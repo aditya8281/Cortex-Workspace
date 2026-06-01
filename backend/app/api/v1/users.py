@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from backend.app.schemas.user import UserLogin, TokenResponse
 from backend.app.services.user_service import login_user
+from backend.app.api.deps import get_current_user
+from backend.app.models.user import User
 
 from backend.app.api.deps import get_db
 from backend.app.schemas.user import UserCreate, UserResponse
@@ -74,3 +76,11 @@ def login(
         )
 
     return token
+
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name
+    }
