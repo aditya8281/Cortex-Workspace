@@ -1,9 +1,9 @@
 from fastapi import FastAPI
+
 from backend.app.core.config import settings
 from backend.app.api.router import api_router
-from backend.app.db.session import engine
 from backend.app.db.base import Base
-from backend.app.models.user import User
+from backend.app.models.user import User  # noqa: F401 - Registers User model
 
 
 app = FastAPI(

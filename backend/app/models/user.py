@@ -8,8 +8,28 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    email: Mapped[str] = mapped_column(String, unique=True, index=True)
-    full_name: Mapped[str] = mapped_column(String)
 
-    # NEW FIELD
-    hashed_password: Mapped[str] = mapped_column(String)
+    email: Mapped[str] = mapped_column(
+        String,
+        unique=True,
+        index=True,
+        nullable=False
+    )
+
+    full_name: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    # AUTH FIELD
+    hashed_password: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    # ROLE FIELD
+    role: Mapped[str] = mapped_column(
+        String,
+        default="user",
+        nullable=False
+    )

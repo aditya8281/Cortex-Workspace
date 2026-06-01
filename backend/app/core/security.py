@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta, timezone
-from jose import jwt
+
+from fastapi import HTTPException, status
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from jose import jwt, JWTError
-from fastapi import HTTPException, status
+from backend.app.core.config import settings
 
 # -----------------------------
 # Password Hashing
@@ -22,27 +23,20 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 # -----------------------------
 # JWT Configuration
 # -----------------------------
-SECRET_KEY = "super-secret-key-change-this-later"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 
 def create_access_token(data: dict):
     to_encode = data.copy()
 
     expire = datetime.now(timezone.utc) + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
     to_encode.update({"exp": expire})
 
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
     return encoded_jwt
-
-
-
-from backend.app.core.config import settings
 
 
 def decode_access_token(token: str):

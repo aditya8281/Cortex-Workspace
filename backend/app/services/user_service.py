@@ -2,8 +2,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.models.user import User
 from backend.app.schemas.user import UserCreate
-from backend.app.core.security import hash_password
-from backend.app.core.security import verify_password, create_access_token
+from backend.app.core.security import hash_password, verify_password, create_access_token
 
 
 def create_user(db: Session, user: UserCreate):
@@ -21,8 +20,15 @@ def create_user(db: Session, user: UserCreate):
 
     return db_user
 
-from sqlalchemy.orm import Session
-from backend.app.models.user import User
+
+def get_user(db: Session, user_id: int):
+    """Get a user by ID."""
+    return db.query(User).filter(User.id == user_id).first()
+
+
+def get_users(db: Session, skip: int = 0, limit: int = 100):
+    """Get all users with pagination."""
+    return db.query(User).offset(skip).limit(limit).all()
 
 
 def authenticate_user(db: Session, email: str, password: str):
