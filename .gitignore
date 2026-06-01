@@ -11,3 +11,4 @@ wheels/
 .pytest_cache/
 .mypy_cache/
 app.db
+checkpoint.txt
