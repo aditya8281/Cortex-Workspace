@@ -1,16 +1,11 @@
 from pydantic import BaseModel, EmailStr
 
 
-class UserCreate(BaseModel):
+class UserLogin(BaseModel):
     email: EmailStr
-    full_name: str
-    password: str   # NEW FIELD
+    password: str
 
 
-class UserResponse(BaseModel):
-    id: int
-    email: EmailStr
-    full_name: str
-
-    class Config:
-        from_attributes = True
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
