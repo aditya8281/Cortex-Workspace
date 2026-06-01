@@ -5,7 +5,6 @@ from backend.app.db.session import engine
 from backend.app.db.base import Base
 from backend.app.models.user import User
 
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.APP_NAME,
