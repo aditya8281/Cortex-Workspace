@@ -1,43 +1,92 @@
-from backend.app.executor.graph import ExecutionGraph
+import asyncio
+from backend.app.executor.graph import ExecutionGraph, ExecutionStep
 
 
 class GraphRunner:
 
     def __init__(self, executor):
         self.executor = executor
+        self.tools = self.executor.tool_registry
 
     async def run(self, graph: ExecutionGraph, query: str, user_id: int | None):
 
-        context = {
+        # -------------------------------------------------
+        # EXECUTION STATE (clean + structured)
+        # -------------------------------------------------
+        state = {
             "query": query,
             "memory": None,
-            "tools": [],
-            "llm_input": None
+            "tool_map": {},      # step_id -> result
+            "llm": None,
+            "completed": set()
         }
 
+        pending_steps = graph.steps.copy()
+
         # -------------------------------------------------
-        # STEP EXECUTION LOOP
+        # DAG EXECUTION LOOP
         # -------------------------------------------------
-        for step in graph.steps:
+        while pending_steps:
+
+            ready_steps = [
+                step for step in pending_steps
+                if self._is_ready(step, state)
+            ]
+
+            if not ready_steps:
+                break  # prevents deadlock
+
+            results = await asyncio.gather(
+                *[
+                    self._execute_step(step, state, query, user_id)
+                    for step in ready_steps
+                ],
+                return_exceptions=True
+            )
+
+            for step, result in zip(ready_steps, results):
+
+                state["completed"].add(step.id)
+                state["tool_map"][step.id] = result
+                step.result = result
+
+                pending_steps.remove(step)
+
+        return state
+
+    # -------------------------------------------------
+    # DAG RESOLUTION
+    # -------------------------------------------------
+    def _is_ready(self, step: ExecutionStep, state) -> bool:
+
+        return all(dep in state["completed"] for dep in step.depends_on)
+
+    # -------------------------------------------------
+    # STEP EXECUTION ROUTER
+    # -------------------------------------------------
+    async def _execute_step(self, step, state, query, user_id):
+
+        try:
 
             if step.type == "memory":
-                context["memory"] = await self._run_memory(query, user_id)
+                return await self._run_memory(query, user_id)
 
-            elif step.type == "tool":
-                result = await self._run_tool(step.name, query)
-                context["tools"].append(result)
-                step.result = result
+            if step.type == "tool":
+                return await self._run_tool(step.name, query)
 
-            elif step.type == "llm":
-                result = await self._run_llm(context)
-                step.result = result
+            if step.type == "llm":
+                return await self._run_llm(state, query)
 
-        return context
+            return None
+
+        except Exception as e:
+            return f"ERROR: {str(e)}"
 
     # -------------------------------------------------
-    # MEMORY EXECUTION
+    # MEMORY STEP
     # -------------------------------------------------
     async def _run_memory(self, query, user_id):
+
         if user_id is None:
             return None
 
@@ -47,43 +96,30 @@ class GraphRunner:
         )
 
     # -------------------------------------------------
-    # TOOL EXECUTION
+    # TOOL STEP (NOW PROPERLY DELEGATED)
     # -------------------------------------------------
     async def _run_tool(self, tool_name, query):
 
-        if tool_name == "file_search":
-            return self.executor.file_agent.search(query)
-
-        if tool_name == "system_scanner":
-            return self.executor.system_agent.scan(query)
-
-        if tool_name == "rag":
-            results = self.executor.rag.search(query)
-
-            if not results:
-                return None
-
-            return "\n\n".join(
-                item["data"]["chunk"][:500]
-                for item in results
-            )
-
-        return None
+        return await self.tools.execute(tool_name, query)
 
     # -------------------------------------------------
-    # LLM EXECUTION
+    # LLM STEP (DEPENDENCY-AWARE)
     # -------------------------------------------------
-    async def _run_llm(self, context):
+    async def _run_llm(self, state, query):
 
         prompt_parts = []
 
-        if context["memory"]:
-            prompt_parts.append(context["memory"])
+        # memory first
+        if state["memory"]:
+            prompt_parts.append(state["memory"])
 
-        if context["tools"]:
-            prompt_parts.extend(context["tools"])
+        # tool outputs (ordered deterministically)
+        for step_id in sorted(state["tool_map"].keys()):
+            value = state["tool_map"][step_id]
+            if value:
+                prompt_parts.append(str(value))
 
-        prompt_parts.append(context["query"])
+        prompt_parts.append(query)
 
         final_prompt = "\n\n".join(prompt_parts)
 

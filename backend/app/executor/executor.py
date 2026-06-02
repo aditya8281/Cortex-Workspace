@@ -15,6 +15,9 @@ from backend.app.rag.service import RAGService
 from backend.app.core.logging import get_logger
 from backend.app.core.paths import PROJECT_ROOT
 
+from backend.app.executor.tool_registry import ToolRegistry
+
+
 logger = get_logger(__name__)
 
 
@@ -35,6 +38,9 @@ class AIExecutor:
 
         # Graph runtime engine
         self.graph_runner = GraphRunner(self)
+
+        self.tool_registry = ToolRegistry(self)
+        
 
     async def execute(
         self,
