@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, TypedDict
+from typing import Any, Dict, Optional
 
 
 class ToolContext:
@@ -14,13 +14,35 @@ class ToolContext:
         self.state = state or {}
 
 
-# ✅ NEW STANDARD TOOL OUTPUT FORMAT
-class ToolResult(TypedDict):
-    tool: str
-    output: Any
-    confidence: float
-    relevance: float
-    meta: Dict[str, Any]
+# -------------------------------------------------
+# FINAL TOOL RESULT (RUNTIME OBJECT)
+# -------------------------------------------------
+class ToolResult:
+    def __init__(
+        self,
+        tool: str,
+        output: Any = None,
+        confidence: float = 1.0,
+        relevance: float = 1.0,
+        status: str = "success",
+        meta: Optional[Dict[str, Any]] = None
+    ):
+        self.tool = tool
+        self.output = output
+        self.confidence = confidence
+        self.relevance = relevance
+        self.status = status
+        self.meta = meta or {}
+
+    def to_dict(self):
+        return {
+            "tool": self.tool,
+            "output": self.output,
+            "confidence": self.confidence,
+            "relevance": self.relevance,
+            "status": self.status,
+            "meta": self.meta,
+        }
 
 
 class BaseTool(ABC):
@@ -38,7 +60,8 @@ class BaseTool(ABC):
     def reflect(self, result: ToolResult) -> Dict[str, Any]:
         return {
             "tool": self.name,
-            "success": result is not None
+            "success": result is not None,
+            "status": getattr(result, "status", None)
         }
 
 
