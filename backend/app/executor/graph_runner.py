@@ -1,6 +1,7 @@
 import asyncio
 from backend.app.executor.graph import ExecutionGraph, ExecutionStep
 from backend.app.tools.base import ToolContext, ToolResult
+from backend.app.executor.tool_intelligence import ToolIntelligence
 
 
 class GraphRunner:
@@ -69,6 +70,10 @@ class GraphRunner:
                     state["llm"] = result
 
                 pending_steps.remove(step)
+
+        intel = ToolIntelligence()
+
+        state["tools"] = intel.process(state["tools"])
 
         return state
 
