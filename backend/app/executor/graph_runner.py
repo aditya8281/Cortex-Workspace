@@ -3,6 +3,7 @@ from backend.app.executor.graph import ExecutionGraph, ExecutionStep
 from backend.app.tools.base import ToolContext, ToolResult
 from backend.app.executor.tool_intelligence import ToolIntelligence
 from backend.app.executor.tool_fusion import ToolFusionEngine
+from backend.app.executor.context_compiler import ContextCompiler
 
 
 class GraphRunner:
@@ -227,20 +228,17 @@ class GraphRunner:
     # -------------------------------------------------
     # LLM
     # -------------------------------------------------
+
+
     async def _run_llm(self, state, query):
 
-        prompt_parts = []
+        compiler = ContextCompiler()
 
-        if state["memory"]:
-            prompt_parts.append(str(state["memory"]))
+        # build clean reasoning context
+        prompt = compiler.compile(
+            tools=state["tools"],
+            memory=state["memory"],
+            query=query
+        )
 
-        for step_id in sorted(state["tool_map"].keys()):
-            value = state["tool_map"][step_id]
-            if value:
-                prompt_parts.append(str(value))
-
-        prompt_parts.append(query)
-
-        final_prompt = "\n\n".join(prompt_parts)
-
-        return await self.executor.llm.generate(final_prompt)
+        return await self.executor.llm.generate(prompt)
