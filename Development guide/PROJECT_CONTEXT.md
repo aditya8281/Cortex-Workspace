@@ -11,6 +11,7 @@ Cortex Workspace is a FastAPI backend for an AI-assisted engineering workspace. 
 - repository search and lightweight RAG
 - persistent conversation memory
 - file-system and system inspection agents
+- a reusable tool abstraction layer for autonomous tool execution
 
 The repository is still backend-first. There is no frontend app yet, and the top-level `docker-compose.yml` is currently empty.
 
@@ -157,6 +158,7 @@ Important implementation detail:
 
 - `user_id` is checked with `is not None`, so `0` is not treated as missing
 - `GraphRunner` now records memory, tool, and LLM outputs back into state so the executor can rebuild the final response correctly
+- built-in tool adapters are registered automatically for `file_search`, `system_scanner`, and `rag`
 
 ### Providers
 
@@ -210,6 +212,25 @@ Operational note:
 - reports OS, Python runtime, free disk space, database presence, and migration count
 - performs lightweight readiness checks only
 
+## Tool Framework
+
+The reusable tool layer lives in [backend/app/tools/](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/).
+
+Key files:
+
+- [backend/app/tools/base.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/base.py)
+- [backend/app/tools/metadata.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/metadata.py)
+- [backend/app/tools/builtins.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/builtins.py)
+- [backend/app/tools/discovery.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/discovery.py)
+
+Current state:
+
+- `BaseTool` defines `decide()` and `run()` for autonomous execution
+- `RegisteredTool` binds tools to metadata
+- `ToolMetadata` holds capability hints, priority, and tags
+- `ToolRegistry` auto-registers the built-in executor tools when an executor instance is passed in
+- `discover_tools()` exists for future package-based tool discovery, but the current repo ships only the built-in adapters
+
 ## Database and Migrations
 
 Database wiring:
@@ -256,6 +277,8 @@ Test support files:
 - ensured the LLM step waits for memory and tool steps before running
 - fixed `ExecutionTracer.report()` to read from sessions instead of a missing attribute
 - fixed `ExecutionSession.created_at` to use a per-session timestamp
+- added built-in tool adapters and auto-registration so graph tool steps can actually execute
+- normalized graph runner tool outputs so responses use readable tool content instead of raw envelopes
 - guarded the index rebuild script against empty content
 - imported `Memory` in Alembic env so migrations stay aligned with the ORM
 - updated this context file to match the current graph-based executor architecture and route layout
