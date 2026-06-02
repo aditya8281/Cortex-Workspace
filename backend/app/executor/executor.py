@@ -19,6 +19,8 @@ from backend.app.core.paths import PROJECT_ROOT
 from backend.app.executor.tool_registry import ToolRegistry
 from backend.app.executor.context import ExecutionContext
 
+from backend.app.executor.tool_feedback import ToolFeedbackStore
+
 
 logger = get_logger(__name__)
 
@@ -26,28 +28,46 @@ logger = get_logger(__name__)
 class AIExecutor:
 
     def __init__(self):
-        # core NLP pipeline
+
+        # -------------------------------
+        # CORE PIPELINE
+        # -------------------------------
         self.classifier = IntentClassifier()
         self.planner = Planner()
         self.builder = ResponseBuilder()
 
-        # model + memory
+        # -------------------------------
+        # MODEL + MEMORY
+        # -------------------------------
         self.llm = LLMRouter()
         self.memory = MemoryRepository()
 
-        # agents (kept for backward compatibility / future use)
+        # -------------------------------
+        # AGENTS (legacy / fallback)
+        # -------------------------------
         self.file_agent = FileSearchAgent()
         self.system_agent = SystemScanner()
         self.rag = RAGService(str(PROJECT_ROOT))
 
-        # tool system (SINGLE SOURCE OF TRUTH)
+        # -------------------------------
+        # TOOL SYSTEM
+        # -------------------------------
         self.tool_registry = ToolRegistry(self)
 
-        # execution observability
+        # -------------------------------
+        # OBSERVABILITY
+        # -------------------------------
         self.tracer = ExecutionTracer()
 
-        # graph engine
+        # -------------------------------
+        # GRAPH ENGINE
+        # -------------------------------
         self.graph_runner = GraphRunner(self)
+
+        # -------------------------------
+        # LEARNING LAYER (NEW)
+        # -------------------------------
+        self.tool_feedback = ToolFeedbackStore()
 
     # -------------------------------------------------
     # MAIN ENTRY
@@ -68,12 +88,19 @@ class AIExecutor:
         intent = self.classifier.classify(query)
 
         # -------------------------------------------------
-        # BUILD EXECUTION GRAPH
+        # TOOL BIAS (ADAPTIVE SIGNAL - NEW)
         # -------------------------------------------------
+        tool_bias = self.tool_feedback.get_tool_bias()
+
+        # inject bias into planner if supported
         graph = self.planner.build_graph(intent)
 
+        # (future hook: planner can use tool_bias later)
+
+        logger.info(f"execution_graph_built steps={len(graph.steps)}")
+
         # -------------------------------------------------
-        # RUN GRAPH (RAW EXECUTION STATE)
+        # RUN GRAPH
         # -------------------------------------------------
         raw_state = await self.graph_runner.run(
             graph=graph,
@@ -82,7 +109,7 @@ class AIExecutor:
         )
 
         # -------------------------------------------------
-        # MAP GRAPH → EXECUTION CONTEXT (IMPORTANT FIX)
+        # MAP GRAPH → CONTEXT
         # -------------------------------------------------
         ctx = self._build_execution_context(
             query=query,
@@ -90,10 +117,21 @@ class AIExecutor:
             raw_state=raw_state
         )
 
+        # -------------------------------------------------
+        # LEARNING FEEDBACK (CRITICAL ADDITION)
+        # -------------------------------------------------
+        self.tool_feedback.log(
+            query=query,
+            tools=ctx.tool_results
+        )
+
         logger.info("executor_finished")
 
         return self.builder.build(ctx)
-    
+
+    # -------------------------------------------------
+    # CONTEXT MAPPING (SAFE + CLEAN)
+    # -------------------------------------------------
     def _build_execution_context(
         self,
         query: str,
@@ -101,16 +139,8 @@ class AIExecutor:
         raw_state: dict
     ) -> ExecutionContext:
 
-        # MEMORY
         memory = raw_state.get("memory")
-
-        # TOOL RESULTS (keep structured if possible)
-        tools = []
-
-        for tool in raw_state.get("tools", []):
-            tools.append(tool)
-
-        # LLM OUTPUT
+        tools = raw_state.get("tools", [])
         llm = raw_state.get("llm")
 
         return ExecutionContext(
