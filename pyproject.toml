@@ -1,5 +1,5 @@
 [project]
-name = "ai-engineering-workspace"
+name = "cortex-workspace"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -23,6 +23,7 @@ dependencies = [
     "sentence-transformers>=5.5.1",
     "sqlalchemy>=2.0.50",
     "uvicorn>=0.48.0",
+    "structlog>=25.4.0",
 ]
 
 [dependency-groups]

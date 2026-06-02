@@ -10,7 +10,11 @@ from backend.app.executor.schemas import ExecutionResult
 
 from backend.app.rag.service import RAGService
 
+from backend.app.core.logging import get_logger
+
 from backend.app.core.paths import PROJECT_ROOT
+
+logger = get_logger(__name__)
 
 class AIExecutor:
 
@@ -44,9 +48,23 @@ class AIExecutor:
             user_id=user_id
         )
 
+        logger.info(
+            f"executor_started "
+            f"user_id={user_id} "
+            f"query={query[:100]}"
+        )
+
         intent = self.classifier.classify(query)
 
+        logger.info(
+            f"classified_intent={intent}"
+        )
+
         plan = self.planner.build_plan(intent)
+
+        logger.info(
+            f"execution_plan={plan}"
+        )
 
         if plan.use_memory and user_id:
             ctx.memory = self.memory.search(
@@ -87,6 +105,10 @@ class AIExecutor:
                         f"Repository Context:\n{rag_context}"
                     )
 
+            logger.info(    
+                f"executing_tool={tool}"
+            )
+
         if plan.use_llm:
 
             prompt_parts = []
@@ -100,6 +122,10 @@ class AIExecutor:
 
             final_prompt = "\n\n".join(prompt_parts)
 
+            logger.info(
+                "calling_llm"
+            )
+
             ctx.llm_response = await self.llm.generate(
                 final_prompt
             )
@@ -110,6 +136,11 @@ class AIExecutor:
                     query=query,
                     response=ctx.llm_response
                 )
+
+                
+            logger.info(
+                "executor_finished"
+            )
 
             
 

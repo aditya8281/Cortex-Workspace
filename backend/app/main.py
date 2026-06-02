@@ -1,19 +1,27 @@
 from fastapi import FastAPI
 
-from backend.app.core.config import settings
 from backend.app.api.router import api_router
-from backend.app.models.user import User  # noqa: F401 - Registers User model
+from backend.app.core.config import settings
+from backend.app.core.logging import setup_logging
+from backend.app.core.middleware import RequestLoggingMiddleware
+from backend.app.models.user import User  # noqa: F401
 
+
+setup_logging()
 
 app = FastAPI(
     title=settings.APP_NAME,
     debug=settings.DEBUG,
-    version="0.1.0"
+    version="0.1.0",
+)
+
+app.add_middleware(
+    RequestLoggingMiddleware
 )
 
 app.include_router(
     api_router,
-    prefix=settings.API_V1_PREFIX
+    prefix=settings.API_V1_PREFIX,
 )
 
 
