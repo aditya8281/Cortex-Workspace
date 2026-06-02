@@ -8,10 +8,16 @@ class RepoScanner:
 
     def scan(self, root: str):
         files = []
+        root_path = Path(root)
 
-        for path in Path(root).rglob("*"):
+        for path in root_path.rglob("*"):
             if path.is_file():
-                if any(x in str(path) for x in [".py", ".md", ".txt"]):
+                # Exclude hidden directories (starting with '.') and dependency directories
+                parts = path.relative_to(root_path).parts
+                if any(p.startswith(".") or p in ("venv", "node_modules", "__pycache__") for p in parts):
+                    continue
+
+                if path.suffix in (".py", ".md", ".txt"):
                     files.append(str(path))
 
         return files

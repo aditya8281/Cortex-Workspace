@@ -11,7 +11,7 @@ class AIGateway:
         self.file_agent = FileSearchAgent()
         self.system_agent = SystemScanner()
 
-    def route(self, query: str, user_id: int = None):
+    async def route(self, query: str, user_id: int = None) -> str:
         query_lower = query.lower()
 
         if "file" in query_lower or "pdf" in query_lower:
@@ -25,4 +25,9 @@ class AIGateway:
             if memory:
                 return memory
 
-        return self.llm.generate(query)
+        response = await self.llm.generate(query)
+
+        if user_id and response:
+            self.memory.add(user_id, query, response)
+
+        return response

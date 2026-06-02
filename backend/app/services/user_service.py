@@ -6,6 +6,11 @@ from backend.app.core.security import hash_password, verify_password, create_acc
 
 
 def create_user(db: Session, user: UserCreate):
+    # Check if email is already registered
+    existing_user = db.query(User).filter(User.email == user.email).first()
+    if existing_user:
+        return None
+
     hashed_pw = hash_password(user.password)
 
     db_user = User(

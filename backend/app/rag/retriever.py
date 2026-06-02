@@ -1,5 +1,3 @@
-import numpy as np
-
 from backend.app.rag.vector_store import VectorStore
 from backend.app.rag.embeddings import EmbeddingModel
 from backend.app.rag.text_chunker import TextChunker
