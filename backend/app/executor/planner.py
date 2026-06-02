@@ -14,15 +14,21 @@ class Planner:
         if intent == IntentType.TOOL:
             return ExecutionPlan(
                 intent=intent,
-                tool_name="file_search"
+                use_memory=True,
+                use_llm=True,
+                tools=["file_search"]
             )
 
         if intent == IntentType.SYSTEM:
             return ExecutionPlan(
                 intent=intent,
-                tool_name="system_scanner"
+                use_memory=True,
+                use_llm=True,
+                tools=["system_scanner"]
             )
 
         return ExecutionPlan(
-            intent=IntentType.CHAT
+            intent=IntentType.CHAT,
+            use_memory=True,
+            use_llm=True
         )

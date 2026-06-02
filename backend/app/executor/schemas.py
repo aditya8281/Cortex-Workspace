@@ -12,7 +12,8 @@ class IntentType(str, Enum):
 class ExecutionPlan(BaseModel):
     intent: IntentType
     use_memory: bool = True
-    tool_name: str | None = None
+    use_llm: bool = True
+    tools: list[str] = []
 
 
 class ExecutionResult(BaseModel):

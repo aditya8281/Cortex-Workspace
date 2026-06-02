@@ -28,52 +28,59 @@ class AIExecutor:
         user_id: int | None = None
     ) -> ExecutionResult:
 
+        from backend.app.executor.context import ExecutionContext
+
+        ctx = ExecutionContext(
+            query=query,
+            user_id=user_id
+        )
+
         intent = self.classifier.classify(query)
 
         plan = self.planner.build_plan(intent)
 
         if plan.use_memory and user_id:
-
-            memory = self.memory.search(
+            ctx.memory = self.memory.search(
                 user_id=user_id,
                 query=query
             )
 
-            if memory:
-                return self.builder.build(
-                    answer=memory,
-                    source="memory",
-                    memory_used=True
+        for tool in plan.tools:
+
+            if tool == "file_search":
+
+                result = self.file_agent.search(query)
+
+                ctx.tool_results.append(result)
+
+            elif tool == "system_scanner":
+
+                result = self.system_agent.scan(query)
+
+                ctx.tool_results.append(result)
+
+        if plan.use_llm:
+
+            prompt_parts = []
+
+            if ctx.memory:
+                prompt_parts.append(ctx.memory)
+
+            prompt_parts.extend(ctx.tool_results)
+
+            prompt_parts.append(query)
+
+            final_prompt = "\n\n".join(prompt_parts)
+
+            ctx.llm_response = await self.llm.generate(
+                final_prompt
+            )
+
+            if user_id:
+                self.memory.add(
+                    user_id=user_id,
+                    query=query,
+                    response=ctx.llm_response
                 )
 
-        if plan.tool_name == "file_search":
-
-            result = self.file_agent.search(query)
-
-            return self.builder.build(
-                answer=result,
-                source="file_search"
-            )
-
-        if plan.tool_name == "system_scanner":
-
-            result = self.system_agent.scan(query)
-
-            return self.builder.build(
-                answer=result,
-                source="system_scanner"
-            )
-
-        response = await self.llm.generate(query)
-
-        if user_id:
-            self.memory.add(
-                user_id=user_id,
-                query=query,
-                response=response
-            )
-
-        return self.builder.build(
-            answer=response,
-            source="llm"
-        )
+        return self.builder.build(ctx)
