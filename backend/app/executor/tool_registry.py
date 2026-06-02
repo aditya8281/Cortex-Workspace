@@ -1,46 +1,45 @@
-from typing import Callable, Any
+from typing import Dict, Any, List
+from backend.app.tools.base import BaseTool, ToolContext
 
 
 class ToolRegistry:
+    """
+    Now acts as TOOL ORCHESTRATOR, not just function map.
+    """
 
-    def __init__(self, executor):
-        self.executor = executor
+    def __init__(self):
+        self.tools: Dict[str, BaseTool] = {}
 
-        self.tools: dict[str, Callable] = {
-            "file_search": self._file_search,
-            "system_scanner": self._system_scanner,
-            "rag": self._rag
+    def register(self, tool: BaseTool):
+        self.tools[tool.name] = tool
+
+    def list_tools(self) -> List[str]:
+        return list(self.tools.keys())
+
+    async def execute_auto(self, query: str, user_id: int = None) -> Dict[str, Any]:
+        """
+        AUTONOMOUS MODE:
+        - tools decide themselves if they should run
+        """
+
+        context = ToolContext(user_id=user_id, query=query)
+
+        results = []
+
+        for tool in self.tools.values():
+            decision = tool.decide(context)
+
+            if decision.get("should_run"):
+                output = await tool.run(context, decision.get("params", {}))
+
+                results.append({
+                    "tool": tool.name,
+                    "output": output,
+                    "reflection": tool.reflect(output),
+                    "reason": decision.get("reason")
+                })
+
+        return {
+            "query": query,
+            "results": results
         }
-
-    # -------------------------------------------------
-    # PUBLIC EXECUTOR
-    # -------------------------------------------------
-    async def execute(self, tool_name: str, query: str) -> Any:
-
-        tool = self.tools.get(tool_name)
-
-        if not tool:
-            return f"Unknown tool: {tool_name}"
-
-        return await tool(query)
-
-    # -------------------------------------------------
-    # TOOL WRAPPERS
-    # -------------------------------------------------
-    async def _file_search(self, query: str):
-        return self.executor.file_agent.search(query)
-
-    async def _system_scanner(self, query: str):
-        return self.executor.system_agent.scan(query)
-
-    async def _rag(self, query: str):
-
-        results = self.executor.rag.search(query)
-
-        if not results:
-            return None
-
-        return "\n\n".join(
-            item["data"]["chunk"][:500]
-            for item in results
-        )

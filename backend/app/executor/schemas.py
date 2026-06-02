@@ -19,6 +19,7 @@ class ExecutionPlan(BaseModel):
     use_memory: bool = True
     use_llm: bool = True
     tools: list[str] = Field(default_factory=list)
+    tool_candidates: list[str] = Field(default_factory=list)
 
 
 class ExecutionResult(BaseModel):

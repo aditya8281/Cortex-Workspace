@@ -14,6 +14,8 @@ class Planner:
     # -------------------------------------------------
     def build_plan(self, intent):
 
+        tool_candidates = []
+
         if isinstance(intent, IntentDecision):
 
             tools = []
@@ -21,28 +23,34 @@ class Planner:
             if intent.intent == IntentType.TOOL:
                 if intent.subtype == "file_search":
                     tools.append("file_search")
+                    tool_candidates.append("file_search")
 
             elif intent.intent == IntentType.SYSTEM:
                 if intent.subtype == "system_scan":
                     tools.append("system_scanner")
+                    tool_candidates.append("system_scanner")
 
             elif intent.intent == IntentType.RAG:
                 if intent.subtype == "repo_rag":
                     tools.append("rag")
+                    tool_candidates.append("rag")
 
             return ExecutionPlan(
                 intent=intent.intent,
                 use_memory=True,
                 use_llm=True,
-                tools=tools
+                tools=tools,
+                tool_candidates=tool_candidates
             )
 
+        # legacy fallback
         if intent == IntentType.TOOL:
             return ExecutionPlan(
                 intent=intent,
                 use_memory=True,
                 use_llm=True,
-                tools=["file_search"]
+                tools=["file_search"],
+                tool_candidates=["file_search"]
             )
 
         if intent == IntentType.SYSTEM:
@@ -50,7 +58,8 @@ class Planner:
                 intent=intent,
                 use_memory=True,
                 use_llm=True,
-                tools=["system_scanner"]
+                tools=["system_scanner"],
+                tool_candidates=["system_scanner"]
             )
 
         if intent == IntentType.RAG:
@@ -58,14 +67,16 @@ class Planner:
                 intent=intent,
                 use_memory=True,
                 use_llm=True,
-                tools=["rag"]
+                tools=["rag"],
+                tool_candidates=["rag"]
             )
 
         return ExecutionPlan(
             intent=IntentType.CHAT,
             use_memory=True,
             use_llm=True,
-            tools=[]
+            tools=[],
+            tool_candidates=[]
         )
 
     # -------------------------------------------------

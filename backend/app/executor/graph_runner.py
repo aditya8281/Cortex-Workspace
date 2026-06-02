@@ -1,5 +1,6 @@
 import asyncio
 from backend.app.executor.graph import ExecutionGraph, ExecutionStep
+from backend.app.tools.base import ToolContext
 
 
 class GraphRunner:
@@ -9,7 +10,16 @@ class GraphRunner:
         self.tools = self.executor.tool_registry
         self.tracer = self.executor.tracer
 
-    async def run(self, graph: ExecutionGraph, query: str, user_id: int | None):
+    # -------------------------------------------------
+    # MAIN RUN METHOD (NOW TOOL-AWARE + PLAN-AWARE)
+    # -------------------------------------------------
+    async def run(
+        self,
+        graph: ExecutionGraph,
+        query: str,
+        user_id: int | None,
+        plan=None
+    ):
 
         # -------------------------------------------------
         # EXECUTION STATE
@@ -20,12 +30,18 @@ class GraphRunner:
             "tools": [],
             "tool_map": {},
             "llm": None,
-            "completed": set()
+            "completed": set(),
+
+            # agentic extensions
+            "tool_candidates": [],
+            "tool_decisions": {}
         }
+
+        if plan and hasattr(plan, "tool_candidates"):
+            state["tool_candidates"] = plan.tool_candidates
 
         pending_steps = graph.steps.copy()
 
-        # IMPORTANT: create execution session once
         execution_id = self.tracer.create_session()
 
         # -------------------------------------------------
@@ -39,7 +55,7 @@ class GraphRunner:
             ]
 
             if not ready_steps:
-                break  # prevents deadlock
+                break
 
             results = await asyncio.gather(
                 *[
@@ -63,8 +79,10 @@ class GraphRunner:
 
                 if step.type == "memory":
                     state["memory"] = result
-                elif step.type == "tool" and result is not None:
+
+                elif step.type == "tool":
                     state["tools"].append(result)
+
                 elif step.type == "llm":
                     state["llm"] = result
 
@@ -73,16 +91,22 @@ class GraphRunner:
         return state
 
     # -------------------------------------------------
-    # DAG RESOLUTION
+    # DAG READY CHECK
     # -------------------------------------------------
     def _is_ready(self, step: ExecutionStep, state) -> bool:
-
         return all(dep in state["completed"] for dep in step.depends_on)
 
     # -------------------------------------------------
     # STEP EXECUTION ROUTER
     # -------------------------------------------------
-    async def _execute_step(self, execution_id, step, state, query, user_id):
+    async def _execute_step(
+        self,
+        execution_id,
+        step,
+        state,
+        query,
+        user_id
+    ):
 
         self.tracer.start(
             execution_id,
@@ -97,7 +121,12 @@ class GraphRunner:
                 result = await self._run_memory(query, user_id)
 
             elif step.type == "tool":
-                result = await self._run_tool(step.name, query)
+                result = await self._run_tool_autonomous(
+                    step.name,
+                    query,
+                    state,
+                    user_id
+                )
 
             elif step.type == "llm":
                 result = await self._run_llm(state, query)
@@ -137,24 +166,81 @@ class GraphRunner:
         )
 
     # -------------------------------------------------
-    # TOOL STEP
+    # TOOL BRAIN EXECUTION (NEW CORE LOGIC)
     # -------------------------------------------------
-    async def _run_tool(self, tool_name, query):
+    async def _run_tool_autonomous(
+        self,
+        tool_name,
+        query,
+        state,
+        user_id
+    ):
 
-        return await self.tools.execute(tool_name, query)
+        tool = self.tools.tools.get(tool_name)
+
+        if not tool:
+            return None
+
+        context = ToolContext(
+            user_id=user_id,
+            query=query,
+            state=state
+        )
+
+        # 1. TOOL DECISION (BRAIN)
+        decision = tool.decide(context)
+
+        self.tracer.log_event(
+            "tool_decision",
+            {
+                "tool": tool_name,
+                "decision": decision
+            }
+        )
+
+        # 2. SKIP IF NOT NEEDED
+        if not decision.get("should_run"):
+            return {
+                "tool": tool_name,
+                "skipped": True,
+                "reason": decision.get("reason", "no reason")
+            }
+
+        # 3. EXECUTE TOOL
+        result = await tool.run(
+            context,
+            decision.get("params", {})
+        )
+
+        # 4. REFLECTION (lightweight feedback layer)
+        reflection = tool.reflect(result)
+
+        self.tracer.log_event(
+            "tool_result",
+            {
+                "tool": tool_name,
+                "reflection": reflection
+            }
+        )
+
+        state["tool_decisions"][tool_name] = decision
+
+        return {
+            "tool": tool_name,
+            "output": result,
+            "reflection": reflection
+        }
 
     # -------------------------------------------------
-    # LLM STEP
+    # LLM STEP (FINAL SYNTHESIS)
     # -------------------------------------------------
     async def _run_llm(self, state, query):
 
         prompt_parts = []
 
-        # memory first
         if state["memory"]:
-            prompt_parts.append(state["memory"])
+            prompt_parts.append(str(state["memory"]))
 
-        # deterministic tool ordering
         for step_id in sorted(state["tool_map"].keys()):
             if not step_id.startswith("tool_step_"):
                 continue
