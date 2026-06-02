@@ -2,6 +2,7 @@ import asyncio
 from backend.app.executor.graph import ExecutionGraph, ExecutionStep
 from backend.app.tools.base import ToolContext, ToolResult
 from backend.app.executor.tool_intelligence import ToolIntelligence
+from backend.app.executor.tool_fusion import ToolFusionEngine
 
 
 class GraphRunner:
@@ -72,8 +73,10 @@ class GraphRunner:
                 pending_steps.remove(step)
 
         intel = ToolIntelligence()
+        fusion = ToolFusionEngine()
 
         state["tools"] = intel.process(state["tools"])
+        state["tools"] = fusion.process(state["tools"])
 
         return state
 
