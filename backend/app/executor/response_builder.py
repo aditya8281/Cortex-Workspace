@@ -8,33 +8,18 @@ class ResponseBuilder:
 
         sections = []
 
-        # -------------------------------------------------
-        # MEMORY LAYER (contextual grounding)
-        # -------------------------------------------------
+        # MEMORY
         if ctx.memory:
-            sections.append(
-                self._format_memory(ctx.memory)
-            )
+            sections.append(self._format_memory(ctx.memory))
 
-        # -------------------------------------------------
-        # TOOL LAYER (structured grounding)
-        # -------------------------------------------------
+        # TOOLS (NOW RANKED)
         if ctx.tool_results:
-            sections.append(
-                self._format_tools(ctx.tool_results)
-            )
+            sections.append(self._format_tools(ctx.tool_results))
 
-        # -------------------------------------------------
-        # LLM LAYER (final reasoning)
-        # -------------------------------------------------
+        # LLM
         if ctx.llm_response:
-            sections.append(
-                self._format_llm(ctx.llm_response)
-            )
+            sections.append(self._format_llm(ctx.llm_response))
 
-        # -------------------------------------------------
-        # FALLBACK
-        # -------------------------------------------------
         if not sections:
             sections.append(
                 "🤖 Final Response:\nI couldn't generate a response from available context."
@@ -47,55 +32,44 @@ class ResponseBuilder:
         )
 
     # -------------------------------------------------
-    # MEMORY FORMATTING
+    # MEMORY
     # -------------------------------------------------
     def _format_memory(self, memory):
-
         return "🧠 Memory Context:\n" + str(memory)
 
     # -------------------------------------------------
-    # TOOL FORMATTING (IMPORTANT UPGRADE)
+    # TOOL (RANKED VIEW)
     # -------------------------------------------------
     def _format_tools(self, tool_results):
 
-        blocks = ["🛠 Tool Results:"]
+        # STEP 1: sort by relevance (IMPORTANT NEW LOGIC)
+        sorted_tools = sorted(
+            tool_results,
+            key=lambda t: t.relevance,
+            reverse=True
+        )
 
-        for i, tool in enumerate(tool_results):
+        blocks = ["🛠 Tool Results (Ranked by Relevance):"]
+
+        # STEP 2: render each tool cleanly
+        for i, t in enumerate(sorted_tools):
 
             blocks.append(
-                f"\n--- Tool {i + 1} ---\n{self._serialize_tool(tool)}"
+                f"""
+--- Tool {i + 1} ---
+Tool: {t.tool}
+Status: {t.status}
+Relevance: {t.relevance}
+Confidence: {t.confidence}
+Output:
+{t.output}
+"""
             )
 
         return "\n".join(blocks)
 
     # -------------------------------------------------
-    # TOOL SERIALIZATION (CRITICAL FIX)
-    # -------------------------------------------------
-    def _serialize_tool(self, tool):
-
-        # already structured dict (new system)
-        if isinstance(tool, dict):
-
-            parts = []
-
-            for k, v in tool.items():
-
-                if v is None:
-                    continue
-
-                if isinstance(v, (list, dict)):
-                    parts.append(f"{k}: {v}")
-                else:
-                    parts.append(f"{k}: {str(v)}")
-
-            return "\n".join(parts)
-
-        # fallback
-        return str(tool)
-
-    # -------------------------------------------------
-    # LLM FORMATTING
+    # LLM
     # -------------------------------------------------
     def _format_llm(self, llm_response):
-
         return "🤖 Final Response:\n" + str(llm_response)

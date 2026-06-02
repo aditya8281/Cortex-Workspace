@@ -3,20 +3,26 @@ from typing import Any, Dict, List, Optional
 
 
 # -------------------------------------------------
-# TOOL RESULT (STRUCTURED, NOT STRING)
+# TOOL RESULT (NOW WITH INTELLIGENCE SIGNALS)
 # -------------------------------------------------
 @dataclass
 class ToolResult:
     tool: str
     output: Any
+
     status: str = "success"
     skipped: bool = False
     reason: Optional[str] = None
+
+    # NEW: intelligence signals
+    confidence: float = 1.0
+    relevance: float = 1.0
+
     meta: Dict[str, Any] = field(default_factory=dict)
 
 
 # -------------------------------------------------
-# MEMORY ITEM (STRUCTURED FUTURE-PROOFING)
+# MEMORY ITEM (UNCHANGED BUT SAFE)
 # -------------------------------------------------
 @dataclass
 class MemoryItem:
@@ -26,22 +32,17 @@ class MemoryItem:
 
 
 # -------------------------------------------------
-# EXECUTION CONTEXT (UPGRADED)
+# EXECUTION CONTEXT
 # -------------------------------------------------
 @dataclass
 class ExecutionContext:
-
     query: str
-    user_id: Optional[int] = None
+    user_id: int | None = None
 
-    # MEMORY LAYER
     memory: List[MemoryItem] = field(default_factory=list)
 
-    # TOOL LAYER (STRUCTURED, CRITICAL FIX)
     tool_results: List[ToolResult] = field(default_factory=list)
 
-    # FINAL LLM OUTPUT
-    llm_response: Optional[str] = None
+    llm_response: str | None = None
 
-    # OPTIONAL: EXECUTION METADATA (FUTURE-PROOF)
     meta: Dict[str, Any] = field(default_factory=dict)
