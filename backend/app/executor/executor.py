@@ -6,15 +6,17 @@ from backend.app.agent.system_scanner import SystemScanner
 from backend.app.executor.intent_classifier import IntentClassifier
 from backend.app.executor.planner import Planner
 from backend.app.executor.response_builder import ResponseBuilder
-from backend.app.executor.schemas import ExecutionResult
+from backend.app.executor.schemas import ExecutionResult, IntentDecision
+
+from backend.app.executor.graph_runner import GraphRunner
 
 from backend.app.rag.service import RAGService
 
 from backend.app.core.logging import get_logger
-
 from backend.app.core.paths import PROJECT_ROOT
 
 logger = get_logger(__name__)
+
 
 class AIExecutor:
 
@@ -31,7 +33,8 @@ class AIExecutor:
 
         self.rag = RAGService(str(PROJECT_ROOT))
 
-
+        # Graph runtime engine
+        self.graph_runner = GraphRunner(self)
 
     async def execute(
         self,
@@ -47,11 +50,12 @@ class AIExecutor:
         )
 
         logger.info(
-            f"executor_started "
-            f"user_id={user_id} "
-            f"query={query[:100]}"
+            f"executor_started user_id={user_id} query={query[:100]}"
         )
 
+        # -------------------------------------------------
+        # INTENT CLASSIFICATION
+        # -------------------------------------------------
         intent = self.classifier.classify(query)
 
         logger.info(
@@ -59,101 +63,34 @@ class AIExecutor:
         )
 
         # -------------------------------------------------
-        # COMPATIBILITY ADAPTER LAYER (CRITICAL)
+        # GRAPH BUILDING (CORE UPGRADE)
         # -------------------------------------------------
-
-        from backend.app.executor.schemas import IntentType, IntentDecision
-
-        if isinstance(intent, IntentDecision):
-            # New system path
-            plan = self.planner.build_plan(intent)
-
-        else:
-            # Legacy fallback path (IntentType)
-            plan = self.planner.build_plan(intent)
-
-        plan = self.planner.build_plan(intent)
+        graph = self.planner.build_graph(intent)
 
         logger.info(
-            f"execution_plan={plan}"
+            f"execution_graph_built steps={len(graph.steps)}"
         )
 
-        if plan.use_memory and user_id is not None:
-            ctx.memory = self.memory.search(
-                user_id=user_id,
-                query=query
-            )
+        # -------------------------------------------------
+        # GRAPH EXECUTION
+        # -------------------------------------------------
+        result = await self.graph_runner.run(
+            graph=graph,
+            query=query,
+            user_id=user_id
+        )
 
-        for tool in plan.tools:
+        # -------------------------------------------------
+        # BUILD FINAL CONTEXT
+        # -------------------------------------------------
+        ctx = ExecutionContext(
+            query=query,
+            user_id=user_id,
+            memory=result.get("memory"),
+            tool_results=result.get("tools", []),
+            llm_response=result.get("llm")
+        )
 
-            if tool == "file_search":
-
-                result = self.file_agent.search(query)
-
-                ctx.tool_results.append(result)
-
-            elif tool == "system_scanner":
-
-                result = self.system_agent.scan(query)
-
-                ctx.tool_results.append(result)
-            
-            elif tool == "rag":
-
-                results = self.rag. search(
-                    query
-                )
-
-                if results:
-
-                    rag_context = "\n\n".join(
-                        [
-                            item["data"]["chunk"][:500]
-                            for item in results
-                        ]
-                    )
-
-                    ctx.tool_results.append(
-                        f"Repository Context:\n{rag_context}"
-                    )
-
-            logger.info(    
-                f"executing_tool={tool}"
-            )
-
-        if plan.use_llm:
-
-            prompt_parts = []
-
-            if ctx.memory:
-                prompt_parts.append(ctx.memory)
-
-            prompt_parts.extend(ctx.tool_results)
-
-            prompt_parts.append(query)
-
-            final_prompt = "\n\n".join(prompt_parts)
-
-            logger.info(
-                "calling_llm"
-            )
-
-            ctx.llm_response = await self.llm.generate(
-                final_prompt
-            )
-
-            if user_id is not None:
-                self.memory.add(
-                    user_id=user_id,
-                    query=query,
-                    response=ctx.llm_response
-                )
-
-                
-            logger.info(
-                "executor_finished"
-            )
-
-            
+        logger.info("executor_finished")
 
         return self.builder.build(ctx)

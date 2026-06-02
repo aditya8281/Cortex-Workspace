@@ -4,33 +4,29 @@ from backend.app.executor.schemas import (
     IntentDecision,
 )
 
+from backend.app.executor.graph import ExecutionGraph, ExecutionStep
+
 
 class Planner:
 
+    # -------------------------------------------------
+    # LEGACY PATH (DO NOT REMOVE YET)
+    # -------------------------------------------------
     def build_plan(self, intent):
 
-        # -------------------------------------------------
-        # NEW SYSTEM PATH (IntentDecision)
-        # -------------------------------------------------
         if isinstance(intent, IntentDecision):
 
             tools = []
 
-            # TOOL INTENTS
             if intent.intent == IntentType.TOOL:
-
                 if intent.subtype == "file_search":
                     tools.append("file_search")
 
-            # SYSTEM INTENTS
             elif intent.intent == IntentType.SYSTEM:
-
                 if intent.subtype == "system_scan":
                     tools.append("system_scanner")
 
-            # RAG INTENTS
             elif intent.intent == IntentType.RAG:
-
                 if intent.subtype == "repo_rag":
                     tools.append("rag")
 
@@ -40,10 +36,6 @@ class Planner:
                 use_llm=True,
                 tools=tools
             )
-
-        # -------------------------------------------------
-        # LEGACY SYSTEM PATH (IntentType fallback)
-        # -------------------------------------------------
 
         if intent == IntentType.TOOL:
             return ExecutionPlan(
@@ -75,3 +67,68 @@ class Planner:
             use_llm=True,
             tools=[]
         )
+
+    # -------------------------------------------------
+    # NEW: GRAPH BUILDER (CORTEX AGENT CORE START)
+    # -------------------------------------------------
+    def build_graph(self, intent) -> ExecutionGraph:
+
+        graph = ExecutionGraph()
+
+        # MEMORY STEP (always first if needed later)
+        graph.add_step(
+            ExecutionStep(
+                id="memory_step",
+                type="memory",
+                name="memory_recall",
+                input=None
+            )
+        )
+
+        # TOOL STEP(S)
+        tools = []
+
+        if isinstance(intent, IntentDecision):
+            intent_type = intent.intent
+            subtype = intent.subtype
+
+            if intent_type == IntentType.TOOL and subtype == "file_search":
+                tools.append("file_search")
+
+            elif intent_type == IntentType.SYSTEM and subtype == "system_scan":
+                tools.append("system_scanner")
+
+            elif intent_type == IntentType.RAG and subtype == "repo_rag":
+                tools.append("rag")
+
+        else:
+            # legacy fallback
+            if intent == IntentType.TOOL:
+                tools.append("file_search")
+            elif intent == IntentType.SYSTEM:
+                tools.append("system_scanner")
+            elif intent == IntentType.RAG:
+                tools.append("rag")
+
+        for i, tool in enumerate(tools):
+            graph.add_step(
+                ExecutionStep(
+                    id=f"tool_step_{i}",
+                    type="tool",
+                    name=tool,
+                    input=None,
+                    depends_on=["memory_step"]
+                )
+            )
+
+        # LLM STEP (final synthesis)
+        graph.add_step(
+            ExecutionStep(
+                id="llm_step",
+                type="llm",
+                name="final_response",
+                depends_on=[f"tool_step_{i}" for i in range(len(tools))]
+            )
+        )
+
+        return graph
