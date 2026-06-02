@@ -77,7 +77,10 @@ class RepoRetriever:
         top_k: int = 5
     ):
 
-        if self.vector_store is None:
+        if (
+            self.vector_store is None
+            or len(self.vector_store.metadata) == 0
+        ):
             return []
 
         query_vector = self.embedder.encode(

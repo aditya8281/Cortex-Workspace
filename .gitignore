@@ -12,3 +12,5 @@ wheels/
 .mypy_cache/
 app.db
 Developer
+.ruff_cache/
+.cortex/

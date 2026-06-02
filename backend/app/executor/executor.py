@@ -10,10 +10,7 @@ from backend.app.executor.schemas import ExecutionResult
 
 from backend.app.rag.service import RAGService
 
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-
+from backend.app.core.paths import PROJECT_ROOT
 
 class AIExecutor:
 

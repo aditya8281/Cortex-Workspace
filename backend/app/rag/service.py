@@ -1,24 +1,31 @@
+from backend.app.rag.index_manager import IndexManager
 from backend.app.rag.retriever import RepoRetriever
 
 
 class RAGService:
 
-    def __init__(self):
+    def __init__(
+        self,
+        repo_path: str
+    ):
+
+        self.repo_path = repo_path
 
         self.retriever = RepoRetriever()
 
         self.initialized = False
 
-    def initialize(
-        self,
-        repo_path: str
-    ):
+    def initialize(self):
 
         if self.initialized:
             return
 
-        self.retriever.build_index(
-            repo_path
+        manager = IndexManager(
+            repo_path=self.repo_path
+        )
+
+        self.retriever.vector_store = (
+            manager.get_store()
         )
 
         self.initialized = True
