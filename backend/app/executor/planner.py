@@ -15,9 +15,10 @@ class Planner:
     def build_plan(self, intent):
 
         tool_candidates = []
-        tools = []
 
         if isinstance(intent, IntentDecision):
+
+            tools = []
 
             if intent.intent == IntentType.TOOL:
                 if intent.subtype == "file_search":
@@ -42,7 +43,6 @@ class Planner:
                 tool_candidates=tool_candidates
             )
 
-        # fallback
         if intent == IntentType.TOOL:
             return ExecutionPlan(
                 intent=intent,
@@ -79,49 +79,43 @@ class Planner:
         )
 
     # -------------------------------------------------
-    # GRAPH BUILDER (STABLE + TRACEABLE)
+    # 🧠 NEW: ADAPTIVE GRAPH BUILDER
     # -------------------------------------------------
-    def build_graph(self, intent) -> ExecutionGraph:
+    def build_graph(self, intent, tool_bias: dict[str, float] | None = None):
 
         graph = ExecutionGraph()
 
-        # -----------------------------
+        # -------------------------
         # MEMORY STEP
-        # -----------------------------
+        # -------------------------
         graph.add_step(
             ExecutionStep(
                 id="memory_step",
                 type="memory",
                 name="memory_recall",
-                depends_on=[]
+                input=None
             )
         )
 
-        # -----------------------------
-        # TOOL SELECTION
-        # -----------------------------
-        tools = self._resolve_tools(intent)
+        # -------------------------
+        # TOOL SELECTION BASED ON BIAS
+        # -------------------------
+        tools = self._select_tools(intent, tool_bias)
 
-        tool_step_ids = []
-
-        for tool_name in tools:
-
-            step_id = f"tool_{tool_name}"
-
+        for i, tool in enumerate(tools):
             graph.add_step(
                 ExecutionStep(
-                    id=step_id,
+                    id=f"tool_step_{i}",
                     type="tool",
-                    name=tool_name,
+                    name=tool,
+                    input=None,
                     depends_on=["memory_step"]
                 )
             )
 
-            tool_step_ids.append(step_id)
-
-        # -----------------------------
-        # LLM STEP (FINAL SYNTHESIS)
-        # -----------------------------
+        # -------------------------
+        # FINAL LLM STEP
+        # -------------------------
         graph.add_step(
             ExecutionStep(
                 id="llm_step",
@@ -129,7 +123,7 @@ class Planner:
                 name="final_response",
                 depends_on=[
                     "memory_step",
-                    *tool_step_ids
+                    *[f"tool_step_{i}" for i in range(len(tools))]
                 ]
             )
         )
@@ -137,21 +131,24 @@ class Planner:
         return graph
 
     # -------------------------------------------------
-    # SINGLE SOURCE TOOL RESOLUTION LOGIC
+    # 🧠 TOOL SELECTION ENGINE (CORE INTELLIGENCE)
     # -------------------------------------------------
-    def _resolve_tools(self, intent):
+    def _select_tools(self, intent, tool_bias: dict[str, float] | None):
 
         tools = []
 
+        # base rules first
         if isinstance(intent, IntentDecision):
 
-            if intent.intent == IntentType.TOOL and intent.subtype == "file_search":
-                tools.append("file_search")
+            if intent.intent == IntentType.TOOL:
+                if intent.subtype == "file_search":
+                    tools.append("file_search")
 
-            elif intent.intent == IntentType.SYSTEM and intent.subtype == "system_scan":
-                tools.append("system_scanner")
+            elif intent.intent == IntentType.SYSTEM:
+                if intent.subtype == "system_scan":
+                    tools.append("system_scanner")
 
-            elif intent.intent == IntentType.RAG and intent.subtype == "repo_rag":
+            elif intent.intent == IntentType.RAG:
                 tools.append("rag")
 
         else:
@@ -161,5 +158,18 @@ class Planner:
                 tools.append("system_scanner")
             elif intent == IntentType.RAG:
                 tools.append("rag")
+
+        # -------------------------
+        # APPLY BIAS (NEW INTELLIGENCE)
+        # -------------------------
+        if not tool_bias:
+            return tools
+
+        # sort tools by historical performance
+        tools = sorted(
+            tools,
+            key=lambda t: tool_bias.get(t, 0.5),
+            reverse=True
+        )
 
         return tools
