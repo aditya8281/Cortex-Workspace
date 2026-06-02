@@ -127,7 +127,10 @@ class Planner:
                 id="llm_step",
                 type="llm",
                 name="final_response",
-                depends_on=[f"tool_step_{i}" for i in range(len(tools))]
+                depends_on=[
+                    "memory_step",
+                    *[f"tool_step_{i}" for i in range(len(tools))]
+                ]
             )
         )
 

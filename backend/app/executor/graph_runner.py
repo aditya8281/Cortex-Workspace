@@ -17,6 +17,7 @@ class GraphRunner:
         state = {
             "query": query,
             "memory": None,
+            "tools": [],
             "tool_map": {},
             "llm": None,
             "completed": set()
@@ -59,6 +60,13 @@ class GraphRunner:
                 state["completed"].add(step.id)
                 state["tool_map"][step.id] = result
                 step.result = result
+
+                if step.type == "memory":
+                    state["memory"] = result
+                elif step.type == "tool" and result is not None:
+                    state["tools"].append(result)
+                elif step.type == "llm":
+                    state["llm"] = result
 
                 pending_steps.remove(step)
 
@@ -148,6 +156,9 @@ class GraphRunner:
 
         # deterministic tool ordering
         for step_id in sorted(state["tool_map"].keys()):
+            if not step_id.startswith("tool_step_"):
+                continue
+
             value = state["tool_map"][step_id]
             if value:
                 prompt_parts.append(str(value))

@@ -8,6 +8,7 @@ from backend.app.executor.planner import Planner
 from backend.app.executor.response_builder import ResponseBuilder
 from backend.app.executor.schemas import ExecutionResult, IntentDecision
 
+from backend.app.executor.tracer import ExecutionTracer
 from backend.app.executor.graph_runner import GraphRunner
 
 from backend.app.rag.service import RAGService
@@ -36,10 +37,11 @@ class AIExecutor:
 
         self.rag = RAGService(str(PROJECT_ROOT))
 
+        self.tool_registry = ToolRegistry(self)
+        self.tracer = ExecutionTracer()
+
         # Graph runtime engine
         self.graph_runner = GraphRunner(self)
-
-        self.tool_registry = ToolRegistry(self)
         
 
     async def execute(

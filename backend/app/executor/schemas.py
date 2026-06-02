@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class IntentType(str, Enum):
@@ -18,7 +18,7 @@ class ExecutionPlan(BaseModel):
     intent: IntentType
     use_memory: bool = True
     use_llm: bool = True
-    tools: list[str] = []
+    tools: list[str] = Field(default_factory=list)
 
 
 class ExecutionResult(BaseModel):
@@ -32,6 +32,6 @@ class IntentDecision(BaseModel):
     confidence_level: IntentConfidence
 
     subtype: str | None = None  # file_search, system_scan, repo_rag, etc.
-    keywords: list[str] = []
+    keywords: list[str] = Field(default_factory=list)
 
     requires_tools: bool = False

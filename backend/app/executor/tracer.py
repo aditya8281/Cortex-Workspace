@@ -1,6 +1,6 @@
 import uuid
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 @dataclass
@@ -20,12 +20,8 @@ class StepTrace:
 @dataclass
 class ExecutionSession:
     execution_id: str
-    created_at: float = time.time()
-    traces: dict[str, Any] = None
-
-    def __post_init__(self):
-        if self.traces is None:
-            self.traces = {}
+    created_at: float = field(default_factory=time.time)
+    traces: dict[str, Any] = field(default_factory=dict)
 
 
 class ExecutionTracer:
@@ -78,8 +74,14 @@ class ExecutionTracer:
     # -------------------------------------------------
     def report(self):
         return {
-            step_id: vars(trace)
-            for step_id, trace in self.traces.items()
+            execution_id: {
+                "created_at": session.created_at,
+                "traces": {
+                    step_id: vars(trace)
+                    for step_id, trace in session.traces.items()
+                }
+            }
+            for execution_id, session in self.sessions.items()
         }
     
     def create_session(self) -> str:

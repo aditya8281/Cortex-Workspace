@@ -1,18 +1,18 @@
 # Cortex Workspace - Project Context
 
-Last verified: 2026-06-02
+Last verified: 2026-06-03
 
 ## Overview
 
-Cortex Workspace is a FastAPI-based backend for an AI-assisted engineering workspace. The current codebase focuses on:
+Cortex Workspace is a FastAPI backend for an AI-assisted engineering workspace. The current codebase centers on:
 
 - user authentication and profile APIs
-- an AI gateway that routes requests into an execution pipeline
-- a lightweight RAG/indexing layer for repository search
-- local memory storage for prior conversations
-- repo and system inspection agents
+- a graph-driven AI execution engine
+- repository search and lightweight RAG
+- persistent conversation memory
+- file-system and system inspection agents
 
-The repository is still backend-first. There is no frontend application yet, and the top-level `docker-compose.yml` is currently empty.
+The repository is still backend-first. There is no frontend app yet, and the top-level `docker-compose.yml` is currently empty.
 
 ## Current Stack
 
@@ -38,7 +38,7 @@ Key behavior:
 - creates a FastAPI app with `settings.APP_NAME`, `settings.DEBUG`, and version `0.1.0`
 - registers `RequestLoggingMiddleware`
 - mounts the API router under `settings.API_V1_PREFIX`
-- exposes a simple `GET /` health-style root response
+- exposes a simple `GET /` root response
 
 The app imports both the `User` and `Memory` ORM models so SQLAlchemy metadata is registered at startup.
 
@@ -50,7 +50,7 @@ Important values:
 
 - `APP_NAME=Cortex Workspace`
 - `API_V1_PREFIX=/api/v1`
-- `DEBUG` is now normalized defensively so values like `true`, `false`, `release`, `prod`, and `production` do not crash app import
+- `DEBUG` is normalized defensively so values like `true`, `false`, `release`, `prod`, and `production` do not crash app import
 - `DATABASE_URL` and `SECRET_KEY` are required from the environment or `.env`
 - AI settings are read from `AI_MODE`, `AI_MODEL`, `AI_API_KEY`, `AI_API_URL`, and `LOCAL_MODEL`
 
@@ -127,9 +127,9 @@ Behavior:
 
 ### Gateway and Executor
 
-The request flow is:
+The request flow is now graph-based:
 
-`API -> AIGateway -> AIExecutor -> planner/tools/memory/LLM -> ResponseBuilder`
+`API -> AIGateway -> AIExecutor -> IntentClassifier -> Planner.build_graph() -> GraphRunner -> ToolRegistry / Memory / LLM -> ResponseBuilder`
 
 Relevant files:
 
@@ -137,19 +137,26 @@ Relevant files:
 - [backend/app/executor/executor.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/executor.py)
 - [backend/app/executor/intent_classifier.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/intent_classifier.py)
 - [backend/app/executor/planner.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/planner.py)
+- [backend/app/executor/graph.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/graph.py)
+- [backend/app/executor/graph_runner.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/graph_runner.py)
+- [backend/app/executor/tool_registry.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/tool_registry.py)
+- [backend/app/executor/tracer.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/tracer.py)
 - [backend/app/executor/response_builder.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/response_builder.py)
 
 Current executor behavior:
 
-- classifies the query into `chat`, `tool`, `system`, or `rag`
-- optionally looks up conversation memory for authenticated requests
-- can call the file search agent, system scanner, or repository RAG
-- sends the final prompt to the selected LLM provider
-- stores the new memory for authenticated requests
+- classifies the query into an `IntentDecision` with `intent`, `confidence`, `confidence_level`, `subtype`, and `keywords`
+- builds an execution graph rather than a flat plan
+- runs a dedicated memory step first
+- executes tool steps via the `ToolRegistry`
+- runs the final LLM step after memory and tool dependencies are satisfied
+- stores authenticated conversation memory after the response is generated
+- passes the final assembled context to `ResponseBuilder`
 
-Small but important implementation detail:
+Important implementation detail:
 
 - `user_id` is checked with `is not None`, so `0` is not treated as missing
+- `GraphRunner` now records memory, tool, and LLM outputs back into state so the executor can rebuild the final response correctly
 
 ### Providers
 
@@ -213,7 +220,7 @@ Database wiring:
 
 Important migration detail:
 
-- Alembic now imports both `User` and `Memory` so future autogeneration sees the full ORM metadata
+- Alembic imports both `User` and `Memory` so future autogeneration sees the full ORM metadata
 
 ## Tests
 
@@ -244,6 +251,11 @@ Test support files:
 
 - normalized `DEBUG` parsing so nonstandard environment values do not crash app import
 - changed executor memory checks to use `user_id is not None`
+- fixed `AIExecutor` initialization order so `tool_registry` and `tracer` exist before `GraphRunner` is created
+- wired graph execution state so memory, tool, and LLM outputs are preserved for final response building
+- ensured the LLM step waits for memory and tool steps before running
+- fixed `ExecutionTracer.report()` to read from sessions instead of a missing attribute
+- fixed `ExecutionSession.created_at` to use a per-session timestamp
 - guarded the index rebuild script against empty content
 - imported `Memory` in Alembic env so migrations stay aligned with the ORM
-- updated this context file to match the actual route paths and current module structure
+- updated this context file to match the current graph-based executor architecture and route layout
