@@ -81,7 +81,9 @@ class GraphRunner:
                     state["memory"] = result
 
                 elif step.type == "tool":
-                    state["tools"].append(result)
+                    normalized = self._normalize_tool_output(result)
+                    if normalized:
+                        state["tools"].append(normalized)
 
                 elif step.type == "llm":
                     state["llm"] = result
@@ -95,6 +97,20 @@ class GraphRunner:
     # -------------------------------------------------
     def _is_ready(self, step: ExecutionStep, state) -> bool:
         return all(dep in state["completed"] for dep in step.depends_on)
+
+    def _normalize_tool_output(self, result):
+        if isinstance(result, dict) and "output" in result:
+            output = result["output"]
+
+            if output is None:
+                return None
+
+            return str(output)
+
+        if result is None:
+            return None
+
+        return str(result)
 
     # -------------------------------------------------
     # STEP EXECUTION ROUTER
@@ -247,7 +263,9 @@ class GraphRunner:
 
             value = state["tool_map"][step_id]
             if value:
-                prompt_parts.append(str(value))
+                normalized = self._normalize_tool_output(value)
+                if normalized:
+                    prompt_parts.append(normalized)
 
         prompt_parts.append(query)
 

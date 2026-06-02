@@ -28,6 +28,7 @@ class ExecutionTracer:
 
     def __init__(self):
         self.sessions: dict[str, ExecutionSession] = {}
+        self.events: list[dict[str, Any]] = []
 
     # -------------------------------------------------
     # STEP START
@@ -83,6 +84,15 @@ class ExecutionTracer:
             }
             for execution_id, session in self.sessions.items()
         }
+
+    def log_event(self, event_type: str, payload: Any):
+        self.events.append(
+            {
+                "event_type": event_type,
+                "payload": payload,
+                "timestamp": time.time(),
+            }
+        )
     
     def create_session(self) -> str:
         execution_id = str(uuid.uuid4())

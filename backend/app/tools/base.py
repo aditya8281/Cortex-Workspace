@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
+from backend.app.tools.metadata import ToolMetadata
+
 
 class ToolContext:
     """
@@ -56,3 +58,14 @@ class BaseTool(ABC):
             "tool": self.name,
             "success": result is not None
         }
+        
+
+class RegisteredTool(BaseTool):
+    """
+    BaseTool + metadata binding
+    """
+
+    metadata: ToolMetadata
+
+    def get_metadata(self) -> ToolMetadata:
+        return self.metadata

@@ -6,7 +6,7 @@ from backend.app.agent.system_scanner import SystemScanner
 from backend.app.executor.intent_classifier import IntentClassifier
 from backend.app.executor.planner import Planner
 from backend.app.executor.response_builder import ResponseBuilder
-from backend.app.executor.schemas import ExecutionResult, IntentDecision
+from backend.app.executor.schemas import ExecutionResult
 
 from backend.app.executor.tracer import ExecutionTracer
 from backend.app.executor.graph_runner import GraphRunner
@@ -17,6 +17,7 @@ from backend.app.core.logging import get_logger
 from backend.app.core.paths import PROJECT_ROOT
 
 from backend.app.executor.tool_registry import ToolRegistry
+from backend.app.executor.context import ExecutionContext
 
 
 logger = get_logger(__name__)
@@ -25,37 +26,37 @@ logger = get_logger(__name__)
 class AIExecutor:
 
     def __init__(self):
+        # core NLP pipeline
         self.classifier = IntentClassifier()
         self.planner = Planner()
         self.builder = ResponseBuilder()
 
+        # model + memory
         self.llm = LLMRouter()
         self.memory = MemoryRepository()
 
+        # agents (kept for backward compatibility / future use)
         self.file_agent = FileSearchAgent()
         self.system_agent = SystemScanner()
-
         self.rag = RAGService(str(PROJECT_ROOT))
 
+        # tool system (SINGLE SOURCE OF TRUTH)
         self.tool_registry = ToolRegistry(self)
+
+        # execution observability
         self.tracer = ExecutionTracer()
 
-        # Graph runtime engine
+        # graph engine
         self.graph_runner = GraphRunner(self)
-        
 
+    # -------------------------------------------------
+    # MAIN ENTRY
+    # -------------------------------------------------
     async def execute(
         self,
         query: str,
         user_id: int | None = None
     ) -> ExecutionResult:
-
-        from backend.app.executor.context import ExecutionContext
-
-        ctx = ExecutionContext(
-            query=query,
-            user_id=user_id
-        )
 
         logger.info(
             f"executor_started user_id={user_id} query={query[:100]}"
@@ -66,21 +67,17 @@ class AIExecutor:
         # -------------------------------------------------
         intent = self.classifier.classify(query)
 
-        logger.info(
-            f"classified_intent={intent}"
-        )
+        logger.info(f"classified_intent={intent}")
 
         # -------------------------------------------------
-        # GRAPH BUILDING (CORE UPGRADE)
+        # BUILD EXECUTION GRAPH
         # -------------------------------------------------
         graph = self.planner.build_graph(intent)
 
-        logger.info(
-            f"execution_graph_built steps={len(graph.steps)}"
-        )
+        logger.info(f"execution_graph_built steps={len(graph.steps)}")
 
         # -------------------------------------------------
-        # GRAPH EXECUTION
+        # RUN GRAPH
         # -------------------------------------------------
         result = await self.graph_runner.run(
             graph=graph,
@@ -89,7 +86,7 @@ class AIExecutor:
         )
 
         # -------------------------------------------------
-        # BUILD FINAL CONTEXT
+        # FINAL CONTEXT BUILD
         # -------------------------------------------------
         ctx = ExecutionContext(
             query=query,

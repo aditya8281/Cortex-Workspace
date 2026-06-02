@@ -1,45 +1,60 @@
-from typing import Dict, Any, List
+from typing import Dict, List
+
 from backend.app.tools.base import BaseTool, ToolContext
+from backend.app.tools.builtins import FileSearchTool, RagTool, SystemScannerTool
 
 
 class ToolRegistry:
     """
-    Now acts as TOOL ORCHESTRATOR, not just function map.
+    SINGLE RESPONSIBILITY:
+    - store tools
+    - expose tools to executor
     """
 
-    def __init__(self):
+    def __init__(self, executor=None):
+        self.executor = executor
         self.tools: Dict[str, BaseTool] = {}
+
+        if executor is not None:
+            self.register(FileSearchTool(executor))
+            self.register(SystemScannerTool(executor))
+            self.register(RagTool(executor))
 
     def register(self, tool: BaseTool):
         self.tools[tool.name] = tool
 
+    def get(self, name: str):
+        return self.tools.get(name)
+
     def list_tools(self) -> List[str]:
         return list(self.tools.keys())
 
-    async def execute_auto(self, query: str, user_id: int = None) -> Dict[str, Any]:
-        """
-        AUTONOMOUS MODE:
-        - tools decide themselves if they should run
-        """
+    def all(self) -> List[BaseTool]:
+        return list(self.tools.values())
 
-        context = ToolContext(user_id=user_id, query=query)
+    async def execute(
+        self,
+        name: str,
+        context: ToolContext,
+    ):
+        tool = self.get(name)
 
-        results = []
+        if tool is None:
+            return None
 
-        for tool in self.tools.values():
-            decision = tool.decide(context)
+        decision = tool.decide(context)
 
-            if decision.get("should_run"):
-                output = await tool.run(context, decision.get("params", {}))
+        if not decision.get("should_run", False):
+            return {
+                "tool": name,
+                "skipped": True,
+                "reason": decision.get("reason", "no reason"),
+            }
 
-                results.append({
-                    "tool": tool.name,
-                    "output": output,
-                    "reflection": tool.reflect(output),
-                    "reason": decision.get("reason")
-                })
+        result = await tool.run(context, decision.get("params", {}))
 
         return {
-            "query": query,
-            "results": results
+            "tool": name,
+            "output": result,
+            "reflection": tool.reflect(result),
         }
