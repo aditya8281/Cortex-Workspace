@@ -8,8 +8,11 @@ retriever.build_index(
     str(PROJECT_ROOT)
 )
 
-retriever.vector_store.save(
-    ".cortex"
-)
+if retriever.vector_store is None:
+    print("No indexable content found. Skipping save.")
+else:
+    retriever.vector_store.save(
+        ".cortex"
+    )
 
 print("Repository index rebuilt.")

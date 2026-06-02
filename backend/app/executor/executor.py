@@ -64,7 +64,7 @@ class AIExecutor:
             f"execution_plan={plan}"
         )
 
-        if plan.use_memory and user_id:
+        if plan.use_memory and user_id is not None:
             ctx.memory = self.memory.search(
                 user_id=user_id,
                 query=query
@@ -128,7 +128,7 @@ class AIExecutor:
                 final_prompt
             )
 
-            if user_id:
+            if user_id is not None:
                 self.memory.add(
                     user_id=user_id,
                     query=query,

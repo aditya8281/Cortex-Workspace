@@ -30,6 +30,7 @@ class RepoRetriever:
         self,
         repo_path: str
     ):
+        self.vector_store = None
 
         files = self.scanner.scan(repo_path)
 

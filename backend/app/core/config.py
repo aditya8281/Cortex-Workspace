@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +31,23 @@ class Settings(BaseSettings):
     AI_API_URL: str | None = None
 
     LOCAL_MODEL: str = "llama3"
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def normalize_debug(cls, value):
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+
+            if normalized in {"1", "true", "yes", "on"}:
+                return True
+
+            if normalized in {"0", "false", "no", "off", "release", "prod", "production"}:
+                return False
+
+        return value
 
 
 settings = Settings()

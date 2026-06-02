@@ -12,9 +12,12 @@ class RepoScanner:
 
         for path in root_path.rglob("*"):
             if path.is_file():
-                # Exclude hidden directories (starting with '.') and dependency directories
+                # Exclude hidden directories (starting with '.') and dependency directories.
                 parts = path.relative_to(root_path).parts
-                if any(p.startswith(".") or p in ("venv", "node_modules", "__pycache__") for p in parts):
+                if any(
+                    p.startswith(".") or p in ("venv", "node_modules", "__pycache__")
+                    for p in parts
+                ):
                     continue
 
                 if path.suffix in (".py", ".md", ".txt"):
