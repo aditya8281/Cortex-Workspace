@@ -10,15 +10,14 @@ from backend.app.executor.graph import ExecutionGraph, ExecutionStep
 class Planner:
 
     # -------------------------------------------------
-    # LEGACY PATH (DO NOT REMOVE YET)
+    # LEGACY PATH (UNCHANGED)
     # -------------------------------------------------
     def build_plan(self, intent):
 
         tool_candidates = []
+        tools = []
 
         if isinstance(intent, IntentDecision):
-
-            tools = []
 
             if intent.intent == IntentType.TOOL:
                 if intent.subtype == "file_search":
@@ -43,7 +42,7 @@ class Planner:
                 tool_candidates=tool_candidates
             )
 
-        # legacy fallback
+        # fallback
         if intent == IntentType.TOOL:
             return ExecutionPlan(
                 intent=intent,
@@ -80,59 +79,49 @@ class Planner:
         )
 
     # -------------------------------------------------
-    # NEW: GRAPH BUILDER (CORTEX AGENT CORE START)
+    # GRAPH BUILDER (STABLE + TRACEABLE)
     # -------------------------------------------------
     def build_graph(self, intent) -> ExecutionGraph:
 
         graph = ExecutionGraph()
 
-        # MEMORY STEP (always first if needed later)
+        # -----------------------------
+        # MEMORY STEP
+        # -----------------------------
         graph.add_step(
             ExecutionStep(
                 id="memory_step",
                 type="memory",
                 name="memory_recall",
-                input=None
+                depends_on=[]
             )
         )
 
-        # TOOL STEP(S)
-        tools = []
+        # -----------------------------
+        # TOOL SELECTION
+        # -----------------------------
+        tools = self._resolve_tools(intent)
 
-        if isinstance(intent, IntentDecision):
-            intent_type = intent.intent
-            subtype = intent.subtype
+        tool_step_ids = []
 
-            if intent_type == IntentType.TOOL and subtype == "file_search":
-                tools.append("file_search")
+        for tool_name in tools:
 
-            elif intent_type == IntentType.SYSTEM and subtype == "system_scan":
-                tools.append("system_scanner")
+            step_id = f"tool_{tool_name}"
 
-            elif intent_type == IntentType.RAG and subtype == "repo_rag":
-                tools.append("rag")
-
-        else:
-            # legacy fallback
-            if intent == IntentType.TOOL:
-                tools.append("file_search")
-            elif intent == IntentType.SYSTEM:
-                tools.append("system_scanner")
-            elif intent == IntentType.RAG:
-                tools.append("rag")
-
-        for i, tool in enumerate(tools):
             graph.add_step(
                 ExecutionStep(
-                    id=f"tool_step_{i}",
+                    id=step_id,
                     type="tool",
-                    name=tool,
-                    input=None,
+                    name=tool_name,
                     depends_on=["memory_step"]
                 )
             )
 
-        # LLM STEP (final synthesis)
+            tool_step_ids.append(step_id)
+
+        # -----------------------------
+        # LLM STEP (FINAL SYNTHESIS)
+        # -----------------------------
         graph.add_step(
             ExecutionStep(
                 id="llm_step",
@@ -140,9 +129,37 @@ class Planner:
                 name="final_response",
                 depends_on=[
                     "memory_step",
-                    *[f"tool_step_{i}" for i in range(len(tools))]
+                    *tool_step_ids
                 ]
             )
         )
 
         return graph
+
+    # -------------------------------------------------
+    # SINGLE SOURCE TOOL RESOLUTION LOGIC
+    # -------------------------------------------------
+    def _resolve_tools(self, intent):
+
+        tools = []
+
+        if isinstance(intent, IntentDecision):
+
+            if intent.intent == IntentType.TOOL and intent.subtype == "file_search":
+                tools.append("file_search")
+
+            elif intent.intent == IntentType.SYSTEM and intent.subtype == "system_scan":
+                tools.append("system_scanner")
+
+            elif intent.intent == IntentType.RAG and intent.subtype == "repo_rag":
+                tools.append("rag")
+
+        else:
+            if intent == IntentType.TOOL:
+                tools.append("file_search")
+            elif intent == IntentType.SYSTEM:
+                tools.append("system_scanner")
+            elif intent == IntentType.RAG:
+                tools.append("rag")
+
+        return tools

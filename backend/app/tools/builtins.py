@@ -1,7 +1,11 @@
 from backend.app.tools.base import RegisteredTool, ToolContext
+from backend.app.tools.base import ToolResult
 from backend.app.tools.metadata import ToolMetadata
 
 
+# -------------------------------------------------
+# FILE SEARCH TOOL
+# -------------------------------------------------
 class FileSearchTool(RegisteredTool):
     name = "file_search"
 
@@ -16,6 +20,7 @@ class FileSearchTool(RegisteredTool):
         )
 
     def decide(self, context: ToolContext):
+
         query = context.query.strip()
 
         if not query:
@@ -27,14 +32,32 @@ class FileSearchTool(RegisteredTool):
 
         return {
             "should_run": True,
-            "reason": "workspace search requested",
+            "reason": "file search requested",
             "params": {},
         }
 
     async def run(self, context: ToolContext, params):
-        return self.executor.file_agent.search(context.query)
+
+        try:
+            result = self.executor.file_agent.search(context.query)
+
+            return {
+                "query": context.query,
+                "results": result,
+                "count": len(result) if result else 0
+            }
+
+        except Exception as e:
+
+            return {
+                "error": str(e),
+                "query": context.query
+            }
 
 
+# -------------------------------------------------
+# SYSTEM SCANNER TOOL
+# -------------------------------------------------
 class SystemScannerTool(RegisteredTool):
     name = "system_scanner"
 
@@ -49,6 +72,7 @@ class SystemScannerTool(RegisteredTool):
         )
 
     def decide(self, context: ToolContext):
+
         return {
             "should_run": True,
             "reason": "system diagnostics requested",
@@ -56,9 +80,26 @@ class SystemScannerTool(RegisteredTool):
         }
 
     async def run(self, context: ToolContext, params):
-        return self.executor.system_agent.scan(context.query)
+
+        try:
+            result = self.executor.system_agent.scan()
+
+            return {
+                "status": "ok",
+                "diagnostics": result
+            }
+
+        except Exception as e:
+
+            return {
+                "status": "error",
+                "error": str(e)
+            }
 
 
+# -------------------------------------------------
+# RAG TOOL
+# -------------------------------------------------
 class RagTool(RegisteredTool):
     name = "rag"
 
@@ -73,19 +114,42 @@ class RagTool(RegisteredTool):
         )
 
     def decide(self, context: ToolContext):
+
         return {
             "should_run": True,
-            "reason": "repository context requested",
+            "reason": "repository retrieval requested",
             "params": {},
         }
 
     async def run(self, context: ToolContext, params):
-        results = self.executor.rag.search(context.query)
 
-        if not results:
-            return None
+        try:
+            results = self.executor.rag.search(context.query)
 
-        return "\n\n".join(
-            item["data"]["chunk"][:500]
-            for item in results
-        )
+            if not results:
+                return {
+                    "query": context.query,
+                    "chunks": [],
+                    "count": 0
+                }
+
+            chunks = []
+
+            for item in results:
+                try:
+                    chunks.append(item["data"]["chunk"][:500])
+                except Exception:
+                    continue
+
+            return {
+                "query": context.query,
+                "chunks": chunks,
+                "count": len(chunks)
+            }
+
+        except Exception as e:
+
+            return {
+                "error": str(e),
+                "query": context.query
+            }

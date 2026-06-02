@@ -1,9 +1,15 @@
 import asyncio
+from typing import Any, Dict, List
+
 from backend.app.executor.graph import ExecutionGraph, ExecutionStep
 from backend.app.tools.base import ToolContext
 
 
 class GraphRunner:
+    """
+    Deterministic DAG execution engine for Cortex Workspace.
+    Executes memory → tools → LLM steps with traceability and stable state.
+    """
 
     def __init__(self, executor):
         self.executor = executor
@@ -11,7 +17,7 @@ class GraphRunner:
         self.tracer = self.executor.tracer
 
     # -------------------------------------------------
-    # MAIN RUN METHOD (NOW TOOL-AWARE + PLAN-AWARE)
+    # MAIN RUN LOOP
     # -------------------------------------------------
     async def run(
         self,
@@ -19,34 +25,14 @@ class GraphRunner:
         query: str,
         user_id: int | None,
         plan=None
-    ):
-
-        # -------------------------------------------------
-        # EXECUTION STATE
-        # -------------------------------------------------
-        state = {
-            "query": query,
-            "memory": None,
-            "tools": [],
-            "tool_map": {},
-            "llm": None,
-            "completed": set(),
-
-            # agentic extensions
-            "tool_candidates": [],
-            "tool_decisions": {}
-        }
-
-        if plan and hasattr(plan, "tool_candidates"):
-            state["tool_candidates"] = plan.tool_candidates
-
-        pending_steps = graph.steps.copy()
+    ) -> Dict[str, Any]:
 
         execution_id = self.tracer.create_session()
 
-        # -------------------------------------------------
-        # DAG EXECUTION LOOP
-        # -------------------------------------------------
+        state = self._init_state(query, plan)
+
+        pending_steps: List[ExecutionStep] = list(graph.steps)
+
         while pending_steps:
 
             ready_steps = [
@@ -73,47 +59,66 @@ class GraphRunner:
 
             for step, result in zip(ready_steps, results):
 
-                state["completed"].add(step.id)
-                state["tool_map"][step.id] = result
-                step.result = result
-
-                if step.type == "memory":
-                    state["memory"] = result
-
-                elif step.type == "tool":
-                    normalized = self._normalize_tool_output(result)
-                    if normalized:
-                        state["tools"].append(normalized)
-
-                elif step.type == "llm":
-                    state["llm"] = result
-
+                self._apply_step_result(step, result, state)
                 pending_steps.remove(step)
+
+        return state
+
+    # -------------------------------------------------
+    # STATE INITIALIZATION
+    # -------------------------------------------------
+    def _init_state(self, query: str, plan) -> Dict[str, Any]:
+
+        state = {
+            "query": query,
+
+            # deterministic execution tracking
+            "completed": [],
+            "step_results": {},
+
+            # execution outputs
+            "memory": None,
+            "tools": [],
+            "llm": None,
+
+            # agentic extensions
+            "tool_candidates": [],
+            "tool_decisions": {}
+        }
+
+        if plan and hasattr(plan, "tool_candidates"):
+            state["tool_candidates"] = plan.tool_candidates
 
         return state
 
     # -------------------------------------------------
     # DAG READY CHECK
     # -------------------------------------------------
-    def _is_ready(self, step: ExecutionStep, state) -> bool:
+    def _is_ready(self, step: ExecutionStep, state: Dict[str, Any]) -> bool:
         return all(dep in state["completed"] for dep in step.depends_on)
 
-    def _normalize_tool_output(self, result):
-        if isinstance(result, dict) and "output" in result:
-            output = result["output"]
+    # -------------------------------------------------
+    # APPLY RESULTS TO STATE (SINGLE SOURCE OF TRUTH)
+    # -------------------------------------------------
+    def _apply_step_result(self, step: ExecutionStep, result: Any, state: Dict[str, Any]):
 
-            if output is None:
-                return None
+        state["completed"].append(step.id)
+        state["step_results"][step.id] = result
+        step.result = result
 
-            return str(output)
+        if step.type == "memory":
+            state["memory"] = result
 
-        if result is None:
-            return None
+        elif step.type == "tool":
+            normalized = self._normalize_tool_output(result)
+            if normalized:
+                state["tools"].append(normalized)
 
-        return str(result)
+        elif step.type == "llm":
+            state["llm"] = result
 
     # -------------------------------------------------
-    # STEP EXECUTION ROUTER
+    # STEP EXECUTOR
     # -------------------------------------------------
     async def _execute_step(
         self,
@@ -166,10 +171,14 @@ class GraphRunner:
                 error=str(e)
             )
 
-            return f"ERROR: {str(e)}"
+            return {
+                "status": "error",
+                "error": str(e),
+                "step": step.id
+            }
 
     # -------------------------------------------------
-    # MEMORY STEP
+    # MEMORY STEP (RAW RETRIEVAL ONLY)
     # -------------------------------------------------
     async def _run_memory(self, query, user_id):
 
@@ -182,7 +191,7 @@ class GraphRunner:
         )
 
     # -------------------------------------------------
-    # TOOL BRAIN EXECUTION (NEW CORE LOGIC)
+    # TOOL EXECUTION (DECIDE → RUN → REFLECT)
     # -------------------------------------------------
     async def _run_tool_autonomous(
         self,
@@ -195,7 +204,11 @@ class GraphRunner:
         tool = self.tools.tools.get(tool_name)
 
         if not tool:
-            return None
+            return {
+                "tool": tool_name,
+                "status": "missing",
+                "output": None
+            }
 
         context = ToolContext(
             user_id=user_id,
@@ -203,7 +216,6 @@ class GraphRunner:
             state=state
         )
 
-        # 1. TOOL DECISION (BRAIN)
         decision = tool.decide(context)
 
         self.tracer.log_event(
@@ -214,61 +226,81 @@ class GraphRunner:
             }
         )
 
-        # 2. SKIP IF NOT NEEDED
-        if not decision.get("should_run"):
+        if not decision.get("should_run", True):
             return {
                 "tool": tool_name,
-                "skipped": True,
-                "reason": decision.get("reason", "no reason")
+                "status": "skipped",
+                "reason": decision.get("reason", "no reason"),
+                "output": None
             }
 
-        # 3. EXECUTE TOOL
-        result = await tool.run(
-            context,
-            decision.get("params", {})
-        )
+        try:
+            result = await tool.run(
+                context,
+                decision.get("params", {})
+            )
 
-        # 4. REFLECTION (lightweight feedback layer)
-        reflection = tool.reflect(result)
+            reflection = tool.reflect(result)
 
-        self.tracer.log_event(
-            "tool_result",
-            {
+            state["tool_decisions"][tool_name] = decision
+
+            self.tracer.log_event(
+                "tool_result",
+                {
+                    "tool": tool_name,
+                    "reflection": reflection
+                }
+            )
+
+            return {
                 "tool": tool_name,
+                "status": "success",
+                "output": result,
                 "reflection": reflection
             }
-        )
 
-        state["tool_decisions"][tool_name] = decision
+        except Exception as e:
 
-        return {
-            "tool": tool_name,
-            "output": result,
-            "reflection": reflection
-        }
+            return {
+                "tool": tool_name,
+                "status": "error",
+                "output": None,
+                "error": str(e)
+            }
 
     # -------------------------------------------------
-    # LLM STEP (FINAL SYNTHESIS)
+    # LLM FINAL SYNTHESIS STEP
     # -------------------------------------------------
     async def _run_llm(self, state, query):
 
         prompt_parts = []
 
+        # memory
         if state["memory"]:
             prompt_parts.append(str(state["memory"]))
 
-        for step_id in sorted(state["tool_map"].keys()):
-            if not step_id.startswith("tool_step_"):
-                continue
+        # tool outputs (clean + deterministic)
+        for tool_result in state["tools"]:
+            prompt_parts.append(str(tool_result))
 
-            value = state["tool_map"][step_id]
-            if value:
-                normalized = self._normalize_tool_output(value)
-                if normalized:
-                    prompt_parts.append(normalized)
-
+        # user query last
         prompt_parts.append(query)
 
         final_prompt = "\n\n".join(prompt_parts)
 
         return await self.executor.llm.generate(final_prompt)
+
+    # -------------------------------------------------
+    # NORMALIZATION
+    # -------------------------------------------------
+    def _normalize_tool_output(self, result):
+
+        if not result:
+            return None
+
+        if isinstance(result, dict):
+            if result.get("status") == "error":
+                return f"[TOOL_ERROR] {result.get('error', 'unknown error')}"
+            return str(result.get("output", result))
+
+        return str(result)

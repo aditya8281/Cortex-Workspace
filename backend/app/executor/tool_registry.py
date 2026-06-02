@@ -1,6 +1,6 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
-from backend.app.tools.base import BaseTool, ToolContext
+from backend.app.tools.base import BaseTool, ToolContext, ToolResult
 from backend.app.tools.builtins import FileSearchTool, RagTool, SystemScannerTool
 
 
@@ -8,7 +8,7 @@ class ToolRegistry:
     """
     SINGLE RESPONSIBILITY:
     - store tools
-    - expose tools to executor
+    - provide unified execution access
     """
 
     def __init__(self, executor=None):
@@ -20,10 +20,16 @@ class ToolRegistry:
             self.register(SystemScannerTool(executor))
             self.register(RagTool(executor))
 
+    # -------------------------------------------------
+    # REGISTRATION
+    # -------------------------------------------------
     def register(self, tool: BaseTool):
         self.tools[tool.name] = tool
 
-    def get(self, name: str):
+    # -------------------------------------------------
+    # LOOKUP
+    # -------------------------------------------------
+    def get(self, name: str) -> Optional[BaseTool]:
         return self.tools.get(name)
 
     def list_tools(self) -> List[str]:
@@ -32,29 +38,24 @@ class ToolRegistry:
     def all(self) -> List[BaseTool]:
         return list(self.tools.values())
 
+    # -------------------------------------------------
+    # SINGLE EXECUTION AUTHORITY (IMPORTANT FIX)
+    # -------------------------------------------------
     async def execute(
         self,
         name: str,
         context: ToolContext,
-    ):
+    ) -> ToolResult:
+
         tool = self.get(name)
 
         if tool is None:
-            return None
+            return ToolResult(
+                tool=name,
+                status="error",
+                output=None,
+                reason="tool_not_found"
+            )
 
-        decision = tool.decide(context)
-
-        if not decision.get("should_run", False):
-            return {
-                "tool": name,
-                "skipped": True,
-                "reason": decision.get("reason", "no reason"),
-            }
-
-        result = await tool.run(context, decision.get("params", {}))
-
-        return {
-            "tool": name,
-            "output": result,
-            "reflection": tool.reflect(result),
-        }
+        # DELEGATE TO BASE TOOL EXECUTION PIPELINE
+        return await tool.execute(context)

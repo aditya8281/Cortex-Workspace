@@ -67,35 +67,56 @@ class AIExecutor:
         # -------------------------------------------------
         intent = self.classifier.classify(query)
 
-        logger.info(f"classified_intent={intent}")
-
         # -------------------------------------------------
         # BUILD EXECUTION GRAPH
         # -------------------------------------------------
         graph = self.planner.build_graph(intent)
 
-        logger.info(f"execution_graph_built steps={len(graph.steps)}")
-
         # -------------------------------------------------
-        # RUN GRAPH
+        # RUN GRAPH (RAW EXECUTION STATE)
         # -------------------------------------------------
-        result = await self.graph_runner.run(
+        raw_state = await self.graph_runner.run(
             graph=graph,
             query=query,
             user_id=user_id
         )
 
         # -------------------------------------------------
-        # FINAL CONTEXT BUILD
+        # MAP GRAPH → EXECUTION CONTEXT (IMPORTANT FIX)
         # -------------------------------------------------
-        ctx = ExecutionContext(
+        ctx = self._build_execution_context(
             query=query,
             user_id=user_id,
-            memory=result.get("memory"),
-            tool_results=result.get("tools", []),
-            llm_response=result.get("llm")
+            raw_state=raw_state
         )
 
         logger.info("executor_finished")
 
         return self.builder.build(ctx)
+    
+    def _build_execution_context(
+        self,
+        query: str,
+        user_id: int | None,
+        raw_state: dict
+    ) -> ExecutionContext:
+
+        # MEMORY
+        memory = raw_state.get("memory")
+
+        # TOOL RESULTS (keep structured if possible)
+        tools = []
+
+        for tool in raw_state.get("tools", []):
+            tools.append(tool)
+
+        # LLM OUTPUT
+        llm = raw_state.get("llm")
+
+        return ExecutionContext(
+            query=query,
+            user_id=user_id,
+            memory=memory,
+            tool_results=tools,
+            llm_response=llm
+        )

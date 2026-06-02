@@ -9,32 +9,31 @@ class ResponseBuilder:
         sections = []
 
         # -------------------------------------------------
-        # MEMORY LAYER (contextual, lowest priority)
+        # MEMORY LAYER (contextual grounding)
         # -------------------------------------------------
         if ctx.memory:
             sections.append(
-                "🧠 Memory Context:\n" + ctx.memory
+                self._format_memory(ctx.memory)
             )
 
         # -------------------------------------------------
-        # TOOL LAYER (ground truth, medium priority)
+        # TOOL LAYER (structured grounding)
         # -------------------------------------------------
         if ctx.tool_results:
-            tool_block = "\n\n".join(ctx.tool_results)
             sections.append(
-                "🛠 Tool Results:\n" + tool_block
+                self._format_tools(ctx.tool_results)
             )
 
         # -------------------------------------------------
-        # LLM LAYER (final reasoning, highest priority)
+        # LLM LAYER (final reasoning)
         # -------------------------------------------------
         if ctx.llm_response:
             sections.append(
-                "🤖 Final Response:\n" + ctx.llm_response
+                self._format_llm(ctx.llm_response)
             )
 
         # -------------------------------------------------
-        # SAFETY: fallback if everything empty
+        # FALLBACK
         # -------------------------------------------------
         if not sections:
             sections.append(
@@ -44,5 +43,59 @@ class ResponseBuilder:
         return ExecutionResult(
             answer="\n\n".join(sections),
             source="executor_v2",
-            memory_used=ctx.memory is not None
+            memory_used=bool(ctx.memory)
         )
+
+    # -------------------------------------------------
+    # MEMORY FORMATTING
+    # -------------------------------------------------
+    def _format_memory(self, memory):
+
+        return "🧠 Memory Context:\n" + str(memory)
+
+    # -------------------------------------------------
+    # TOOL FORMATTING (IMPORTANT UPGRADE)
+    # -------------------------------------------------
+    def _format_tools(self, tool_results):
+
+        blocks = ["🛠 Tool Results:"]
+
+        for i, tool in enumerate(tool_results):
+
+            blocks.append(
+                f"\n--- Tool {i + 1} ---\n{self._serialize_tool(tool)}"
+            )
+
+        return "\n".join(blocks)
+
+    # -------------------------------------------------
+    # TOOL SERIALIZATION (CRITICAL FIX)
+    # -------------------------------------------------
+    def _serialize_tool(self, tool):
+
+        # already structured dict (new system)
+        if isinstance(tool, dict):
+
+            parts = []
+
+            for k, v in tool.items():
+
+                if v is None:
+                    continue
+
+                if isinstance(v, (list, dict)):
+                    parts.append(f"{k}: {v}")
+                else:
+                    parts.append(f"{k}: {str(v)}")
+
+            return "\n".join(parts)
+
+        # fallback
+        return str(tool)
+
+    # -------------------------------------------------
+    # LLM FORMATTING
+    # -------------------------------------------------
+    def _format_llm(self, llm_response):
+
+        return "🤖 Final Response:\n" + str(llm_response)

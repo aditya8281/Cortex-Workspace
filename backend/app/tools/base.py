@@ -1,40 +1,44 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Literal
+from dataclasses import dataclass
 
-from backend.app.tools.metadata import ToolMetadata
 
-
+# -------------------------------------------------
+# TOOL CONTEXT (SAFE + STRUCTURED)
+# -------------------------------------------------
+@dataclass
 class ToolContext:
-    """
-    Shared context passed to every tool.
-    """
-    def __init__(
-        self,
-        user_id: Optional[int] = None,
-        query: str = "",
-        state: Optional[Dict[str, Any]] = None
-    ):
-        self.user_id = user_id
-        self.query = query
-        self.state = state or {}
+    user_id: Optional[int] = None
+    query: str = ""
+    state: Dict[str, Any] = None
 
 
+# -------------------------------------------------
+# STANDARDIZED TOOL RESULT (CRITICAL FIX)
+# -------------------------------------------------
+@dataclass
+class ToolResult:
+    tool: str
+    status: Literal["success", "skipped", "error"]
+    output: Any = None
+    reason: Optional[str] = None
+    meta: Dict[str, Any] = None
+
+
+# -------------------------------------------------
+# BASE TOOL
+# -------------------------------------------------
 class BaseTool(ABC):
-    """
-    Autonomous Tool Unit (ATU)
-
-    Every tool now has:
-    - decide(): should it run + how
-    - run(): actual execution
-    """
 
     name: str
 
+    # -------------------------------------------------
+    # DECISION LAYER (MUST BE STRICT)
+    # -------------------------------------------------
     @abstractmethod
     def decide(self, context: ToolContext) -> Dict[str, Any]:
         """
-        Tool "brain".
-        Returns:
+        Must return:
         {
             "should_run": bool,
             "reason": str,
@@ -43,29 +47,64 @@ class BaseTool(ABC):
         """
         pass
 
+    # -------------------------------------------------
+    # EXECUTION LAYER
+    # -------------------------------------------------
     @abstractmethod
     async def run(self, context: ToolContext, params: Dict[str, Any]) -> Any:
-        """
-        Executes tool logic.
-        """
         pass
 
+    # -------------------------------------------------
+    # STANDARDIZED REFLECTION
+    # -------------------------------------------------
     def reflect(self, result: Any) -> Dict[str, Any]:
-        """
-        Optional self-evaluation layer (MVP simple).
-        """
         return {
             "tool": self.name,
-            "success": result is not None
+            "success": result is not None,
+            "type": type(result).__name__
         }
-        
 
+    # -------------------------------------------------
+    # SAFE WRAPPER (IMPORTANT ADDITION)
+    # -------------------------------------------------
+    async def execute(self, context: ToolContext) -> ToolResult:
+
+        decision = self.decide(context)
+
+        if not decision.get("should_run", True):
+            return ToolResult(
+                tool=self.name,
+                status="skipped",
+                reason=decision.get("reason", "no reason"),
+                output=None
+            )
+
+        try:
+            result = await self.run(context, decision.get("params", {}))
+
+            return ToolResult(
+                tool=self.name,
+                status="success",
+                output=result,
+                meta=self.reflect(result)
+            )
+
+        except Exception as e:
+
+            return ToolResult(
+                tool=self.name,
+                status="error",
+                output=None,
+                reason=str(e)
+            )
+
+
+# -------------------------------------------------
+# REGISTERED TOOL (UNCHANGED BUT NOW COMPATIBLE)
+# -------------------------------------------------
 class RegisteredTool(BaseTool):
-    """
-    BaseTool + metadata binding
-    """
 
-    metadata: ToolMetadata
+    metadata: Any  # keep flexible unless you want strict schema
 
-    def get_metadata(self) -> ToolMetadata:
+    def get_metadata(self):
         return self.metadata
