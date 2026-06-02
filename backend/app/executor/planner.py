@@ -27,6 +27,14 @@ class Planner:
                 tools=["system_scanner"]
             )
 
+        if intent == IntentType.RAG:
+            return ExecutionPlan(
+                intent=intent,
+                use_memory=True,
+                use_llm=True,
+                tools=["rag"]
+            )
+
         return ExecutionPlan(
             intent=IntentType.CHAT,
             use_memory=True,

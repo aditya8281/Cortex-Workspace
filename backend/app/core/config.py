@@ -15,5 +15,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env")
 
+    WORKSPACE_ROOT: str = "."
+
 
 settings = Settings()

@@ -1,43 +1,90 @@
-from backend.app.rag.vector_store import VectorStore
 from backend.app.rag.embeddings import EmbeddingModel
-from backend.app.rag.text_chunker import TextChunker
-from backend.app.ai.ingestion.extractor import FileExtractor
+from backend.app.rag.vector_store import VectorStore
+
 from backend.app.ai.ingestion.scanner import RepoScanner
+from backend.app.ai.ingestion.extractor import FileExtractor
+from backend.app.ai.ingestion.chunker import TextChunker
 
 
-class RepoIndexBuilder:
-    """
-    Builds AI understanding of entire codebase
-    """
+class RepoRetriever:
 
     def __init__(self):
         self.embedder = EmbeddingModel()
-        self.chunker = TextChunker()
-        self.extractor = FileExtractor()
         self.scanner = RepoScanner()
+        self.extractor = FileExtractor()
+        self.chunker = TextChunker()
 
         self.vector_store = None
 
-    def build(self, repo_path: str):
+    def build_index(
+        self,
+        repo_path: str
+    ):
+
         files = self.scanner.scan(repo_path)
 
-        all_chunks = []
+        all_texts = []
         metadata = []
 
-        for file in files:
-            content = self.extractor.extract(file)
-            chunks = self.chunker.chunk(content)
+        for file_path in files:
+
+            content = self.extractor.extract(
+                file_path
+            )
+
+            if not content:
+                continue
+
+            chunks = self.chunker.chunk_text(
+                content,
+                metadata={
+                    "file": file_path
+                }
+            )
 
             for chunk in chunks:
-                all_chunks.append(chunk)
-                metadata.append({
-                    "file": file,
-                    "content": chunk
-                })
 
-        vectors = self.embedder.encode(all_chunks)
+                all_texts.append(
+                    chunk["text"]
+                )
 
-        self.vector_store = VectorStore(dim=vectors.shape[1])
-        self.vector_store.add(vectors, metadata)
+                metadata.append(
+                    {
+                        "file": file_path,
+                        "chunk": chunk["text"]
+                    }
+                )
 
-        return self.vector_store
+        if not all_texts:
+            return
+
+        vectors = self.embedder.encode(
+            all_texts
+        )
+
+        self.vector_store = VectorStore(
+            dim=vectors.shape[1]
+        )
+
+        self.vector_store.add(
+            vectors,
+            metadata
+        )
+
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 5
+    ):
+
+        if self.vector_store is None:
+            return []
+
+        query_vector = self.embedder.encode(
+            [query]
+        )
+
+        return self.vector_store.search(
+            query_vector,
+            top_k
+        )

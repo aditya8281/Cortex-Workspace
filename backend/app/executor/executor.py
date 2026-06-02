@@ -8,6 +8,12 @@ from backend.app.executor.planner import Planner
 from backend.app.executor.response_builder import ResponseBuilder
 from backend.app.executor.schemas import ExecutionResult
 
+from backend.app.rag.service import RAGService
+
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 
 class AIExecutor:
 
@@ -21,6 +27,14 @@ class AIExecutor:
 
         self.file_agent = FileSearchAgent()
         self.system_agent = SystemScanner()
+
+        self.rag = RAGService()
+
+        self.rag.initialize(
+            str(PROJECT_ROOT)
+        )
+
+
 
     async def execute(
         self,
@@ -58,6 +72,25 @@ class AIExecutor:
                 result = self.system_agent.scan(query)
 
                 ctx.tool_results.append(result)
+            
+            elif tool == "rag":
+
+                results = self.rag. search(
+                    query
+                )
+
+                if results:
+
+                    rag_context = "\n\n".join(
+                        [
+                            item["data"]["chunk"][:500]
+                            for item in results
+                        ]
+                    )
+
+                    ctx.tool_results.append(
+                        f"Repository Context:\n{rag_context}"
+                    )
 
         if plan.use_llm:
 
@@ -82,5 +115,7 @@ class AIExecutor:
                     query=query,
                     response=ctx.llm_response
                 )
+
+            
 
         return self.builder.build(ctx)

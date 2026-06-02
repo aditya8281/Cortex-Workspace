@@ -12,4 +12,7 @@ class IntentClassifier:
         if any(word in q for word in ["bug", "error", "repo", "system"]):
             return IntentType.SYSTEM
 
+        if any(word in q for word in ["code","class","function","authentication","router","endpoint"]):
+            return IntentType.RAG
+
         return IntentType.CHAT

@@ -7,6 +7,7 @@ class IntentType(str, Enum):
     CHAT = "chat"
     TOOL = "tool"
     SYSTEM = "system"
+    RAG = "rag"
 
 
 class ExecutionPlan(BaseModel):
