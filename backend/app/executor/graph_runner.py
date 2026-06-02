@@ -12,17 +12,20 @@ class GraphRunner:
     async def run(self, graph: ExecutionGraph, query: str, user_id: int | None):
 
         # -------------------------------------------------
-        # EXECUTION STATE (clean + structured)
+        # EXECUTION STATE
         # -------------------------------------------------
         state = {
             "query": query,
             "memory": None,
-            "tool_map": {},      # step_id -> result
+            "tool_map": {},
             "llm": None,
             "completed": set()
         }
 
         pending_steps = graph.steps.copy()
+
+        # IMPORTANT: create execution session once
+        execution_id = self.tracer.create_session()
 
         # -------------------------------------------------
         # DAG EXECUTION LOOP
@@ -39,7 +42,13 @@ class GraphRunner:
 
             results = await asyncio.gather(
                 *[
-                    self._execute_step(step, state, query, user_id)
+                    self._execute_step(
+                        execution_id,
+                        step,
+                        state,
+                        query,
+                        user_id
+                    )
                     for step in ready_steps
                 ],
                 return_exceptions=True
@@ -65,9 +74,14 @@ class GraphRunner:
     # -------------------------------------------------
     # STEP EXECUTION ROUTER
     # -------------------------------------------------
-    async def _execute_step(self, step, state, query, user_id):
+    async def _execute_step(self, execution_id, step, state, query, user_id):
 
-        self.tracer.start(step.id, step.type, step.name)
+        self.tracer.start(
+            execution_id,
+            step.id,
+            step.type,
+            step.name
+        )
 
         try:
 
@@ -83,12 +97,22 @@ class GraphRunner:
             else:
                 result = None
 
-            self.tracer.end(step.id, result=result)
+            self.tracer.end(
+                execution_id,
+                step.id,
+                result=result
+            )
+
             return result
 
         except Exception as e:
 
-            self.tracer.end(step.id, error=str(e))
+            self.tracer.end(
+                execution_id,
+                step.id,
+                error=str(e)
+            )
+
             return f"ERROR: {str(e)}"
 
     # -------------------------------------------------
@@ -105,14 +129,14 @@ class GraphRunner:
         )
 
     # -------------------------------------------------
-    # TOOL STEP (NOW PROPERLY DELEGATED)
+    # TOOL STEP
     # -------------------------------------------------
     async def _run_tool(self, tool_name, query):
 
         return await self.tools.execute(tool_name, query)
 
     # -------------------------------------------------
-    # LLM STEP (DEPENDENCY-AWARE)
+    # LLM STEP
     # -------------------------------------------------
     async def _run_llm(self, state, query):
 
@@ -122,7 +146,7 @@ class GraphRunner:
         if state["memory"]:
             prompt_parts.append(state["memory"])
 
-        # tool outputs (ordered deterministically)
+        # deterministic tool ordering
         for step_id in sorted(state["tool_map"].keys()):
             value = state["tool_map"][step_id]
             if value:
