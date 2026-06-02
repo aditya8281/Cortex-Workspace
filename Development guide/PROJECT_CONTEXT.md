@@ -2,18 +2,68 @@
 
 Last verified: 2026-06-03
 
-## Overview
+## What This Project Is
 
-Cortex Workspace is a FastAPI backend for an AI-assisted engineering workspace. The current codebase centers on:
+Cortex Workspace is an AI operating system for a personal computer and, later, an online platform.
+
+The goal is not just a chatbot. The goal is a local-first assistant that can:
+
+- talk in a polished chat UI
+- understand and search the whole laptop
+- read and analyze local repositories
+- find files, documents, and knowledge across the machine
+- explain bugs, architecture, and codebase state
+- help build projects like a senior engineering copilot
+- switch between local models and popular hosted LLMs through API keys
+- later expand into an online, multi-user, cloud-capable product
+- eventually feel like the OS itself is intelligent and assistant-driven
+
+If another AI model reads this file, it should understand the product vision immediately and know what kind of system to build next.
+
+## Final Goal
+
+The final product should become a full assistant layer for the computer:
+
+- a local server starts the system
+- a frontend chat interface gives the user a clean conversational experience
+- the backend can search the laptop, repository, and memory
+- the assistant can inspect and explain the repo, project state, and code bugs
+- the assistant can answer questions like:
+  - "Where is the PDF about transformers on my laptop?"
+  - "What does this repository do?"
+  - "What bugs or mismatches exist here?"
+  - "Generate project context from the current codebase."
+  - "Help me plan and build the next feature."
+- the assistant can route to:
+  - local models like Ollama or other local providers
+  - hosted providers like OpenAI-compatible APIs, Anthropic-style APIs, or future providers
+- the system stays expandable so local features can later become online features
+- the final product has a strong CI/CD pipeline, testing, and deployable architecture
+
+## Product Principles
+
+- Local first, cloud optional
+- Privacy aware by default
+- Tool-driven, not prompt-only
+- Modular and extensible
+- Provider agnostic
+- Repository aware
+- OS aware
+- Frontend first-class, not an afterthought
+- Easy to grow from single-user desktop assistant to online platform
+
+## Current Codebase State
+
+The repo is currently a backend-first FastAPI application with:
 
 - user authentication and profile APIs
 - a graph-driven AI execution engine
+- a reusable tool abstraction layer
 - repository search and lightweight RAG
 - persistent conversation memory
 - file-system and system inspection agents
-- a reusable tool abstraction layer for autonomous tool execution
 
-The repository is still backend-first. There is no frontend app yet, and the top-level `docker-compose.yml` is currently empty.
+The repository does not yet have the final frontend experience. The top-level `docker-compose.yml` is currently empty.
 
 ## Current Stack
 
@@ -128,7 +178,7 @@ Behavior:
 
 ### Gateway and Executor
 
-The request flow is now graph-based:
+The request flow is graph-based:
 
 `API -> AIGateway -> AIExecutor -> IntentClassifier -> Planner.build_graph() -> GraphRunner -> ToolRegistry / Memory / LLM -> ResponseBuilder`
 
@@ -157,7 +207,7 @@ Current executor behavior:
 Important implementation detail:
 
 - `user_id` is checked with `is not None`, so `0` is not treated as missing
-- `GraphRunner` now records memory, tool, and LLM outputs back into state so the executor can rebuild the final response correctly
+- `GraphRunner` records memory, tool, and LLM outputs back into state so the executor can rebuild the final response correctly
 - built-in tool adapters are registered automatically for `file_search`, `system_scanner`, and `rag`
 
 ### Providers
@@ -267,6 +317,57 @@ Test support files:
 - automatic RAG rebuild at startup is intentionally disabled
 - `README.md` is still sparse compared to the codebase
 - system diagnostics are intentionally lightweight rather than production-grade observability
+- the final laptop-wide OS assistant, frontend, and online platform are still vision goals, not finished product features
+
+## Roadmap To The Final Goal
+
+### Phase 1: Stable Local Assistant
+
+- keep the local FastAPI backend reliable
+- keep the graph executor, memory, and tools working together
+- make the chat experience smooth and useful
+- keep local model support stable via Ollama or other local providers
+
+### Phase 2: Strong Desktop Intelligence
+
+- add OS-wide file discovery and indexing
+- expand repo understanding and bug analysis
+- improve memory and contextual recall
+- allow the assistant to answer questions about local files, docs, and codebases
+- support project-building assistance, not just Q&A
+
+### Phase 3: Provider Flexibility
+
+- support switching between local and hosted providers
+- keep provider configuration explicit and pluggable
+- support multiple API-key-backed model vendors
+- unify responses and tool usage across providers
+
+### Phase 4: Frontend Experience
+
+- build a polished chat UI
+- show tool activity, memory, repo context, and file search results
+- support conversational workflows and project management
+- make the interface feel like an assistant operating system layer
+
+### Phase 5: Platform Expansion
+
+- make the backend ready for online use
+- separate local-only and cloud-ready components
+- add tenancy, auth, and infrastructure concerns where needed
+- build a CI/CD pipeline for testing, deployment, and release automation
+
+## What Future AI Should Do With This File
+
+If a model reads this file, it should:
+
+1. Understand the product vision first.
+2. Treat the current repo as a local-first backend foundation.
+3. Prefer changes that keep the system modular, provider-agnostic, and expandable.
+4. Preserve support for local models and hosted models.
+5. Improve the assistant’s real-world ability to inspect the laptop, repository, and project state.
+6. Build toward a strong frontend, offline-first UX, and later online expansion.
+7. Keep CI/CD, tests, and observability in the roadmap from the start.
 
 ## Recent Fixes / Mismatches Resolved
 
@@ -281,4 +382,3 @@ Test support files:
 - normalized graph runner tool outputs so responses use readable tool content instead of raw envelopes
 - guarded the index rebuild script against empty content
 - imported `Memory` in Alembic env so migrations stay aligned with the ORM
-- updated this context file to match the current graph-based executor architecture and route layout
