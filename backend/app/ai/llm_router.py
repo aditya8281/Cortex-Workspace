@@ -1,29 +1,15 @@
-from backend.app.ai.api_llm import APILLM
-from backend.app.ai.local_llm import LocalLLM
-
-from backend.app.ai.config import ai_settings
+from backend.app.ai.providers.registry import (
+    ProviderRegistry,
+)
 
 
 class LLMRouter:
-    """
-    Routes requests to either Local LLM or API LLM.
-    """
 
     def __init__(self):
 
-        if ai_settings.mode == "api":
-
-            self.llm = APILLM(
-                api_key=ai_settings.api_key,
-                base_url=ai_settings.api_url,
-                model=ai_settings.model,
-            )
-
-        else:
-
-            self.llm = LocalLLM(
-                model=ai_settings.local_model
-            )
+        self.llm = (
+            ProviderRegistry.get_provider()
+        )
 
     async def generate(
         self,

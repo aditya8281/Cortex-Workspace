@@ -7,15 +7,9 @@ class BaseLLM(ABC):
     """
 
     @abstractmethod
-    async def generate(self, prompt: str, system_prompt: str | None = None) -> str:
-        """
-        Generate response from LLM.
-
-        Args:
-            prompt: user input
-            system_prompt: optional system instruction
-
-        Returns:
-            str: model response
-        """
-        pass
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None
+    ) -> str:
+        raise NotImplementedError
