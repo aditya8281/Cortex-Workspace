@@ -7,6 +7,7 @@ class GraphRunner:
     def __init__(self, executor):
         self.executor = executor
         self.tools = self.executor.tool_registry
+        self.tracer = self.executor.tracer
 
     async def run(self, graph: ExecutionGraph, query: str, user_id: int | None):
 
@@ -66,20 +67,28 @@ class GraphRunner:
     # -------------------------------------------------
     async def _execute_step(self, step, state, query, user_id):
 
+        self.tracer.start(step.id, step.type, step.name)
+
         try:
 
             if step.type == "memory":
-                return await self._run_memory(query, user_id)
+                result = await self._run_memory(query, user_id)
 
-            if step.type == "tool":
-                return await self._run_tool(step.name, query)
+            elif step.type == "tool":
+                result = await self._run_tool(step.name, query)
 
-            if step.type == "llm":
-                return await self._run_llm(state, query)
+            elif step.type == "llm":
+                result = await self._run_llm(state, query)
 
-            return None
+            else:
+                result = None
+
+            self.tracer.end(step.id, result=result)
+            return result
 
         except Exception as e:
+
+            self.tracer.end(step.id, error=str(e))
             return f"ERROR: {str(e)}"
 
     # -------------------------------------------------
