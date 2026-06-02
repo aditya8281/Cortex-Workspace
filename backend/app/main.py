@@ -5,6 +5,7 @@ from backend.app.core.config import settings
 from backend.app.core.logging import setup_logging
 from backend.app.core.middleware import RequestLoggingMiddleware
 from backend.app.models.user import User  # noqa: F401
+from backend.app.ai.memory.models import Memory  # noqa: F401
 from backend.app.core.logging import get_logger
 
 

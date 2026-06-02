@@ -1,31 +1,73 @@
-from typing import Dict, List, Optional
+from sqlalchemy import select
+
+from backend.app.ai.memory.models import Memory
+from backend.app.db.session import SessionLocal
 
 
 class MemoryRepository:
-    """
-    Long-term and episodic memory repository for user interactions.
-    """
 
-    def __init__(self):
-        # Maps user_id -> list of memory dicts {"query": str, "response": str}
-        self._memories: Dict[int, List[Dict[str, str]]] = {}
+    def add(
+        self,
+        user_id: int,
+        query: str,
+        response: str
+    ) -> None:
 
-    def add(self, user_id: int, query: str, response: str) -> None:
-        """Store a user memory record."""
-        if user_id not in self._memories:
-            self._memories[user_id] = []
-        self._memories[user_id].append({"query": query, "response": response})
+        with SessionLocal() as db:
 
-    def search(self, user_id: int, query: str) -> Optional[str]:
-        """Search similar memories for a user. Returns the matching response or None."""
-        user_memories = self._memories.get(user_id, [])
-        query_lower = query.lower()
+            memory = Memory(
+                user_id=user_id,
+                query=query,
+                response=response
+            )
 
-        # Simple keyword match over stored memory queries
-        for mem in reversed(user_memories):
-            # Match any significant word (>3 chars) from the query in the memory query
-            words = [word for word in query_lower.split() if len(word) > 3]
-            if words and any(word in mem["query"].lower() for word in words):
-                return f"[Memory Recall]: You previously asked about '{mem['query']}'. Context: {mem['response']}"
+            db.add(memory)
+            db.commit()
+
+    def search(
+        self,
+        user_id: int,
+        query: str
+    ) -> str | None:
+
+        query_words = [
+            word.lower()
+            for word in query.split()
+            if len(word) > 3
+        ]
+
+        if not query_words:
+            return None
+
+        with SessionLocal() as db:
+
+            stmt = (
+                select(Memory)
+                .where(Memory.user_id == user_id)
+                .order_by(Memory.created_at.desc())
+                .limit(50)
+            )
+
+            memories = db.execute(stmt).scalars().all()
+
+            for memory in memories:
+
+                memory_query = memory.query.lower()
+
+                if any(
+                    word in memory_query
+                    for word in query_words
+                ):
+
+                    return (
+                        f"[Memory Recall]\n"
+                        f"Previous Question: {memory.query}\n"
+                        f"Previous Answer: {memory.response}"
+                    )
 
         return None
+
+    def count(self) -> int:
+
+        with SessionLocal() as db:
+            return db.query(Memory).count()
