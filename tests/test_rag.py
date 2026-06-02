@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from backend.app.rag.embeddings import EmbeddingModel
 from backend.app.rag.vector_store import VectorStore
 from backend.app.rag.text_chunker import TextChunker
-from backend.app.rag.retriever import RepoIndexBuilder
+from backend.app.rag.retriever import RepoRetriever
 from backend.app.ai.ingestion.scanner import RepoScanner
 
 
@@ -81,15 +81,16 @@ def test_repo_scanner_ignores_venv_and_hidden(tmp_path):
     assert "config.txt" not in rel_paths
 
 
-def test_repo_index_builder(tmp_path, mock_sentence_transformer):
+def test_repo_retriever(tmp_path, mock_sentence_transformer):
     repo_dir = tmp_path / "test_repo"
     repo_dir.mkdir()
     (repo_dir / "app.py").write_text("def my_func(): pass", encoding="utf-8")
 
-    builder = RepoIndexBuilder()
+    retriever = RepoRetriever()
     with patch.object(RepoScanner, "scan", return_value=[str(repo_dir / "app.py")]):
-        store = builder.build(str(repo_dir))
+        retriever.build_index(str(repo_dir))
 
+    store = retriever.vector_store
     assert store is not None
     assert store.dim == 384
     assert len(store.metadata) > 0

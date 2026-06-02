@@ -23,14 +23,6 @@ class IndexManager:
         if existing:
             return existing
 
-        retriever = RepoRetriever()
-
-        retriever.build_index(
-            self.repo_path
-        )
-
-        retriever.vector_store.save(
-            self.index_path
-        )
-
-        return retriever.vector_store
+        # Return a fresh empty vector store to avoid blocking application startup/testing.
+        # The index should be rebuilt explicitly using scripts/rebuild_index.py.
+        return VectorStore(dim=384)

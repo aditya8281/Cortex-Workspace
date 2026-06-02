@@ -25,11 +25,9 @@ class AIExecutor:
         self.file_agent = FileSearchAgent()
         self.system_agent = SystemScanner()
 
-        self.rag = RAGService()
+        self.rag = RAGService(str(PROJECT_ROOT))
 
-        self.rag.initialize(
-            str(PROJECT_ROOT)
-        )
+        self.rag.initialize()
 
 
 
