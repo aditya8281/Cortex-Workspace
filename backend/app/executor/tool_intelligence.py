@@ -1,79 +1,101 @@
-from backend.app.executor.context import ToolResult
+from backend.app.tools.base import ToolResult
 
 
 class ToolIntelligence:
 
     """
-    Responsible for:
-    - scoring tool outputs
-    - ranking tools
-    - filtering noise
+    Ranks and filters tool outputs before LLM reasoning.
+    This is the "brain filter layer" between tools and LLM.
     """
 
-    # -------------------------------------------------
-    # MAIN ENTRY
-    # -------------------------------------------------
-    def process(self, tool_results: list[ToolResult]) -> list[ToolResult]:
+    def process(self, tools: list[ToolResult]) -> list[ToolResult]:
 
-        if not tool_results:
+        if not tools:
             return []
 
-        scored = []
+        # -------------------------------------------------
+        # STEP 1: FILTER INVALID / LOW QUALITY RESULTS
+        # -------------------------------------------------
+        filtered = [
+            t for t in tools
+            if self._is_valid(t)
+        ]
 
-        for t in tool_results:
-            t.relevance = self._score_relevance(t)
-            t.confidence = self._score_confidence(t)
-            scored.append(t)
+        if not filtered:
+            return []
 
-        # sort by importance
-        scored.sort(key=lambda x: (x.relevance, x.confidence), reverse=True)
+        # -------------------------------------------------
+        # STEP 2: SCORE EACH TOOL RESULT
+        # -------------------------------------------------
+        scored = [
+            (t, self._score(t))
+            for t in filtered
+        ]
 
-        return scored
+        # -------------------------------------------------
+        # STEP 3: SORT BY SCORE DESC
+        # -------------------------------------------------
+        scored.sort(key=lambda x: x[1], reverse=True)
+
+        # -------------------------------------------------
+        # STEP 4: ATTACH SCORE BACK INTO META
+        # -------------------------------------------------
+        final = []
+        for tool, score in scored:
+            tool.meta["intelligence_score"] = score
+            final.append(tool)
+
+        return final
 
     # -------------------------------------------------
-    # RELEVANCE SCORING
+    # VALIDATION LAYER
     # -------------------------------------------------
-    def _score_relevance(self, tool: ToolResult) -> float:
+    def _is_valid(self, tool: ToolResult) -> bool:
 
-        base = 0.5
+        if tool is None:
+            return False
 
-        # no output → useless
+        if tool.status in ["error"]:
+            return False
+
         if tool.output is None:
+            return False
+
+        return True
+
+    # -------------------------------------------------
+    # SCORING ENGINE (CORE LOGIC)
+    # -------------------------------------------------
+    def _score(self, tool: ToolResult) -> float:
+
+        score = 0.0
+
+        # confidence weight
+        score += getattr(tool, "confidence", 0.5) * 0.5
+
+        # relevance weight
+        score += getattr(tool, "relevance", 0.5) * 0.3
+
+        # output richness
+        score += self._output_score(tool.output) * 0.2
+
+        return round(score, 4)
+
+    # -------------------------------------------------
+    # OUTPUT QUALITY HEURISTIC
+    # -------------------------------------------------
+    def _output_score(self, output) -> float:
+
+        if output is None:
             return 0.0
 
-        # skipped tool → very low value
-        if tool.skipped:
-            return 0.1
+        if isinstance(output, dict):
+            return min(len(output.keys()) / 10, 1.0)
 
-        # structured output is better
-        if isinstance(tool.output, dict):
-            base += 0.3
+        if isinstance(output, list):
+            return min(len(output) / 10, 1.0)
 
-        # large text output (RAG/file search) = more relevant
-        if isinstance(tool.output, str) and len(tool.output) > 200:
-            base += 0.2
+        if isinstance(output, str):
+            return min(len(output) / 1000, 1.0)
 
-        # tool-specific boosts
-        if tool.tool == "rag":
-            base += 0.2
-
-        if tool.tool == "file_search":
-            base += 0.15
-
-        return min(base, 1.0)
-
-    # -------------------------------------------------
-    # CONFIDENCE SCORING
-    # -------------------------------------------------
-    def _score_confidence(self, tool: ToolResult) -> float:
-
-        if tool.status != "success":
-            return 0.2
-
-        if tool.output is None:
-            return 0.3
-
-        if isinstance(tool.output, dict):
-            return 0.9
-
-        return 0.7
+        return 0.5
