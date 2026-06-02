@@ -13,9 +13,23 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     ENV: str = "development"
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     WORKSPACE_ROOT: str = "."
+    
+    # =========================
+    # AI CONFIGURATION
+    # =========================
+
+    AI_MODE: str = "local"
+
+    AI_MODEL: str = "gpt-4o-mini"
+
+    AI_API_KEY: str | None = None
+
+    AI_API_URL: str | None = None
+
+    LOCAL_MODEL: str = "llama3"
 
 
 settings = Settings()
