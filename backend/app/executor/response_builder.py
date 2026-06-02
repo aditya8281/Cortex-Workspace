@@ -1,5 +1,6 @@
 from backend.app.executor.context import ExecutionContext
 from backend.app.executor.schemas import ExecutionResult
+from backend.app.tools.base import ToolResult
 
 
 class ResponseBuilder:
@@ -8,68 +9,102 @@ class ResponseBuilder:
 
         sections = []
 
-        # MEMORY
+        # -------------------------------------------------
+        # MEMORY LAYER (low priority, contextual grounding)
+        # -------------------------------------------------
         if ctx.memory:
-            sections.append(self._format_memory(ctx.memory))
+            sections.append(
+                "🧠 Memory Context:\n" + str(ctx.memory)
+            )
 
-        # TOOLS (NOW RANKED)
+        # -------------------------------------------------
+        # TOOL LAYER (structured + confidence-aware)
+        # -------------------------------------------------
         if ctx.tool_results:
-            sections.append(self._format_tools(ctx.tool_results))
+            tool_block = self._format_tools(ctx.tool_results)
+            sections.append(tool_block)
 
-        # LLM
+        # -------------------------------------------------
+        # LLM LAYER (final reasoning output)
+        # -------------------------------------------------
         if ctx.llm_response:
-            sections.append(self._format_llm(ctx.llm_response))
+            sections.append(
+                "🤖 Final Response:\n" + str(ctx.llm_response)
+            )
 
+        # -------------------------------------------------
+        # FALLBACK
+        # -------------------------------------------------
         if not sections:
             sections.append(
-                "🤖 Final Response:\nI couldn't generate a response from available context."
+                "🤖 Final Response:\nNo usable context found to generate response."
             )
 
         return ExecutionResult(
             answer="\n\n".join(sections),
             source="executor_v2",
-            memory_used=bool(ctx.memory)
+            memory_used=ctx.memory is not None
         )
 
     # -------------------------------------------------
-    # MEMORY
+    # TOOL FORMATTING ENGINE (IMPORTANT UPGRADE)
     # -------------------------------------------------
-    def _format_memory(self, memory):
-        return "🧠 Memory Context:\n" + str(memory)
+    def _format_tools(self, tools: list[ToolResult]) -> str:
 
-    # -------------------------------------------------
-    # TOOL (RANKED VIEW)
-    # -------------------------------------------------
-    def _format_tools(self, tool_results):
+        blocks = ["🛠 Tool Results (Structured):"]
 
-        # STEP 1: sort by relevance (IMPORTANT NEW LOGIC)
-        sorted_tools = sorted(
-            tool_results,
-            key=lambda t: t.relevance,
-            reverse=True
-        )
+        for t in tools:
 
-        blocks = ["🛠 Tool Results (Ranked by Relevance):"]
-
-        # STEP 2: render each tool cleanly
-        for i, t in enumerate(sorted_tools):
+            # skip low-quality / failed tools
+            if getattr(t, "status", None) in ["error"]:
+                continue
 
             blocks.append(
                 f"""
---- Tool {i + 1} ---
 Tool: {t.tool}
 Status: {t.status}
-Relevance: {t.relevance}
 Confidence: {t.confidence}
+Relevance: {t.relevance}
+
 Output:
-{t.output}
+{self._compress_output(t.output)}
+
+Meta:
+{self._compress_meta(t.meta)}
 """
             )
 
         return "\n".join(blocks)
 
     # -------------------------------------------------
-    # LLM
+    # OUTPUT COMPRESSION
     # -------------------------------------------------
-    def _format_llm(self, llm_response):
-        return "🤖 Final Response:\n" + str(llm_response)
+    def _compress_output(self, output):
+
+        if output is None:
+            return "None"
+
+        if isinstance(output, str):
+            return output[:800] + ("\n...[truncated]" if len(output) > 800 else "")
+
+        if isinstance(output, dict):
+            keys = list(output.keys())[:6]
+            return {k: output[k] for k in keys}
+
+        if isinstance(output, list):
+            return output[:5]
+
+        return str(output)[:500]
+
+    # -------------------------------------------------
+    # META COMPRESSION
+    # -------------------------------------------------
+    def _compress_meta(self, meta):
+
+        if not meta:
+            return {}
+
+        if isinstance(meta, dict):
+            return {k: meta[k] for k in list(meta.keys())[:6]}
+
+        return str(meta)[:300]
