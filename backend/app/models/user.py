@@ -16,20 +16,8 @@ class User(Base):
         nullable=False
     )
 
-    full_name: Mapped[str] = mapped_column(
-        String,
-        nullable=False
-    )
+    full_name: Mapped[str] = mapped_column(String, nullable=False)
 
-    # AUTH FIELD
-    hashed_password: Mapped[str] = mapped_column(
-        String,
-        nullable=False
-    )
+    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
 
-    # ROLE FIELD
-    role: Mapped[str] = mapped_column(
-        String,
-        default="user",
-        nullable=False
-    )
+    role: Mapped[str] = mapped_column(String, default="user", nullable=False)

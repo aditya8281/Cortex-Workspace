@@ -17,9 +17,6 @@ from backend.app.services.user_service import (
 router = APIRouter()
 
 
-# -----------------------------
-# Create User (REGISTER)
-# -----------------------------
 @router.post("/users", response_model=UserResponse)
 def create_new_user(
     user: UserCreate,
@@ -37,15 +34,11 @@ def create_new_user(
 
 
 # -----------------------------
-# Get All Users
-# -----------------------------
 @router.get("/users", response_model=list[UserResponse])
 def read_users(db: Session = Depends(get_db)):
     return get_users(db)
 
 
-# -----------------------------
-# Get Single User
 # -----------------------------
 @router.get("/users/{user_id}", response_model=UserResponse)
 def read_user(
