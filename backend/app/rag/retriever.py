@@ -9,12 +9,22 @@ from backend.app.ai.ingestion.chunker import TextChunker
 class RepoRetriever:
 
     def __init__(self):
-        self.embedder = EmbeddingModel()
+
+        self.embedder = None
+
         self.scanner = RepoScanner()
         self.extractor = FileExtractor()
         self.chunker = TextChunker()
 
         self.vector_store = None
+        
+        
+    def _get_embedder(self):
+
+        if self.embedder is None:
+            self.embedder = EmbeddingModel()
+
+        return self.embedder
 
     def build_index(
         self,
@@ -58,7 +68,7 @@ class RepoRetriever:
         if not all_texts:
             return
 
-        vectors = self.embedder.encode(
+        vectors = self._get_embedder().encode(
             all_texts
         )
 
@@ -83,7 +93,7 @@ class RepoRetriever:
         ):
             return []
 
-        query_vector = self.embedder.encode(
+        query_vector = self._get_embedder().encode(
             [query]
         )
 

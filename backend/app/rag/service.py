@@ -36,6 +36,9 @@ class RAGService:
         top_k: int = 5
     ):
 
+        if not self.initialized:
+            self.initialize()
+
         return self.retriever.retrieve(
             query,
             top_k

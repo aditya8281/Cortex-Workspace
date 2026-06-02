@@ -31,8 +31,6 @@ class AIExecutor:
 
         self.rag = RAGService(str(PROJECT_ROOT))
 
-        self.rag.initialize()
-
 
 
     async def execute(
