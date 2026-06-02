@@ -1,155 +1,69 @@
 from backend.app.tools.base import RegisteredTool, ToolContext
-from backend.app.tools.base import ToolResult
-from backend.app.tools.metadata import ToolMetadata
 
 
-# -------------------------------------------------
-# FILE SEARCH TOOL
-# -------------------------------------------------
 class FileSearchTool(RegisteredTool):
     name = "file_search"
 
     def __init__(self, executor):
         self.executor = executor
-        self.metadata = ToolMetadata(
-            name=self.name,
-            description="Search workspace files and file contents.",
-            capabilities=["file_search", "workspace_scan"],
-            priority=10,
-            tags=["files", "search"],
-        )
 
     def decide(self, context: ToolContext):
 
-        query = context.query.strip()
+        if not context.query.strip():
+            return {"should_run": False, "reason": "empty", "params": {}}
 
-        if not query:
-            return {
-                "should_run": False,
-                "reason": "empty query",
-                "params": {},
-            }
-
-        return {
-            "should_run": True,
-            "reason": "file search requested",
-            "params": {},
-        }
+        return {"should_run": True, "reason": "search", "params": {}}
 
     async def run(self, context: ToolContext, params):
 
-        try:
-            result = self.executor.file_agent.search(context.query)
+        result = self.executor.file_agent.search(context.query)
 
-            return {
-                "query": context.query,
-                "results": result,
-                "count": len(result) if result else 0
-            }
-
-        except Exception as e:
-
-            return {
-                "error": str(e),
-                "query": context.query
-            }
+        return {
+            "result": result,
+            "count": len(result) if result else 0
+        }
 
 
-# -------------------------------------------------
-# SYSTEM SCANNER TOOL
-# -------------------------------------------------
 class SystemScannerTool(RegisteredTool):
     name = "system_scanner"
 
     def __init__(self, executor):
         self.executor = executor
-        self.metadata = ToolMetadata(
-            name=self.name,
-            description="Inspect system health and workspace diagnostics.",
-            capabilities=["system_scan", "diagnostics"],
-            priority=8,
-            tags=["system", "health"],
-        )
 
     def decide(self, context: ToolContext):
-
-        return {
-            "should_run": True,
-            "reason": "system diagnostics requested",
-            "params": {},
-        }
+        return {"should_run": True, "reason": "system", "params": {}}
 
     async def run(self, context: ToolContext, params):
 
-        try:
-            result = self.executor.system_agent.scan()
+        result = self.executor.system_agent.scan()
 
-            return {
-                "status": "ok",
-                "diagnostics": result
-            }
-
-        except Exception as e:
-
-            return {
-                "status": "error",
-                "error": str(e)
-            }
+        return {
+            "diagnostics": result
+        }
 
 
-# -------------------------------------------------
-# RAG TOOL
-# -------------------------------------------------
 class RagTool(RegisteredTool):
     name = "rag"
 
     def __init__(self, executor):
         self.executor = executor
-        self.metadata = ToolMetadata(
-            name=self.name,
-            description="Retrieve repository context from the codebase index.",
-            capabilities=["rag", "repository_search"],
-            priority=9,
-            tags=["code", "retrieval"],
-        )
 
     def decide(self, context: ToolContext):
-
-        return {
-            "should_run": True,
-            "reason": "repository retrieval requested",
-            "params": {},
-        }
+        return {"should_run": True, "reason": "rag", "params": {}}
 
     async def run(self, context: ToolContext, params):
 
-        try:
-            results = self.executor.rag.search(context.query)
+        results = self.executor.rag.search(context.query)
 
-            if not results:
-                return {
-                    "query": context.query,
-                    "chunks": [],
-                    "count": 0
-                }
+        if not results:
+            return {"chunks": [], "count": 0}
 
-            chunks = []
+        chunks = [
+            item["data"]["chunk"][:500]
+            for item in results
+        ]
 
-            for item in results:
-                try:
-                    chunks.append(item["data"]["chunk"][:500])
-                except Exception:
-                    continue
-
-            return {
-                "query": context.query,
-                "chunks": chunks,
-                "count": len(chunks)
-            }
-
-        except Exception as e:
-
-            return {
-                "error": str(e),
-                "query": context.query
-            }
+        return {
+            "chunks": chunks,
+            "count": len(chunks)
+        }
