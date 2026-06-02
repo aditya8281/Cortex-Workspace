@@ -8,7 +8,11 @@ class IntentType(str, Enum):
     TOOL = "tool"
     SYSTEM = "system"
     RAG = "rag"
-
+    
+class IntentConfidence(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 
 class ExecutionPlan(BaseModel):
     intent: IntentType
@@ -21,3 +25,13 @@ class ExecutionResult(BaseModel):
     answer: str
     source: str
     memory_used: bool = False
+    
+class IntentDecision(BaseModel):
+    intent: IntentType
+    confidence: float  # 0.0 - 1.0
+    confidence_level: IntentConfidence
+
+    subtype: str | None = None  # file_search, system_scan, repo_rag, etc.
+    keywords: list[str] = []
+
+    requires_tools: bool = False

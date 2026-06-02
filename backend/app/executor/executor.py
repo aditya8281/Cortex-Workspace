@@ -58,6 +58,20 @@ class AIExecutor:
             f"classified_intent={intent}"
         )
 
+        # -------------------------------------------------
+        # COMPATIBILITY ADAPTER LAYER (CRITICAL)
+        # -------------------------------------------------
+
+        from backend.app.executor.schemas import IntentType, IntentDecision
+
+        if isinstance(intent, IntentDecision):
+            # New system path
+            plan = self.planner.build_plan(intent)
+
+        else:
+            # Legacy fallback path (IntentType)
+            plan = self.planner.build_plan(intent)
+
         plan = self.planner.build_plan(intent)
 
         logger.info(
