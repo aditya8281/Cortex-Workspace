@@ -1,3 +1,4 @@
+from typing import List, Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -9,8 +10,14 @@ router = APIRouter()
 gateway = AIGateway()
 
 
+class ChatTurn(BaseModel):
+    role: str
+    content: str
+
+
 class QueryRequest(BaseModel):
     query: str
+    history: Optional[List[ChatTurn]] = None
 
 
 class AIResponse(BaseModel):
@@ -25,7 +32,10 @@ async def ask_public(payload: QueryRequest):
     """
     Public query endpoint. Routes request through the AI Gateway.
     """
-    result = await gateway.route(payload.query)
+    result = await gateway.route(
+        query=payload.query,
+        history=payload.history
+    )
     return AIResponse(
         query=payload.query,
         response=result.answer,
@@ -41,7 +51,11 @@ async def chat_private(
     """
     Authenticated chat endpoint. Remembers user context and saves conversation memory.
     """
-    result = await gateway.route(payload.query, user_id=current_user.id)
+    result = await gateway.route(
+        query=payload.query,
+        user_id=current_user.id,
+        history=payload.history
+    )
     return AIResponse(
         query=payload.query,
         response=result.answer,

@@ -45,7 +45,8 @@ class AIExecutor:
     async def execute(
         self,
         query: str,
-        user_id: int | None = None
+        user_id: int | None = None,
+        history: list = None
     ) -> ExecutionResult:
 
         logger.info(f"executor_started user_id={user_id} query={query[:100]}")
@@ -60,7 +61,8 @@ class AIExecutor:
                 graph=graph,
                 query=query,
                 user_id=user_id,
-                intent=intent
+                intent=intent,
+                history=history
             )
 
             ctx = self._build_execution_context(

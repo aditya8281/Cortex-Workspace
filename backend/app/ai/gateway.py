@@ -10,12 +10,14 @@ class AIGateway:
     async def route(
         self,
         query: str,
-        user_id: int | None = None
+        user_id: int | None = None,
+        history: list = None
     ) -> ExecutionResult:
 
         result = await self.executor.execute(
             query=query,
-            user_id=user_id
+            user_id=user_id,
+            history=history
         )
 
         return result

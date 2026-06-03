@@ -17,7 +17,7 @@ class GraphRunner:
         self.tracer = self.executor.tracer
         self.state = self.executor.state
 
-    async def run(self, graph: ExecutionGraph, query: str, user_id: int | None, intent=None):
+    async def run(self, graph: ExecutionGraph, query: str, user_id: int | None, intent=None, history=None):
 
         state = {
             "execution_id": None,
@@ -30,6 +30,7 @@ class GraphRunner:
             "execution_trace": [],
             "errors": [],
             "intent": intent,
+            "history": history,
         }
 
         execution_id = self.tracer.create_session()
@@ -270,9 +271,32 @@ class GraphRunner:
         compiler = ContextCompiler()
 
         chat_history = None
-        if user_id is not None:
+        session_history = state.get("history")
+
+        if session_history:
+            chat_history = []
+            for turn in session_history:
+                role = getattr(turn, "role", None) or (turn.get("role") if isinstance(turn, dict) else None)
+                content = getattr(turn, "content", None) or (turn.get("content") if isinstance(turn, dict) else None)
+                if role and content:
+                    chat_history.append({
+                        "role": role,
+                        "content": content
+                    })
+        
+        if not chat_history and user_id is not None:
             try:
-                chat_history = self.executor.memory.get_recent_history(user_id)
+                db_history = self.executor.memory.get_recent_history(user_id)
+                chat_history = []
+                for turn in db_history:
+                    chat_history.append({
+                        "role": "user",
+                        "content": turn["query"]
+                    })
+                    chat_history.append({
+                        "role": "assistant",
+                        "content": turn["response"]
+                    })
             except Exception:
                 pass
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import { getExecutionReplay, listExecutions } from "./api/execution";
 import { getMe, login, register, logout } from "./api/auth";
-import { askQuestion, type AskResponse } from "./api/ai";
+import { askQuestion, type AskResponse, type ChatTurn } from "./api/ai";
 
 type User = {
   id: number;
@@ -440,10 +440,18 @@ function App() {
       text: userQuery,
       timestamp: new Date().toLocaleTimeString(),
     };
+
+    const history: ChatTurn[] = chatMessages
+      .filter((msg) => msg.id !== "welcome")
+      .map((msg) => ({
+        role: msg.sender,
+        content: msg.text,
+      }));
+
     setChatMessages((prev) => [...prev, userMsg]);
 
     try {
-      const result: AskResponse = await askQuestion(userQuery, !!token);
+      const result: AskResponse = await askQuestion(userQuery, !!token, history);
 
       const assistantMsg: ChatMessage = {
         id: Math.random().toString(36).substring(7),

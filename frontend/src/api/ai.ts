@@ -7,8 +7,17 @@ export type AskResponse = {
   execution_id: string | null;
 };
 
-export async function askQuestion(query: string, useAuthenticatedChat = false): Promise<AskResponse> {
+export type ChatTurn = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export async function askQuestion(
+  query: string, 
+  useAuthenticatedChat = false, 
+  history?: ChatTurn[]
+): Promise<AskResponse> {
   const url = useAuthenticatedChat ? "/ai/chat" : "/ai/ask";
-  const res = await api.post(url, { query });
+  const res = await api.post(url, { query, history });
   return res.data;
 }

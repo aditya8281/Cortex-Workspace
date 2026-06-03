@@ -5,10 +5,18 @@ class ContextCompiler:
         if chat_history:
             history_str = "Recent Conversation History:\n"
             for turn in chat_history:
-                resp = turn["response"]
-                if "Final Response:\n" in resp:
-                    resp = resp.split("Final Response:\n", 1)[1]
-                history_str += f"User: {turn['query']}\nAssistant: {resp}\n"
+                if isinstance(turn, dict) and "query" in turn and "response" in turn:
+                    q = turn["query"]
+                    resp = turn["response"]
+                    if "Final Response:\n" in resp:
+                        resp = resp.split("Final Response:\n", 1)[1]
+                    history_str += f"User: {q}\nAssistant: {resp}\n"
+                elif isinstance(turn, dict) and "role" in turn and "content" in turn:
+                    role_display = "User" if turn["role"] == "user" else "Assistant"
+                    content = turn["content"]
+                    if "Final Response:\n" in content:
+                        content = content.split("Final Response:\n", 1)[1]
+                    history_str += f"{role_display}: {content}\n"
             blocks.append(history_str.strip())
 
         if memory:
