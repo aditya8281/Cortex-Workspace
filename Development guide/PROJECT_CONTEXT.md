@@ -4,70 +4,50 @@ Last verified: 2026-06-03
 
 ## What This Project Is
 
-Cortex Workspace is not just a chatbot.
+Cortex Workspace is a local-first AI workspace and repository intelligence system.
+It is not just a chatbot.
 
-It is being built as a local-first AI operating system and engineering platform for a personal computer, with a path to a later online product.
+The product is being shaped as a second brain for the computer:
 
-The core goal is to make the machine feel assistant-driven:
-
-- a polished chat UI
-- local server-based execution
-- whole-laptop awareness
-- repository awareness
-- file and document search across the machine
-- bug finding and codebase explanation
-- model switching across local and hosted providers
+- chat-first assistant workspace
+- repository understanding and codebase reasoning
+- workspace intelligence and activity feeds
 - execution replay and debugging
-- tool orchestration and observability
-- a foundation that can later become cloud-capable
+- model routing across local and hosted providers
+- memory, summaries, and knowledge graphs
+- read-first filesystem discovery with approval gates for mutations
 
-If another AI model reads this file, it should immediately understand the product direction and the expected architecture.
+The current direction is:
 
-## Final Goal
-
-The final product should behave like an AI layer on top of the computer:
-
-- the user runs a local server
-- the UI provides a good chat-first workspace
-- the backend can inspect files, repos, memories, and execution traces
-- the assistant can answer questions like:
-  - where a PDF or document lives on the laptop
-  - what a repository does
-  - what bugs or mismatches exist in the codebase
-  - how to generate project context from the current repo state
-  - how to plan and build the next feature
-- the system can route requests to:
-  - local models such as Ollama or other local providers
-  - hosted providers through API keys
-- the platform stays expandable so local-only features can later become online features
-- the project eventually gets proper testing, CI/CD, and deployable architecture
+- keep the UI minimal and productive
+- make Cortex feel alive without turning it into a dashboard
+- let Cortex read broadly across meaningful user files
+- keep modification actions explicit and approval-driven
 
 ## Product Principles
 
 - Local first, cloud optional
-- Privacy aware by default
-- Tool-driven, not prompt-only
-- Modular and extensible
-- Provider agnostic
+- Read broadly, modify carefully
+- Chat-first, not trace-first
 - Repository aware
-- OS aware
-- Frontend is first-class
-- Built for single-user desktop use first, then platform expansion
+- Memory aware
+- Graph aware
+- Provider agnostic
+- Minimal but useful UI
+- Safe autonomy with explicit approval for mutations
 
-## Current Codebase State
+## Current High-Level Shape
 
-The repository is currently a backend-first FastAPI application with:
+The repository is currently a full-stack FastAPI + React application with:
 
-- user authentication and profile APIs
-- a graph-driven AI execution engine
-- structured tool results
-- tool fusion and tool intelligence scoring
-- an adaptive tool feedback loop
-- repository search and lightweight RAG
-- persistent conversation memory
-- file-system and system inspection agents
-- execution state persistence for replay and debugging
-- a React/Vite/TypeScript frontend workspace
+- authenticated and guest chat flows
+- execution routing and replay support
+- persistent memory storage
+- repository search and RAG foundations
+- workspace intelligence reporting
+- an activity feed for repository discoveries
+- a system access and autonomy policy surface
+- a responsive React/Vite/TypeScript frontend
 
 ## Runtime Entry Point
 
@@ -75,13 +55,11 @@ The application starts in [backend/app/main.py](../backend/app/main.py).
 
 Behavior:
 
-- calls `setup_logging()`
+- sets up logging
 - creates the FastAPI app
-- registers `RequestLoggingMiddleware`
 - mounts the API router under `/api/v1`
-- exposes `GET /` as a basic status endpoint
-
-The app imports the ORM models that need metadata registration at startup.
+- exposes a simple health/status root endpoint
+- initializes the backend services used by AI, execution, and state layers
 
 ## Configuration
 
@@ -91,15 +69,32 @@ Important values:
 
 - `APP_NAME=Cortex Workspace`
 - `API_V1_PREFIX=/api/v1`
-- `DEBUG` is normalized defensively
+- `WORKSPACE_ROOT` controls the main workspace root for scanning and indexing
 - `DATABASE_URL` and `SECRET_KEY` come from the environment or `.env`
-- AI settings are read from `AI_MODE`, `AI_MODEL`, `AI_API_KEY`, `AI_API_URL`, and `LOCAL_MODEL`
+- AI configuration is controlled by:
+  - `AI_MODE`
+  - `AI_MODEL`
+  - `AI_API_KEY`
+  - `AI_API_URL`
+  - `LOCAL_MODEL`
+  - `OLLAMA_URL`
 
 ## API Surface
 
 Routing is assembled in [backend/app/api/router.py](../backend/app/api/router.py).
 
-Current endpoints:
+Current top-level API groups:
+
+- health
+- users
+- authentication
+- AI chat and ask
+- execution and replay
+- model management
+- user settings
+- workspace intelligence
+
+Important endpoints:
 
 - `GET /`
 - `GET /api/v1/health/live`
@@ -116,36 +111,12 @@ Current endpoints:
 - `GET /api/v1/execution/{execution_id}`
 - `GET /api/v1/execution/{execution_id}/replay`
 - `GET /api/v1/execution/{execution_id}/tools`
-
-Important note:
-
-- the execution router is mounted at `/api/v1/execution`, so the handler paths are relative and must not repeat `/execution`
-
-## Data Model
-
-### Users
-
-The user ORM model is in [backend/app/models/user.py](../backend/app/models/user.py).
-
-Fields:
-
-- `id`
-- `email`
-- `full_name`
-- `hashed_password`
-- `role`
-
-### Memories
-
-The memory ORM model is in [backend/app/ai/memory/models.py](../backend/app/ai/memory/models.py).
-
-Fields:
-
-- `id`
-- `user_id`
-- `query`
-- `response`
-- `created_at`
+- `GET /api/v1/workspace/intelligence`
+- `GET /api/v1/models/installed`
+- `POST /api/v1/models/pull`
+- `DELETE /api/v1/models/{model_name}`
+- `GET /api/v1/users/me/settings`
+- `PUT /api/v1/users/me/settings`
 
 ## Authentication
 
@@ -154,11 +125,12 @@ Authentication helpers live in [backend/app/core/security.py](../backend/app/cor
 Behavior:
 
 - passwords are hashed before storage
-- tokens are JWTs with an `exp` claim
-- `get_current_user()` decodes the bearer token and loads the user
-- `/api/v1/me` is protected by `HTTPBearer`
+- tokens are JWTs
+- protected endpoints resolve the current user from bearer auth
+- the frontend supports sign-in, registration, and sign-out flows
+- API credentials can be stored in user settings for authenticated usage
 
-## AI Layer
+## AI and Execution Layer
 
 ### Execution Flow
 
@@ -184,26 +156,12 @@ Relevant files:
 
 Current behavior:
 
-- the query is classified into an `IntentDecision`
-- the planner builds a graph rather than a flat plan
-- the graph always starts with memory recall
-- tools are selected from intent plus tool bias
-- the graph runner executes memory, tool, and LLM steps
-- tool execution is routed through the tool registry
-- tool results are structured with `ToolResult`
-- tool fusion removes duplication and noisy outputs
-- tool intelligence ranks results before synthesis
-- the final LLM step compiles context from memory plus tools
-- the response builder turns the assembled context into the final answer
-
-Important implementation details:
-
-- `user_id` is checked with `is not None`
-- `GraphRunner` is the main emitter for execution events
-- `StateManager` plus `StateStore` is the persisted source of truth for replayable executions
-- `ExecutionTracer` is for timing and step tracing, not the replay source of truth
-- built-in tools are registered automatically
-- tool execution now flows through the shared tool abstraction
+- the query is classified before execution
+- planning is graph-based rather than flat
+- memory recall is part of the reasoning path
+- tools are selected and fused before synthesis
+- execution events are persisted for replay
+- the frontend can inspect traces and replay execution timelines
 
 ## Providers
 
@@ -211,33 +169,98 @@ Provider selection lives in [backend/app/ai/providers/registry.py](../backend/ap
 
 Supported modes:
 
-- `local` -> [backend/app/ai/local_llm.py](../backend/app/ai/local_llm.py) via Ollama-style local generation
-- `api` -> [backend/app/ai/api_llm.py](../backend/app/ai/api_llm.py) via an OpenAI-compatible request shape
+- `local` -> [backend/app/ai/local_llm.py](../backend/app/ai/local_llm.py)
+- `api` -> [backend/app/ai/api_llm.py](../backend/app/ai/api_llm.py)
 
-The router is a simple mode switch right now.
+The router currently acts as a mode switch between local and hosted inference.
 
 ## RAG and Repository Search
 
-There are two chunkers in the repo:
+Current retrieval and indexing pieces:
 
-- [backend/app/rag/text_chunker.py](../backend/app/rag/text_chunker.py)
+- [backend/app/ai/ingestion/scanner.py](../backend/app/ai/ingestion/scanner.py)
+- [backend/app/ai/ingestion/extractor.py](../backend/app/ai/ingestion/extractor.py)
 - [backend/app/ai/ingestion/chunker.py](../backend/app/ai/ingestion/chunker.py)
+- [backend/app/rag/embeddings.py](../backend/app/rag/embeddings.py)
+- [backend/app/rag/vector_store.py](../backend/app/rag/vector_store.py)
+- [backend/app/rag/storage.py](../backend/app/rag/storage.py)
+- [backend/app/rag/index_manager.py](../backend/app/rag/index_manager.py)
+- [backend/app/rag/service.py](../backend/app/rag/service.py)
 
-The active RAG pipeline is:
+Important behavior:
 
-- [backend/app/ai/ingestion/scanner.py](../backend/app/ai/ingestion/scanner.py) scans source files
-- [backend/app/ai/ingestion/extractor.py](../backend/app/ai/ingestion/extractor.py) reads file contents
-- [backend/app/ai/ingestion/chunker.py](../backend/app/ai/ingestion/chunker.py) chunks text
-- [backend/app/rag/embeddings.py](../backend/app/rag/embeddings.py) generates embeddings
-- [backend/app/rag/vector_store.py](../backend/app/rag/vector_store.py) stores vectors in FAISS
-- [backend/app/rag/storage.py](../backend/app/rag/storage.py) persists the index files
-- [backend/app/rag/index_manager.py](../backend/app/rag/index_manager.py) loads the local index
-- [backend/app/rag/service.py](../backend/app/rag/service.py) exposes search
+- the scanner now supports broad read-only discovery across meaningful user roots
+- it prunes low-value or virtual OS directories by default
+- file extraction supports text, markdown, Python, and PDF documents
+- RAG still remains separate from workspace intelligence
 
 Operational note:
 
-- repository indexing is not rebuilt automatically on startup
-- use [scripts/rebuild_index.py](../scripts/rebuild_index.py) to regenerate the local index
+- repository indexing is still not fully automatic on every startup
+- the index rebuild flow remains a separate operation
+
+## Workspace Intelligence
+
+The current workspace intelligence endpoint lives in [backend/app/api/v1/workspace.py](../backend/app/api/v1/workspace.py).
+
+The backing service is [backend/app/services/workspace_intelligence_service.py](../backend/app/services/workspace_intelligence_service.py).
+
+It now produces a structured report containing:
+
+- project purpose
+- architecture summary
+- repository list
+- concept list
+- repository model
+- dependency graph
+- module graph
+- knowledge graph
+- query classification guidance
+- memory summary
+- activity feed
+- system access and autonomy policy
+- entrypoints
+- APIs
+- build process
+- key files
+- warnings
+- evidence snippets
+
+### Activity Feed
+
+The activity feed is meant to make Cortex feel alive without intrusive notifications.
+
+Examples:
+
+- Cortex indexed 3 new repositories
+- Cortex learned 12 new concepts
+- Cortex found 4 TODOs
+- Cortex detected architecture changes
+
+### System Access and Autonomy
+
+The workspace report now exposes a clear permission model:
+
+- Observation Mode: read-only
+- Approval Mode: default
+- Automated Mode: allowed for selected safe categories
+
+Read actions are treated as normal system behavior.
+Modify actions remain approval-driven.
+
+Ignored OS paths include:
+
+- `/proc`
+- `/sys`
+- `/dev`
+- `/run`
+- `/tmp`
+
+The intent is:
+
+- read broadly across meaningful user data
+- avoid indexing OS noise
+- keep the user in control of any state changes
 
 ## State and Replay
 
@@ -259,11 +282,7 @@ Purpose:
 Replay behavior:
 
 - `ExecutionReplayEngine` reads persisted events from SQLite
-- `/api/v1/execution/{execution_id}/replay` returns:
-  - `execution_id`
-  - `status`
-  - `summary`
-  - `replay`
+- `/api/v1/execution/{execution_id}/replay` returns replay metadata and timeline data
 - `/api/v1/execution` returns execution list items for the frontend sidebar
 
 ## Frontend
@@ -281,76 +300,53 @@ Current tree:
 - [frontend/src/index.css](../frontend/src/index.css)
 - [frontend/src/api](../frontend/src/api)
 
-Current UI:
+Current UI direction:
 
-- 3-column workspace
-- left: execution list
-- center: execution timeline
-- right: inspector
+- chat-first assistant workspace
+- minimal top bar with auth access
+- left history rail
+- centered conversation area
+- utility drawer for traces, config, workspace intelligence, and admin tools
+- compact, premium, techy visual treatment
 
-Current frontend state:
+Frontend behavior:
 
-- the execution list is now backed by the backend execution list endpoint
-- the replay panel reads from the replay API
-- the inspector reads summary data from the same replay response
+- messages are rendered in a centered conversation column
+- auth actions are accessible at the top
+- config and workspace intelligence are available on demand
+- traces are hidden until needed instead of dominating the layout
+- the workspace drawer now includes activity feed, repository model, graphs, and system access policy
 
-## Current Phase
+## Current State of the Repository
 
-Phase 1 completion work.
+The repo currently includes:
 
-Primary objectives:
+- backend APIs for AI, execution, models, users, settings, health, and workspace intelligence
+- a React interface that is more product-like and chat-oriented
+- a broad read-only scanner for meaningful user files
+- structured workspace intelligence that models the repository as a graph
+- explicit permission and autonomy guidance
 
-1. Stable execution IDs
-2. Execution event persistence
-3. Replay engine reliability
-4. Replay API stabilization
-5. Timeline UI stabilization
-6. Inspector UI stabilization
-7. Tool usage analytics
-8. Execution debugging foundation
+## Near-Term Direction
 
-## Future Direction
+The next useful expansions are:
 
-After the local assistant is stable, the next major expansions are:
-
-- richer model routing
-- better OS-wide file intelligence
-- stronger repo indexing and context generation
-- online/cloud mode
-- collaboration features
-- CI/CD hardening
-- production deployment readiness
+- a real background observer/indexer for new files and repositories
+- semantic search across the broader read scope
+- explicit user-configurable autonomy levels in settings
+- richer memory persistence for repo decisions and architecture notes
+- more detailed import, symbol, and dependency graph traversal
+- proactive, low-noise discovery notifications
+- permission-aware modification workflows
 
 ## What Future AI Should Do With This File
 
 When another AI model reads this file, it should:
 
-1. Treat the local-first AI OS assistant vision as the top priority.
-2. Keep the execution replay pipeline consistent with the backend event store.
-3. Preserve the 3-panel frontend workspace pattern.
+1. Treat the current chat-first workspace as the default product shape.
+2. Preserve the read-first, approval-driven system access model.
+3. Keep workspace intelligence structured and graph-based.
 4. Prefer production-grade fixes over quick hacks.
-5. Avoid reintroducing duplicate observability paths.
-6. Keep the codebase expandable toward online and multi-provider support.
-
-## Execution Plan & Hardening Pipeline
-
-To stabilize and scale the Cortex Workspace, we follow a strict sequential execution pipeline:
-
-### 1. Backend Security Hardening
-- **CORS Configuration**: Restrict API calls to known frontend addresses (e.g., `http://localhost:5173`) using FastAPI `CORSMiddleware`.
-- **API Endpoint Authentication**: Intercept requests to user list (`GET /users`) and individual user information (`GET /users/{user_id}`) to verify JWT identity via `get_current_user`.
-- **Token Validity Check**: Assert that token signature, expiration times, and claims are valid before executing requests.
-
-### 2. Traceability and Observability Linkage
-- **Execution ID in API**: Modify the AI routing gateway (`AIGateway`) and chat/ask endpoints to return the generated `execution_id` along with the text answer. This links every user prompt directly to a trace in the SQLite event store.
-
-### 3. Integrated Premium Chat Client
-- **Authentication Flows**: Implement sign-in and registration forms in the React client, storing access tokens securely and adding request-interceptors to include `Bearer <token>` headers.
-- **Unified 3-Panel Console**:
-  - *Left Panel*: Lists previous executions with filters.
-  - *Center Panel*: Dual-mode display:
-    - **Chat Console**: Real-time message exchange, loading visualizer, and system model/provider selector (`local` vs `api`).
-    - **Replay Timeline**: Interactive event timeline replay.
-  - *Right Panel*: Detailed system/tool metrics, timing metrics, and active tools visualizer.
-- **Dynamic Linking**: When a chat request completes, the client extracts the returned `execution_id`, loads its execution trace, and highlights it instantly in the telemetry dashboard.
+5. Avoid reintroducing a dashboard-first layout.
+6. Keep the repo extensible toward richer indexing and autonomous observation.
 
