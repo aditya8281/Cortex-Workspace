@@ -1,4 +1,4 @@
-import api from "./client";
+import { api } from "./client";
 
 export type SyncStatus = {
   last_sync_time: string | null;
