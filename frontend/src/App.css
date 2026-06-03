@@ -36,3 +36,29 @@ h3 {
   color: #6b7280;
   font-size: 13px;
 }
+
+.exec-item {
+  padding: 8px;
+  margin-bottom: 6px;
+  background: #121a2a;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid #1c2333;
+}
+
+.exec-item:hover {
+  background: #18223a;
+}
+
+.timeline-step {
+  padding: 10px;
+  margin-bottom: 8px;
+  border-left: 2px solid #3b82f6;
+  background: #121a2a;
+  border-radius: 6px;
+}
+
+.meta {
+  font-size: 11px;
+  color: #6b7280;
+}

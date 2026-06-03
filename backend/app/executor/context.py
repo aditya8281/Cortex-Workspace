@@ -5,7 +5,7 @@ from backend.app.tools.base import ToolResult
 
 
 # -------------------------------------------------
-# MEMORY ITEM (UNCHANGED BUT SAFE)
+# MEMORY ITEM
 # -------------------------------------------------
 @dataclass
 class MemoryItem:
@@ -20,7 +20,11 @@ class MemoryItem:
 @dataclass
 class ExecutionContext:
     query: str
+
     user_id: int | None = None
+
+    # NEW
+    execution_id: str | None = None
 
     memory: Any = None
 
