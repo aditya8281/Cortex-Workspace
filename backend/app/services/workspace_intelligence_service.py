@@ -59,7 +59,23 @@ class WorkspaceIntelligenceService:
         system_access = self._build_system_access()
         dependency_graph = self._build_dependency_graph(dependencies, frameworks)
         module_graph = self._build_module_graph(files)
-        knowledge_graph = self._build_knowledge_graph(concepts, repository_model["relationships"])
+
+        from backend.app.db.session import SessionLocal
+        from backend.app.intelligence.models import RepositoryProfile
+        db_created = False
+        db = None
+        db_repos = []
+        try:
+            db = SessionLocal()
+            db_created = True
+            db_repos = db.query(RepositoryProfile).all()
+        except Exception:
+            pass
+        finally:
+            if db_created and db:
+                db.close()
+
+        knowledge_graph = self._build_knowledge_graph(concepts, repository_model["relationships"], db_repos)
         memory_summary = self._build_memory_summary(project_context, warnings, concepts)
 
         return {
@@ -418,7 +434,9 @@ class WorkspaceIntelligenceService:
 
         return {"nodes": nodes[:24], "edges": edges[:20]}
 
-    def _build_knowledge_graph(self, concepts: list[str], relationships: list[dict[str, str]]) -> dict[str, Any]:
+    def _build_knowledge_graph(
+        self, concepts: list[str], relationships: list[dict[str, str]], db_repos: list[Any]
+    ) -> dict[str, Any]:
         nodes = list(concepts[:12])
         edges: list[dict[str, str]] = []
 
@@ -441,6 +459,66 @@ class WorkspaceIntelligenceService:
                     nodes.append(source)
                 if target not in nodes:
                     nodes.append(target)
+
+        # Automatically merge other repository knowledge states from database
+        for repo in db_repos:
+            # Skip merging our main workspace under its specific path again if already mapped
+            if repo.name == self.root.name or repo.path == str(self.root):
+                continue
+                
+            # Add repository node
+            if repo.name not in nodes:
+                nodes.append(repo.name)
+                
+            # Connect main workspace root to repository
+            edges.append({
+                "source": self.root.name,
+                "target": repo.name,
+                "relation": "contains"
+            })
+            if self.root.name not in nodes:
+                nodes.append(self.root.name)
+
+            # Link repo technologies
+            if repo.tech_stack:
+                for tech in [t.strip() for t in repo.tech_stack.split(",") if t.strip()]:
+                    if tech not in nodes:
+                        nodes.append(tech)
+                    edges.append({
+                        "source": repo.name,
+                        "target": tech,
+                        "relation": "uses"
+                    })
+
+            # Link repo entry points
+            if repo.entry_points_json:
+                try:
+                    entry_points = json.loads(repo.entry_points_json)
+                    for ep in entry_points:
+                        if ep not in nodes:
+                            nodes.append(ep)
+                        edges.append({
+                            "source": repo.name,
+                            "target": ep,
+                            "relation": "entrypoint"
+                        })
+                except Exception:
+                    pass
+
+            # Link repo important files
+            if repo.important_files_json:
+                try:
+                    imp_files = json.loads(repo.important_files_json)
+                    for f in imp_files:
+                        if f not in nodes:
+                            nodes.append(f)
+                        edges.append({
+                            "source": repo.name,
+                            "target": f,
+                            "relation": "important_file"
+                        })
+                except Exception:
+                    pass
 
         return {"nodes": nodes, "edges": edges}
 

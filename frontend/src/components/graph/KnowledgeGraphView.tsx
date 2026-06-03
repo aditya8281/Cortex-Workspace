@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -7,6 +7,8 @@ import {
   type Node,
   type Edge,
   Position,
+  useNodesState,
+  useEdgesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useWorkspaceIntelligence, useRepositoryProfiles } from "@/hooks/useIntelligence";
@@ -15,17 +17,23 @@ export function KnowledgeGraphView() {
   const { data: workspace } = useWorkspaceIntelligence();
   const { data: repos = [] } = useRepositoryProfiles();
 
-  const { nodes, edges } = useMemo(() => {
-    const nodes: Node[] = [];
-    const edges: Edge[] = [];
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  // Compute and initialize node layouts when workspace data or repository profiles change
+  useEffect(() => {
+    if (!workspace && repos.length === 0) return;
+
+    const computedNodes: Node[] = [];
+    const computedEdges: Edge[] = [];
     
-    // Define layout center coordinate
+    // Set dynamic layout anchor coordinates
     const centerX = 500;
     const centerY = 350;
 
     // 1. Center Workspace Node
     const workspaceId = "workspace";
-    nodes.push({
+    computedNodes.push({
       id: workspaceId,
       position: { x: centerX, y: centerY },
       data: { label: workspace?.project_name ?? "Workspace" },
@@ -47,7 +55,7 @@ export function KnowledgeGraphView() {
     repos.forEach((repo, i) => {
       const id = `repo-${repo.name}`;
       const angle = (i / Math.max(repos.length, 1)) * Math.PI * 2;
-      nodes.push({
+      computedNodes.push({
         id,
         position: {
           x: centerX + Math.cos(angle) * 180,
@@ -64,7 +72,7 @@ export function KnowledgeGraphView() {
           boxShadow: "0 4px 6px rgba(0, 0, 0, 0.15)",
         },
       });
-      edges.push({
+      computedEdges.push({
         id: `e-repo-${repo.name}`,
         source: workspaceId,
         target: id,
@@ -77,9 +85,9 @@ export function KnowledgeGraphView() {
     const concepts = workspace?.concepts ?? [];
     concepts.forEach((concept, i) => {
       const id = `concept-${concept}`;
-      // Offset starting angle to interleave with repositories
+      // Offset concepts starting angle to distribute them cleanly
       const angle = (i / Math.max(concepts.length, 1)) * Math.PI * 2 + Math.PI / 4;
-      nodes.push({
+      computedNodes.push({
         id,
         position: {
           x: centerX + Math.cos(angle) * 320,
@@ -96,7 +104,7 @@ export function KnowledgeGraphView() {
           boxShadow: "0 4px 8px rgba(16, 185, 129, 0.1)",
         },
       });
-      edges.push({
+      computedEdges.push({
         id: `e-concept-${concept}`,
         source: workspaceId,
         target: id,
@@ -108,7 +116,7 @@ export function KnowledgeGraphView() {
     // 4. Knowledge Graph Codebase Relationships (Circle 3 - Outer - Radius 480)
     const kgEdges = workspace?.knowledge_graph?.edges ?? [];
     
-    // Collect all unique entity labels from the edges to construct nodes
+    // Collect all unique labels to avoid duplicate nodes
     const kgEntities = new Set<string>();
     kgEdges.forEach((edge) => {
       kgEntities.add(edge.source);
@@ -120,13 +128,12 @@ export function KnowledgeGraphView() {
       const id = `kg-${entity}`;
       const angle = (i / Math.max(kgEntitiesArray.length, 1)) * Math.PI * 2 - Math.PI / 8;
       
-      // Differentiate file vs symbol styling
       const isFile = entity.includes("/") || entity.endsWith(".py") || entity.endsWith(".ts") || entity.endsWith(".tsx");
       const bg = isFile ? "#1e1b4b" : "#172554";
       const border = isFile ? "#4f46e5" : "#2563eb";
       const color = isFile ? "#cbd5e1" : "#93c5fd";
 
-      nodes.push({
+      computedNodes.push({
         id,
         position: {
           x: centerX + Math.cos(angle) * 480,
@@ -145,9 +152,8 @@ export function KnowledgeGraphView() {
       });
     });
 
-    // Map the actual relationships to ReactFlow edges
     kgEdges.forEach((edge, i) => {
-      edges.push({
+      computedEdges.push({
         id: `e-kg-${i}-${edge.source}-${edge.target}`,
         source: `kg-${edge.source}`,
         target: `kg-${edge.target}`,
@@ -157,12 +163,20 @@ export function KnowledgeGraphView() {
       });
     });
 
-    return { nodes, edges };
-  }, [workspace, repos]);
+    setNodes(computedNodes);
+    setEdges(computedEdges);
+  }, [workspace, repos, setNodes, setEdges]);
 
   return (
     <div className="h-[calc(100vh-3.5rem)] w-full">
-      <ReactFlow nodes={nodes} edges={edges} fitView className="bg-cortex-bg">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        fitView
+        className="bg-cortex-bg"
+      >
         <Background color="#1e2a42" gap={20} />
         <Controls />
         <MiniMap nodeColor="#5b9dff" maskColor="rgb(6 10 18 / 0.8)" />
