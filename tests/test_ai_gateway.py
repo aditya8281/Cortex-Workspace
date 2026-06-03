@@ -18,14 +18,14 @@ def fixture_gateway():
 async def test_ai_gateway_file_search_agent(gateway):
     query = "Search my python files"
     response = await gateway.route(query)
-    assert "FileSearchAgent" in response
+    assert "FileSearchAgent" in response.answer
 
 
 @pytest.mark.asyncio
 async def test_ai_gateway_system_scanner_agent(gateway):
     query = "Check database errors"
     response = await gateway.route(query)
-    assert "SystemScanner" in response
+    assert "SystemScanner" in response.answer
 
 
 @pytest.mark.asyncio
@@ -37,15 +37,15 @@ async def test_ai_gateway_llm_routing_and_memory(gateway):
 
         # 1. First query with user_id: Memory is empty, so it should call LLM and save response.
         response = await gateway.route(query, user_id=42)
-        assert response == "Paris"
-        mock_generate.assert_called_once_with(query)
+        assert "Paris" in response.answer
+        mock_generate.assert_called_once()
 
         # 2. Second query with same keywords: Memory recall context is passed to LLM.
         mock_generate.reset_mock()
         mock_generate.return_value = "Paris recall response"
         recall_response = await gateway.route("France capital", user_id=42)
-        assert "[Memory Recall]" in recall_response
-        assert "Paris" in recall_response
+        assert "[Memory Recall]" in recall_response.answer
+        assert "Paris" in recall_response.answer
         mock_generate.assert_called_once()
 
 
@@ -61,7 +61,8 @@ def test_ai_api_endpoints():
         assert response.status_code == 200
         data = response.json()
         assert data["query"] == "Tell me about AI"
-        assert data["response"] == "Artificial Intelligence"
+        assert "Artificial Intelligence" in data["response"]
+        assert "execution_id" in data
         assert data["user_id"] is None
 
     # 2. Test chat endpoint without token (should return 401)

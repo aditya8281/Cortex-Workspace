@@ -331,3 +331,26 @@ When another AI model reads this file, it should:
 4. Prefer production-grade fixes over quick hacks.
 5. Avoid reintroducing duplicate observability paths.
 6. Keep the codebase expandable toward online and multi-provider support.
+
+## Execution Plan & Hardening Pipeline
+
+To stabilize and scale the Cortex Workspace, we follow a strict sequential execution pipeline:
+
+### 1. Backend Security Hardening
+- **CORS Configuration**: Restrict API calls to known frontend addresses (e.g., `http://localhost:5173`) using FastAPI `CORSMiddleware`.
+- **API Endpoint Authentication**: Intercept requests to user list (`GET /users`) and individual user information (`GET /users/{user_id}`) to verify JWT identity via `get_current_user`.
+- **Token Validity Check**: Assert that token signature, expiration times, and claims are valid before executing requests.
+
+### 2. Traceability and Observability Linkage
+- **Execution ID in API**: Modify the AI routing gateway (`AIGateway`) and chat/ask endpoints to return the generated `execution_id` along with the text answer. This links every user prompt directly to a trace in the SQLite event store.
+
+### 3. Integrated Premium Chat Client
+- **Authentication Flows**: Implement sign-in and registration forms in the React client, storing access tokens securely and adding request-interceptors to include `Bearer <token>` headers.
+- **Unified 3-Panel Console**:
+  - *Left Panel*: Lists previous executions with filters.
+  - *Center Panel*: Dual-mode display:
+    - **Chat Console**: Real-time message exchange, loading visualizer, and system model/provider selector (`local` vs `api`).
+    - **Replay Timeline**: Interactive event timeline replay.
+  - *Right Panel*: Detailed system/tool metrics, timing metrics, and active tools visualizer.
+- **Dynamic Linking**: When a chat request completes, the client extracts the returned `execution_id`, loads its execution trace, and highlights it instantly in the telemetry dashboard.
+

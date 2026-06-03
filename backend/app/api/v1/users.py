@@ -35,7 +35,10 @@ def create_new_user(
 
 # -----------------------------
 @router.get("/users", response_model=list[UserResponse])
-def read_users(db: Session = Depends(get_db)):
+def read_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     return get_users(db)
 
 
@@ -43,7 +46,8 @@ def read_users(db: Session = Depends(get_db)):
 @router.get("/users/{user_id}", response_model=UserResponse)
 def read_user(
     user_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     user = get_user(db, user_id)
 

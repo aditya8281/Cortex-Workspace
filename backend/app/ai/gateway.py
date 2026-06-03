@@ -1,4 +1,5 @@
 from backend.app.executor import AIExecutor
+from backend.app.executor.schemas import ExecutionResult
 
 
 class AIGateway:
@@ -10,11 +11,11 @@ class AIGateway:
         self,
         query: str,
         user_id: int | None = None
-    ) -> str:
+    ) -> ExecutionResult:
 
         result = await self.executor.execute(
             query=query,
             user_id=user_id
         )
 
-        return result.answer
+        return result

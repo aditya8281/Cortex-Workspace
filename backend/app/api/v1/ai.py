@@ -17,6 +17,7 @@ class AIResponse(BaseModel):
     query: str
     response: str
     user_id: int | None = None
+    execution_id: str | None = None
 
 
 @router.post("/ask", response_model=AIResponse)
@@ -24,8 +25,12 @@ async def ask_public(payload: QueryRequest):
     """
     Public query endpoint. Routes request through the AI Gateway.
     """
-    response_text = await gateway.route(payload.query)
-    return AIResponse(query=payload.query, response=response_text)
+    result = await gateway.route(payload.query)
+    return AIResponse(
+        query=payload.query,
+        response=result.answer,
+        execution_id=result.execution_id
+    )
 
 
 @router.post("/chat", response_model=AIResponse)
@@ -36,9 +41,10 @@ async def chat_private(
     """
     Authenticated chat endpoint. Remembers user context and saves conversation memory.
     """
-    response_text = await gateway.route(payload.query, user_id=current_user.id)
+    result = await gateway.route(payload.query, user_id=current_user.id)
     return AIResponse(
         query=payload.query,
-        response=response_text,
-        user_id=current_user.id
+        response=result.answer,
+        user_id=current_user.id,
+        execution_id=result.execution_id
     )
