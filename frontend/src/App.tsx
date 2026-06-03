@@ -33,6 +33,13 @@ const ProfilePage = lazy(() =>
 const ModelsPage = lazy(() =>
   import("@/pages/ModelsPage").then((m) => ({ default: m.ModelsPage })),
 );
+const MarketplacePage = lazy(() =>
+  import("@/pages/MarketplacePage").then((m) => ({ default: m.MarketplacePage })),
+);
+const PerformancePage = lazy(() =>
+  import("@/pages/PerformancePage").then((m) => ({ default: m.PerformancePage })),
+);
+
 
 
 const queryClient = new QueryClient({
@@ -147,6 +154,22 @@ export default function App() {
               element={
                 <Suspense fallback={<PageLoader />}>
                   <ModelsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="marketplace"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <MarketplacePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="performance"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <PerformancePage />
                 </Suspense>
               }
             />

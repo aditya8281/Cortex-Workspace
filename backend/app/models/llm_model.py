@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Integer, String, LargeBinary, Boolean, DateTime, func
+from sqlalchemy import Integer, String, LargeBinary, Boolean, DateTime, Float, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.db.base import Base
@@ -51,3 +51,33 @@ class CortexTaskRoute(Base):
     primary_model: Mapped[str] = mapped_column(String(256), nullable=False)
     fallback_model: Mapped[str] = mapped_column(String(256), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class CortexModelMetric(Base):
+    """Aggregate per-model performance metrics — upserted after every inference."""
+    __tablename__ = "cortex_model_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    model_name: Mapped[str] = mapped_column(String(256), unique=True, index=True, nullable=False)
+    provider_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    total_requests: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    success_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failure_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    avg_latency_ms: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class CortexModelEvent(Base):
+    """Append-only inference event log — powers analytics and health monitoring."""
+    __tablename__ = "cortex_model_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    model_name: Mapped[str] = mapped_column(String(256), index=True, nullable=False)
+    provider_name: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    task_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    latency_ms: Mapped[float] = mapped_column(Float, nullable=False)
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    fallback_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    routed_by: Mapped[str] = mapped_column(String(32), default="auto", nullable=False)  # "auto" | "manual"
+    ts: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

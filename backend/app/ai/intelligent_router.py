@@ -1,9 +1,14 @@
 import time
+import asyncio
 import logging
+from datetime import datetime
 from typing import List, Dict, Any, Tuple, Optional
 
 from backend.app.db.session import SessionLocal
-from backend.app.models.llm_model import CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute
+from backend.app.models.llm_model import (
+    CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute,
+    CortexModelMetric, CortexModelEvent,
+)
 from backend.app.ai.task_classifier import TaskClassifier
 from backend.app.ai.model_registry import retrieve_key_securely
 from backend.app.ai.local_llm import LocalLLM
@@ -151,6 +156,8 @@ class IntelligentRouter:
                 response = "⚠️ [Notice: Both primary and fallback models failed. Using system default provider]\n\n" + response
 
         response_time = time.time() - start_time
+        latency_ms = response_time * 1000
+        success = not fallback_used or resolved_model_used != "Default Fallback"
 
         # Compile Routing Information
         routing_info = {
@@ -162,6 +169,19 @@ class IntelligentRouter:
             "fallback_reason": fallback_error_msg if fallback_used else None,
             "classified_task": task_type
         }
+
+        # Fire-and-forget metric recording (non-blocking)
+        asyncio.ensure_future(
+            self._record_event(
+                model_name=resolved_model_used,
+                provider_name=resolved_provider,
+                task_type=task_type,
+                latency_ms=latency_ms,
+                success=success,
+                fallback_used=fallback_used,
+                routed_by="auto" if is_auto_mode else "manual",
+            )
+        )
 
         return {
             "response": response,
@@ -254,3 +274,66 @@ class IntelligentRouter:
             
         finally:
             db.close()
+
+    async def _record_event(
+        self,
+        model_name: str,
+        provider_name: str,
+        task_type: str,
+        latency_ms: float,
+        success: bool,
+        fallback_used: bool,
+        routed_by: str,
+    ) -> None:
+        """Write inference event and upsert aggregate metrics (fire-and-forget)."""
+        if not model_name or model_name in ("Default Fallback", ""):
+            return
+        try:
+            db = SessionLocal()
+            try:
+                # Append event row
+                event = CortexModelEvent(
+                    model_name=model_name,
+                    provider_name=provider_name,
+                    task_type=task_type,
+                    latency_ms=latency_ms,
+                    success=success,
+                    fallback_used=fallback_used,
+                    routed_by=routed_by,
+                )
+                db.add(event)
+
+                # Upsert aggregate metric
+                metric = db.query(CortexModelMetric).filter(
+                    CortexModelMetric.model_name == model_name
+                ).first()
+
+                if metric is None:
+                    metric = CortexModelMetric(
+                        model_name=model_name,
+                        provider_name=provider_name,
+                        total_requests=0,
+                        success_count=0,
+                        failure_count=0,
+                        avg_latency_ms=0.0,
+                    )
+                    db.add(metric)
+
+                # Rolling average: (old_avg * old_count + new_value) / new_count
+                new_total = metric.total_requests + 1
+                metric.avg_latency_ms = (
+                    (metric.avg_latency_ms * metric.total_requests + latency_ms) / new_total
+                )
+                metric.total_requests = new_total
+                if success:
+                    metric.success_count += 1
+                else:
+                    metric.failure_count += 1
+                metric.last_used_at = datetime.utcnow()
+                metric.provider_name = provider_name  # keep current
+
+                db.commit()
+            finally:
+                db.close()
+        except Exception as exc:
+            logger.warning(f"Failed to record model event: {exc}")

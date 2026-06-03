@@ -14,6 +14,8 @@ import {
   User,
   ChevronLeft,
   Cpu,
+  ShoppingBag,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,8 @@ const NAV = [
   { to: "/sync", icon: RefreshCw, label: "Sync Center" },
   { to: "/activity", icon: Activity, label: "Activity" },
   { to: "/models", icon: Cpu, label: "Models" },
+  { to: "/marketplace", icon: ShoppingBag, label: "Marketplace" },
+  { to: "/performance", icon: BarChart3, label: "Performance" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 

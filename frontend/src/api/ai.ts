@@ -341,3 +341,113 @@ export async function updateRoutingRoutes(routes: TaskRoute[]): Promise<unknown>
   return res.data;
 }
 
+export interface MarketplaceModel {
+  name: string;
+  display_name: string;
+  size: string;
+  context_length: number;
+  vram_requirement_gb: number;
+  best_use_case: string;
+  tags: string[];
+  is_installed: boolean;
+  download_status: "installed" | "available";
+}
+
+export interface HardwareInfo {
+  os: string;
+  cpu: string;
+  ram: {
+    total_gb: number;
+    available_gb: number;
+    usage_percent: number;
+  };
+  gpu: {
+    detected: boolean;
+    name: string;
+    total_vram_gb: number;
+    free_vram_gb: number;
+    utilization: number;
+  };
+}
+
+export interface MetricsSummary {
+  avg_response_time_ms: number;
+  avg_tokens_per_second: number;
+  cache_hit_rate_percent: number;
+  gpu_usage_percent: number;
+  vram_usage: {
+    total_gb: number;
+    used_gb: number;
+    usage_percent: number;
+  };
+  memory_usage: {
+    total_gb: number;
+    used_gb: number;
+    usage_percent: number;
+  };
+  total_requests: number;
+  most_used_models: {
+    model_name: string;
+    provider_name: string;
+    total_requests: number;
+  }[];
+}
+
+export interface ModelHealth {
+  model_name: string;
+  provider_name: string;
+  total_requests: number;
+  success_rate: number;
+  failure_rate: number;
+  avg_latency_ms: number;
+  last_used_at: string | null;
+  status: "healthy" | "unstable" | "failing" | "inactive";
+}
+
+export interface TaskDistributionItem {
+  task_key: string;
+  task_type: string;
+  count: number;
+  avg_latency_ms: number;
+  success_rate_percent: number;
+}
+
+export interface RoutingAnalytics {
+  routing_mode: {
+    auto: number;
+    manual: number;
+    total: number;
+  };
+  task_distribution: TaskDistributionItem[];
+  profile_distribution: {
+    profile_name: string;
+    count: number;
+  }[];
+}
+
+export async function getMarketplace(): Promise<MarketplaceModel[]> {
+  const res = await api.get("/models/marketplace");
+  return res.data;
+}
+
+export async function getHardwareInfo(): Promise<HardwareInfo> {
+  const res = await api.get("/models/hardware");
+  return res.data;
+}
+
+export async function getMetricsSummary(): Promise<MetricsSummary> {
+  const res = await api.get("/models/metrics/summary");
+  return res.data;
+}
+
+export async function getModelHealth(): Promise<ModelHealth[]> {
+  const res = await api.get("/models/metrics/health");
+  return res.data;
+}
+
+export async function getRoutingAnalytics(): Promise<RoutingAnalytics> {
+  const res = await api.get("/models/metrics/analytics");
+  return res.data;
+}
+
+

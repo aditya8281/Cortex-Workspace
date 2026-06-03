@@ -593,7 +593,7 @@ export function ModelsPage() {
                   <button
                     type="button"
                     key={prof.name}
-                    onClick={() => selectProfileMutation.mutate({ name: prof.name })}
+                    onClick={() => selectProfileMutation.mutate(prof.name)}
                     className={cn(
                       "flex flex-col rounded-xl border p-4 text-left transition duration-200 bg-cortex-surface/40 backdrop-blur-md cursor-pointer",
                       isActive 

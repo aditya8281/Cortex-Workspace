@@ -19,6 +19,8 @@ const TITLES: Record<string, string> = {
   "/settings": "Settings",
   "/projects": "Projects",
   "/profile": "Profile",
+  "/marketplace": "Marketplace",
+  "/performance": "Performance",
 };
 
 export function AppShell() {
