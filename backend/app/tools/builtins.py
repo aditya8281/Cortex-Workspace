@@ -35,7 +35,7 @@ class SystemScannerTool(RegisteredTool):
 
     async def run(self, context: ToolContext, params):
 
-        result = self.executor.system_agent.scan()
+        result = self.executor.system_agent.scan(context.query)
 
         return {
             "diagnostics": result

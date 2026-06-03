@@ -59,6 +59,8 @@ The repo is currently a backend-first FastAPI application with:
 - user authentication and profile APIs
 - a graph-driven AI execution engine
 - a reusable tool abstraction layer
+- structured tool results with fusion and intelligence scoring
+- an adaptive tool-feedback loop for future selection bias
 - repository search and lightweight RAG
 - persistent conversation memory
 - file-system and system inspection agents
@@ -81,7 +83,7 @@ The repository does not yet have the final frontend experience. The top-level `d
 
 ## Runtime Entry Point
 
-The application starts in [backend/app/main.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/main.py).
+The application starts in [backend/app/main.py](./backend/app/main.py).
 
 Key behavior:
 
@@ -95,7 +97,7 @@ The app imports both the `User` and `Memory` ORM models so SQLAlchemy metadata i
 
 ## Configuration
 
-Settings live in [backend/app/core/config.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/core/config.py).
+Settings live in [backend/app/core/config.py](./backend/app/core/config.py).
 
 Important values:
 
@@ -105,11 +107,11 @@ Important values:
 - `DATABASE_URL` and `SECRET_KEY` are required from the environment or `.env`
 - AI settings are read from `AI_MODE`, `AI_MODEL`, `AI_API_KEY`, `AI_API_URL`, and `LOCAL_MODEL`
 
-The repo includes [.env.example](/home/krishna/Desktop/AI Engineering Workspace/.env.example). The local `.env` currently uses SQLite and a development secret placeholder.
+The repo includes [.env.example](./.env.example). The local `.env` currently uses SQLite and a development secret placeholder.
 
 ## API Surface
 
-API routing is assembled in [backend/app/api/router.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/api/router.py).
+API routing is assembled in [backend/app/api/router.py](./backend/app/api/router.py).
 
 Current endpoints:
 
@@ -133,7 +135,7 @@ Important note:
 
 ### Users
 
-The user ORM model is in [backend/app/models/user.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/models/user.py).
+The user ORM model is in [backend/app/models/user.py](./backend/app/models/user.py).
 
 Fields:
 
@@ -151,7 +153,7 @@ The matching Alembic chain is:
 
 ### Memories
 
-The memory ORM model is in [backend/app/ai/memory/models.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/ai/memory/models.py).
+The memory ORM model is in [backend/app/ai/memory/models.py](./backend/app/ai/memory/models.py).
 
 Fields:
 
@@ -161,11 +163,11 @@ Fields:
 - `response`
 - `created_at`
 
-The memory migration is [migrations/versions/32a5943404d9_create_memories_table.py](/home/krishna/Desktop/AI Engineering Workspace/migrations/versions/32a5943404d9_create_memories_table.py).
+The memory migration is [migrations/versions/32a5943404d9_create_memories_table.py](./migrations/versions/32a5943404d9_create_memories_table.py).
 
 ## Authentication
 
-Authentication helpers live in [backend/app/core/security.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/core/security.py).
+Authentication helpers live in [backend/app/core/security.py](./backend/app/core/security.py).
 
 Behavior:
 
@@ -184,15 +186,19 @@ The request flow is graph-based:
 
 Relevant files:
 
-- [backend/app/ai/gateway.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/ai/gateway.py)
-- [backend/app/executor/executor.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/executor.py)
-- [backend/app/executor/intent_classifier.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/intent_classifier.py)
-- [backend/app/executor/planner.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/planner.py)
-- [backend/app/executor/graph.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/graph.py)
-- [backend/app/executor/graph_runner.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/graph_runner.py)
-- [backend/app/executor/tool_registry.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/tool_registry.py)
-- [backend/app/executor/tracer.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/tracer.py)
-- [backend/app/executor/response_builder.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/executor/response_builder.py)
+- [backend/app/ai/gateway.py](./backend/app/ai/gateway.py)
+- [backend/app/executor/executor.py](./backend/app/executor/executor.py)
+- [backend/app/executor/intent_classifier.py](./backend/app/executor/intent_classifier.py)
+- [backend/app/executor/planner.py](./backend/app/executor/planner.py)
+- [backend/app/executor/graph.py](./backend/app/executor/graph.py)
+- [backend/app/executor/graph_runner.py](./backend/app/executor/graph_runner.py)
+- [backend/app/executor/tool_registry.py](./backend/app/executor/tool_registry.py)
+- [backend/app/executor/tool_intelligence.py](./backend/app/executor/tool_intelligence.py)
+- [backend/app/executor/tool_fusion.py](./backend/app/executor/tool_fusion.py)
+- [backend/app/executor/context_compiler.py](./backend/app/executor/context_compiler.py)
+- [backend/app/executor/tool_feedback.py](./backend/app/executor/tool_feedback.py)
+- [backend/app/executor/tracer.py](./backend/app/executor/tracer.py)
+- [backend/app/executor/response_builder.py](./backend/app/executor/response_builder.py)
 
 Current executor behavior:
 
@@ -201,6 +207,9 @@ Current executor behavior:
 - runs a dedicated memory step first
 - executes tool steps via the `ToolRegistry`
 - runs the final LLM step after memory and tool dependencies are satisfied
+- compiles LLM context from memory + structured tool results
+- filters and ranks tools before final synthesis
+- stores tool usage signals for future adaptive selection
 - stores authenticated conversation memory after the response is generated
 - passes the final assembled context to `ResponseBuilder`
 
@@ -209,15 +218,16 @@ Important implementation detail:
 - `user_id` is checked with `is not None`, so `0` is not treated as missing
 - `GraphRunner` records memory, tool, and LLM outputs back into state so the executor can rebuild the final response correctly
 - built-in tool adapters are registered automatically for `file_search`, `system_scanner`, and `rag`
+- the system-scanner adapter now passes the query through correctly
 
 ### Providers
 
-Provider selection lives in [backend/app/ai/providers/registry.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/ai/providers/registry.py).
+Provider selection lives in [backend/app/ai/providers/registry.py](./backend/app/ai/providers/registry.py).
 
 Supported modes:
 
-- `local` -> [backend/app/ai/local_llm.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/ai/local_llm.py) via Ollama at `http://localhost:11434/api/generate`
-- `api` -> [backend/app/ai/api_llm.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/ai/api_llm.py) using an OpenAI-compatible chat-completions payload
+- `local` -> [backend/app/ai/local_llm.py](./backend/app/ai/local_llm.py) via Ollama at `http://localhost:11434/api/generate`
+- `api` -> [backend/app/ai/api_llm.py](./backend/app/ai/api_llm.py) using an OpenAI-compatible chat-completions payload
 
 The router is a simple mode switch, not a complex multi-provider balancer yet.
 
@@ -225,31 +235,31 @@ The router is a simple mode switch, not a complex multi-provider balancer yet.
 
 There are two chunkers in the repo:
 
-- [backend/app/rag/text_chunker.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/rag/text_chunker.py) is a simple chunk utility covered by tests
-- [backend/app/ai/ingestion/chunker.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/ai/ingestion/chunker.py) is the chunker used by the repository retriever pipeline
+- [backend/app/rag/text_chunker.py](./backend/app/rag/text_chunker.py) is a simple chunk utility covered by tests
+- [backend/app/ai/ingestion/chunker.py](./backend/app/ai/ingestion/chunker.py) is the chunker used by the repository retriever pipeline
 
 The active RAG pipeline is:
 
-- [backend/app/ai/ingestion/scanner.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/ai/ingestion/scanner.py) scans `.py`, `.md`, and `.txt` files
-- [backend/app/ai/ingestion/extractor.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/ai/ingestion/extractor.py) reads file contents
-- [backend/app/ai/ingestion/chunker.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/ai/ingestion/chunker.py) chunks text for embedding
-- [backend/app/rag/embeddings.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/rag/embeddings.py) encodes chunks using `SentenceTransformer("all-MiniLM-L6-v2")`
-- [backend/app/rag/vector_store.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/rag/vector_store.py) stores vectors in FAISS
-- [backend/app/rag/storage.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/rag/storage.py) persists `index.faiss` and `metadata.pkl`
-- [backend/app/rag/index_manager.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/rag/index_manager.py) loads `.cortex` if present, otherwise returns an empty `VectorStore(dim=384)`
-- [backend/app/rag/service.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/rag/service.py) exposes `search(query, top_k)`
+- [backend/app/ai/ingestion/scanner.py](./backend/app/ai/ingestion/scanner.py) scans `.py`, `.md`, and `.txt` files
+- [backend/app/ai/ingestion/extractor.py](./backend/app/ai/ingestion/extractor.py) reads file contents
+- [backend/app/ai/ingestion/chunker.py](./backend/app/ai/ingestion/chunker.py) chunks text for embedding
+- [backend/app/rag/embeddings.py](./backend/app/rag/embeddings.py) encodes chunks using `SentenceTransformer("all-MiniLM-L6-v2")`
+- [backend/app/rag/vector_store.py](./backend/app/rag/vector_store.py) stores vectors in FAISS
+- [backend/app/rag/storage.py](./backend/app/rag/storage.py) persists `index.faiss` and `metadata.pkl`
+- [backend/app/rag/index_manager.py](./backend/app/rag/index_manager.py) loads `.cortex` if present, otherwise returns an empty `VectorStore(dim=384)`
+- [backend/app/rag/service.py](./backend/app/rag/service.py) exposes `search(query, top_k)`
 
 Operational note:
 
 - repository indexing is not rebuilt automatically on startup
-- use [scripts/rebuild_index.py](/home/krishna/Desktop/AI Engineering Workspace/scripts/rebuild_index.py) to regenerate `.cortex`
+- use [scripts/rebuild_index.py](./scripts/rebuild_index.py) to regenerate `.cortex`
 - the rebuild script now skips saving if no indexable content is found
 
 ## Agent Utilities
 
 ### File Search Agent
 
-[backend/app/agent/file_search.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/agent/file_search.py)
+[backend/app/agent/file_search.py](./backend/app/agent/file_search.py)
 
 - keyword search across the workspace
 - scans file names and text content
@@ -257,27 +267,28 @@ Operational note:
 
 ### System Scanner
 
-[backend/app/agent/system_scanner.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/agent/system_scanner.py)
+[backend/app/agent/system_scanner.py](./backend/app/agent/system_scanner.py)
 
 - reports OS, Python runtime, free disk space, database presence, and migration count
 - performs lightweight readiness checks only
 
 ## Tool Framework
 
-The reusable tool layer lives in [backend/app/tools/](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/).
+The reusable tool layer lives in [backend/app/tools/](./backend/app/tools/).
 
 Key files:
 
-- [backend/app/tools/base.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/base.py)
-- [backend/app/tools/metadata.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/metadata.py)
-- [backend/app/tools/builtins.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/builtins.py)
-- [backend/app/tools/discovery.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/tools/discovery.py)
+- [backend/app/tools/base.py](./backend/app/tools/base.py)
+- [backend/app/tools/metadata.py](./backend/app/tools/metadata.py)
+- [backend/app/tools/builtins.py](./backend/app/tools/builtins.py)
+- [backend/app/tools/discovery.py](./backend/app/tools/discovery.py)
 
 Current state:
 
 - `BaseTool` defines `decide()` and `run()` for autonomous execution
 - `RegisteredTool` binds tools to metadata
 - `ToolMetadata` holds capability hints, priority, and tags
+- `ToolResult` is the runtime object used across the executor pipeline
 - `ToolRegistry` auto-registers the built-in executor tools when an executor instance is passed in
 - `discover_tools()` exists for future package-based tool discovery, but the current repo ships only the built-in adapters
 
@@ -285,9 +296,9 @@ Current state:
 
 Database wiring:
 
-- [backend/app/db/base.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/db/base.py)
-- [backend/app/db/session.py](/home/krishna/Desktop/AI Engineering Workspace/backend/app/db/session.py)
-- [migrations/env.py](/home/krishna/Desktop/AI Engineering Workspace/migrations/env.py)
+- [backend/app/db/base.py](./backend/app/db/base.py)
+- [backend/app/db/session.py](./backend/app/db/session.py)
+- [migrations/env.py](./migrations/env.py)
 
 Important migration detail:
 
@@ -305,10 +316,10 @@ Test coverage currently includes:
 
 Test support files:
 
-- [tests/conftest.py](/home/krishna/Desktop/AI Engineering Workspace/tests/conftest.py) creates isolated SQLite databases for tests and mocks `sentence_transformers`
-- [tests/test_auth.py](/home/krishna/Desktop/AI Engineering Workspace/tests/test_auth.py)
-- [tests/test_ai_gateway.py](/home/krishna/Desktop/AI Engineering Workspace/tests/test_ai_gateway.py)
-- [tests/test_rag.py](/home/krishna/Desktop/AI Engineering Workspace/tests/test_rag.py)
+- [tests/conftest.py](./tests/conftest.py) creates isolated SQLite databases for tests and mocks `sentence_transformers`
+- [tests/test_auth.py](./tests/test_auth.py)
+- [tests/test_ai_gateway.py](./tests/test_ai_gateway.py)
+- [tests/test_rag.py](./tests/test_rag.py)
 
 ## Current Limitations
 
@@ -380,5 +391,9 @@ If a model reads this file, it should:
 - fixed `ExecutionSession.created_at` to use a per-session timestamp
 - added built-in tool adapters and auto-registration so graph tool steps can actually execute
 - normalized graph runner tool outputs so responses use readable tool content instead of raw envelopes
+- aligned the shared `ToolResult` shape across executor, tools, and feedback layers
+- connected the planner to the adaptive tool-bias signal
+- fixed the system scanner tool to pass the query into the scanner
+- updated the context compiler to understand structured tool objects
 - guarded the index rebuild script against empty content
 - imported `Memory` in Alembic env so migrations stay aligned with the ORM

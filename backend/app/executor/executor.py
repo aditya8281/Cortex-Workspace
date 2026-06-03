@@ -93,7 +93,7 @@ class AIExecutor:
         tool_bias = self.tool_feedback.get_tool_bias()
 
         # inject bias into planner if supported
-        graph = self.planner.build_graph(intent)
+        graph = self.planner.build_graph(intent, tool_bias=tool_bias)
 
         # (future hook: planner can use tool_bias later)
 

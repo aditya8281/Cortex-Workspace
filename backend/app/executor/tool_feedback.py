@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 import time
 
-from backend.app.executor.context import ToolResult
+from backend.app.tools.base import ToolResult
 
 
 @dataclass

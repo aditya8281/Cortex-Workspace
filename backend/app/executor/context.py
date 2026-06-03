@@ -1,24 +1,7 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-
-# -------------------------------------------------
-# TOOL RESULT (NOW WITH INTELLIGENCE SIGNALS)
-# -------------------------------------------------
-@dataclass
-class ToolResult:
-    tool: str
-    output: Any
-
-    status: str = "success"
-    skipped: bool = False
-    reason: Optional[str] = None
-
-    # NEW: intelligence signals
-    confidence: float = 1.0
-    relevance: float = 1.0
-
-    meta: Dict[str, Any] = field(default_factory=dict)
+from backend.app.tools.base import ToolResult
 
 
 # -------------------------------------------------
@@ -39,7 +22,7 @@ class ExecutionContext:
     query: str
     user_id: int | None = None
 
-    memory: List[MemoryItem] = field(default_factory=list)
+    memory: Any = None
 
     tool_results: List[ToolResult] = field(default_factory=list)
 

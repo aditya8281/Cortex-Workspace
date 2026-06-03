@@ -1,4 +1,4 @@
-from backend.app.executor.context import ToolResult
+from backend.app.tools.base import ToolResult
 
 
 class ToolFusionEngine:

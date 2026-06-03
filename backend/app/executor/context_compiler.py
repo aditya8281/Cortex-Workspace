@@ -19,16 +19,18 @@ class ContextCompiler:
         blocks = ["🛠 Tool Context:"]
 
         for t in tools:
-
-            blocks.append(f"""
-Tool: {t.get('tool')}
-Status: {t.get('status')}
-Confidence: {t.get('confidence')}
-Relevance: {t.get('relevance')}
+            blocks.append(
+                f"""
+Tool: {getattr(t, 'tool', 'unknown')}
+Status: {getattr(t, 'status', 'unknown')}
+Confidence: {getattr(t, 'confidence', 0.0)}
+Relevance: {getattr(t, 'relevance', 0.0)}
+Skipped: {getattr(t, 'skipped', False)}
 
 Output:
-{self._compress_output(t.get('output'))}
-""")
+{self._compress_output(getattr(t, 'output', None))}
+"""
+            )
 
         return "\n".join(blocks)
 

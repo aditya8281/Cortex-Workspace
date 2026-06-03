@@ -25,6 +25,8 @@ class ToolResult:
         confidence: float = 1.0,
         relevance: float = 1.0,
         status: str = "success",
+        skipped: bool = False,
+        reason: str | None = None,
         meta: Optional[Dict[str, Any]] = None
     ):
         self.tool = tool
@@ -32,6 +34,8 @@ class ToolResult:
         self.confidence = confidence
         self.relevance = relevance
         self.status = status
+        self.skipped = skipped
+        self.reason = reason
         self.meta = meta or {}
 
     def to_dict(self):
@@ -56,6 +60,39 @@ class BaseTool(ABC):
     @abstractmethod
     async def run(self, context: ToolContext, params: Dict[str, Any]) -> ToolResult:
         pass
+
+    async def execute(self, context: ToolContext) -> ToolResult:
+        decision = self.decide(context)
+
+        if not decision.get("should_run", False):
+            return ToolResult(
+                tool=self.name,
+                output=None,
+                confidence=1.0,
+                relevance=0.0,
+                status="skipped",
+                skipped=True,
+                reason=decision.get("reason", "skipped"),
+                meta={"params": decision.get("params", {})}
+            )
+
+        result = await self.run(context, decision.get("params", {}))
+
+        if isinstance(result, ToolResult):
+            return result
+
+        return ToolResult(
+            tool=self.name,
+            output=result,
+            confidence=decision.get("confidence", 1.0),
+            relevance=decision.get("relevance", 1.0),
+            status="success",
+            skipped=False,
+            meta={
+                "params": decision.get("params", {}),
+                "reflection": self.reflect(result),
+            }
+        )
 
     def reflect(self, result: ToolResult) -> Dict[str, Any]:
         return {
