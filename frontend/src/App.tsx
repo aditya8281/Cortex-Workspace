@@ -317,6 +317,50 @@ function renderMessageText(text: string) {
   );
 }
 
+interface ProviderConfig {
+  name: string;
+  defaultUrl: string;
+  models: string[];
+}
+
+const PROVIDERS: Record<string, ProviderConfig> = {
+  openai: {
+    name: "OpenAI",
+    defaultUrl: "https://api.openai.com/v1",
+    models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]
+  },
+  nvidia: {
+    name: "NVIDIA NIM",
+    defaultUrl: "https://integrate.api.nvidia.com/v1",
+    models: [
+      "meta/llama3-70b-instruct",
+      "meta/llama3-8b-instruct",
+      "nvidia/nemotron-4-340b-instruct",
+      "mistralai/mixtral-8x22b-instruct-v0.1"
+    ]
+  },
+  groq: {
+    name: "Groq",
+    defaultUrl: "https://api.groq.com/openai/v1",
+    models: ["llama3-70b-8192", "llama3-8b-8192", "mixtral-8x7b-32768", "gemma-7b-it"]
+  },
+  openrouter: {
+    name: "OpenRouter",
+    defaultUrl: "https://openrouter.ai/api/v1",
+    models: [
+      "meta-llama/llama-3-70b-instruct",
+      "mistralai/mixtral-8x22b-instruct",
+      "anthropic/claude-3.5-sonnet",
+      "google/gemini-flash-1.5"
+    ]
+  },
+  custom: {
+    name: "Custom (Other)",
+    defaultUrl: "",
+    models: []
+  }
+};
+
 function App() {
   // Authentication state
   const [token, setToken] = useState<string | null>(localStorage.getItem("cortex_token"));
@@ -393,6 +437,8 @@ function App() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSavedMessage, setSettingsSavedMessage] = useState<string | null>(null);
 
+  const [selectedModelOption, setSelectedModelOption] = useState("");
+
   // Load API keys from sessionStorage (guests) or backend (users)
   useEffect(() => {
     if (token) {
@@ -425,6 +471,47 @@ function App() {
       sessionStorage.setItem("cortex_api_base_url", val);
     }
   };
+
+  const activeProviderKey = (() => {
+    const normalizedUrl = apiBaseUrl.trim().toLowerCase();
+    if (normalizedUrl.includes("api.openai.com")) return "openai";
+    if (normalizedUrl.includes("integrate.api.nvidia.com")) return "nvidia";
+    if (normalizedUrl.includes("api.groq.com")) return "groq";
+    if (normalizedUrl.includes("openrouter.ai")) return "openrouter";
+    return "custom";
+  })();
+
+  const handleProviderChange = (providerKey: string) => {
+    const provider = PROVIDERS[providerKey];
+    if (provider) {
+      handleApiBaseUrlChange(provider.defaultUrl);
+      if (providerKey === "custom") {
+        updateModelConfig("llm_model", "");
+      } else {
+        if (provider.models.length > 0) {
+          updateModelConfig("llm_model", provider.models[0]);
+        } else {
+          updateModelConfig("llm_model", "");
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (modelConfig.inference_engine === "API") {
+      const provider = PROVIDERS[activeProviderKey];
+      if (provider && activeProviderKey !== "custom") {
+        const isPredefined = provider.models.includes(modelConfig.llm_model);
+        if (isPredefined) {
+          setSelectedModelOption(modelConfig.llm_model);
+        } else {
+          setSelectedModelOption("custom_model");
+        }
+      } else {
+        setSelectedModelOption("custom_model");
+      }
+    }
+  }, [modelConfig.inference_engine, activeProviderKey, modelConfig.llm_model]);
 
   const handleSaveSettings = async () => {
     setSettingsLoading(true);
@@ -1015,21 +1102,84 @@ function App() {
 
           {showModelConfig && (
             <div className="model-config-panel">
-              <div className="config-group">
-                <label className="config-label">🤖 Main LLM</label>
-                <select
-                  className="config-select"
-                  value={modelConfig.llm_model}
-                  onChange={e => updateModelConfig("llm_model", e.target.value)}
-                >
-                  <option value="qwen3:8b">Qwen3 8B (Q4_K_M)</option>
-                  <option value="llama3">Llama 3 8B</option>
-                  <option value="mistral">Mistral 7B</option>
-                  <option value="codellama">CodeLlama 7B</option>
-                  <option value="gemma2">Gemma 2 9B</option>
-                  <option value="phi3">Phi-3 Mini</option>
-                </select>
-              </div>
+              {modelConfig.inference_engine === "Ollama" ? (
+                <div className="config-group">
+                  <label className="config-label">🤖 Main LLM</label>
+                  <select
+                    className="config-select"
+                    value={modelConfig.llm_model}
+                    onChange={e => updateModelConfig("llm_model", e.target.value)}
+                  >
+                    <option value="qwen3:8b">Qwen3 8B (Q4_K_M)</option>
+                    <option value="llama3">Llama 3 8B</option>
+                    <option value="mistral">Mistral 7B</option>
+                    <option value="codellama">CodeLlama 7B</option>
+                    <option value="gemma2">Gemma 2 9B</option>
+                    <option value="phi3">Phi-3 Mini</option>
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div className="config-group">
+                    <label className="config-label">🔌 API Provider</label>
+                    <select
+                      className="config-select"
+                      value={activeProviderKey}
+                      onChange={e => handleProviderChange(e.target.value)}
+                    >
+                      <option value="openai">OpenAI</option>
+                      <option value="nvidia">NVIDIA NIM</option>
+                      <option value="groq">Groq</option>
+                      <option value="openrouter">OpenRouter</option>
+                      <option value="custom">Custom (Other)</option>
+                    </select>
+                  </div>
+
+                  <div className="config-group">
+                    <label className="config-label">🤖 API Model</label>
+                    {activeProviderKey === "custom" ? (
+                      <input
+                        type="text"
+                        className="config-input"
+                        placeholder="Type model name (e.g. gpt-4o)..."
+                        value={modelConfig.llm_model}
+                        onChange={e => updateModelConfig("llm_model", e.target.value)}
+                      />
+                    ) : (
+                      <>
+                        <select
+                          className="config-select"
+                          value={selectedModelOption}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setSelectedModelOption(val);
+                            if (val === "custom_model") {
+                              updateModelConfig("llm_model", "");
+                            } else {
+                              updateModelConfig("llm_model", val);
+                            }
+                          }}
+                        >
+                          {PROVIDERS[activeProviderKey]?.models.map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                          <option value="custom_model">Other (Write model name)...</option>
+                        </select>
+                        {selectedModelOption === "custom_model" && (
+                          <input
+                            type="text"
+                            className="config-input"
+                            style={{ marginTop: '5px' }}
+                            placeholder="Type custom model name..."
+                            value={modelConfig.llm_model}
+                            onChange={e => updateModelConfig("llm_model", e.target.value)}
+                          />
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
 
               <div className="config-group">
                 <label className="config-label">🧬 Embedding Model</label>
