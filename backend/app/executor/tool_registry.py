@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 
 from backend.app.tools.base import BaseTool, ToolContext, ToolResult
-from backend.app.tools.builtins import (
+from backend.app.tools.builtin_tools import (
     FileSearchTool,
     RagTool,
     SystemActionsTool,

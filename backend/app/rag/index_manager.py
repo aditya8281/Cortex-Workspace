@@ -21,7 +21,8 @@ class IndexManager:
         self.code_parsing = code_parsing or "Tree-sitter"
 
         # Build an isolated subfolder key per config so indices never collide
-        safe = lambda s: s.replace("/", "_").replace(" ", "-").replace("(", "").replace(")", "")
+        def safe(s):
+            return s.replace("/", "_").replace(" ", "-").replace("(", "").replace(")", "")
         index_key = f"index_{safe(self.embedding_model)}_{safe(self.vector_db)}_{safe(self.code_parsing)}"
         self.index_path = str(Path(index_path) / index_key)
 

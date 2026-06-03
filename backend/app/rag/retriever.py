@@ -1,3 +1,4 @@
+from typing import cast
 from backend.app.rag.embeddings import EmbeddingModel
 from backend.app.rag.vector_store import VectorStore
 
@@ -13,13 +14,13 @@ class RepoRetriever:
         self.vector_db = vector_db or "FAISS"
         self.code_parsing = code_parsing or "Tree-sitter"
 
-        self.embedder = None
+        self.embedder: EmbeddingModel | None = None
 
         self.scanner = RepoScanner()
         self.extractor = FileExtractor()
         self.chunker = TextChunker(code_parsing=self.code_parsing)
 
-        self.vector_store = None
+        self.vector_store: VectorStore | None = None
         
         
     def _get_embedder(self):
@@ -148,5 +149,5 @@ class RepoRetriever:
                     "data": meta
                 })
 
-        scored_results.sort(key=lambda x: x["score"], reverse=True)
+        scored_results.sort(key=lambda x: cast(float, x["score"]), reverse=True)
         return scored_results[:top_k]

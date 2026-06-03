@@ -116,8 +116,8 @@ class BackgroundObserverService:
                     break
 
         removed = [p for p in previous if p not in current]
-        for path in removed[:50]:
-            changed_paths.append(path)
+        for p in removed[:50]:
+            changed_paths.append(p)
 
         snapshot["files"] = current
         snapshot["updated_at"] = datetime.now(timezone.utc).isoformat()

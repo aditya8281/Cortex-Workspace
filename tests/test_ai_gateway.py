@@ -4,9 +4,6 @@ from fastapi.testclient import TestClient
 
 from backend.app.main import app
 from backend.app.ai.gateway import AIGateway
-from backend.app.ai.memory.repository import MemoryRepository
-from backend.app.agent.file_search import FileSearchAgent
-from backend.app.agent.system_scanner import SystemScanner
 
 
 @pytest.fixture(name="gateway")

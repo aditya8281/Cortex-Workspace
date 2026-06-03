@@ -37,8 +37,12 @@ export function useChatSend() {
     setIsGenerating(true);
 
     try {
+      const configPayload = { ...modelConfig };
+      if (activeSession.selectedModel) {
+        configPayload.llm_model = activeSession.selectedModel;
+      }
       const response = await askQuestion(query, Boolean(token), history, {
-        ...modelConfig,
+        ...configPayload,
         api_key: apiKey,
         api_base_url: apiBaseUrl,
       });

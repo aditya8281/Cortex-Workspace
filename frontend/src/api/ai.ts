@@ -220,3 +220,79 @@ export async function pullModel(
     }
   }
 }
+
+export type RegisteredModel = {
+  id?: number;
+  name: string;
+  provider: string;
+  context_length?: number | null;
+  parameters?: string | null;
+  quantization?: string | null;
+  vram_estimate?: string | null;
+  status: string;
+  is_local: boolean;
+};
+
+export type Provider = {
+  id?: number;
+  name: string;
+  base_url?: string | null;
+  is_enabled: boolean;
+  is_custom: boolean;
+  has_key: boolean;
+};
+
+export async function getAllModels(): Promise<RegisteredModel[]> {
+  const res = await api.get("/models");
+  return res.data;
+}
+
+export async function getProviders(): Promise<Provider[]> {
+  const res = await api.get("/models/providers");
+  return res.data;
+}
+
+export async function validateProvider(
+  name: string,
+  base_url: string,
+  api_key: string
+): Promise<{ valid: boolean; models: string[]; test_response?: string; error?: string }> {
+  const res = await api.post("/models/providers/validate", { name, base_url, api_key });
+  return res.data;
+}
+
+export async function createProvider(provider: {
+  name: string;
+  base_url?: string;
+  api_key?: string;
+  is_enabled: boolean;
+  is_custom: boolean;
+}): Promise<any> {
+  const res = await api.post("/models/providers", provider);
+  return res.data;
+}
+
+export async function updateProvider(
+  name: string,
+  provider: {
+    name: string;
+    base_url?: string;
+    api_key?: string;
+    is_enabled: boolean;
+    is_custom: boolean;
+  }
+): Promise<any> {
+  const res = await api.put(`/models/providers/${encodeURIComponent(name)}`, provider);
+  return res.data;
+}
+
+export async function deleteProvider(name: string): Promise<any> {
+  const res = await api.delete(`/models/providers/${encodeURIComponent(name)}`);
+  return res.data;
+}
+
+export async function selectModel(model_name: string): Promise<any> {
+  const res = await api.post("/models/select", { model_name });
+  return res.data;
+}
+

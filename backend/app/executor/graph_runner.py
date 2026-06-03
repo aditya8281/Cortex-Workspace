@@ -8,7 +8,6 @@ from backend.app.executor.tool_intelligence import ToolIntelligence
 from backend.app.executor.tool_fusion import ToolFusionEngine
 from backend.app.executor.context_compiler import ContextCompiler
 
-from backend.app.state.manager import StateManager
 from backend.app.state.models import SystemEvent, EventType
 
 

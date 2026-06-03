@@ -13,6 +13,7 @@ import {
   Settings,
   User,
   ChevronLeft,
+  Cpu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ const NAV = [
   { to: "/graph", icon: Network, label: "Knowledge Graph" },
   { to: "/sync", icon: RefreshCw, label: "Sync Center" },
   { to: "/activity", icon: Activity, label: "Activity" },
+  { to: "/models", icon: Cpu, label: "Models" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 

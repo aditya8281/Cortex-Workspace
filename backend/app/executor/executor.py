@@ -21,6 +21,7 @@ from backend.app.executor.context import ExecutionContext
 
 from backend.app.executor.tool_feedback import ToolFeedbackStore
 from backend.app.state.manager import StateManager
+from backend.app.state.models import SystemEvent, EventType
 
 
 logger = get_logger(__name__)
@@ -123,7 +124,7 @@ class AIExecutor:
             logger.info("executor_finished")
             return self.builder.build(ctx)
 
-        except Exception as e:
+        except Exception:
 
             logger.exception("executor_failed")
             raise

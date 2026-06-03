@@ -30,6 +30,10 @@ const ProjectsPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
+const ModelsPage = lazy(() =>
+  import("@/pages/ModelsPage").then((m) => ({ default: m.ModelsPage })),
+);
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -135,6 +139,14 @@ export default function App() {
               element={
                 <Suspense fallback={<PageLoader />}>
                   <SettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="models"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ModelsPage />
                 </Suspense>
               }
             />

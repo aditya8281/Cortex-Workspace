@@ -14,7 +14,7 @@ class EmbeddingModel:
         if model_name == "bge-small-en-v1.5":
             model_name = "BAAI/bge-small-en-v1.5"
         self.model_name = model_name
-        self.model = None
+        self.model: SentenceTransformer | None = None
 
     def _ensure_loaded(self):
 
@@ -29,7 +29,7 @@ class EmbeddingModel:
     ) -> np.ndarray:
 
         self._ensure_loaded()
-
+        assert self.model is not None
         vectors = self.model.encode(
             texts
         )

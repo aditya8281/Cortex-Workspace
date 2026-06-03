@@ -88,7 +88,7 @@ class TextChunker:
         # Fallback/generic pattern matching for other/Python fallback code blocks
         if not blocks:
             lines = text.splitlines()
-            current_block = []
+            current_block: list[str] = []
             block_starter = re.compile(
                 r'^\s*('
                 r'def |class |function |export |import |'

@@ -8,6 +8,7 @@ from backend.app.core.logging import setup_logging
 from backend.app.core.middleware import RequestLoggingMiddleware
 from backend.app.models.user import User  # noqa: F401
 from backend.app.models.user_profile import UserProfile  # noqa: F401
+from backend.app.models.llm_model import CortexProvider, CortexModel  # noqa: F401
 from backend.app.ai.memory.models import Memory  # noqa: F401
 from backend.app.intelligence.models import (  # noqa: F401
     CortexAutomationSettings,

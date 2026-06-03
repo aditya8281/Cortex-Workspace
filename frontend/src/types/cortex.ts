@@ -13,6 +13,7 @@ export type ChatSession = {
   createdAt: string;
   pinned?: boolean;
   archived?: boolean;
+  selectedModel?: string;
 };
 
 export type AppUser = {

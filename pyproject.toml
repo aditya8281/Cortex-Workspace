@@ -25,6 +25,7 @@ dependencies = [
     "uvicorn>=0.48.0",
     "structlog>=25.4.0",
     "redis>=5.0.1",
+    "keyring>=25.0.0",
 ]
 
 [dependency-groups]

@@ -79,7 +79,7 @@ db-backup:
 
 lint:
 	uv run ruff check backend/ tests/
-	uv run mypy backend/ --ignore-missing-imports
+	uv run mypy backend/ --ignore-missing-imports --explicit-package-bases --implicit-optional
 
 format:
 	uv run black backend/ tests/ --line-length 100

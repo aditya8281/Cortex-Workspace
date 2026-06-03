@@ -30,7 +30,7 @@ class ToolFeedbackStore:
             )
 
     def get_tool_bias(self) -> Dict[str, float]:
-        bias = {}
+        bias: Dict[str, List[float]] = {}
 
         for r in self.records[-200:]:
 
