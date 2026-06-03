@@ -43,28 +43,28 @@ install:
 # ============================================================================
 
 dev:
-	uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+	uv run uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 
 dev-no-reload:
-	uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 
 shell:
-	python -i -c "from backend.app.main import app; from backend.app.db.session import SessionLocal; db = SessionLocal()"
+	uv run python -i -c "from backend.app.main import app; from backend.app.db.session import SessionLocal; db = SessionLocal()"
 
 # ============================================================================
 # DATABASE
 # ============================================================================
 
 migrate:
-	alembic upgrade head
+	uv run alembic upgrade head
 
 migration:
-	alembic revision -m "$(m)"
+	uv run alembic revision -m "$(m)"
 
 db-reset:
 	@echo "⚠️ Resetting database..."
 	rm -f app.db
-	alembic upgrade head
+	uv run alembic upgrade head
 	@echo "✓ Database reset complete"
 
 db-shell:
@@ -78,12 +78,12 @@ db-backup:
 # ============================================================================
 
 lint:
-	ruff check backend/ tests/
-	mypy backend/ --ignore-missing-imports
+	uv run ruff check backend/ tests/
+	uv run mypy backend/ --ignore-missing-imports
 
 format:
-	black backend/ tests/ --line-length 100
-	ruff check backend/ tests/ --fix
+	uv run black backend/ tests/ --line-length 100
+	uv run ruff check backend/ tests/ --fix
 
 check: lint test
 	@echo "✓ All checks passed"
@@ -93,13 +93,13 @@ check: lint test
 # ============================================================================
 
 test:
-	pytest -v --tb=short
+	uv run pytest -v --tb=short
 
 test-cov:
-	pytest --cov=backend --cov-report=term-missing --cov-report=html -v
+	uv run pytest --cov=backend --cov-report=term-missing --cov-report=html -v
 
 test-watch:
-	pytest -v --looponfail
+	uv run pytest -v --looponfail
 
 # ============================================================================
 # CLEANUP

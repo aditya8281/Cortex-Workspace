@@ -11,5 +11,8 @@ wheels/
 .pytest_cache/
 .mypy_cache/
 app.db
+state.db
+*.db
+*.db.backup.*
 .ruff_cache/
 .cortex/

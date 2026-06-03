@@ -1,5 +1,5 @@
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
@@ -17,7 +17,7 @@ class EventType(str, Enum):
 class SystemEvent(BaseModel):
     id: Optional[str] = None
     type: EventType
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     payload: Dict[str, Any] = Field(default_factory=dict)
     source: str = "system"
 
@@ -35,7 +35,7 @@ class AIState(BaseModel):
 
 class SystemHealthState(BaseModel):
     status: str = "healthy"
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class SystemState(BaseModel):

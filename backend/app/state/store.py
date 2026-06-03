@@ -1,6 +1,6 @@
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from .models import SystemState, SystemEvent
@@ -62,7 +62,7 @@ class StateStore:
             INSERT INTO state_snapshot (timestamp, state_json)
             VALUES (?, ?)
             """,
-            (datetime.utcnow().isoformat(), state.model_dump_json()),
+            (datetime.now(timezone.utc).isoformat(), state.model_dump_json()),
         )
 
         self.conn.commit()
