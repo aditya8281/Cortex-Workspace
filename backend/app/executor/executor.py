@@ -59,7 +59,8 @@ class AIExecutor:
             raw_state = await self.graph_runner.run(
                 graph=graph,
                 query=query,
-                user_id=user_id
+                user_id=user_id,
+                intent=intent
             )
 
             ctx = self._build_execution_context(

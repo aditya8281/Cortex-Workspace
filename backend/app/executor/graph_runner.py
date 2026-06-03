@@ -17,7 +17,7 @@ class GraphRunner:
         self.tracer = self.executor.tracer
         self.state = self.executor.state
 
-    async def run(self, graph: ExecutionGraph, query: str, user_id: int | None):
+    async def run(self, graph: ExecutionGraph, query: str, user_id: int | None, intent=None):
 
         state = {
             "execution_id": None,
@@ -29,6 +29,7 @@ class GraphRunner:
             "completed": set(),
             "execution_trace": [],
             "errors": [],
+            "intent": intent,
         }
 
         execution_id = self.tracer.create_session()
@@ -282,14 +283,28 @@ class GraphRunner:
             query=query
         )
 
-        system_prompt = (
-            "You are a factual, local-first AI assistant for Cortex Workspace.\n"
-            "You must base your answer strictly on the provided Tool Context, Memory Context, and Recent Conversation History.\n"
-            "If the tools did not find any matching files, folders, or contents, you must clearly state that "
-            "the files or directories do not exist in the workspace, and you must NOT invent or hallucinate any paths "
-            "or directories that are not present in the tool results.\n"
-            "Do not make up fake code, fake directories, or fake research papers."
-        )
+        intent = state.get("intent")
+        intent_type = intent.intent if intent else None
+
+        if intent_type == "chat":
+            system_prompt = (
+                "You are a friendly, helpful, local-first AI assistant for Cortex Workspace.\n"
+                "You should reply directly to the user's greeting, chat, question, or request using the context from the "
+                "provided Recent Conversation History and Memory Context (if available).\n"
+                "If the user is introducing themselves, greeting you, or having a general conversation, "
+                "be warm, human-like, and conversational. Do NOT mention workspace directories, tools, or missing files "
+                "unless they explicitly ask you about workspace files, code, or tools.\n"
+                "Make sure to remember their name or details if they tell you."
+            )
+        else:
+            system_prompt = (
+                "You are a factual, local-first AI assistant for Cortex Workspace.\n"
+                "You must base your answer strictly on the provided Tool Context, Memory Context, and Recent Conversation History.\n"
+                "If the tools did not find any matching files, folders, or contents, you must clearly state that "
+                "the files or directories do not exist in the workspace, and you must NOT invent or hallucinate any paths "
+                "or directories that are not present in the tool results.\n"
+                "Do not make up fake code, fake directories, or fake research papers."
+            )
 
         return await self.executor.llm.generate(prompt, system_prompt=system_prompt)
 
