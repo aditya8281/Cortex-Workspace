@@ -51,7 +51,7 @@ class RAGService:
         """Pre-warm the retriever for the given (or default) config."""
         self._get_retriever(embedding_model, vector_db, code_parsing)
 
-    def search(
+    async def search(
         self,
         query: str,
         top_k: int = 5,
@@ -59,5 +59,30 @@ class RAGService:
         vector_db: str = None,
         code_parsing: str = None
     ):
-        retriever = self._get_retriever(embedding_model, vector_db, code_parsing)
-        return retriever.retrieve(query, top_k)
+        import hashlib
+        import logging
+        from backend.app.core.redis import redis_cache
+        from backend.app.core.config import settings
+
+        em = embedding_model or "BAAI/bge-small-en-v1.5"
+        vd = vector_db or "FAISS"
+        cp = code_parsing or "Tree-sitter"
+
+        cache_payload = f"{query}||{top_k}||{em}||{vd}||{cp}"
+        cache_hash = hashlib.md5(cache_payload.encode("utf-8")).hexdigest()
+        cache_key = f"rag_search:{cache_hash}"
+
+        cached_results = await redis_cache.get(cache_key)
+        if cached_results is not None:
+            logging.getLogger(__name__).info(f"RAG search cache HIT for key {cache_key}")
+            return cached_results
+
+        logging.getLogger(__name__).info(f"RAG search cache MISS for key {cache_key}. Executing retrieval...")
+        retriever = self._get_retriever(em, vd, cp)
+        results = retriever.retrieve(query, top_k)
+
+        if results:
+            # Cache results for 30 minutes (or same LLM_CACHE_TTL_SECONDS)
+            await redis_cache.set(cache_key, results, expire_seconds=settings.LLM_CACHE_TTL_SECONDS)
+
+        return results

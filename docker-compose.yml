@@ -19,6 +19,13 @@ services:
     #           capabilities: [gpu]
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: cortex-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -32,6 +39,7 @@ services:
       - backend_data:/data
     depends_on:
       - ollama
+      - redis
     restart: unless-stopped
 
   frontend:

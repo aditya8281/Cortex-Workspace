@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     DATABASE_URL: str
+    REDIS_URL: str = "redis://localhost:6379/0"
+    LLM_CACHE_TTL_SECONDS: int = 1800
     ENV: str = "development"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

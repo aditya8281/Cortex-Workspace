@@ -29,6 +29,10 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     logger.info(f"{settings.APP_NAME} started")
     
+    # Test Redis connectivity
+    from backend.app.core.redis import redis_cache
+    await redis_cache.ping()
+    
     # Background warmup for AIExecutor and RAG index loading to optimize first-query latency
     import asyncio
     from backend.app.executor import AIExecutor
@@ -54,6 +58,8 @@ async def lifespan(app: FastAPI):
     yield
 
     observer.stop()
+    await redis_cache.close()
+    logger.info("Redis cache connection closed")
 
 
 app = FastAPI(

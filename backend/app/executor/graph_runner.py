@@ -1,4 +1,6 @@
 import asyncio
+import hashlib
+import logging
 
 from backend.app.executor.graph import ExecutionGraph, ExecutionStep
 from backend.app.tools.base import ToolContext, ToolResult
@@ -297,7 +299,27 @@ class GraphRunner:
             state=state
         )
 
-        return await self.tools.execute(tool_name, context)
+        max_retries = 2
+        res = None
+        for attempt in range(max_retries):
+            try:
+                res = await self.tools.execute(tool_name, context)
+                if res and res.status != "error":
+                    return res
+                if attempt < max_retries - 1:
+                    logging.getLogger(__name__).warning(
+                        f"Tool {tool_name} failed with status {res.status if res else 'None'}. Retrying (attempt {attempt + 2}/{max_retries})..."
+                    )
+                    await asyncio.sleep(0.2)
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise
+                logging.getLogger(__name__).warning(
+                    f"Tool {tool_name} raised exception {e}. Retrying (attempt {attempt + 2}/{max_retries})..."
+                )
+                await asyncio.sleep(0.2)
+
+        return res
 
     def _normalize_tool(self, result):
         if result is None:
@@ -378,7 +400,26 @@ class GraphRunner:
                 "Do not make up fake code, fake directories, or fake research papers."
             )
 
-        return await self.executor.llm.generate(
+        # Build Redis cache key
+        from backend.app.core.redis import redis_cache
+        from backend.app.core.config import settings
+
+        llm_model = state.get("llm_model") or ""
+        inference_engine = state.get("inference_engine") or ""
+        api_base_url = state.get("api_base_url") or ""
+        
+        cache_payload = f"{prompt}||{system_prompt}||{llm_model}||{inference_engine}||{api_base_url}"
+        cache_hash = hashlib.md5(cache_payload.encode("utf-8")).hexdigest()
+        cache_key = f"llm_cache:{cache_hash}"
+
+        cached_response = await redis_cache.get(cache_key)
+        if cached_response:
+            logging.getLogger(__name__).info(f"LLM Response cache HIT for key {cache_key}")
+            return cached_response
+
+        logging.getLogger(__name__).info(f"LLM Response cache MISS for key {cache_key}. Querying LLM...")
+        
+        response = await self.executor.llm.generate(
             prompt,
             system_prompt=system_prompt,
             model=state.get("llm_model"),
@@ -386,6 +427,11 @@ class GraphRunner:
             api_key=state.get("api_key"),
             api_base_url=state.get("api_base_url")
         )
+
+        if response:
+            await redis_cache.set(cache_key, response, expire_seconds=settings.LLM_CACHE_TTL_SECONDS)
+
+        return response
 
     def _preview(self, value):
         if value is None:

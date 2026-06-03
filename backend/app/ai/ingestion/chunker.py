@@ -90,7 +90,12 @@ class TextChunker:
             lines = text.splitlines()
             current_block = []
             block_starter = re.compile(
-                r'^\s*(def |class |function |export |import |const \w+\s*=\s*(\(.*?\)|[^=]+?)\s*=>|let \w+\s*=\s*function|var \w+\s*=\s*function|public |private |protected |async |fn |impl )'
+                r'^\s*('
+                r'def |class |function |export |import |'
+                r'const \w+\s*=\s*(\(.*?\)|[^=]+?)\s*=>|let \w+\s*=\s*function|var \w+\s*=\s*function|'
+                r'public |private |protected |async |'
+                r'fn |impl |struct |enum |trait |type |interface |package |func '
+                r')'
             )
             for line in lines:
                 if block_starter.match(line) and current_block and len("\n".join(current_block)) > 400:

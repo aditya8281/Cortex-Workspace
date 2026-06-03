@@ -57,7 +57,7 @@ class RagTool(RegisteredTool):
         vector_db = state.get("vector_db")
         code_parsing = state.get("code_parsing")
 
-        results = self.executor.rag.search(
+        results = await self.executor.rag.search(
             context.query,
             embedding_model=embedding_model,
             vector_db=vector_db,
