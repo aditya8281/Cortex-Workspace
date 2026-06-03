@@ -267,7 +267,7 @@ export async function createProvider(provider: {
   api_key?: string;
   is_enabled: boolean;
   is_custom: boolean;
-}): Promise<any> {
+}): Promise<unknown> {
   const res = await api.post("/models/providers", provider);
   return res.data;
 }
@@ -281,17 +281,17 @@ export async function updateProvider(
     is_enabled: boolean;
     is_custom: boolean;
   }
-): Promise<any> {
+): Promise<unknown> {
   const res = await api.put(`/models/providers/${encodeURIComponent(name)}`, provider);
   return res.data;
 }
 
-export async function deleteProvider(name: string): Promise<any> {
+export async function deleteProvider(name: string): Promise<unknown> {
   const res = await api.delete(`/models/providers/${encodeURIComponent(name)}`);
   return res.data;
 }
 
-export async function selectModel(model_name: string): Promise<any> {
+export async function selectModel(model_name: string): Promise<unknown> {
   const res = await api.post("/models/select", { model_name });
   return res.data;
 }

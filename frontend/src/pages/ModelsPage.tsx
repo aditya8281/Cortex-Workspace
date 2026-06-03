@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
+import { cn } from "@/lib/utils";
 import { 
   getAllModels, 
   getProviders, 
@@ -17,7 +18,7 @@ import {
   type RegisteredModel,
   type Provider
 } from "@/api/ai";
-import { Trash2, Shield, Play, Loader2, RefreshCw, Key, Plus, CheckCircle, AlertTriangle } from "lucide-react";
+import { Trash2, Shield, Play, Loader2, RefreshCw, Plus, CheckCircle, AlertTriangle } from "lucide-react";
 
 export function ModelsPage() {
   const qc = useQueryClient();
@@ -36,7 +37,7 @@ export function ModelsPage() {
 
   // Pull Model State
   const [pullModelName, setPullModelName] = useState("");
-  const [pullProgress, setPullProgress] = useState<any>(null);
+  const [pullProgress, setPullProgress] = useState<{ status: string; percent: number; completed?: number; total?: number } | null>(null);
   const [isPulling, setIsPulling] = useState(false);
 
   // Provider Form State
@@ -46,11 +47,8 @@ export function ModelsPage() {
   const [providerName, setProviderName] = useState("");
   const [isCustom, setIsCustom] = useState(false);
 
-  const [validationResult, setValidationResult] = useState<any>(null);
+  const [validationResult, setValidationResult] = useState<{ valid: boolean; models?: string[]; test_response?: string; error?: string } | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-
-  // Default provider names
-  const DEFAULT_PROVIDERS = ["OpenAI", "Anthropic", "Google", "OpenRouter", "Groq", "Together", "DeepSeek"];
 
   // Mutations
   const deleteModelMutation = useMutation({
@@ -59,7 +57,7 @@ export function ModelsPage() {
       setToast("Local model deleted successfully");
       qc.invalidateQueries({ queryKey: ["models"] });
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       setToast(`Failed to delete model: ${err.message || err}`);
     }
   });
@@ -115,8 +113,9 @@ export function ModelsPage() {
       } else {
         setToast("Connection validation failed.");
       }
-    } catch (e: any) {
-      setValidationResult({ valid: false, error: e.message || "Failed to call validation API" });
+    } catch (e: unknown) {
+      const err = e as Error;
+      setValidationResult({ valid: false, error: err.message || "Failed to call validation API" });
       setToast("Validation failed");
     } finally {
       setIsValidating(false);
@@ -149,8 +148,9 @@ export function ModelsPage() {
       qc.invalidateQueries({ queryKey: ["providers"] });
       qc.invalidateQueries({ queryKey: ["models"] });
       setSelectedProvider(null);
-    } catch (e: any) {
-      setToast(`Error saving provider: ${e.response?.data?.detail || e.message}`);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { detail?: string } }; message?: string };
+      setToast(`Error saving provider: ${err.response?.data?.detail || err.message}`);
     }
   };
 
@@ -167,8 +167,9 @@ export function ModelsPage() {
       setPullModelName("");
       setPullProgress(null);
       qc.invalidateQueries({ queryKey: ["models"] });
-    } catch (e: any) {
-      setToast(`Download failed: ${e.message}`);
+    } catch (e: unknown) {
+      const err = e as Error;
+      setToast(`Download failed: ${err.message}`);
     } finally {
       setIsPulling(false);
     }
@@ -176,7 +177,6 @@ export function ModelsPage() {
 
   // Filter models
   const localModels = models.filter((m) => m.is_local);
-  const cloudModels = models.filter((m) => !m.is_local);
 
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8 bg-cortex-background">
@@ -186,7 +186,7 @@ export function ModelsPage() {
             <h2 className="text-2xl font-bold tracking-tight text-cortex-text">Model Management</h2>
             <p className="text-sm text-cortex-muted">Configure and switch between local and cloud providers.</p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => { refetchModels(); refetchProviders(); }} className="gap-2">
+          <Button variant="secondary" size="sm" onClick={() => { refetchModels(); refetchProviders(); }} className="gap-2">
             <RefreshCw className="h-4 w-4" /> Refresh
           </Button>
         </div>
@@ -293,7 +293,7 @@ export function ModelsPage() {
                         {p.is_enabled ? (
                           <Badge variant="accent">Enabled</Badge>
                         ) : (
-                          <Badge variant="secondary">Disabled</Badge>
+                           <Badge variant="default">Disabled</Badge>
                         )}
                       </div>
                     </button>
@@ -467,7 +467,7 @@ export function ModelsPage() {
                     <span>Status: {pullProgress.status}</span>
                     <span>{pullProgress.percent}%</span>
                   </div>
-                  {pullProgress.total > 0 && (
+                  {pullProgress.total && pullProgress.total > 0 && (
                     <div className="w-full bg-cortex-border rounded-full h-1.5 overflow-hidden">
                       <div 
                         className="bg-cortex-accent h-1.5 rounded-full transition-all duration-300"
