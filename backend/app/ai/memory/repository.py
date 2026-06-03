@@ -67,6 +67,29 @@ class MemoryRepository:
 
         return None
 
+    def get_recent_history(
+        self,
+        user_id: int,
+        limit: int = 5
+    ) -> list[dict]:
+        with SessionLocal() as db:
+            stmt = (
+                select(Memory)
+                .where(Memory.user_id == user_id)
+                .order_by(Memory.created_at.desc())
+                .limit(limit)
+            )
+            memories = db.execute(stmt).scalars().all()
+            memories_list = list(memories)
+            memories_list.reverse()
+            return [
+                {
+                    "query": m.query,
+                    "response": m.response
+                }
+                for m in memories_list
+            ]
+
     def count(self) -> int:
 
         with SessionLocal() as db:

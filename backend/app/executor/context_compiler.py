@@ -1,6 +1,15 @@
 class ContextCompiler:
-    def compile(self, tools, memory=None, query=""):
+    def compile(self, tools, memory=None, chat_history=None, query=""):
         blocks = []
+
+        if chat_history:
+            history_str = "Recent Conversation History:\n"
+            for turn in chat_history:
+                resp = turn["response"]
+                if "Final Response:\n" in resp:
+                    resp = resp.split("Final Response:\n", 1)[1]
+                history_str += f"User: {turn['query']}\nAssistant: {resp}\n"
+            blocks.append(history_str.strip())
 
         if memory:
             blocks.append("Memory Context:\n" + str(memory))

@@ -165,7 +165,7 @@ class GraphRunner:
             elif step.type == "tool":
                 result = await self._run_tool(step.name, query, state, user_id)
             elif step.type == "llm":
-                result = await self._run_llm(state, query)
+                result = await self._run_llm(state, query, user_id)
             else:
                 result = None
 
@@ -265,18 +265,26 @@ class GraphRunner:
             meta={"wrapped": True}
         )
 
-    async def _run_llm(self, state, query):
+    async def _run_llm(self, state, query, user_id=None):
         compiler = ContextCompiler()
+
+        chat_history = None
+        if user_id is not None:
+            try:
+                chat_history = self.executor.memory.get_recent_history(user_id)
+            except Exception:
+                pass
 
         prompt = compiler.compile(
             tools=state["tools"],
             memory=state["memory"],
+            chat_history=chat_history,
             query=query
         )
 
         system_prompt = (
             "You are a factual, local-first AI assistant for Cortex Workspace.\n"
-            "You must base your answer strictly on the provided Tool Context and Memory Context.\n"
+            "You must base your answer strictly on the provided Tool Context, Memory Context, and Recent Conversation History.\n"
             "If the tools did not find any matching files, folders, or contents, you must clearly state that "
             "the files or directories do not exist in the workspace, and you must NOT invent or hallucinate any paths "
             "or directories that are not present in the tool results.\n"

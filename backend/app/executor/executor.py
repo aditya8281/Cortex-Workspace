@@ -67,6 +67,26 @@ class AIExecutor:
                 user_id=user_id,
                 raw_state=raw_state
             )
+
+            if user_id is not None and ctx.llm_response:
+                try:
+                    self.memory.add(
+                        user_id=user_id,
+                        query=query,
+                        response=str(ctx.llm_response)
+                    )
+                    self.state.emit_event(SystemEvent(
+                        type=EventType.MEMORY_STORED,
+                        payload={
+                            "user_id": user_id,
+                            "query": query,
+                            "response": str(ctx.llm_response)[:100]
+                        },
+                        source="AIExecutor"
+                    ), execution_id=raw_state.get("execution_id"))
+                except Exception as mem_ex:
+                    logger.error(f"Failed to store conversation memory: {mem_ex}")
+
             self.tool_feedback.log(
                 query=query,
                 tools=ctx.tool_results
