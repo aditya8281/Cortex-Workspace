@@ -16,30 +16,26 @@ class RepoScanner:
             self.search_paths.append(downloads)
 
     def scan(self, root: str | None = None):
+        import os
         files = []
         
         scan_roots = self.search_paths
         if root is not None:
             scan_roots = [Path(root).resolve()]
 
+        ignored_dirs = {".git", "node_modules", "venv", ".venv", "__pycache__", ".cortex", "dist", "build", ".next"}
+
         for root_path in scan_roots:
             if not root_path.exists():
                 continue
-            for path in root_path.rglob("*"):
-                if path.is_file():
-                    # Exclude hidden directories (starting with '.') and dependency directories.
-                    try:
-                        relative_path = path.relative_to(root_path)
-                        parts = relative_path.parts
-                    except ValueError:
-                        parts = path.parts
-
-                    if any(
-                        p.startswith(".") or p in ("venv", "node_modules", "__pycache__")
-                        for p in parts
-                    ):
+            for r, dirs, filenames in os.walk(root_path):
+                # Prune hidden and ignored directories in-place so os.walk doesn't traverse them
+                dirs[:] = [d for d in dirs if d not in ignored_dirs and not d.startswith(".")]
+                
+                for filename in filenames:
+                    if filename.startswith("."):
                         continue
-
+                    path = Path(r) / filename
                     if path.suffix in (".py", ".md", ".txt", ".pdf"):
                         files.append(str(path))
 

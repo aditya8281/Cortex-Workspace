@@ -30,22 +30,28 @@ class FileSearchAgent:
         matched_files: List[str] = []
         file_count = 0
 
+        import os
+        ignored_dirs = {".git", "node_modules", "venv", ".venv", "__pycache__", ".cortex", "dist", "build", ".next"}
+
         # Scan for matching files in all search paths
         for root in self.search_paths:
-            for path in root.rglob("*"):
-                if path.is_file():
-                    # Skip build, cache and virtual environment directories
-                    try:
-                        relative_path = path.relative_to(root)
-                        parts = relative_path.parts
-                    except ValueError:
-                        parts = path.parts
-
-                    if any(p.startswith(".") or p in ("venv", "node_modules", "__pycache__") for p in parts):
+            if not root.exists():
+                continue
+            for r, dirs, filenames in os.walk(root):
+                # Prune hidden and ignored directories in-place so os.walk doesn't traverse them
+                dirs[:] = [d for d in dirs if d not in ignored_dirs and not d.startswith(".")]
+                
+                for filename in filenames:
+                    if filename.startswith("."):
                         continue
-
+                    path = Path(r) / filename
                     file_count += 1
                     
+                    try:
+                        relative_path = path.relative_to(root)
+                    except ValueError:
+                        relative_path = path
+
                     if root == self.workspace_root:
                         path_display = str(relative_path)
                     else:

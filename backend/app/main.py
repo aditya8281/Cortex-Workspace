@@ -19,6 +19,23 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"{settings.APP_NAME} started")
+    
+    # Background warmup for AIExecutor and RAG index loading to optimize first-query latency
+    import asyncio
+    from backend.app.executor import AIExecutor
+
+    def warmup_executor():
+        try:
+            logger.info("Starting background warmup: Loading models and initializing RAG index...")
+            executor = AIExecutor()
+            executor.rag.initialize()
+            logger.info("Background warmup complete: AIExecutor and RAGService are fully ready.")
+        except Exception as ex:
+            logger.error(f"Error during background warmup: {ex}")
+
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, warmup_executor)
+
     yield
 
 

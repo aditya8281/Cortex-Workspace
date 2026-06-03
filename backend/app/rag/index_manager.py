@@ -48,8 +48,99 @@ class IndexManager:
         rebuild_needed = (existing is None) or (cached_states != current_states)
 
         if rebuild_needed:
-            # Rebuild vector store index
-            retriever.build_index(self.repo_path)
+            if existing is not None and cached_states:
+                try:
+                    ntotal = existing.index.ntotal
+                    if ntotal > 0 and len(existing.metadata) == ntotal:
+                        all_vectors = existing.index.reconstruct_n(0, ntotal)
+                        
+                        # Group existing vectors and metadata by file path
+                        existing_by_file = {}
+                        for idx, meta in enumerate(existing.metadata):
+                            file_path = meta.get("file")
+                            if file_path:
+                                if file_path not in existing_by_file:
+                                    existing_by_file[file_path] = {"vectors": [], "metadata": []}
+                                existing_by_file[file_path]["vectors"].append(all_vectors[idx])
+                                existing_by_file[file_path]["metadata"].append(meta)
+                        
+                        # Determine changes
+                        new_or_modified_files = []
+                        retained_vectors = []
+                        retained_metadata = []
+                        
+                        for f in current_states:
+                            if f in cached_states and cached_states[f] == current_states[f]:
+                                # Unmodified: retain its vectors and metadata
+                                if f in existing_by_file:
+                                    retained_vectors.extend(existing_by_file[f]["vectors"])
+                                    retained_metadata.extend(existing_by_file[f]["metadata"])
+                            else:
+                                # New or modified: we must re-process this file
+                                new_or_modified_files.append(f)
+                                
+                        # Process new and modified files
+                        new_vectors = []
+                        new_metadata = []
+                        
+                        for f in new_or_modified_files:
+                            content = retriever.extractor.extract(f)
+                            if not content:
+                                continue
+                            chunks = retriever.chunker.chunk_text(content, metadata={"file": f})
+                            chunk_texts = [chunk["text"] for chunk in chunks]
+                            if not chunk_texts:
+                                continue
+                            
+                            # Generate embeddings for new chunks
+                            file_vectors = retriever._get_embedder().encode(chunk_texts)
+                            for idx, vec in enumerate(file_vectors):
+                                new_vectors.append(vec)
+                                new_metadata.append({
+                                    "file": f,
+                                    "chunk": chunk_texts[idx]
+                                })
+                        
+                        # Combine and construct the final index
+                        final_vectors = []
+                        if retained_vectors:
+                            final_vectors.extend(retained_vectors)
+                        if new_vectors:
+                            final_vectors.extend(new_vectors)
+                            
+                        final_metadata = retained_metadata + new_metadata
+                        
+                        if final_vectors:
+                            import numpy as np
+                            final_vectors_np = np.array(final_vectors).astype("float32")
+                            new_store = VectorStore(dim=final_vectors_np.shape[1])
+                            new_store.add(final_vectors_np, final_metadata)
+                            
+                            new_store.save(self.index_path)
+                            try:
+                                base.mkdir(parents=True, exist_ok=True)
+                                with open(state_file, "w") as f:
+                                    json.dump(current_states, f)
+                            except Exception:
+                                pass
+                            return new_store
+                        else:
+                            empty_store = VectorStore(dim=384)
+                            empty_store.save(self.index_path)
+                            try:
+                                base.mkdir(parents=True, exist_ok=True)
+                                with open(state_file, "w") as f:
+                                    json.dump(current_states, f)
+                            except Exception:
+                                pass
+                            return empty_store
+                    else:
+                        retriever.build_index(self.repo_path)
+                except Exception as e:
+                    print(f"Incremental update failed, falling back: {e}")
+                    retriever.build_index(self.repo_path)
+            else:
+                retriever.build_index(self.repo_path)
             
             if retriever.vector_store is not None:
                 # Save the new index, metadata, and state cache
