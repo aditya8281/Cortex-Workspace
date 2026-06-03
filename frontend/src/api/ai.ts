@@ -45,10 +45,70 @@ export type WorkspaceIntelligenceEntryPoint = {
   role: string;
 };
 
+export type WorkspaceActivityFeedItem = {
+  title: string;
+  detail: string;
+  tone: "success" | "info" | "warning" | "insight";
+  count?: number | null;
+};
+
+export type WorkspaceGraph = {
+  nodes: string[];
+  edges: { source: string; target: string; relation: string }[];
+};
+
+export type WorkspaceRepositoryModel = {
+  modules: string[];
+  files: string[];
+  classes: string[];
+  functions: string[];
+  apis: string[];
+  configurations: string[];
+  dependencies: string[];
+  entry_points: string[];
+  documentation: string[];
+  relationships: { source: string; target: string; relation: string }[];
+};
+
+export type WorkspaceQueryClass = {
+  name: string;
+  retrieval: string;
+  use_case: string;
+};
+
+export type WorkspaceMemorySummary = {
+  patterns: string[];
+  decisions: string[];
+  known_bugs: string[];
+  design_rationale: string[];
+};
+
+export type WorkspaceSystemAccess = {
+  default_mode: string;
+  modes: { name: string; description: string }[];
+  read_permissions: string[];
+  modify_permissions: string[];
+  ignored_paths: string[];
+  read_scope: string[];
+  discovery_policy: string;
+  autonomous_discovery: string[];
+  approval_rules: string[];
+  proactive_examples: string[];
+};
+
 export type WorkspaceIntelligenceResponse = {
   project_name: string;
   purpose: string;
   architecture: string[];
+  repositories: string[];
+  concepts: string[];
+  repository_model: WorkspaceRepositoryModel;
+  system_access: WorkspaceSystemAccess;
+  dependency_graph: WorkspaceGraph;
+  module_graph: WorkspaceGraph;
+  knowledge_graph: WorkspaceGraph;
+  query_classes: WorkspaceQueryClass[];
+  memory_summary: WorkspaceMemorySummary;
   dependencies: string[];
   frameworks: string[];
   entrypoints: WorkspaceIntelligenceEntryPoint[];
@@ -58,6 +118,7 @@ export type WorkspaceIntelligenceResponse = {
   build_process: string[];
   key_files: string[];
   warnings: string[];
+  activity_feed: WorkspaceActivityFeedItem[];
   evidence: { path: string; snippet: string }[];
 };
 

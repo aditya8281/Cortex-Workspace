@@ -122,6 +122,25 @@ const QUICK_ACTIONS = [
   },
 ];
 
+const REACT_TEMPLATES = [
+  {
+    title: "ChatGPT-style shell",
+    prompt: "Design a polished ChatGPT-style React interface with a top bar, left history rail, center chat, and right settings drawer.",
+  },
+  {
+    title: "Auth-first UI",
+    prompt: "Build a clean React login and register modal flow with top navigation access and polished accessibility.",
+  },
+  {
+    title: "Configuration center",
+    prompt: "Create a React model configuration panel that supports local and API providers with clean cards and presets.",
+  },
+  {
+    title: "Assistant dashboard",
+    prompt: "Generate a modern React assistant dashboard with templates, prompts, execution traces, and workspace insights.",
+  },
+];
+
 const PROVIDERS: Record<ProviderKey, ProviderConfig> = {
   openai: {
     name: "OpenAI",
@@ -176,10 +195,6 @@ const MODEL_DEFAULTS: ModelConfig = {
   inference_engine: "Ollama",
   code_parsing: "Tree-sitter",
 };
-
-function pad(value: number) {
-  return value.toString().padStart(2, "0");
-}
 
 function formatTimestamp(value?: string | null) {
   if (!value) return "unknown";
@@ -457,6 +472,7 @@ function App() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [panelTab, setPanelTab] = useState<PanelTab>("traces");
+  const [utilityOpen, setUtilityOpen] = useState(false);
   const [inputQuery, setInputQuery] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -795,6 +811,7 @@ function App() {
     setActiveSessionId(session.id);
     setRenamingId(null);
     setRenameValue("");
+    setUtilityOpen(false);
     announceToast("Started a fresh workspace session");
   };
 
@@ -849,6 +866,7 @@ function App() {
     setToken(null);
     setCurrentUser(null);
     setPanelTab("traces");
+    setUtilityOpen(false);
     announceToast("Signed out");
   };
 
@@ -1092,6 +1110,12 @@ function App() {
   const inspectExecution = (executionId: string) => {
     setSelectedExecution(executionId);
     setPanelTab("traces");
+    setUtilityOpen(true);
+  };
+
+  const openUtilityPanel = (tab: PanelTab) => {
+    setPanelTab(tab);
+    setUtilityOpen(true);
   };
 
   const handleSessionRenameCommit = (sessionId: string) => {
@@ -1102,7 +1126,6 @@ function App() {
 
   const sessionCount = sessions.length;
   const activeExecutionCount = executions.length;
-  const latestExecution = executions[0];
   const readyChip = isAuthenticated ? "Authenticated" : "Local guest";
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1121,6 +1144,56 @@ function App() {
       <div className="background-orb background-orb--two" />
 
       {toast && <div className="toast">{toast}</div>}
+
+      <header className="topbar card">
+        <div className="topbar__brand">
+          <button type="button" className="brand-mark brand-mark--compact" onClick={() => setSidebarOpen((value) => !value)}>
+            CX
+          </button>
+          <div>
+            <p className="eyebrow">Cortex Workspace</p>
+            <h1>Assistant workspace</h1>
+          </div>
+        </div>
+
+        <div className="topbar__actions">
+          <button
+            type="button"
+            className="topbar-btn"
+            onClick={() => {
+              setPanelTab("traces");
+              setUtilityOpen(false);
+            }}
+          >
+            Chats
+          </button>
+          <button type="button" className="topbar-btn" onClick={() => openUtilityPanel("models")}>
+            Config
+          </button>
+          <button type="button" className="topbar-btn" onClick={() => openUtilityPanel("workspace")}>
+            Workspace
+          </button>
+          {isAuthenticated ? (
+            <>
+              <span className="topbar-user">
+                {currentUser?.full_name || "Signed in"}
+              </span>
+              <button type="button" className="topbar-btn topbar-btn--accent" onClick={handleLogoutClick}>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" className="topbar-btn" onClick={() => setAuthMode("login")}>
+                Sign in
+              </button>
+              <button type="button" className="topbar-btn topbar-btn--accent" onClick={() => setAuthMode("register")}>
+                Register
+              </button>
+            </>
+          )}
+        </div>
+      </header>
 
       <aside className={`sidebar ${sidebarOpen ? "is-open" : "is-closed"}`}>
         <div className="sidebar__brand">
@@ -1159,10 +1232,10 @@ function App() {
           </button>
 
           <div className="inline-actions">
-            <button type="button" className="ghost-btn" onClick={() => setPanelTab("traces")}>
+            <button type="button" className="ghost-btn" onClick={() => openUtilityPanel("traces")}>
               Traces
             </button>
-            <button type="button" className="ghost-btn" onClick={() => setPanelTab("models")}>
+            <button type="button" className="ghost-btn" onClick={() => openUtilityPanel("models")}>
               Models
             </button>
           </div>
@@ -1188,6 +1261,7 @@ function App() {
                   onClick={() => {
                     setActiveSessionId(session.id);
                     setPanelTab("traces");
+                    setUtilityOpen(false);
                   }}
                 >
                   <div className="session-item__main">
@@ -1288,37 +1362,6 @@ function App() {
       </aside>
 
       <main className="workspace">
-        <header className="hero card">
-          <div className="hero__title">
-            <button type="button" className="icon-btn icon-btn--wide" onClick={() => setSidebarOpen((value) => !value)}>
-              {sidebarOpen ? "Collapse" : "Expand"}
-            </button>
-            <div>
-              <p className="eyebrow">Operational cockpit</p>
-              <h2>{activeSession?.title ?? "New Session"}</h2>
-            </div>
-          </div>
-
-          <div className="hero__stats">
-            <div className="stat-card">
-              <span>Sessions</span>
-              <strong>{pad(sessionCount)}</strong>
-            </div>
-            <div className="stat-card">
-              <span>Executions</span>
-              <strong>{pad(activeExecutionCount)}</strong>
-            </div>
-            <div className="stat-card">
-              <span>Latest</span>
-              <strong>{latestExecution?.status ?? "idle"}</strong>
-            </div>
-            <div className="stat-card">
-              <span>Panel</span>
-              <strong>{panelTab}</strong>
-            </div>
-          </div>
-        </header>
-
         {errorMessage ? <div className="alert alert--error">{errorMessage}</div> : null}
         {adminError ? <div className="alert alert--error">{adminError}</div> : null}
 
@@ -1327,9 +1370,19 @@ function App() {
             <div className="chat-panel__top">
               <div>
                 <p className="eyebrow">Chat stream</p>
-                <h3>Build, inspect, and iterate in one place</h3>
+                <h3>{activeSession?.title ?? "New Session"}</h3>
+                <p className="chat-subtitle">A minimal assistant workspace with history, templates, and on-demand tools.</p>
               </div>
               <div className="chat-panel__chips">
+                <button type="button" className="topbar-btn topbar-btn--compact" onClick={() => setSidebarOpen((value) => !value)}>
+                  {sidebarOpen ? "Hide history" : "Show history"}
+                </button>
+                <button type="button" className="topbar-btn topbar-btn--compact" onClick={() => openUtilityPanel("models")}>
+                  Config
+                </button>
+                <button type="button" className="topbar-btn topbar-btn--compact" onClick={() => openUtilityPanel("workspace")}>
+                  Workspace
+                </button>
                 <span className="meta-chip">{isAuthenticated ? "private chat" : "public chat"}</span>
                 <span className="meta-chip">{modelConfig.llm_model || "no model"}</span>
               </div>
@@ -1338,12 +1391,36 @@ function App() {
             <div className="chat-stream">
               {!activeSession || activeSession.messages.length <= 1 ? (
                 <div className="empty-state">
-                  <div className="empty-state__hero">
-                    <div className="empty-state__glyph">C</div>
-                    <h3>Techy, fast, and focused.</h3>
+                <div className="empty-state__hero">
+                  <div className="empty-state__glyph">C</div>
+                    <h3>Chat first. Quiet. Useful.</h3>
                     <p>
                       Ask for code analysis, repository context, execution traces, or a full product review.
                     </p>
+                  </div>
+
+                  <div className="template-section">
+                    <div className="panel-head panel-head--compact">
+                      <div>
+                        <p className="eyebrow">React templates</p>
+                        <h4>Prebuilt starting points</h4>
+                      </div>
+                    </div>
+                    <div className="quick-grid quick-grid--templates">
+                      {REACT_TEMPLATES.map((item, index) => (
+                        <button
+                          key={item.title}
+                          type="button"
+                          className="quick-card quick-card--template"
+                          style={{ animationDelay: `${index * 80}ms` }}
+                          onClick={() => void handleSendMessage(undefined, item.prompt)}
+                        >
+                          <span className="quick-card__icon">R</span>
+                          <strong>{item.title}</strong>
+                          <p>{item.prompt}</p>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="quick-grid">
@@ -1426,360 +1503,677 @@ function App() {
               </div>
             </form>
           </section>
+        </section>
+      </main>
 
-          <aside className="inspector card">
-            <div className="inspector__tabs">
-              <button type="button" className={panelTab === "traces" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("traces")}>
-                Traces
-              </button>
-              <button type="button" className={panelTab === "models" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("models")}>
-                Models
-              </button>
-              <button type="button" className={panelTab === "workspace" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("workspace")}>
-                Workspace
-              </button>
-              {currentUser?.role === "admin" && (
-                <button type="button" className={panelTab === "admin" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("admin")}>
-                  Admin
+      <aside className={`utility-drawer ${utilityOpen ? "is-open" : ""}`}>
+        <div className="utility-drawer__header">
+          <div>
+            <p className="eyebrow">Tools</p>
+            <h3>
+              {panelTab === "traces" && "Execution trace"}
+              {panelTab === "models" && "Configuration"}
+              {panelTab === "workspace" && "Workspace intelligence"}
+              {panelTab === "admin" && "Admin"}
+            </h3>
+          </div>
+          <button type="button" className="icon-btn" onClick={() => setUtilityOpen(false)}>
+            ×
+          </button>
+        </div>
+
+        <div className="inspector__tabs inspector__tabs--drawer">
+          <button type="button" className={panelTab === "traces" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("traces")}>
+            Traces
+          </button>
+          <button type="button" className={panelTab === "models" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("models")}>
+            Config
+          </button>
+          <button type="button" className={panelTab === "workspace" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("workspace")}>
+            Workspace
+          </button>
+          {currentUser?.role === "admin" && (
+            <button type="button" className={panelTab === "admin" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("admin")}>
+              Admin
+            </button>
+          )}
+        </div>
+
+        <div className="utility-drawer__body">
+          {panelTab === "traces" && (
+            <div className="inspector-panel">
+              <div className="panel-head">
+                <div>
+                  <p className="eyebrow">Execution trace</p>
+                  <h3>Replay the system</h3>
+                </div>
+                <button type="button" className="icon-btn" onClick={() => void listExecutions().then(setExecutions)}>
+                  ↻
                 </button>
-              )}
-            </div>
-
-            {panelTab === "traces" && (
-              <div className="inspector-panel">
-                <div className="panel-head">
-                  <div>
-                    <p className="eyebrow">Execution trace</p>
-                    <h3>Replay the system</h3>
-                  </div>
-                  <button type="button" className="icon-btn" onClick={() => void listExecutions().then(setExecutions)}>
-                    ↻
-                  </button>
-                </div>
-
-                <div className="scroll-stack">
-                  {executions.map((execution) => {
-                    const active = execution.execution_id === selectedExecution;
-
-                    return (
-                      <button
-                        key={execution.execution_id}
-                        type="button"
-                        className={`trace-card ${active ? "is-active" : ""}`}
-                        onClick={() => setSelectedExecution(execution.execution_id)}
-                      >
-                        <div className="trace-card__top">
-                          <span className="trace-id">{execution.execution_id.slice(0, 12)}…</span>
-                          <StatusPill status={execution.status} />
-                        </div>
-                        <div className="trace-card__meta">
-                          <span>{execution.event_count ?? 0} events</span>
-                          <span>{execution.summary?.steps_executed ?? 0} steps</span>
-                        </div>
-                        <div className="trace-card__meta">
-                          <span>{execution.summary?.tools_used?.length ?? 0} tools</span>
-                          <span>{formatTimestamp(execution.last_timestamp)}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-
-                  {!loadingExecutions && executions.length === 0 && (
-                    <div className="mini-empty">Run a chat query to populate execution traces.</div>
-                  )}
-                </div>
-
-                <div className="trace-detail">
-                  {!executionData ? (
-                    <div className="mini-empty">{loadingReplay ? "Loading replay..." : "Pick a trace to inspect."}</div>
-                  ) : (
-                    <>
-                      <div className="trace-summary-grid">
-                        <div className="mini-stat">
-                          <span>Status</span>
-                          <StatusPill status={executionData.status} />
-                        </div>
-                        <div className="mini-stat">
-                          <span>Duration</span>
-                          <strong>{formatDuration(executionData.summary?.duration_ms)}</strong>
-                        </div>
-                        <div className="mini-stat">
-                          <span>Steps</span>
-                          <strong>{executionData.summary?.steps_executed ?? 0}</strong>
-                        </div>
-                        <div className="mini-stat">
-                          <span>Errors</span>
-                          <strong>{executionData.summary?.error_count ?? 0}</strong>
-                        </div>
-                      </div>
-
-                      <div className="chip-wrap">
-                        {(executionData.summary?.tools_used ?? []).length > 0 ? (
-                          executionData.summary.tools_used?.map((tool) => (
-                            <span key={tool} className="meta-chip">
-                              {tool}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="muted">No tools were recorded.</span>
-                        )}
-                      </div>
-
-                      <div className="timeline">
-                        {executionData.replay.map((step) => (
-                          <article key={step.step} className="timeline-item">
-                            <div className="timeline-item__head">
-                              <span className="timeline-step">Step {step.step}</span>
-                              <strong>{step.action}</strong>
-                              <span className="timeline-time">{formatTimestamp(step.raw?.timestamp)}</span>
-                            </div>
-                            <div className="timeline-item__body">
-                              <div className="timeline-row">
-                                <span>Type</span>
-                                <code>{step.raw?.type || "event"}</code>
-                              </div>
-                              <div className="timeline-row">
-                                <span>Source</span>
-                                <code>{step.raw?.source || "system"}</code>
-                              </div>
-                              {step.raw?.human_readable && <p>{step.raw.human_readable}</p>}
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
-            )}
 
-            {panelTab === "models" && (
-              <div className="inspector-panel">
-                <div className="panel-head">
-                  <div>
-                    <p className="eyebrow">Model stack</p>
-                    <h3>Runtime configuration</h3>
-                  </div>
-                </div>
+              <div className="scroll-stack">
+                {executions.map((execution) => {
+                  const active = execution.execution_id === selectedExecution;
 
-                <div className="settings-block">
-                  <label>Inference engine</label>
-                  <select
-                    value={modelConfig.inference_engine}
-                    onChange={(event) => updateModelField("inference_engine", event.target.value)}
-                  >
-                    <option value="Ollama">Ollama</option>
-                    <option value="API">External API</option>
-                  </select>
-                </div>
-
-                {modelConfig.inference_engine === "Ollama" ? (
-                  <div className="settings-stack">
-                    <div className="settings-block">
-                      <label>Main model</label>
-                      <select value={modelConfig.llm_model} onChange={(event) => updateModelField("llm_model", event.target.value)}>
-                        {CURATED_MODELS.map((model) => (
-                          <option key={model.id} value={model.id}>
-                            {model.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="settings-stack">
-                    <div className="settings-block">
-                      <label>Provider</label>
-                      <select value={activeProviderKey} onChange={(event) => setProvider(event.target.value as ProviderKey)}>
-                        {Object.entries(PROVIDERS).map(([key, provider]) => (
-                          <option key={key} value={key}>
-                            {provider.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="settings-block">
-                      <label>Model</label>
-                      {activeProviderKey === "custom" ? (
-                        <input
-                          value={modelConfig.llm_model}
-                          onChange={(event) => updateModelField("llm_model", event.target.value)}
-                          placeholder="gpt-4o"
-                        />
-                      ) : (
-                        <select
-                          value={selectedModelOption}
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            updateModelField("llm_model", value === "custom_model" ? "" : value);
-                          }}
-                        >
-                          {PROVIDERS[activeProviderKey].models.map((model) => (
-                            <option key={model} value={model}>
-                              {model}
-                            </option>
-                          ))}
-                          <option value="custom_model">Custom model name</option>
-                        </select>
-                      )}
-                    </div>
-
-                    <div className="settings-block">
-                      <label>API base URL</label>
-                      <input
-                        value={apiBaseUrl}
-                        onChange={(event) => handleApiBaseUrlChange(event.target.value)}
-                        placeholder="https://api.openai.com/v1"
-                      />
-                    </div>
-
-                    <div className="settings-block">
-                      <label>API key</label>
-                      <div className="input-split">
-                        <input
-                          type={showApiKey ? "text" : "password"}
-                          value={apiKey}
-                          onChange={(event) => handleApiKeyChange(event.target.value)}
-                          placeholder="sk-..."
-                        />
-                        <button type="button" className="ghost-btn" onClick={() => setShowApiKey((value) => !value)}>
-                          {showApiKey ? "Hide" : "Show"}
-                        </button>
+                  return (
+                    <button
+                      key={execution.execution_id}
+                      type="button"
+                      className={`trace-card ${active ? "is-active" : ""}`}
+                      onClick={() => setSelectedExecution(execution.execution_id)}
+                    >
+                      <div className="trace-card__top">
+                        <span className="trace-id">{execution.execution_id.slice(0, 12)}…</span>
+                        <StatusPill status={execution.status} />
                       </div>
-                    </div>
+                      <div className="trace-card__meta">
+                        <span>{execution.event_count ?? 0} events</span>
+                        <span>{execution.summary?.steps_executed ?? 0} steps</span>
+                      </div>
+                      <div className="trace-card__meta">
+                        <span>{execution.summary?.tools_used?.length ?? 0} tools</span>
+                        <span>{formatTimestamp(execution.last_timestamp)}</span>
+                      </div>
+                    </button>
+                  );
+                })}
 
-                    {token ? (
-                      <button type="button" className="primary-btn" onClick={handleSaveSettings} disabled={settingsLoading}>
-                        {settingsLoading ? "Saving..." : "Save credentials"}
-                      </button>
-                    ) : (
-                      <div className="mini-empty">Sign in to persist API credentials securely.</div>
-                    )}
-                    {settingsSavedMessage && <div className="success-note">{settingsSavedMessage}</div>}
-                  </div>
+                {!loadingExecutions && executions.length === 0 && (
+                  <div className="mini-empty">Run a chat query to populate execution traces.</div>
                 )}
+              </div>
 
-                <div className="settings-block">
-                  <label>Embedding model</label>
-                  <select value={modelConfig.embedding_model} onChange={(event) => updateModelField("embedding_model", event.target.value)}>
-                    <option value="BAAI/bge-small-en-v1.5">BGE Small EN v1.5</option>
-                    <option value="all-MiniLM-L6-v2">MiniLM L6 v2</option>
-                    <option value="all-mpnet-base-v2">MPNet Base v2</option>
-                  </select>
-                </div>
-
-                <div className="settings-block">
-                  <label>Code parsing</label>
-                  <select value={modelConfig.code_parsing} onChange={(event) => updateModelField("code_parsing", event.target.value)}>
-                    <option value="Tree-sitter">Tree-sitter</option>
-                    <option value="Plain">Plain overlap</option>
-                  </select>
-                </div>
-
-                <div className="settings-block">
-                  <label>Active runtime</label>
-                  <div className="runtime-pill">
-                    <span className="pulse" />
-                    <strong>{modelConfig.inference_engine}</strong>
-                    <span>{modelConfig.llm_model || "unset"}</span>
-                  </div>
-                </div>
-
-                {modelConfig.inference_engine === "Ollama" && (
+              <div className="trace-detail">
+                {!executionData ? (
+                  <div className="mini-empty">{loadingReplay ? "Loading replay..." : "Pick a trace to inspect."}</div>
+                ) : (
                   <>
-                    <div className="panel-divider" />
-                    <div className="panel-head">
-                      <div>
-                        <p className="eyebrow">Local models</p>
-                        <h3>Installed and downloadable</h3>
+                    <div className="trace-summary-grid">
+                      <div className="mini-stat">
+                        <span>Status</span>
+                        <StatusPill status={executionData.status} />
                       </div>
-                      <button type="button" className="icon-btn" onClick={fetchInstalledModels}>
-                        ↻
-                      </button>
+                      <div className="mini-stat">
+                        <span>Duration</span>
+                        <strong>{formatDuration(executionData.summary?.duration_ms)}</strong>
+                      </div>
+                      <div className="mini-stat">
+                        <span>Steps</span>
+                        <strong>{executionData.summary?.steps_executed ?? 0}</strong>
+                      </div>
+                      <div className="mini-stat">
+                        <span>Errors</span>
+                        <strong>{executionData.summary?.error_count ?? 0}</strong>
+                      </div>
                     </div>
 
-                    <div className="scroll-stack">
-                      {loadingModels ? (
-                        <div className="mini-empty">Loading local model inventory...</div>
-                      ) : installedModels.length === 0 ? (
-                        <div className="mini-empty">No Ollama models were found.</div>
-                      ) : (
-                        installedModels.map((model) => (
-                          <div key={model.name} className="model-row">
-                            <div>
-                              <strong>{model.name}</strong>
-                              <span>{(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB</span>
-                            </div>
-                            {currentUser?.role === "admin" && (
-                              <button type="button" className="icon-btn icon-btn--danger" onClick={() => handleDeleteModel(model.name)}>
-                                ×
-                              </button>
-                            )}
-                          </div>
+                    <div className="chip-wrap">
+                      {(executionData.summary?.tools_used ?? []).length > 0 ? (
+                        executionData.summary.tools_used?.map((tool) => (
+                          <span key={tool} className="meta-chip">
+                            {tool}
+                          </span>
                         ))
+                      ) : (
+                        <span className="muted">No tools were recorded.</span>
                       )}
                     </div>
 
-                    <div className="download-list">
-                      {CURATED_MODELS.filter(
-                        (model) =>
-                          !installedModels.some(
-                            (installed) => installed.name === model.id || installed.name.startsWith(`${model.id}:`),
-                          ),
-                      ).map((model) => (
-                        <div key={model.id} className="download-row">
-                          <span>{model.name}</span>
-                          <button type="button" className="ghost-btn" onClick={() => void handlePullModel(model.id)}>
-                            Download
-                          </button>
-                        </div>
+                    <div className="timeline">
+                      {executionData.replay.map((step) => (
+                        <article key={step.step} className="timeline-item">
+                          <div className="timeline-item__head">
+                            <span className="timeline-step">Step {step.step}</span>
+                            <strong>{step.action}</strong>
+                            <span className="timeline-time">{formatTimestamp(step.raw?.timestamp)}</span>
+                          </div>
+                          <div className="timeline-item__body">
+                            <div className="timeline-row">
+                              <span>Type</span>
+                              <code>{step.raw?.type || "event"}</code>
+                            </div>
+                            <div className="timeline-row">
+                              <span>Source</span>
+                              <code>{step.raw?.source || "system"}</code>
+                            </div>
+                            {step.raw?.human_readable && <p>{step.raw.human_readable}</p>}
+                          </div>
+                        </article>
                       ))}
                     </div>
                   </>
                 )}
               </div>
-            )}
+            </div>
+          )}
 
-            {panelTab === "workspace" && (
-              <div className="inspector-panel">
-                <div className="panel-head">
-                  <div>
-                    <p className="eyebrow">Workspace intelligence</p>
-                    <h3>Project understanding layer</h3>
-                  </div>
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    onClick={() => {
-                      setLoadingWorkspace(true);
-                      void getWorkspaceIntelligence()
-                        .then(setWorkspaceIntelligence)
-                        .catch(() => setWorkspaceIntelligence(null))
-                        .finally(() => setLoadingWorkspace(false));
-                    }}
-                  >
-                    ↻
-                  </button>
+          {panelTab === "models" && (
+            <div className="inspector-panel">
+              <div className="panel-head">
+                <div>
+                  <p className="eyebrow">Model stack</p>
+                  <h3>Runtime configuration</h3>
                 </div>
+              </div>
 
-                {loadingWorkspace ? (
-                  <div className="mini-empty">Building workspace understanding...</div>
-                ) : !workspaceIntelligence ? (
-                  <div className="mini-empty">No workspace summary available yet.</div>
-                ) : (
+              <div className="settings-block">
+                <label>Inference engine</label>
+                <select
+                  value={modelConfig.inference_engine}
+                  onChange={(event) => updateModelField("inference_engine", event.target.value)}
+                >
+                  <option value="Ollama">Ollama</option>
+                  <option value="API">External API</option>
+                </select>
+              </div>
+
+              {modelConfig.inference_engine === "Ollama" ? (
+                <div className="settings-stack">
+                  <div className="settings-block">
+                    <label>Main model</label>
+                    <select value={modelConfig.llm_model} onChange={(event) => updateModelField("llm_model", event.target.value)}>
+                      {CURATED_MODELS.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="settings-stack">
+                  <div className="settings-block">
+                    <label>Provider</label>
+                    <select value={activeProviderKey} onChange={(event) => setProvider(event.target.value as ProviderKey)}>
+                      {Object.entries(PROVIDERS).map(([key, provider]) => (
+                        <option key={key} value={key}>
+                          {provider.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="settings-block">
+                    <label>Model</label>
+                    {activeProviderKey === "custom" ? (
+                      <input
+                        value={modelConfig.llm_model}
+                        onChange={(event) => updateModelField("llm_model", event.target.value)}
+                        placeholder="gpt-4o"
+                      />
+                    ) : (
+                      <select
+                        value={selectedModelOption}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          updateModelField("llm_model", value === "custom_model" ? "" : value);
+                        }}
+                      >
+                        {PROVIDERS[activeProviderKey].models.map((model) => (
+                          <option key={model} value={model}>
+                            {model}
+                          </option>
+                        ))}
+                        <option value="custom_model">Custom model name</option>
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="settings-block">
+                    <label>API base URL</label>
+                    <input
+                      value={apiBaseUrl}
+                      onChange={(event) => handleApiBaseUrlChange(event.target.value)}
+                      placeholder="https://api.openai.com/v1"
+                    />
+                  </div>
+
+                  <div className="settings-block">
+                    <label>API key</label>
+                    <div className="input-split">
+                      <input
+                        type={showApiKey ? "text" : "password"}
+                        value={apiKey}
+                        onChange={(event) => handleApiKeyChange(event.target.value)}
+                        placeholder="sk-..."
+                      />
+                      <button type="button" className="ghost-btn" onClick={() => setShowApiKey((value) => !value)}>
+                        {showApiKey ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {token ? (
+                    <button type="button" className="primary-btn" onClick={handleSaveSettings} disabled={settingsLoading}>
+                      {settingsLoading ? "Saving..." : "Save credentials"}
+                    </button>
+                  ) : (
+                    <div className="mini-empty">Sign in to persist API credentials securely.</div>
+                  )}
+                  {settingsSavedMessage && <div className="success-note">{settingsSavedMessage}</div>}
+                </div>
+              )}
+
+              <div className="settings-block">
+                <label>Embedding model</label>
+                <select value={modelConfig.embedding_model} onChange={(event) => updateModelField("embedding_model", event.target.value)}>
+                  <option value="BAAI/bge-small-en-v1.5">BGE Small EN v1.5</option>
+                  <option value="all-MiniLM-L6-v2">MiniLM L6 v2</option>
+                  <option value="all-mpnet-base-v2">MPNet Base v2</option>
+                </select>
+              </div>
+
+              <div className="settings-block">
+                <label>Code parsing</label>
+                <select value={modelConfig.code_parsing} onChange={(event) => updateModelField("code_parsing", event.target.value)}>
+                  <option value="Tree-sitter">Tree-sitter</option>
+                  <option value="Plain">Plain overlap</option>
+                </select>
+              </div>
+
+              <div className="settings-block">
+                <label>Active runtime</label>
+                <div className="runtime-pill">
+                  <span className="pulse" />
+                  <strong>{modelConfig.inference_engine}</strong>
+                  <span>{modelConfig.llm_model || "unset"}</span>
+                </div>
+              </div>
+
+              {modelConfig.inference_engine === "Ollama" && (
+                <>
+                  <div className="panel-divider" />
+                  <div className="panel-head">
+                    <div>
+                      <p className="eyebrow">Local models</p>
+                      <h3>Installed and downloadable</h3>
+                    </div>
+                    <button type="button" className="icon-btn" onClick={fetchInstalledModels}>
+                      ↻
+                    </button>
+                  </div>
+
                   <div className="scroll-stack">
-                    <div className="mini-stat">
-                      <span>Project</span>
-                      <strong>{workspaceIntelligence.project_name}</strong>
+                    {loadingModels ? (
+                      <div className="mini-empty">Loading local model inventory...</div>
+                    ) : installedModels.length === 0 ? (
+                      <div className="mini-empty">No Ollama models were found.</div>
+                    ) : (
+                      installedModels.map((model) => (
+                        <div key={model.name} className="model-row">
+                          <div>
+                            <strong>{model.name}</strong>
+                            <span>{(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB</span>
+                          </div>
+                          {currentUser?.role === "admin" && (
+                            <button type="button" className="icon-btn icon-btn--danger" onClick={() => handleDeleteModel(model.name)}>
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="download-list">
+                    {CURATED_MODELS.filter(
+                      (model) =>
+                        !installedModels.some(
+                          (installed) => installed.name === model.id || installed.name.startsWith(`${model.id}:`),
+                        ),
+                    ).map((model) => (
+                      <div key={model.id} className="download-row">
+                        <span>{model.name}</span>
+                        <button type="button" className="ghost-btn" onClick={() => void handlePullModel(model.id)}>
+                          Download
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {panelTab === "workspace" && (
+            <div className="inspector-panel">
+              <div className="panel-head">
+                <div>
+                  <p className="eyebrow">Workspace intelligence</p>
+                  <h3>Project understanding layer</h3>
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => {
+                    setLoadingWorkspace(true);
+                    void getWorkspaceIntelligence()
+                      .then(setWorkspaceIntelligence)
+                      .catch(() => setWorkspaceIntelligence(null))
+                      .finally(() => setLoadingWorkspace(false));
+                  }}
+                >
+                  ↻
+                </button>
+              </div>
+
+              {loadingWorkspace ? (
+                <div className="mini-empty">Building workspace understanding...</div>
+              ) : !workspaceIntelligence ? (
+                <div className="mini-empty">No workspace summary available yet.</div>
+              ) : (
+                <div className="scroll-stack workspace-panel">
+                  <section className="workspace-summary">
+                    <div className="workspace-summary__hero">
+                      <p className="eyebrow">Workspace snapshot</p>
+                      <h4>{workspaceIntelligence.project_name}</h4>
+                      <p className="workspace-summary__purpose">{workspaceIntelligence.purpose}</p>
                     </div>
 
-                    <div className="mini-empty" style={{ textAlign: "left" }}>
-                      {workspaceIntelligence.purpose}
+                    <div className="workspace-stats">
+                      <div className="mini-stat">
+                        <span>Repositories</span>
+                        <strong>{workspaceIntelligence.repositories.length}</strong>
+                      </div>
+                      <div className="mini-stat">
+                        <span>Concepts</span>
+                        <strong>{workspaceIntelligence.concepts.length}</strong>
+                      </div>
+                      <div className="mini-stat">
+                        <span>Feed items</span>
+                        <strong>{workspaceIntelligence.activity_feed.length}</strong>
+                      </div>
+                      <div className="mini-stat">
+                        <span>Warnings</span>
+                        <strong>{workspaceIntelligence.warnings.length}</strong>
+                      </div>
                     </div>
 
-                    <div className="settings-block">
-                      <label>Architecture</label>
+                    <div className="chip-wrap">
+                      {workspaceIntelligence.repositories.map((repo) => (
+                        <span key={repo} className="meta-chip">
+                          {repo}
+                        </span>
+                      ))}
+                      {workspaceIntelligence.concepts.map((concept) => (
+                        <span key={concept} className="meta-chip">
+                          {concept}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="workspace-feed">
+                    <div className="panel-head panel-head--compact">
+                      <div>
+                        <p className="eyebrow">Activity feed</p>
+                        <h3>What Cortex noticed</h3>
+                      </div>
+                      <span className="meta-chip">Live</span>
+                    </div>
+
+                    <div className="activity-feed">
+                      {workspaceIntelligence.activity_feed.map((item) => (
+                        <article key={item.title} className={`activity-card activity-card--${item.tone}`}>
+                          <div className="activity-card__head">
+                            <div>
+                              <strong>{item.title}</strong>
+                              <p>{item.detail}</p>
+                            </div>
+                            {typeof item.count === "number" && <span className="activity-count">{item.count}</span>}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+
+                  <details className="workspace-details">
+                    <summary>System access and autonomy</summary>
+                    <div className="workspace-details__body">
+                      <div className="workspace-access-banner">
+                        <span className="meta-chip">Default: {workspaceIntelligence.system_access.default_mode}</span>
+                        <span className="meta-chip">Read-first</span>
+                        <span className="meta-chip">Modify requires approval</span>
+                      </div>
+
+                      <div className="workspace-access-grid">
+                        <div className="workspace-access-card">
+                          <label>Read permissions</label>
+                          <div className="chip-wrap">
+                            {workspaceIntelligence.system_access.read_permissions.map((item) => (
+                              <span key={item} className="meta-chip">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-access-card">
+                          <label>Modify permissions</label>
+                          <div className="chip-wrap">
+                            {workspaceIntelligence.system_access.modify_permissions.map((item) => (
+                              <span key={item} className="meta-chip">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-access-card">
+                          <label>Ignored paths</label>
+                          <div className="chip-wrap">
+                            {workspaceIntelligence.system_access.ignored_paths.map((item) => (
+                              <span key={item} className="meta-chip">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-access-card">
+                          <label>Read scope</label>
+                          <div className="chip-wrap">
+                            {workspaceIntelligence.system_access.read_scope.map((item) => (
+                              <span key={item} className="meta-chip">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="workspace-access-grid workspace-access-grid--stacked">
+                        <div className="workspace-access-card">
+                          <label>Autonomous discovery</label>
+                          <div className="scroll-stack">
+                            {workspaceIntelligence.system_access.autonomous_discovery.map((item) => (
+                              <div key={item} className="mini-empty" style={{ textAlign: "left" }}>
+                                {item}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-access-card">
+                          <label>Approval rules</label>
+                          <div className="scroll-stack">
+                            {workspaceIntelligence.system_access.approval_rules.map((item) => (
+                              <div key={item} className="mini-empty" style={{ textAlign: "left" }}>
+                                {item}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-access-card">
+                          <label>Proactive examples</label>
+                          <div className="scroll-stack">
+                            {workspaceIntelligence.system_access.proactive_examples.map((item) => (
+                              <div key={item} className="mini-empty" style={{ textAlign: "left" }}>
+                                {item}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mini-empty" style={{ textAlign: "left" }}>
+                        {workspaceIntelligence.system_access.discovery_policy}
+                      </div>
+
+                      <div className="workspace-access-modes">
+                        {workspaceIntelligence.system_access.modes.map((mode) => (
+                          <article key={mode.name} className="routing-card">
+                            <strong>{mode.name}</strong>
+                            <span>{mode.description}</span>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+
+                  <details className="workspace-details" open>
+                    <summary>Repository memory</summary>
+                    <div className="workspace-details__body">
+                      <div className="workspace-memory-grid">
+                        <div className="mini-stat">
+                          <span>Patterns</span>
+                          <strong>{workspaceIntelligence.memory_summary.patterns.length}</strong>
+                        </div>
+                        <div className="mini-stat">
+                          <span>Decisions</span>
+                          <strong>{workspaceIntelligence.memory_summary.decisions.length}</strong>
+                        </div>
+                        <div className="mini-stat">
+                          <span>Known bugs</span>
+                          <strong>{workspaceIntelligence.memory_summary.known_bugs.length}</strong>
+                        </div>
+                        <div className="mini-stat">
+                          <span>Rationale</span>
+                          <strong>{workspaceIntelligence.memory_summary.design_rationale.length}</strong>
+                        </div>
+                      </div>
+                      <div className="scroll-stack">
+                        {workspaceIntelligence.memory_summary.patterns.map((item) => (
+                          <div key={item} className="mini-empty" style={{ textAlign: "left" }}>
+                            {item}
+                          </div>
+                        ))}
+                        {workspaceIntelligence.memory_summary.decisions.map((item) => (
+                          <div key={item} className="mini-empty" style={{ textAlign: "left" }}>
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+
+                  <details className="workspace-details">
+                    <summary>Repository world model</summary>
+                    <div className="workspace-details__body">
+                      <div className="workspace-model-grid">
+                        <div className="workspace-model-block">
+                          <label>Modules</label>
+                          <div className="chip-wrap">
+                            {workspaceIntelligence.repository_model.modules.map((item) => (
+                              <span key={item} className="meta-chip">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-model-block">
+                          <label>Classes</label>
+                          <div className="chip-wrap">
+                            {workspaceIntelligence.repository_model.classes.map((item) => (
+                              <span key={item} className="meta-chip">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-model-block">
+                          <label>Functions</label>
+                          <div className="chip-wrap">
+                            {workspaceIntelligence.repository_model.functions.map((item) => (
+                              <span key={item} className="meta-chip">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-model-block">
+                          <label>Files</label>
+                          <div className="chip-wrap">
+                            {workspaceIntelligence.repository_model.files.map((item) => (
+                              <span key={item} className="meta-chip">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+
+                  <details className="workspace-details">
+                    <summary>Graphs</summary>
+                    <div className="workspace-details__body">
+                      <div className="workspace-graph-grid">
+                        <div className="workspace-graph-card">
+                          <label>Dependency graph</label>
+                          <div className="workspace-graph-list">
+                            {workspaceIntelligence.dependency_graph.edges.map((edge) => (
+                              <div key={`${edge.source}-${edge.target}-${edge.relation}`} className="workspace-graph-row">
+                                <span>{edge.source}</span>
+                                <strong>{edge.relation}</strong>
+                                <span>{edge.target}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-graph-card">
+                          <label>Module graph</label>
+                          <div className="workspace-graph-list">
+                            {workspaceIntelligence.module_graph.edges.map((edge) => (
+                              <div key={`${edge.source}-${edge.target}-${edge.relation}`} className="workspace-graph-row">
+                                <span>{edge.source}</span>
+                                <strong>{edge.relation}</strong>
+                                <span>{edge.target}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="workspace-graph-card">
+                          <label>Knowledge graph</label>
+                          <div className="workspace-graph-list">
+                            {workspaceIntelligence.knowledge_graph.edges.map((edge) => (
+                              <div key={`${edge.source}-${edge.target}-${edge.relation}`} className="workspace-graph-row">
+                                <span>{edge.source}</span>
+                                <strong>{edge.relation}</strong>
+                                <span>{edge.target}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+
+                  <details className="workspace-details">
+                    <summary>Query routing</summary>
+                    <div className="workspace-details__body">
+                      <div className="workspace-routing">
+                        {workspaceIntelligence.query_classes.map((item) => (
+                          <article key={item.name} className="routing-card">
+                            <strong>{item.name}</strong>
+                            <p>{item.retrieval}</p>
+                            <span>{item.use_case}</span>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+
+                  <details className="workspace-details">
+                    <summary>Architecture, APIs, and execution</summary>
+                    <div className="workspace-details__body">
                       <div className="chip-wrap">
                         {workspaceIntelligence.architecture.map((item) => (
                           <span key={item} className="meta-chip">
@@ -1787,10 +2181,6 @@ function App() {
                           </span>
                         ))}
                       </div>
-                    </div>
-
-                    <div className="settings-block">
-                      <label>Frameworks</label>
                       <div className="chip-wrap">
                         {workspaceIntelligence.frameworks.map((item) => (
                           <span key={item} className="meta-chip">
@@ -1798,24 +2188,6 @@ function App() {
                           </span>
                         ))}
                       </div>
-                    </div>
-
-                    <div className="settings-block">
-                      <label>Entrypoints</label>
-                      <div className="scroll-stack">
-                        {workspaceIntelligence.entrypoints.map((entry) => (
-                          <div key={entry.path} className="model-row">
-                            <div>
-                              <strong>{entry.path}</strong>
-                              <span>{entry.role}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="settings-block">
-                      <label>APIs</label>
                       <div className="scroll-stack">
                         {workspaceIntelligence.apis.map((apiLine) => (
                           <div key={apiLine} className="mini-empty" style={{ textAlign: "left" }}>
@@ -1823,10 +2195,6 @@ function App() {
                           </div>
                         ))}
                       </div>
-                    </div>
-
-                    <div className="settings-block">
-                      <label>Execution flow</label>
                       <div className="scroll-stack">
                         {workspaceIntelligence.execution_flow.map((step) => (
                           <div key={step} className="mini-empty" style={{ textAlign: "left" }}>
@@ -1835,9 +2203,11 @@ function App() {
                         ))}
                       </div>
                     </div>
+                  </details>
 
-                    <div className="settings-block">
-                      <label>Build and config</label>
+                  <details className="workspace-details">
+                    <summary>Build, files, and warnings</summary>
+                    <div className="workspace-details__body">
                       <div className="chip-wrap">
                         {workspaceIntelligence.config.map((item) => (
                           <span key={item} className="meta-chip">
@@ -1845,17 +2215,13 @@ function App() {
                           </span>
                         ))}
                       </div>
-                      <div className="scroll-stack" style={{ marginTop: "10px" }}>
+                      <div className="scroll-stack">
                         {workspaceIntelligence.build_process.map((line) => (
                           <div key={line} className="mini-empty" style={{ textAlign: "left" }}>
                             {line}
                           </div>
                         ))}
                       </div>
-                    </div>
-
-                    <div className="settings-block">
-                      <label>Key files</label>
                       <div className="chip-wrap">
                         {workspaceIntelligence.key_files.map((file) => (
                           <span key={file} className="meta-chip">
@@ -1863,11 +2229,7 @@ function App() {
                           </span>
                         ))}
                       </div>
-                    </div>
-
-                    {workspaceIntelligence.warnings.length > 0 && (
-                      <div className="settings-block">
-                        <label>Warnings</label>
+                      {workspaceIntelligence.warnings.length > 0 && (
                         <div className="scroll-stack">
                           {workspaceIntelligence.warnings.map((warning) => (
                             <div key={warning} className="mini-empty" style={{ textAlign: "left" }}>
@@ -1875,85 +2237,85 @@ function App() {
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {panelTab === "admin" && currentUser?.role === "admin" && (
-              <div className="inspector-panel">
-                <div className="panel-head">
-                  <div>
-                    <p className="eyebrow">Admin console</p>
-                    <h3>User management</h3>
-                  </div>
-                  <button type="button" className="icon-btn" onClick={loadUsers}>
-                    ↻
-                  </button>
+                      )}
+                    </div>
+                  </details>
                 </div>
+              )}
+            </div>
+          )}
 
-                {loadingUsers ? (
-                  <div className="mini-empty">Loading user records...</div>
-                ) : (
-                  <div className="scroll-stack">
-                    {usersList.map((user) => {
-                      const isEditing = editingUserId === user.id;
-                      return (
-                        <div key={user.id} className="user-row">
-                          <div className="user-row__details">
-                            <strong>{isEditing ? "Editing user" : user.full_name}</strong>
-                            {isEditing ? (
-                              <div className="settings-stack">
-                                <input value={editFullName} onChange={(event) => setEditFullName(event.target.value)} />
-                                <input value={editEmail} onChange={(event) => setEditEmail(event.target.value)} />
-                                <select value={editRole} onChange={(event) => setEditRole(event.target.value)}>
-                                  <option value="user">user</option>
-                                  <option value="admin">admin</option>
-                                </select>
-                              </div>
-                            ) : (
-                              <>
-                                <span>{user.email}</span>
-                                <span className="meta-chip">{user.role}</span>
-                              </>
-                            )}
-                          </div>
-
-                          <div className="user-row__actions">
-                            {isEditing ? (
-                              <>
-                                <button type="button" className="ghost-btn" onClick={() => void handleUserSave(user.id)}>
-                                  Save
-                                </button>
-                                <button type="button" className="ghost-btn" onClick={() => setEditingUserId(null)}>
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button type="button" className="ghost-btn" onClick={() => handleUserStartEdit(user)}>
-                                  Edit
-                                </button>
-                                {user.id !== currentUser?.id && (
-                                  <button type="button" className="icon-btn icon-btn--danger" onClick={() => void handleUserDelete(user.id)}>
-                                    ×
-                                  </button>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+          {panelTab === "admin" && currentUser?.role === "admin" && (
+            <div className="inspector-panel">
+              <div className="panel-head">
+                <div>
+                  <p className="eyebrow">Admin console</p>
+                  <h3>User management</h3>
+                </div>
+                <button type="button" className="icon-btn" onClick={loadUsers}>
+                  ↻
+                </button>
               </div>
-            )}
-          </aside>
-        </section>
-      </main>
+
+              {loadingUsers ? (
+                <div className="mini-empty">Loading user records...</div>
+              ) : (
+                <div className="scroll-stack">
+                  {usersList.map((user) => {
+                    const isEditing = editingUserId === user.id;
+                    return (
+                      <div key={user.id} className="user-row">
+                        <div className="user-row__details">
+                          <strong>{isEditing ? "Editing user" : user.full_name}</strong>
+                          {isEditing ? (
+                            <div className="settings-stack">
+                              <input value={editFullName} onChange={(event) => setEditFullName(event.target.value)} />
+                              <input value={editEmail} onChange={(event) => setEditEmail(event.target.value)} />
+                              <select value={editRole} onChange={(event) => setEditRole(event.target.value)}>
+                                <option value="user">user</option>
+                                <option value="admin">admin</option>
+                              </select>
+                            </div>
+                          ) : (
+                            <>
+                              <span>{user.email}</span>
+                              <span className="meta-chip">{user.role}</span>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="user-row__actions">
+                          {isEditing ? (
+                            <>
+                              <button type="button" className="ghost-btn" onClick={() => void handleUserSave(user.id)}>
+                                Save
+                              </button>
+                              <button type="button" className="ghost-btn" onClick={() => setEditingUserId(null)}>
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button type="button" className="ghost-btn" onClick={() => handleUserStartEdit(user)}>
+                                Edit
+                              </button>
+                              {user.id !== currentUser?.id && (
+                                <button type="button" className="icon-btn icon-btn--danger" onClick={() => void handleUserDelete(user.id)}>
+                                  ×
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </aside>
 
       {authMode !== "none" && (
         <div className="overlay">
