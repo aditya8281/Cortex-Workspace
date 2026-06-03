@@ -1,6 +1,7 @@
+import json
+import os
 from pathlib import Path
 
-from backend.app.rag.retriever import RepoRetriever
 from backend.app.rag.vector_store import VectorStore
 
 
@@ -15,14 +16,52 @@ class IndexManager:
         self.index_path = index_path
 
     def get_store(self):
+        from backend.app.rag.retriever import RepoRetriever
 
-        existing = VectorStore.load(
-            self.index_path
-        )
+        base = Path(self.index_path)
+        state_file = base / "file_states.json"
+        
+        retriever = RepoRetriever()
+        files = retriever.scanner.scan(self.repo_path)
+        
+        # Calculate current file modification times
+        current_states = {}
+        for f in files:
+            try:
+                current_states[f] = os.path.getmtime(f)
+            except Exception:
+                pass
 
-        if existing:
-            return existing
+        # Load existing index & metadata
+        existing = VectorStore.load(self.index_path)
+        
+        # Load cached file states
+        cached_states = {}
+        if state_file.exists():
+            try:
+                with open(state_file, "r") as f:
+                    cached_states = json.load(f)
+            except Exception:
+                pass
 
-        # Return a fresh empty vector store to avoid blocking application startup/testing.
-        # The index should be rebuilt explicitly using scripts/rebuild_index.py.
-        return VectorStore(dim=384)
+        # Check if rebuild is needed
+        rebuild_needed = (existing is None) or (cached_states != current_states)
+
+        if rebuild_needed:
+            # Rebuild vector store index
+            retriever.build_index(self.repo_path)
+            
+            if retriever.vector_store is not None:
+                # Save the new index, metadata, and state cache
+                retriever.vector_store.save(self.index_path)
+                try:
+                    base.mkdir(parents=True, exist_ok=True)
+                    with open(state_file, "w") as f:
+                        json.dump(current_states, f)
+                except Exception:
+                    pass
+                return retriever.vector_store
+            else:
+                return VectorStore(dim=384)
+
+        return existing

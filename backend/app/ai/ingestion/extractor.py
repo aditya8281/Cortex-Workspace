@@ -13,6 +13,14 @@ class FileExtractor:
             return ""
 
         try:
-            return path.read_text(encoding="utf-8", errors="ignore")
+            if path.suffix == ".pdf":
+                import fitz  # PyMuPDF
+                doc = fitz.open(path)
+                content = []
+                for page in doc:
+                    content.append(page.get_text())
+                return "\n".join(content)
+            else:
+                return path.read_text(encoding="utf-8", errors="ignore")
         except Exception:
             return ""

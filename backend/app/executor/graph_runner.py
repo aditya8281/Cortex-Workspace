@@ -274,7 +274,16 @@ class GraphRunner:
             query=query
         )
 
-        return await self.executor.llm.generate(prompt)
+        system_prompt = (
+            "You are a factual, local-first AI assistant for Cortex Workspace.\n"
+            "You must base your answer strictly on the provided Tool Context and Memory Context.\n"
+            "If the tools did not find any matching files, folders, or contents, you must clearly state that "
+            "the files or directories do not exist in the workspace, and you must NOT invent or hallucinate any paths "
+            "or directories that are not present in the tool results.\n"
+            "Do not make up fake code, fake directories, or fake research papers."
+        )
+
+        return await self.executor.llm.generate(prompt, system_prompt=system_prompt)
 
     def _preview(self, value):
         if value is None:
