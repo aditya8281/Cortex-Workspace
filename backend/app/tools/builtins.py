@@ -76,3 +76,96 @@ class RagTool(RegisteredTool):
             "chunks": chunks,
             "count": len(chunks)
         }
+
+
+class SystemActionsTool(RegisteredTool):
+    name = "system_actions"
+
+    def __init__(self, executor):
+        self.executor = executor
+
+    def decide(self, context: ToolContext):
+        query = context.query.lower()
+        triggers = (
+            "open file",
+            "open folder",
+            "launch",
+            "run command",
+            "execute",
+            "read file",
+            "list directory",
+        )
+        if any(t in query for t in triggers):
+            return {"should_run": True, "reason": "system_action", "params": {}}
+        return {"should_run": False, "reason": "no_action_intent", "params": {}}
+
+    async def run(self, context: ToolContext, params):
+        from backend.app.db.session import SessionLocal
+        from backend.app.intelligence.system_actions import SystemActionsService
+
+        query = context.query.lower()
+        service = SystemActionsService()
+        db = SessionLocal()
+        try:
+            if "open folder" in query:
+                return await self._plan(
+                    service,
+                    db,
+                    context,
+                    "open_folder",
+                    "Open folder requested from chat",
+                    [],
+                )
+            if "read file" in query:
+                return await self._plan(
+                    service,
+                    db,
+                    context,
+                    "read_file",
+                    "Read file requested from chat",
+                    [],
+                )
+            if "run command" in query or "execute" in query:
+                return await self._plan(
+                    service,
+                    db,
+                    context,
+                    "run_command",
+                    "Terminal command requested from chat",
+                    [],
+                    {"command": context.query, "category": "terminal"},
+                )
+            return {
+                "available_actions": [
+                    "open_file",
+                    "open_folder",
+                    "read_file",
+                    "list_directory",
+                    "run_command",
+                    "search_files",
+                ],
+                "note": "Use the intelligence API to plan actions with affected paths.",
+            }
+        finally:
+            db.close()
+
+    async def _plan(
+        self,
+        service,
+        db,
+        context: ToolContext,
+        action_type: str,
+        description: str,
+        paths: list,
+        payload: dict | None = None,
+    ):
+        result = service.plan_action(
+            db,
+            user_id=context.user_id,
+            action_type=action_type,
+            description=description,
+            affected_paths=paths,
+            payload=payload or {},
+            category=(payload or {}).get("category"),
+        )
+        return result

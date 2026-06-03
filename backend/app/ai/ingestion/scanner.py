@@ -1,82 +1,105 @@
+import os
 from pathlib import Path
+
 from backend.app.core.config import settings
+from backend.app.intelligence.discovery import FilesystemDiscovery
+from backend.app.intelligence.exclusions import ExclusionConfig, default_exclusions
 
 
 class RepoScanner:
     """
-    Scans repository and collects files for indexing.
+    Scans user environment and collects files for indexing.
+    Uses intelligent home-directory discovery with configurable exclusions.
     """
 
     def __init__(self):
         workspace = Path(settings.WORKSPACE_ROOT).resolve()
-        home = Path.home().resolve()
-        self.search_paths = self._build_search_paths(workspace, home)
+        self.discovery = FilesystemDiscovery()
+        self.exclusions = default_exclusions
+        self.search_paths = self.discovery.discover_roots()
+
+        if workspace.exists() and workspace not in self.search_paths:
+            self.search_paths.insert(0, workspace)
 
     def scan(self, root: str | None = None):
-        import os
-        files = []
+        files: list[str] = []
+        seen: set[str] = set()
 
         scan_roots = self.search_paths
+        exclusions = self.exclusions
         if root is not None:
             scan_roots = [Path(root).resolve()]
-
-        ignored_dirs = {
-            ".git",
-            "node_modules",
-            "venv",
-            ".venv",
-            "__pycache__",
-            ".cortex",
-            "dist",
-            "build",
-            ".next",
-            ".cache",
-            ".local",
-            "proc",
-            "sys",
-            "dev",
-            "run",
-            "tmp",
-        }
+            exclusions = ExclusionConfig(
+                ignored_dir_names=self.exclusions.ignored_dir_names,
+                ignored_path_prefixes=(),
+                index_extensions=self.exclusions.index_extensions,
+                max_file_bytes=self.exclusions.max_file_bytes,
+            )
 
         for root_path in scan_roots:
             if not root_path.exists():
                 continue
+            if exclusions.should_skip_path(root_path):
+                continue
+
             for r, dirs, filenames in os.walk(root_path):
-                # Prune hidden and ignored directories in-place so os.walk doesn't traverse them
+                parent = Path(r)
+                if exclusions.should_skip_path(parent):
+                    dirs.clear()
+                    continue
+
                 dirs[:] = [
                     d
                     for d in dirs
-                    if d not in ignored_dirs and not d.startswith(".") and not self._is_system_noise(d)
+                    if not exclusions.should_prune_dir(d, parent)
                 ]
 
                 for filename in filenames:
-                    if filename.startswith("."):
+                    path = parent / filename
+                    if not exclusions.is_indexable_file(path):
                         continue
-                    path = Path(r) / filename
-                    if path.suffix in (".py", ".md", ".txt", ".pdf"):
-                        files.append(str(path))
+                    path_str = str(path.resolve())
+                    if path_str in seen:
+                        continue
+                    seen.add(path_str)
+                    files.append(path_str)
 
         return files
 
-    def _build_search_paths(self, workspace: Path, home: Path) -> list[Path]:
-        search_paths = [workspace]
-        common_roots = [
-            home,
-            home / "Desktop",
-            home / "Documents",
-            home / "Downloads",
-            home / "Projects",
-            home / "Work",
-            home / "Development",
-            home / "Research",
-        ]
+    def scan_incremental(self, changed_paths: list[str]) -> list[str]:
+        """Return indexable files from a set of changed paths (files or directories)."""
+        files: list[str] = []
+        seen: set[str] = set()
 
-        for path in common_roots:
-            if path.exists() and path not in search_paths:
-                search_paths.append(path)
+        for raw in changed_paths:
+            path = Path(raw).resolve()
+            if not path.exists():
+                continue
+            if path.is_file():
+                if self.exclusions.is_indexable_file(path):
+                    path_str = str(path)
+                    if path_str not in seen:
+                        seen.add(path_str)
+                        files.append(path_str)
+                continue
 
-        return search_paths
+            if self.exclusions.should_skip_path(path):
+                continue
 
-    def _is_system_noise(self, directory: str) -> bool:
-        return directory in {"proc", "sys", "dev", "run", "tmp"}
+            for r, dirs, filenames in os.walk(path):
+                parent = Path(r)
+                dirs[:] = [
+                    d
+                    for d in dirs
+                    if not self.exclusions.should_prune_dir(d, parent)
+                ]
+                for filename in filenames:
+                    file_path = parent / filename
+                    if not self.exclusions.is_indexable_file(file_path):
+                        continue
+                    path_str = str(file_path.resolve())
+                    if path_str not in seen:
+                        seen.add(path_str)
+                        files.append(path_str)
+
+        return files

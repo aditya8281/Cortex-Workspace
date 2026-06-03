@@ -8,6 +8,14 @@ from backend.app.core.logging import setup_logging
 from backend.app.core.middleware import RequestLoggingMiddleware
 from backend.app.models.user import User  # noqa: F401
 from backend.app.ai.memory.models import Memory  # noqa: F401
+from backend.app.intelligence.models import (  # noqa: F401
+    CortexAutomationSettings,
+    KnowledgeEntry,
+    PendingSystemAction,
+    ProactiveNotification,
+    RepositoryProfile,
+    SyncRun,
+)
 from backend.app.core.logging import get_logger
 
 
@@ -36,7 +44,15 @@ async def lifespan(app: FastAPI):
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, warmup_executor)
 
+    from backend.app.intelligence.observer_service import BackgroundObserverService
+
+    observer = BackgroundObserverService(poll_interval_seconds=90)
+    observer.start(loop=loop)
+    logger.info("Cortex background observer started")
+
     yield
+
+    observer.stop()
 
 
 app = FastAPI(

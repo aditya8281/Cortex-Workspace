@@ -25,6 +25,21 @@ import {
   updateUser,
 } from "./api/auth";
 import { getExecutionReplay, listExecutions } from "./api/execution";
+import {
+  dismissProactiveNotification,
+  getAutomationSettings,
+  getLatestSyncRun,
+  getProactiveNotifications,
+  getSyncStatus,
+  listRepositoryProfiles,
+  triggerSyncNow,
+  updateAutomationSettings,
+  type AutomationSettings,
+  type ProactiveNotification,
+  type RepositoryProfile,
+  type SyncRun,
+  type SyncStatus,
+} from "./api/intelligence";
 
 type AppUser = {
   id: number;
@@ -85,7 +100,7 @@ type ReplayData = {
   replay: ReplayStep[];
 };
 
-type PanelTab = "traces" | "models" | "workspace" | "admin";
+type PanelTab = "traces" | "models" | "intelligence" | "workspace" | "admin";
 type AuthMode = "login" | "register" | "none";
 type ProviderKey = "openai" | "nvidia" | "groq" | "openrouter" | "custom";
 
@@ -513,6 +528,14 @@ function App() {
   const [workspaceIntelligence, setWorkspaceIntelligence] = useState<WorkspaceIntelligenceResponse | null>(null);
   const [loadingWorkspace, setLoadingWorkspace] = useState(false);
 
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [latestSyncRun, setLatestSyncRun] = useState<SyncRun | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [loadingIntelligence, setLoadingIntelligence] = useState(false);
+  const [proactiveNotifications, setProactiveNotifications] = useState<ProactiveNotification[]>([]);
+  const [repositoryProfiles, setRepositoryProfiles] = useState<RepositoryProfile[]>([]);
+  const [automationSettings, setAutomationSettings] = useState<AutomationSettings | null>(null);
+
   const [usersList, setUsersList] = useState<AppUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
@@ -755,6 +778,58 @@ function App() {
 
     void loadWorkspaceIntelligence();
   }, [panelTab]);
+
+  const refreshIntelligencePanel = useCallback(async () => {
+    setLoadingIntelligence(true);
+    try {
+      const [status, latest, proactive, repos, automation] = await Promise.all([
+        getSyncStatus(),
+        getLatestSyncRun(),
+        getProactiveNotifications(),
+        listRepositoryProfiles(),
+        getAutomationSettings(),
+      ]);
+      setSyncStatus(status);
+      setLatestSyncRun(latest);
+      setProactiveNotifications(proactive);
+      setRepositoryProfiles(repos);
+      setAutomationSettings(automation);
+    } catch {
+      setSyncStatus(null);
+      setLatestSyncRun(null);
+      setProactiveNotifications([]);
+      setRepositoryProfiles([]);
+      setAutomationSettings(null);
+    } finally {
+      setLoadingIntelligence(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (panelTab !== "intelligence") return;
+    void refreshIntelligencePanel();
+  }, [panelTab, refreshIntelligencePanel]);
+
+  useEffect(() => {
+    if (!syncing) return;
+
+    const interval = window.setInterval(async () => {
+      try {
+        const run = await getLatestSyncRun();
+        setLatestSyncRun(run);
+        const status = await getSyncStatus();
+        setSyncStatus(status);
+        if (run && run.status !== "running") {
+          setSyncing(false);
+          void refreshIntelligencePanel();
+        }
+      } catch {
+        setSyncing(false);
+      }
+    }, 2500);
+
+    return () => window.clearInterval(interval);
+  }, [syncing, refreshIntelligencePanel]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -1170,6 +1245,9 @@ function App() {
           <button type="button" className="topbar-btn" onClick={() => openUtilityPanel("models")}>
             Config
           </button>
+          <button type="button" className="topbar-btn" onClick={() => openUtilityPanel("intelligence")}>
+            Cortex
+          </button>
           <button type="button" className="topbar-btn" onClick={() => openUtilityPanel("workspace")}>
             Workspace
           </button>
@@ -1371,7 +1449,9 @@ function App() {
               <div>
                 <p className="eyebrow">Chat stream</p>
                 <h3>{activeSession?.title ?? "New Session"}</h3>
-                <p className="chat-subtitle">A minimal assistant workspace with history, templates, and on-demand tools.</p>
+                <p className="chat-subtitle">
+                  Persistent machine intelligence with sync, memory, repository awareness, and on-demand tools.
+                </p>
               </div>
               <div className="chat-panel__chips">
                 <button type="button" className="topbar-btn topbar-btn--compact" onClick={() => setSidebarOpen((value) => !value)}>
@@ -1379,6 +1459,9 @@ function App() {
                 </button>
                 <button type="button" className="topbar-btn topbar-btn--compact" onClick={() => openUtilityPanel("models")}>
                   Config
+                </button>
+                <button type="button" className="topbar-btn topbar-btn--compact" onClick={() => openUtilityPanel("intelligence")}>
+                  Cortex
                 </button>
                 <button type="button" className="topbar-btn topbar-btn--compact" onClick={() => openUtilityPanel("workspace")}>
                   Workspace
@@ -1513,6 +1596,7 @@ function App() {
             <h3>
               {panelTab === "traces" && "Execution trace"}
               {panelTab === "models" && "Configuration"}
+              {panelTab === "intelligence" && "Cortex intelligence"}
               {panelTab === "workspace" && "Workspace intelligence"}
               {panelTab === "admin" && "Admin"}
             </h3>
@@ -1528,6 +1612,9 @@ function App() {
           </button>
           <button type="button" className={panelTab === "models" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("models")}>
             Config
+          </button>
+          <button type="button" className={panelTab === "intelligence" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("intelligence")}>
+            Cortex
           </button>
           <button type="button" className={panelTab === "workspace" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("workspace")}>
             Workspace
@@ -1832,6 +1919,195 @@ function App() {
                     ))}
                   </div>
                 </>
+              )}
+            </div>
+          )}
+
+          {panelTab === "intelligence" && (
+            <div className="inspector-panel">
+              <div className="panel-head">
+                <div>
+                  <p className="eyebrow">Personal OS intelligence</p>
+                  <h3>Machine awareness & sync</h3>
+                </div>
+                <button type="button" className="icon-btn" onClick={() => void refreshIntelligencePanel()}>
+                  ↻
+                </button>
+              </div>
+
+              {loadingIntelligence ? (
+                <div className="mini-empty">Loading Cortex intelligence state...</div>
+              ) : (
+                <div className="scroll-stack workspace-panel">
+                  <section className="workspace-summary">
+                    <div className="workspace-summary__hero">
+                      <p className="eyebrow">Environment snapshot</p>
+                      <h4>Second brain status</h4>
+                      <p className="workspace-summary__purpose">
+                        Cortex continuously indexes your machine, remembers repositories, and surfaces high-value observations.
+                      </p>
+                    </div>
+
+                    <div className="workspace-stats">
+                      <div className="mini-stat">
+                        <span>Last sync</span>
+                        <strong>{formatTimestamp(syncStatus?.last_sync_time)}</strong>
+                      </div>
+                      <div className="mini-stat">
+                        <span>Files indexed</span>
+                        <strong>{syncStatus?.files_indexed ?? 0}</strong>
+                      </div>
+                      <div className="mini-stat">
+                        <span>Repositories</span>
+                        <strong>{syncStatus?.repositories_indexed ?? 0}</strong>
+                      </div>
+                      <div className="mini-stat">
+                        <span>Memory updates</span>
+                        <strong>{syncStatus?.memory_updates ?? 0}</strong>
+                      </div>
+                    </div>
+
+                    <div className="sync-actions">
+                      <button
+                        type="button"
+                        className="primary-btn"
+                        disabled={syncing}
+                        onClick={() => {
+                          setSyncing(true);
+                          void triggerSyncNow()
+                            .then((run) => {
+                              setLatestSyncRun(run);
+                              announceToast("Full environment sync started");
+                            })
+                            .catch(() => {
+                              setSyncing(false);
+                              announceToast("Sync could not start");
+                            });
+                        }}
+                      >
+                        {syncing ? "Syncing..." : "Sync Now"}
+                      </button>
+                      <span className="meta-chip">
+                        {syncing || latestSyncRun?.status === "running"
+                          ? latestSyncRun?.progress_message || syncStatus?.progress_message || "Scanning..."
+                          : latestSyncRun?.status ?? syncStatus?.last_sync_status ?? "idle"}
+                      </span>
+                    </div>
+
+                    {latestSyncRun?.result_summary && (
+                      <p className="sync-result">{latestSyncRun.result_summary}</p>
+                    )}
+
+                    {(latestSyncRun?.status === "running" || syncing) && (
+                      <div className="sync-progress">
+                        <span>
+                          +{latestSyncRun?.files_added ?? 0} new · ~{latestSyncRun?.files_modified ?? 0} modified · -
+                          {latestSyncRun?.files_removed ?? 0} removed
+                        </span>
+                      </div>
+                    )}
+                  </section>
+
+                  {proactiveNotifications.length > 0 && (
+                    <section className="workspace-feed">
+                      <div className="panel-head panel-head--compact">
+                        <div>
+                          <p className="eyebrow">Proactive</p>
+                          <h3>High-value observations</h3>
+                        </div>
+                      </div>
+                      <div className="activity-feed">
+                        {proactiveNotifications.map((item) => (
+                          <article key={item.id} className={`activity-card activity-card--${item.priority === "high" ? "warn" : "info"}`}>
+                            <div className="activity-card__head">
+                              <div>
+                                <strong>{item.title}</strong>
+                                <p>{item.message}</p>
+                              </div>
+                              <button
+                                type="button"
+                                className="ghost-btn"
+                                onClick={() =>
+                                  void dismissProactiveNotification(item.id).then(() =>
+                                    setProactiveNotifications((prev) => prev.filter((n) => n.id !== item.id)),
+                                  )
+                                }
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  <section className="workspace-feed">
+                    <div className="panel-head panel-head--compact">
+                      <div>
+                        <p className="eyebrow">Automation</p>
+                        <h3>Permission model</h3>
+                      </div>
+                    </div>
+                    <div className="automation-levels">
+                      {(["observation", "approval", "trusted"] as const).map((level) => (
+                        <button
+                          key={level}
+                          type="button"
+                          className={`ghost-btn ${automationSettings?.automation_level === level ? "is-active" : ""}`}
+                          onClick={() =>
+                            void updateAutomationSettings({ automation_level: level }).then((settings) => {
+                              setAutomationSettings(settings);
+                              announceToast(`Automation: ${level}`);
+                            })
+                          }
+                        >
+                          {level === "observation" && "Observation (read-only)"}
+                          {level === "approval" && "Approval (default)"}
+                          {level === "trusted" && "Trusted automation"}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="workspace-summary__purpose">
+                      Reading, indexing, and search never require approval. Modifications and destructive actions always require confirmation.
+                    </p>
+                  </section>
+
+                  {repositoryProfiles.length > 0 && (
+                    <section className="workspace-feed">
+                      <div className="panel-head panel-head--compact">
+                        <div>
+                          <p className="eyebrow">Repositories</p>
+                          <h3>Stored intelligence</h3>
+                        </div>
+                      </div>
+                      {repositoryProfiles.slice(0, 8).map((repo) => (
+                        <article key={repo.path} className="activity-card activity-card--info">
+                          <div className="activity-card__head">
+                            <div>
+                              <strong>{repo.name}</strong>
+                              <p>{repo.summary}</p>
+                              <span className="meta-chip">{repo.tech_stack}</span>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </section>
+                  )}
+
+                  {syncStatus?.discovery_roots && syncStatus.discovery_roots.length > 0 && (
+                    <details className="workspace-details">
+                      <summary>Discovery roots ({syncStatus.discovery_roots.length})</summary>
+                      <div className="workspace-details__body chip-wrap">
+                        {syncStatus.discovery_roots.map((root) => (
+                          <span key={root} className="meta-chip">
+                            {root}
+                          </span>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </div>
               )}
             </div>
           )}

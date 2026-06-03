@@ -244,13 +244,40 @@ class GraphRunner:
             )
 
     async def _run_memory(self, query, user_id):
-        if user_id is None:
-            return None
+        from backend.app.db.session import SessionLocal
+        from backend.app.intelligence.memory_service import PersistentMemoryService
 
-        return self.executor.memory.search(
-            user_id=user_id,
-            query=query
-        )
+        conversation_hits = None
+        if user_id is not None:
+            conversation_hits = self.executor.memory.search(user_id=user_id, query=query)
+
+        knowledge_hits: list = []
+        try:
+            db = SessionLocal()
+            try:
+                knowledge_hits = PersistentMemoryService().search(
+                    db, query, limit=6, user_id=user_id
+                )
+            finally:
+                db.close()
+        except Exception:
+            knowledge_hits = []
+
+        if conversation_hits:
+            if knowledge_hits:
+                knowledge_block = "\n".join(
+                    f"- {item['title']}: {item['content'][:300]}" for item in knowledge_hits
+                )
+                return f"{conversation_hits}\n\n[Knowledge Memory]\n{knowledge_block}"
+            return conversation_hits
+
+        if knowledge_hits:
+            knowledge_block = "\n".join(
+                f"- {item['title']}: {item['content'][:300]}" for item in knowledge_hits
+            )
+            return f"[Knowledge Memory]\n{knowledge_block}"
+
+        return None
 
     async def _run_tool(self, tool_name, query, state, user_id):
         tool = self.tools.get(tool_name)

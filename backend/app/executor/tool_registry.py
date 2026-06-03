@@ -1,7 +1,12 @@
 from typing import Dict, List, Optional
 
 from backend.app.tools.base import BaseTool, ToolContext, ToolResult
-from backend.app.tools.builtins import FileSearchTool, RagTool, SystemScannerTool
+from backend.app.tools.builtins import (
+    FileSearchTool,
+    RagTool,
+    SystemActionsTool,
+    SystemScannerTool,
+)
 
 
 class ToolRegistry:
@@ -13,6 +18,7 @@ class ToolRegistry:
             self.register(FileSearchTool(executor))
             self.register(SystemScannerTool(executor))
             self.register(RagTool(executor))
+            self.register(SystemActionsTool(executor))
 
     def register(self, tool: BaseTool):
         self.tools[tool.name] = tool

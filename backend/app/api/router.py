@@ -7,6 +7,8 @@ from backend.app.api.v1.execution import router as execution_router
 from backend.app.api.v1.models import router as models_router
 from backend.app.api.v1.user_settings import router as user_settings_router
 from backend.app.api.v1.workspace import router as workspace_router
+from backend.app.api.v1.sync import router as sync_router
+from backend.app.api.v1.intelligence import router as intelligence_router
 
 api_router = APIRouter()
 
@@ -48,4 +50,16 @@ api_router.include_router(
     workspace_router,
     prefix="/workspace",
     tags=["Workspace"]
+)
+
+api_router.include_router(
+    sync_router,
+    prefix="/sync",
+    tags=["Sync"]
+)
+
+api_router.include_router(
+    intelligence_router,
+    prefix="/intelligence",
+    tags=["Intelligence"]
 )

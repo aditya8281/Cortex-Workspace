@@ -23,6 +23,14 @@ from backend.app.db.base import Base
 from backend.app.models.user import User
 from backend.app.models.user_settings import UserSettings
 from backend.app.ai.memory.models import Memory
+from backend.app.intelligence.models import (  # noqa: F401
+    CortexAutomationSettings,
+    KnowledgeEntry,
+    PendingSystemAction,
+    ProactiveNotification,
+    RepositoryProfile,
+    SyncRun,
+)
 
 target_metadata = Base.metadata
 
