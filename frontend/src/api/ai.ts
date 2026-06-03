@@ -92,7 +92,9 @@ export async function pullModel(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch("http://localhost:8000/api/v1/models/pull", {
+  const baseUrl = (api.defaults.baseURL || import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1").replace(/\/$/, "");
+
+  const response = await fetch(`${baseUrl}/models/pull`, {
     method: "POST",
     headers,
     body: JSON.stringify({ model: modelName }),

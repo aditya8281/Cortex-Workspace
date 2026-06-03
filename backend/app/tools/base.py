@@ -47,6 +47,19 @@ class ToolResult:
             "meta": self.meta,
         }
 
+    def __str__(self) -> str:
+        if self.status == "error":
+            error_msg = (self.meta or {}).get("error") or (self.meta or {}).get("reason") or "Unknown error"
+            return f"[Tool Error — {self.tool}]: {error_msg}"
+        if self.status == "skipped":
+            return f"[Skipped — {self.tool}]: {self.reason or 'Not applicable'}"
+        if self.output is not None:
+            return str(self.output)
+        return f"[{self.tool}]"
+
+    def __repr__(self) -> str:
+        return f"ToolResult(tool={self.tool!r}, status={self.status!r}, output={str(self.output)[:60]!r})"
+
 
 class BaseTool(ABC):
 
