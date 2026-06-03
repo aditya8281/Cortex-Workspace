@@ -20,7 +20,12 @@ export const intelligenceKeys = {
 };
 
 export function useSyncStatus() {
-  return useQuery({ queryKey: intelligenceKeys.status, queryFn: getSyncStatus, refetchInterval: 5000 });
+  return useQuery({
+    queryKey: intelligenceKeys.status,
+    queryFn: getSyncStatus,
+    refetchInterval: 5000,
+    retry: false,
+  });
 }
 
 export function useLatestSyncRun() {
@@ -40,7 +45,11 @@ export function useAutomationSettings() {
 }
 
 export function useWorkspaceIntelligence() {
-  return useQuery({ queryKey: intelligenceKeys.workspace, queryFn: getWorkspaceIntelligence });
+  return useQuery({
+    queryKey: intelligenceKeys.workspace,
+    queryFn: getWorkspaceIntelligence,
+    retry: false,
+  });
 }
 
 export function useTriggerSync() {

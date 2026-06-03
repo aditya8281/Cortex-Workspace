@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { MarkdownMessage } from "./MarkdownMessage";
+import { StreamingText } from "./StreamingText";
 import { ChatComposer } from "./ChatComposer";
 import { useChatStore } from "@/stores/chatStore";
 import { cn } from "@/lib/utils";
@@ -17,12 +17,31 @@ export function ChatView() {
   const session = useChatStore((s) => s.getActiveSession());
   const isGenerating = useChatStore((s) => s.isGenerating);
   const endRef = useRef<HTMLDivElement>(null);
+  const [streamId, setStreamId] = useState<string | null>(null);
+  const prevCount = useRef(0);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [session?.messages.length, isGenerating]);
 
-  if (!session) return null;
+  useEffect(() => {
+    const count = session?.messages.length ?? 0;
+    if (count > prevCount.current && session) {
+      const last = session.messages[session.messages.length - 1];
+      if (last?.sender === "assistant" && last.id !== "welcome") {
+        setStreamId(last.id);
+      }
+    }
+    prevCount.current = count;
+  }, [session?.messages.length, session]);
+
+  if (!session) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-cortex-muted">
+        Loading chat…
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -37,7 +56,7 @@ export function ChatView() {
                   className="rounded-xl border border-cortex-border bg-cortex-surface/60 p-4 text-left text-sm transition hover:border-cortex-accent/40 hover:bg-cortex-accent-soft"
                   onClick={() => useChatStore.getState().setInputQuery(item.prompt)}
                 >
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium text-cortex-text">{item.label}</span>
                   <p className="mt-1 text-xs text-cortex-muted line-clamp-2">{item.prompt}</p>
                 </button>
               ))}
@@ -45,10 +64,8 @@ export function ChatView() {
           )}
 
           {session.messages.map((msg) => (
-            <motion.div
+            <div
               key={msg.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
               className={cn("flex gap-3", msg.sender === "user" ? "justify-end" : "justify-start")}
             >
               {msg.sender === "assistant" && (
@@ -66,6 +83,8 @@ export function ChatView() {
               >
                 {msg.sender === "user" ? (
                   <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                ) : streamId === msg.id ? (
+                  <StreamingText text={msg.text} animate />
                 ) : (
                   <MarkdownMessage content={msg.text} />
                 )}
@@ -74,7 +93,7 @@ export function ChatView() {
                   {msg.executionId && <Badge variant="accent">trace</Badge>}
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
 
           {isGenerating && (

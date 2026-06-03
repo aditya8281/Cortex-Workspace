@@ -18,6 +18,7 @@ const TITLES: Record<string, string> = {
   "/activity": "Activity",
   "/settings": "Settings",
   "/projects": "Projects",
+  "/profile": "Profile",
 };
 
 export function AppShell() {
@@ -29,9 +30,13 @@ export function AppShell() {
   const toast = useAppStore((s) => s.toast);
   const setToast = useAppStore((s) => s.setToast);
   const initSessions = useChatStore((s) => s.initSessions);
+  const hasHydrated = useChatStore((s) => s._hasHydrated);
 
   useEffect(() => {
     initSessions();
+    if (!useChatStore.getState()._hasHydrated) {
+      useChatStore.setState({ _hasHydrated: true });
+    }
   }, [initSessions]);
 
   useEffect(() => {
@@ -44,8 +49,19 @@ export function AppShell() {
     TITLES[location.pathname] ??
     (location.pathname.startsWith("/repositories/") ? "Repository" : "Cortex");
 
+  if (!hasHydrated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-cortex-bg text-cortex-text">
+        <div className="text-center">
+          <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-cortex-accent border-t-transparent" />
+          <p className="text-sm text-cortex-muted">Starting Cortex…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-cortex-bg text-cortex-text">
       <div className="hidden md:flex">
         <Sidebar />
       </div>

@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   Brain,
   FileStack,
@@ -72,11 +71,7 @@ export function DashboardPage() {
 
   return (
     <div className="h-full overflow-y-auto p-6 md:p-8">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mx-auto max-w-5xl space-y-8"
-      >
+      <div className="mx-auto max-w-5xl space-y-8">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-cortex-accent">Cortex OS</p>
           <h2 className="mt-1 text-2xl font-semibold tracking-tight">Your machine, understood</h2>
@@ -142,7 +137,7 @@ export function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

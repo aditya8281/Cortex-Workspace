@@ -7,7 +7,8 @@ import { useChatStore } from "@/stores/chatStore";
 import { ArrowLeft } from "lucide-react";
 
 export function RepositoryDetailPage() {
-  const { path: encoded } = useParams();
+  const params = useParams();
+  const encoded = params["*"] ?? params.path ?? "";
   const path = encoded ? decodeURIComponent(encoded) : "";
   const navigate = useNavigate();
   const { data: repos = [] } = useRepositoryProfiles();

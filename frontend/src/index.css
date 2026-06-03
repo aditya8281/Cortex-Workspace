@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --font-sans: "Outfit", system-ui, sans-serif;
@@ -16,34 +17,50 @@
   --color-cortex-warn: #f5b942;
 }
 
-@layer base {
-  * {
-    @apply border-cortex-border;
-  }
+:root {
+  color-scheme: dark;
+  --cortex-bg: #060a12;
+  --cortex-surface: #0c1220;
+  --cortex-text: #e8eef8;
+  --cortex-muted: #8b9cb8;
+  --cortex-accent: #5b9dff;
+  --cortex-border: #1e2a42;
+}
 
-  html,
-  body,
-  #root {
-    @apply min-h-full;
-  }
+html,
+body,
+#root {
+  min-height: 100%;
+  height: 100%;
+  margin: 0;
+}
 
-  body {
-    @apply bg-cortex-bg text-cortex-text font-sans antialiased;
-    background-image:
-      radial-gradient(ellipse 80% 50% at 0% 0%, rgba(91, 157, 255, 0.08), transparent),
-      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(61, 214, 140, 0.06), transparent);
-  }
+body {
+  font-family: var(--font-sans);
+  background-color: var(--cortex-bg);
+  color: var(--cortex-text);
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 0% 0%, rgba(91, 157, 255, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(61, 214, 140, 0.06), transparent);
+}
 
-  ::selection {
-    background: rgba(91, 157, 255, 0.25);
-  }
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
 
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
+::selection {
+  background: rgba(91, 157, 255, 0.25);
+}
 
-  ::-webkit-scrollbar-thumb {
-    @apply rounded-full bg-white/10;
-  }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
 }

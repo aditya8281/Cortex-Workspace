@@ -1,22 +1,56 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
-import { DashboardPage } from "@/pages/DashboardPage";
-import { ChatPage } from "@/pages/ChatPage";
-import { SyncPage } from "@/pages/SyncPage";
-import { RepositoriesPage } from "@/pages/RepositoriesPage";
-import { RepositoryDetailPage } from "@/pages/RepositoryDetailPage";
-import { MemoryPage } from "@/pages/MemoryPage";
-import { KnowledgeGraphPage } from "@/pages/KnowledgeGraphPage";
-import { ActivityPage } from "@/pages/ActivityPage";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { ProjectsPage } from "@/pages/ProjectsPage";
+
+const DashboardPage = lazy(() =>
+  import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
+);
+const ChatPage = lazy(() => import("@/pages/ChatPage").then((m) => ({ default: m.ChatPage })));
+const SyncPage = lazy(() => import("@/pages/SyncPage").then((m) => ({ default: m.SyncPage })));
+const RepositoriesPage = lazy(() =>
+  import("@/pages/RepositoriesPage").then((m) => ({ default: m.RepositoriesPage })),
+);
+const RepositoryDetailPage = lazy(() =>
+  import("@/pages/RepositoryDetailPage").then((m) => ({ default: m.RepositoryDetailPage })),
+);
+const MemoryPage = lazy(() => import("@/pages/MemoryPage").then((m) => ({ default: m.MemoryPage })));
+const KnowledgeGraphPage = lazy(() =>
+  import("@/pages/KnowledgeGraphPage").then((m) => ({ default: m.KnowledgeGraphPage })),
+);
+const ActivityPage = lazy(() =>
+  import("@/pages/ActivityPage").then((m) => ({ default: m.ActivityPage })),
+);
+const SettingsPage = lazy(() =>
+  import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })),
+);
+const ProjectsPage = lazy(() =>
+  import("@/pages/ProjectsPage").then((m) => ({ default: m.ProjectsPage })),
+);
+const ProfilePage = lazy(() =>
+  import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 30_000, retry: 1 },
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
   },
 });
+
+function PageLoader() {
+  return (
+    <div className="flex h-full min-h-[200px] items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-cortex-accent border-t-transparent" />
+        <p className="text-sm text-cortex-muted">Loading…</p>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -24,16 +58,94 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<AppShell />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="chat" element={<ChatPage />} />
-            <Route path="sync" element={<SyncPage />} />
-            <Route path="repositories" element={<RepositoriesPage />} />
-            <Route path="repositories/:path" element={<RepositoryDetailPage />} />
-            <Route path="memory" element={<MemoryPage />} />
-            <Route path="graph" element={<KnowledgeGraphPage />} />
-            <Route path="activity" element={<ActivityPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="projects" element={<ProjectsPage />} />
+            <Route
+              index
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <DashboardPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="chat"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ChatPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="profile"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ProfilePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="sync"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <SyncPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="repositories"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <RepositoriesPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="repositories/*"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <RepositoryDetailPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="memory"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <MemoryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="graph"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <KnowledgeGraphPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="activity"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ActivityPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="settings"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <SettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="projects"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ProjectsPage />
+                </Suspense>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

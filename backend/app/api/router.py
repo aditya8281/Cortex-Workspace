@@ -9,6 +9,7 @@ from backend.app.api.v1.user_settings import router as user_settings_router
 from backend.app.api.v1.workspace import router as workspace_router
 from backend.app.api.v1.sync import router as sync_router
 from backend.app.api.v1.intelligence import router as intelligence_router
+from backend.app.api.v1.profile import router as profile_router
 
 api_router = APIRouter()
 
@@ -62,4 +63,10 @@ api_router.include_router(
     intelligence_router,
     prefix="/intelligence",
     tags=["Intelligence"]
+)
+
+api_router.include_router(
+    profile_router,
+    prefix="/me/profile",
+    tags=["Profile"]
 )

@@ -22,6 +22,7 @@ if config.config_file_name is not None:
 from backend.app.db.base import Base
 from backend.app.models.user import User
 from backend.app.models.user_settings import UserSettings
+from backend.app.models.user_profile import UserProfile  # noqa: F401
 from backend.app.ai.memory.models import Memory
 from backend.app.intelligence.models import (  # noqa: F401
     CortexAutomationSettings,

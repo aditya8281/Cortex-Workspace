@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { ChatMessage, ChatSession, ContextItem } from "@/types/cortex";
 
 function buildSessionTitle(query: string) {
@@ -26,6 +26,18 @@ export function createFreshSession(title = "New chat") {
   } satisfies ChatSession;
 }
 
+function normalizeSessions(sessions: unknown): ChatSession[] {
+  if (!Array.isArray(sessions)) return [];
+  return sessions.filter(
+    (s): s is ChatSession =>
+      s != null &&
+      typeof s === "object" &&
+      "id" in s &&
+      "title" in s &&
+      Array.isArray((s as ChatSession).messages),
+  );
+}
+
 type ChatState = {
   sessions: ChatSession[];
   activeSessionId: string | null;
@@ -34,6 +46,7 @@ type ChatState = {
   contextItems: ContextItem[];
   renamingId: string | null;
   renameValue: string;
+  _hasHydrated: boolean;
   initSessions: () => void;
   setActiveSession: (id: string) => void;
   newSession: () => void;
@@ -61,14 +74,17 @@ export const useChatStore = create<ChatState>()(
       contextItems: [],
       renamingId: null,
       renameValue: "",
+      _hasHydrated: false,
 
       initSessions: () => {
-        const { sessions } = get();
+        const sessions = normalizeSessions(get().sessions);
         if (sessions.length === 0) {
           const session = createFreshSession();
           set({ sessions: [session], activeSessionId: session.id });
-        } else if (!get().activeSessionId) {
-          set({ activeSessionId: sessions[0].id });
+        } else if (!get().activeSessionId || !sessions.find((s) => s.id === get().activeSessionId)) {
+          set({ sessions, activeSessionId: sessions[0].id });
+        } else {
+          set({ sessions });
         }
       },
 
@@ -76,7 +92,7 @@ export const useChatStore = create<ChatState>()(
       newSession: () => {
         const session = createFreshSession();
         set((s) => ({
-          sessions: [session, ...s.sessions],
+          sessions: [session, ...normalizeSessions(s.sessions)],
           activeSessionId: session.id,
         }));
       },
@@ -86,7 +102,7 @@ export const useChatStore = create<ChatState>()(
 
       appendMessages: (sessionId, messages, title) => {
         set((s) => ({
-          sessions: s.sessions.map((session) =>
+          sessions: normalizeSessions(s.sessions).map((session) =>
             session.id === sessionId
               ? {
                   ...session,
@@ -100,28 +116,27 @@ export const useChatStore = create<ChatState>()(
 
       updateSession: (sessionId, patch) =>
         set((s) => ({
-          sessions: s.sessions.map((session) =>
+          sessions: normalizeSessions(s.sessions).map((session) =>
             session.id === sessionId ? { ...session, ...patch } : session,
           ),
         })),
 
       deleteSession: (sessionId) => {
         set((s) => {
-          const sessions = s.sessions.filter((x) => x.id !== sessionId);
+          const sessions = normalizeSessions(s.sessions).filter((x) => x.id !== sessionId);
           const activeSessionId =
             s.activeSessionId === sessionId ? sessions[0]?.id ?? null : s.activeSessionId;
-          return { sessions: sessions.length ? sessions : [createFreshSession()], activeSessionId };
+          if (sessions.length === 0) {
+            const fresh = createFreshSession();
+            return { sessions: [fresh], activeSessionId: fresh.id };
+          }
+          return { sessions, activeSessionId };
         });
       },
 
-      pinSession: (sessionId, pinned) =>
-        get().updateSession(sessionId, { pinned }),
-
-      archiveSession: (sessionId, archived) =>
-        get().updateSession(sessionId, { archived }),
-
+      pinSession: (sessionId, pinned) => get().updateSession(sessionId, { pinned }),
+      archiveSession: (sessionId, archived) => get().updateSession(sessionId, { archived }),
       setRenaming: (renamingId, renameValue = "") => set({ renamingId, renameValue }),
-
       commitRename: (sessionId) => {
         const value = get().renameValue.trim();
         if (value) get().updateSession(sessionId, { title: value });
@@ -130,14 +145,27 @@ export const useChatStore = create<ChatState>()(
 
       getActiveSession: () => {
         const { sessions, activeSessionId } = get();
-        return sessions.find((s) => s.id === activeSessionId) ?? null;
+        return normalizeSessions(sessions).find((s) => s.id === activeSessionId) ?? null;
       },
 
       buildTitleFromQuery: buildSessionTitle,
     }),
     {
       name: "cortex-chats",
+      storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ sessions: s.sessions, activeSessionId: s.activeSessionId }),
+      merge: (persisted, current) => {
+        const p = persisted as Partial<ChatState> | undefined;
+        return {
+          ...current,
+          sessions: normalizeSessions(p?.sessions),
+          activeSessionId: p?.activeSessionId ?? null,
+        };
+      },
+      onRehydrateStorage: () => (state) => {
+        state?.initSessions();
+        useChatStore.setState({ _hasHydrated: true });
+      },
     },
   ),
 );
