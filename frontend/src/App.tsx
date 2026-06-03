@@ -55,6 +55,233 @@ type ChatMessage = {
   timestamp: string;
 };
 
+function parseResponseText(text: string) {
+  if (!text) return { finalResponse: "", memoryText: "", toolText: "" };
+
+  const memoryRegex = /(?:^|\r?\n)Memory\s+Context:\s*\r?\n/i;
+  const toolRegex = /(?:^|\r?\n)Tool\s+Results:\s*\r?\n/i;
+  const finalRegex = /(?:^|\r?\n)Final\s+Response:\s*\r?\n/i;
+
+  const memoryMatch = text.match(memoryRegex);
+  const toolMatch = text.match(toolRegex);
+  const finalMatch = text.match(finalRegex);
+
+  const memoryIdx = memoryMatch && memoryMatch.index !== undefined ? memoryMatch.index : -1;
+  const toolIdx = toolMatch && toolMatch.index !== undefined ? toolMatch.index : -1;
+  const finalIdx = finalMatch && finalMatch.index !== undefined ? finalMatch.index : -1;
+
+  const sections: { type: "memory" | "tool" | "final"; start: number; headerLength: number }[] = [];
+  if (memoryIdx !== -1 && memoryMatch) sections.push({ type: "memory", start: memoryIdx, headerLength: memoryMatch[0].length });
+  if (toolIdx !== -1 && toolMatch) sections.push({ type: "tool", start: toolIdx, headerLength: toolMatch[0].length });
+  if (finalIdx !== -1 && finalMatch) sections.push({ type: "final", start: finalIdx, headerLength: finalMatch[0].length });
+
+  sections.sort((a, b) => a.start - b.start);
+
+  let memoryText = "";
+  let toolText = "";
+  let finalResponse = "";
+
+  const preText = sections.length > 0 ? text.slice(0, sections[0].start).trim() : text.trim();
+
+  for (let i = 0; i < sections.length; i++) {
+    const current = sections[i];
+    const nextStart = i + 1 < sections.length ? sections[i + 1].start : text.length;
+    const content = text.slice(current.start + current.headerLength, nextStart).trim();
+
+    if (current.type === "memory") {
+      memoryText = content;
+    } else if (current.type === "tool") {
+      toolText = content;
+    } else if (current.type === "final") {
+      finalResponse = content;
+    }
+  }
+
+  if (!finalResponse) {
+    if (preText) {
+      finalResponse = preText;
+    } else if (memoryText || toolText) {
+      finalResponse = "Diagnostics execution completed.";
+    } else {
+      finalResponse = text;
+    }
+  } else if (preText) {
+    finalResponse = preText + "\n\n" + finalResponse;
+  }
+
+  return { memoryText, toolText, finalResponse };
+}
+
+function Markdown({ text }: { text: string }) {
+  if (!text) return null;
+
+  // Split by code blocks first to separate text and code
+  const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+  const parts: any[] = [];
+  let lastIndex = 0;
+  let match;
+
+  const renderInline = (inlineText: string) => {
+    const inlineRegex = /(\*\*|`)(.*?)\1/g;
+    const elements: any[] = [];
+    let lastInlineIdx = 0;
+    let inlineMatch;
+    let keyIdx = 0;
+
+    while ((inlineMatch = inlineRegex.exec(inlineText)) !== null) {
+      if (inlineMatch.index > lastInlineIdx) {
+        elements.push(inlineText.slice(lastInlineIdx, inlineMatch.index));
+      }
+      const type = inlineMatch[1];
+      const matchText = inlineMatch[2];
+      if (type === "**") {
+        elements.push(<strong key={`bold-${keyIdx++}`} className="md-strong">{matchText}</strong>);
+      } else if (type === "`") {
+        elements.push(<code key={`code-${keyIdx++}`} className="md-code">{matchText}</code>);
+      }
+      lastInlineIdx = inlineRegex.lastIndex;
+    }
+
+    if (lastInlineIdx < inlineText.length) {
+      elements.push(inlineText.slice(lastInlineIdx));
+    }
+
+    return elements.length > 0 ? elements : inlineText;
+  };
+
+  const renderTextAndInlineCode = (txt: string, blockKey: string) => {
+    const lines = txt.split("\n");
+    return lines.map((line, lineIdx) => {
+      // Check if it's a heading
+      const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const headingText = headingMatch[2];
+        const headingKey = `${blockKey}-h-${lineIdx}`;
+        switch (level) {
+          case 1: return <h1 key={headingKey} className="md-h1">{renderInline(headingText)}</h1>;
+          case 2: return <h2 key={headingKey} className="md-h2">{renderInline(headingText)}</h2>;
+          case 3: return <h3 key={headingKey} className="md-h3">{renderInline(headingText)}</h3>;
+          default: return <h4 key={headingKey} className="md-h4">{renderInline(headingText)}</h4>;
+        }
+      }
+
+      // Check if it's a list item
+      const listMatch = line.match(/^(\s*)([-*]|\d+\.)\s+(.*)$/);
+      if (listMatch) {
+        const listText = listMatch[3];
+        const isNumbered = /^\d+/.test(listMatch[2]);
+        const itemKey = `${blockKey}-li-${lineIdx}`;
+        if (isNumbered) {
+          return (
+            <ol key={itemKey} className="md-ol">
+              <li>{renderInline(listText)}</li>
+            </ol>
+          );
+        } else {
+          return (
+            <ul key={itemKey} className="md-ul">
+              <li>{renderInline(listText)}</li>
+            </ul>
+          );
+        }
+      }
+
+      // Plain line
+      if (line.trim() === "") {
+        return <div key={`${blockKey}-br-${lineIdx}`} className="md-br" />;
+      }
+
+      return (
+        <p key={`${blockKey}-p-${lineIdx}`} className="md-p">
+          {renderInline(line)}
+        </p>
+      );
+    });
+  };
+
+  let blockKeyIdx = 0;
+  while ((match = codeBlockRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      const textPart = text.slice(lastIndex, match.index);
+      parts.push(
+        <div key={`text-block-${blockKeyIdx++}`}>
+          {renderTextAndInlineCode(textPart, `text-${blockKeyIdx}`)}
+        </div>
+      );
+    }
+
+    const language = match[1] || "text";
+    const code = match[2];
+    parts.push(
+      <div key={`code-block-${blockKeyIdx++}`} className="md-code-block-container">
+        <div className="md-code-block-header">
+          <span className="md-code-block-lang">{language}</span>
+          <button 
+            type="button" 
+            className="md-code-copy-btn"
+            onClick={(e) => {
+              navigator.clipboard.writeText(code);
+              const btn = e.currentTarget;
+              btn.innerText = "Copied!";
+              setTimeout(() => { btn.innerText = "Copy"; }, 2000);
+            }}
+          >
+            Copy
+          </button>
+        </div>
+        <pre className="md-code-block">
+          <code>{code}</code>
+        </pre>
+      </div>
+    );
+
+    lastIndex = codeBlockRegex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    const textPart = text.slice(lastIndex);
+    parts.push(
+      <div key={`text-block-${blockKeyIdx++}`}>
+        {renderTextAndInlineCode(textPart, `text-${blockKeyIdx}`)}
+      </div>
+    );
+  }
+
+  return <div className="md-container">{parts}</div>;
+}
+
+function renderMessageText(text: string) {
+  if (!text) return null;
+
+  const { memoryText, toolText, finalResponse } = parseResponseText(text);
+
+  return (
+    <div className="chat-bubble-content">
+      <div className="chat-bubble-text">
+        <Markdown text={finalResponse} />
+      </div>
+      
+      {(memoryText || toolText) && (
+        <div className="chat-bubble-diagnostics">
+          {toolText && (
+            <details className="diagnostics-details">
+              <summary className="diagnostics-summary">🔧 View Invoked Tool Outputs</summary>
+              <pre className="diagnostics-pre">{toolText}</pre>
+            </details>
+          )}
+          {memoryText && (
+            <details className="diagnostics-details">
+              <summary className="diagnostics-summary">🧠 View Memory Recall Details</summary>
+              <pre className="diagnostics-pre">{memoryText}</pre>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   // Authentication state
   const [token, setToken] = useState<string | null>(localStorage.getItem("cortex_token"));
@@ -363,7 +590,7 @@ function App() {
                         <strong>{msg.sender === "user" ? "You" : "Cortex Assistant"}</strong>
                         <span className="chat-time">{msg.timestamp}</span>
                       </div>
-                      <div className="chat-bubble-text">{msg.text}</div>
+                      {renderMessageText(msg.text)}
                       {msg.executionId && (
                         <div className="chat-bubble-actions">
                           <button

@@ -910,3 +910,169 @@
     height: calc(100vh - 200px);
   }
 }
+
+/* Collapsible Diagnostics in Chat Bubbles */
+.chat-bubble-diagnostics {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diagnostics-details {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+}
+
+.diagnostics-summary {
+  padding: 6px 12px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #94a3b8;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(30, 41, 59, 0.15);
+}
+
+.diagnostics-summary:hover {
+  color: #38bdf8;
+  background: rgba(30, 41, 59, 0.35);
+}
+
+.diagnostics-pre {
+  margin: 0;
+  padding: 10px 14px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  background: rgba(7, 10, 19, 0.45);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Markdown Component Styles */
+.md-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.md-h1, .md-h2, .md-h3, .md-h4 {
+  color: #f8fafc;
+  margin: 16px 0 8px 0;
+  font-weight: 700;
+}
+
+.md-h1 { font-size: 1.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 4px; }
+.md-h2 { font-size: 1.25rem; }
+.md-h3 { font-size: 1.1rem; }
+.md-h4 { font-size: 0.95rem; }
+
+.md-p {
+  margin: 0;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.md-strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.md-code {
+  font-family: 'Fira Code', Consolas, Monaco, monospace;
+  font-size: 0.85rem;
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  color: #f43f5e;
+  padding: 2px 6px;
+  border-radius: 6px;
+  word-break: break-all;
+}
+
+.md-code-block-container {
+  margin: 16px 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #090d16;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.md-code-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.md-code-block-lang {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.md-code-copy-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.md-code-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.md-code-block {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.md-code-block code {
+  font-family: 'Fira Code', Consolas, Monaco, monospace;
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  line-height: 1.5;
+  white-space: pre;
+}
+
+.md-ul, .md-ol {
+  margin: 4px 0 4px 20px;
+  padding: 0;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.md-ul {
+  list-style-type: disc;
+}
+
+.md-ol {
+  list-style-type: decimal;
+}
+
+.md-ul li, .md-ol li {
+  margin: 4px 0;
+}
+
+.md-br {
+  height: 8px;
+}
+
