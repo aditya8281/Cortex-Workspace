@@ -64,8 +64,11 @@ class FilesystemDiscovery:
             seen.add(resolved)
             roots.append(resolved)
 
+        # Always index the active workspace root
         add(self.workspace_root)
-        add(self.home)
+        
+        # NEVER add self.home directly to prevent scanning the entire home folder recursively.
+        # Instead, scan specific promoted directories under home.
 
         if self.home.exists():
             self._scan_home_children(roots, seen, max_roots)
@@ -88,10 +91,17 @@ class FilesystemDiscovery:
             resolved = entry.resolve()
             if resolved in seen:
                 continue
-            seen.add(resolved)
-            roots.append(resolved)
 
-            if entry.name.lower() in self.PROMOTED_DIR_NAMES:
+            name_lower = entry.name.lower()
+            # For general high-volume storage folders, do NOT add the root folder itself to roots
+            # (which would trigger full recursive walks). Only scan one level deep for specific project folders.
+            if name_lower in {"downloads", "documents", "desktop", "document", "download"}:
+                self._add_promoted_subdirs(entry, roots, seen, max_roots)
+            # For dedicated developer folders (e.g. projects, workspace, code, dev, src, repos, github),
+            # we add the root itself and also add project subdirectories.
+            elif name_lower in self.PROMOTED_DIR_NAMES:
+                seen.add(resolved)
+                roots.append(resolved)
                 self._add_promoted_subdirs(entry, roots, seen, max_roots)
 
     def _add_promoted_subdirs(

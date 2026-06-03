@@ -156,12 +156,11 @@ Relevant files:
 
 Current behavior:
 
-- the query is classified before execution
-- planning is graph-based rather than flat
-- memory recall is part of the reasoning path
-- tools are selected and fused before synthesis
-- execution events are persisted for replay
-- the frontend can inspect traces and replay execution timelines
+- **Intent-Driven Routing**: Every incoming user query is classified before execution (into CHAT, TOOL, RAG, or SYSTEM intent) to avoid unnecessary tool overhead.
+- **Weighted Graph Execution Planning**: Unlike flat linear agent execution, Cortex structures reasoning using a directed acyclic execution graph (`ExecutionGraph`). The planner orders tasks, starting from `memory_step` and feeding outputs downstream to `tool_step_i` before final synthesis in `llm_step`.
+- **Feedback & Tool Bias**: Execution includes real-time feedback logging. Successful tool runs build up positive score bias for future selections, optimizing overall planning accuracy.
+- **DFS-Based Context Expansion**: When building prompt context, directories and file structures are crawled recursively using Depth-First-Search (DFS) to build context lists, respecting exclusions and boundaries.
+- **Incremental & Persistent Memory**: Previous queries and responses are stored in a local SQLite database for fast local retrieval. Relevant context is injected back into the execution flow through the `memory_recall` step.
 
 ## Providers
 
@@ -169,10 +168,10 @@ Provider selection lives in [backend/app/ai/providers/registry.py](../backend/ap
 
 Supported modes:
 
-- `local` -> [backend/app/ai/local_llm.py](../backend/app/ai/local_llm.py)
-- `api` -> [backend/app/ai/api_llm.py](../backend/app/ai/api_llm.py)
+- `local` -> [backend/app/ai/local_llm.py](../backend/app/ai/local_llm.py) (uses Ollama to execute offline local queries; supports model customization, e.g., llama3, qwen3:8b)
+- `api` -> [backend/app/ai/api_llm.py](../backend/app/ai/api_llm.py) (routes to external hosted REST endpoints like OpenAI/Anthropic/compatible APIs)
 
-The router currently acts as a mode switch between local and hosted inference.
+The router acts as a dynamic hybrid mode switch. This architecture allows Cortex to remain local-first while allowing heavy cloud fallback processing when local models hit context limitations.
 
 ## RAG and Repository Search
 
@@ -186,18 +185,21 @@ Current retrieval and indexing pieces:
 - [backend/app/rag/storage.py](../backend/app/rag/storage.py)
 - [backend/app/rag/index_manager.py](../backend/app/rag/index_manager.py)
 - [backend/app/rag/service.py](../backend/app/rag/service.py)
+- [backend/app/rag/retriever.py](../backend/app/rag/retriever.py)
 
 Important behavior:
 
-- the scanner now supports broad read-only discovery across meaningful user roots
-- it prunes low-value or virtual OS directories by default
-- file extraction supports text, markdown, Python, and PDF documents
-- RAG still remains separate from workspace intelligence
+- **AST-Aware Structural Chunking**: The text chunker (`TextChunker`) supports language-aware parsing. For Python files, it uses the AST module to segment classes and functions into discrete context units. Other code bases fall back on regular expression pattern matching.
+- **Semantic Codebase Retrieval**: Extracts text and code files, creates vector representations using local embedding models (`BAAI/bge-small-en-v1.5`), and indexes them into FAISS.
+- **Hybrid Retrieval Reranking**: When a query is made, FAISS returns semantic candidates. The retriever (`RepoRetriever`) performs a hybrid scoring pass, adding keyword match boosts (based on exact word boundaries and substring matching) to the semantic scores to rank chunks before injecting them into prompt templates.
+- **Incremental Indexing**: Uses filesystem modification timestamps (`mtime`) stored in `.cortex/filesystem_index_state.json` to process changes dynamically, bypassing unmodified files to keep indexing fast.
+- **Multi-File Patch Generation**: Context compiler builds detailed, file-linked codebases for the LLM to construct multi-file code modifications, which are staged in a pending state awaiting user verification and approval.
 
 Operational note:
 
-- repository indexing is still not fully automatic on every startup
-- the index rebuild flow remains a separate operation
+- Repository indexing is run automatically during the new setup pipeline or triggered via the `/api/v1/workspace/sync` endpoint.
+- Rebuilding the vector store updates the local `.cortex` folder.
+
 
 ## Workspace Intelligence
 
