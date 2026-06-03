@@ -33,6 +33,7 @@ class ExecutionResult(BaseModel):
     # EXECUTION OBSERVABILITY
     # -------------------------------------------------
     execution_id: str | None = None
+    routing_info: dict | None = None
 
 
 class IntentDecision(BaseModel):

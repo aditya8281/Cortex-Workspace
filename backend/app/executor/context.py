@@ -32,4 +32,6 @@ class ExecutionContext:
 
     llm_response: str | None = None
 
+    routing_info: Any = None
+
     meta: Dict[str, Any] = field(default_factory=dict)

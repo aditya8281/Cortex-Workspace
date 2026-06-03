@@ -8,7 +8,7 @@ import keyring
 from cryptography.fernet import Fernet
 
 from backend.app.core.config import settings
-from backend.app.models.llm_model import CortexProvider, CortexModel
+from backend.app.models.llm_model import CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +100,96 @@ class ModelRegistry:
                     is_local=m["is_local"]
                 )
                 db.add(model)
+            db.commit()
+
+        # Seed routing profiles and default task routes if empty
+        if db.query(CortexRoutingProfile).first() is None:
+            # Create profiles
+            profiles = [
+                {"name": "Balanced", "is_active": True},
+                {"name": "Coding Heavy", "is_active": False},
+                {"name": "Local Only", "is_active": False},
+                {"name": "Maximum Quality", "is_active": False},
+                {"name": "Custom", "is_active": False}
+            ]
+            for p_data in profiles:
+                p_obj = CortexRoutingProfile(name=p_data["name"], is_active=p_data["is_active"])
+                db.add(p_obj)
+            db.commit()
+
+            # Create default mappings per profile
+            default_routes = {
+                "Balanced": {
+                    "chat": ("gpt-4o-mini", "gemini-1.5-flash"),
+                    "search": ("gpt-4o-mini", "gemini-1.5-flash"),
+                    "coding": ("gpt-4o-mini", "deepseek-coder"),
+                    "repository_analysis": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "architecture_review": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "planning": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "research": ("gpt-4o-mini", "gemini-1.5-flash"),
+                    "debugging": ("gpt-4o", "deepseek-coder"),
+                    "multi_file_modification": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "long_context": ("gemini-1.5-flash", "gpt-4o-mini"),
+                },
+                "Coding Heavy": {
+                    "chat": ("gpt-4o-mini", "deepseek-chat"),
+                    "search": ("gpt-4o-mini", "gemini-1.5-flash"),
+                    "coding": ("claude-3-5-sonnet-latest", "deepseek-coder"),
+                    "repository_analysis": ("claude-3-5-sonnet-latest", "deepseek-coder"),
+                    "architecture_review": ("claude-3-5-sonnet-latest", "gpt-4o"),
+                    "planning": ("claude-3-5-sonnet-latest", "gpt-4o"),
+                    "research": ("gpt-4o-mini", "claude-3-5-haiku-latest"),
+                    "debugging": ("claude-3-5-sonnet-latest", "deepseek-coder"),
+                    "multi_file_modification": ("claude-3-5-sonnet-latest", "deepseek-coder"),
+                    "long_context": ("claude-3-5-sonnet-latest", "gemini-1.5-pro"),
+                },
+                "Local Only": {
+                    "chat": ("llama3", "mistral"),
+                    "search": ("llama3", "mistral"),
+                    "coding": ("qwen2.5-coder", "llama3"),
+                    "repository_analysis": ("qwen2.5-coder", "llama3"),
+                    "architecture_review": ("llama3", "mistral"),
+                    "planning": ("llama3", "mistral"),
+                    "research": ("llama3", "mistral"),
+                    "debugging": ("qwen2.5-coder", "llama3"),
+                    "multi_file_modification": ("qwen2.5-coder", "llama3"),
+                    "long_context": ("llama3", "mistral"),
+                },
+                "Maximum Quality": {
+                    "chat": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "search": ("gpt-4o", "gemini-1.5-pro"),
+                    "coding": ("claude-3-5-sonnet-latest", "gpt-4o"),
+                    "repository_analysis": ("claude-3-5-sonnet-latest", "gemini-1.5-pro"),
+                    "architecture_review": ("claude-3-5-sonnet-latest", "gpt-4o"),
+                    "planning": ("claude-3-5-sonnet-latest", "gpt-4o"),
+                    "research": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "debugging": ("claude-3-5-sonnet-latest", "gpt-4o"),
+                    "multi_file_modification": ("claude-3-5-sonnet-latest", "gpt-4o"),
+                    "long_context": ("gemini-1.5-pro", "claude-3-5-sonnet-latest"),
+                },
+                "Custom": {
+                    "chat": ("gpt-4o-mini", "gemini-1.5-flash"),
+                    "search": ("gpt-4o-mini", "gemini-1.5-flash"),
+                    "coding": ("gpt-4o-mini", "deepseek-coder"),
+                    "repository_analysis": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "architecture_review": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "planning": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "research": ("gpt-4o-mini", "gemini-1.5-flash"),
+                    "debugging": ("gpt-4o", "deepseek-coder"),
+                    "multi_file_modification": ("gpt-4o", "claude-3-5-sonnet-latest"),
+                    "long_context": ("gemini-1.5-flash", "gpt-4o-mini"),
+                }
+            }
+
+            for p_name, routes in default_routes.items():
+                for t_type, (prim, fallb) in routes.items():
+                    route_obj = CortexTaskRoute(
+                        profile_name=p_name,
+                        task_type=t_type,
+                        primary_model=prim,
+                        fallback_model=fallb
+                    )
+                    db.add(route_obj)
             db.commit()
 
     @classmethod

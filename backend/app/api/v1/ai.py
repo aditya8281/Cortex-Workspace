@@ -38,6 +38,7 @@ class AIResponse(BaseModel):
     response: str
     user_id: int | None = None
     execution_id: str | None = None
+    routing_info: Optional[dict] = None
 
 
 @router.post("/ask", response_model=AIResponse)
@@ -60,7 +61,8 @@ async def ask_public(payload: QueryRequest):
         return AIResponse(
             query=payload.query,
             response=result.answer,
-            execution_id=result.execution_id
+            execution_id=result.execution_id,
+            routing_info=result.routing_info
         )
     except ModelNotInstalledError as e:
         return JSONResponse(
@@ -107,7 +109,8 @@ async def chat_private(
             query=payload.query,
             response=result.answer,
             user_id=current_user.id,
-            execution_id=result.execution_id
+            execution_id=result.execution_id,
+            routing_info=result.routing_info
         )
     except ModelNotInstalledError as e:
         return JSONResponse(

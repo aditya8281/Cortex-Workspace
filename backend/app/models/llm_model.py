@@ -31,3 +31,23 @@ class CortexModel(Base):
     is_local: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_custom: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class CortexRoutingProfile(Base):
+    __tablename__ = "cortex_routing_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class CortexTaskRoute(Base):
+    __tablename__ = "cortex_task_routes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    profile_name: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    task_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    primary_model: Mapped[str] = mapped_column(String(256), nullable=False)
+    fallback_model: Mapped[str] = mapped_column(String(256), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)

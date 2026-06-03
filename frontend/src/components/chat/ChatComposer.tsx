@@ -37,7 +37,7 @@ export function ChatComposer() {
   }, []);
 
   // Determine current active model
-  const currentModel = activeSession?.selectedModel || "qwen3:8b";
+  const currentModel = activeSession?.selectedModel || "Auto";
 
   const submit = async (text?: string) => {
     const q = (text ?? local).trim();
@@ -80,6 +80,27 @@ export function ChatComposer() {
 
           {open && (
             <div className="absolute bottom-full left-0 mb-1.5 z-50 max-h-72 w-72 overflow-y-auto rounded-xl border border-cortex-border bg-cortex-surface/95 p-1.5 shadow-2xl backdrop-blur-lg">
+              <button
+                type="button"
+                className={cn(
+                  "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-white/5",
+                  currentModel === "Auto" && "bg-cortex-accent-soft text-cortex-accent"
+                )}
+                onClick={() => {
+                  if (activeSession) {
+                    updateSession(activeSession.id, { selectedModel: "Auto" });
+                  }
+                  setOpen(false);
+                }}
+              >
+                <div className="flex flex-col">
+                  <span className="font-semibold text-cortex-text">Auto Mode</span>
+                  <span className="text-[10px] text-cortex-muted">Dynamic model routing based on task</span>
+                </div>
+                {currentModel === "Auto" && <Check className="h-3.5 w-3.5" />}
+              </button>
+              <div className="my-1 border-t border-cortex-border/50" />
+
               <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-cortex-muted">
                 Local Models
               </div>

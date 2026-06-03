@@ -23,7 +23,8 @@ class ResponseBuilder:
             answer="\n\n".join(sections),
             source="executor_v2",
             memory_used=ctx.memory is not None,
-            execution_id=ctx.execution_id
+            execution_id=ctx.execution_id,
+            routing_info=ctx.routing_info
         )
 
     def _format_tools(self, tools: list[ToolResult]) -> str:

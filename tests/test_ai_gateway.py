@@ -29,21 +29,24 @@ async def test_ai_gateway_system_scanner_agent(gateway):
 async def test_ai_gateway_llm_routing_and_memory(gateway):
     query = "What is the capital of France?"
 
-    with patch("backend.app.ai.llm_router.LLMRouter.generate", new_callable=AsyncMock) as mock_generate:
-        mock_generate.return_value = "Paris"
+    with patch(
+        "backend.app.ai.intelligent_router.IntelligentRouter.route_and_generate",
+        new_callable=AsyncMock,
+    ) as mock_route:
+        mock_route.return_value = {"response": "Paris", "routing_info": None}
 
         # 1. First query with user_id: Memory is empty, so it should call LLM and save response.
         response = await gateway.route(query, user_id=42)
         assert "Paris" in response.answer
-        mock_generate.assert_called_once()
+        mock_route.assert_called_once()
 
         # 2. Second query with same keywords: Memory recall context is passed to LLM.
-        mock_generate.reset_mock()
-        mock_generate.return_value = "Paris recall response"
+        mock_route.reset_mock()
+        mock_route.return_value = {"response": "Paris recall response", "routing_info": None}
         recall_response = await gateway.route("France capital", user_id=42)
         assert "[Memory Recall]" in recall_response.answer
         assert "Paris" in recall_response.answer
-        mock_generate.assert_called_once()
+        mock_route.assert_called_once()
 
 
 def test_ai_api_endpoints():

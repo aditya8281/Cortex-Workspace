@@ -88,6 +88,20 @@ export function ChatView() {
                 ) : (
                   <MarkdownMessage content={msg.text} />
                 )}
+                {msg.routingInfo && (
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-cortex-border/40 pt-2 text-[10px] text-cortex-muted">
+                    <Badge variant="accent" className="text-[9px] py-0.5 px-1.5 shrink-0">
+                      {msg.routingInfo.model_used}
+                    </Badge>
+                    <span className="shrink-0 font-medium text-cortex-text">{msg.routingInfo.provider}</span>
+                    <span className="shrink-0 opacity-40">|</span>
+                    <span className="shrink-0 font-medium text-cortex-accent">{msg.routingInfo.response_time.toFixed(2)}s</span>
+                    <span className="shrink-0 opacity-40">|</span>
+                    <span className="italic truncate max-w-[200px] sm:max-w-[300px]" title={msg.routingInfo.selection_reason}>
+                      {msg.routingInfo.selection_reason}
+                    </span>
+                  </div>
+                )}
                 <div className="mt-2 flex items-center gap-2 text-[10px] opacity-60">
                   <span>{msg.timestamp}</span>
                   {msg.executionId && <Badge variant="accent">trace</Badge>}

@@ -53,6 +53,7 @@ export function useChatSend() {
           sender: "assistant",
           text: response.response,
           executionId: response.execution_id,
+          routingInfo: response.routing_info,
           timestamp: new Date().toLocaleTimeString(),
         },
       ]);

@@ -5,6 +5,15 @@ export type AskResponse = {
   response: string;
   user_id: number | null;
   execution_id: string | null;
+  routing_info?: {
+    model_used: string;
+    provider: string;
+    response_time: number;
+    selection_reason: string;
+    fallback_used?: boolean;
+    fallback_reason?: string | null;
+    classified_task?: string;
+  } | null;
 };
 
 export type ChatTurn = {
@@ -293,6 +302,42 @@ export async function deleteProvider(name: string): Promise<unknown> {
 
 export async function selectModel(model_name: string): Promise<unknown> {
   const res = await api.post("/models/select", { model_name });
+  return res.data;
+}
+
+export interface RoutingProfile {
+  name: string;
+  is_active: boolean;
+}
+
+export interface TaskRoute {
+  task_type: string;
+  primary_model: string;
+  fallback_model: string;
+}
+
+export interface RoutingRoutesResponse {
+  profile_name: string;
+  routes: TaskRoute[];
+}
+
+export async function getRoutingProfiles(): Promise<RoutingProfile[]> {
+  const res = await api.get("/models/routing/profiles");
+  return res.data;
+}
+
+export async function selectRoutingProfile(name: string): Promise<unknown> {
+  const res = await api.post("/models/routing/profiles/select", { name });
+  return res.data;
+}
+
+export async function getRoutingRoutes(): Promise<RoutingRoutesResponse> {
+  const res = await api.get("/models/routing/routes");
+  return res.data;
+}
+
+export async function updateRoutingRoutes(routes: TaskRoute[]): Promise<unknown> {
+  const res = await api.post("/models/routing/routes", { routes });
   return res.data;
 }
 

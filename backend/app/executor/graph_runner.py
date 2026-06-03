@@ -414,21 +414,40 @@ class GraphRunner:
         cached_response = await redis_cache.get(cache_key)
         if cached_response:
             logging.getLogger(__name__).info(f"LLM Response cache HIT for key {cache_key}")
-            return cached_response
+            import json
+            try:
+                cached_dict = json.loads(cached_response)
+                state["routing_info"] = cached_dict.get("routing_info")
+                return cached_dict.get("response")
+            except Exception:
+                pass
 
-        logging.getLogger(__name__).info(f"LLM Response cache MISS for key {cache_key}. Querying LLM...")
+        logging.getLogger(__name__).info(f"LLM Response cache MISS for key {cache_key}. Querying LLM via IntelligentRouter...")
         
-        response = await self.executor.llm.generate(
-            prompt,
+        chat_history_dicts = []
+        if chat_history:
+            chat_history_dicts = chat_history
+
+        res_dict = await self.executor.router.route_and_generate(
+            prompt=prompt,
             system_prompt=system_prompt,
             model=state.get("llm_model"),
+            history=chat_history_dicts,
             inference_engine=state.get("inference_engine"),
             api_key=state.get("api_key"),
             api_base_url=state.get("api_base_url")
         )
 
+        response = res_dict["response"]
+        state["routing_info"] = res_dict["routing_info"]
+
         if response:
-            await redis_cache.set(cache_key, response, expire_seconds=settings.LLM_CACHE_TTL_SECONDS)
+            import json
+            await redis_cache.set(
+                cache_key,
+                json.dumps(res_dict),
+                expire_seconds=settings.LLM_CACHE_TTL_SECONDS
+            )
 
         return response
 

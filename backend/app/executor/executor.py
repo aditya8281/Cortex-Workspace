@@ -1,4 +1,5 @@
 from backend.app.ai.llm_router import LLMRouter
+from backend.app.ai.intelligent_router import IntelligentRouter
 from backend.app.ai.memory.repository import MemoryRepository
 from backend.app.agent.file_search import FileSearchAgent
 from backend.app.agent.system_scanner import SystemScanner
@@ -34,6 +35,7 @@ class AIExecutor:
         self.planner = Planner()
         self.builder = ResponseBuilder()
         self.llm = LLMRouter()
+        self.router = IntelligentRouter()
         self.memory = MemoryRepository()
         self.file_agent = FileSearchAgent()
         self.system_agent = SystemScanner()
@@ -139,6 +141,7 @@ class AIExecutor:
         memory = raw_state.get("memory")
         tools = raw_state.get("tools", [])
         llm = raw_state.get("llm")
+        routing_info = raw_state.get("routing_info")
 
         return ExecutionContext(
             query=query,
@@ -146,7 +149,8 @@ class AIExecutor:
             execution_id=raw_state.get("execution_id"),
             memory=memory,
             tool_results=tools,
-            llm_response=llm
+            llm_response=llm,
+            routing_info=routing_info
         )
 
     def _sync_runtime_state(self, state, query: str, execution_id: str | None, tools):

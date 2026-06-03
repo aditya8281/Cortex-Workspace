@@ -4,6 +4,15 @@ export type ChatMessage = {
   text: string;
   executionId?: string | null;
   timestamp: string;
+  routingInfo?: {
+    model_used: string;
+    provider: string;
+    response_time: number;
+    selection_reason: string;
+    fallback_used?: boolean;
+    fallback_reason?: string | null;
+    classified_task?: string;
+  } | null;
 };
 
 export type ChatSession = {

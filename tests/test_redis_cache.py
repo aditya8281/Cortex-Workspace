@@ -82,12 +82,19 @@ async def test_llm_response_caching_hit(mock_redis):
     # Setup mock executor
     mock_executor = MagicMock()
     mock_executor.llm.generate = AsyncMock()
+    # IntelligentRouter is used on cache-miss; provide an async mock
+    mock_executor.router.route_and_generate = AsyncMock(return_value={
+        "response": "Router LLM Answer",
+        "routing_info": None,
+    })
 
     runner = GraphRunner(mock_executor)
 
+    import json
+    cached_payload = json.dumps({"response": "Cached LLM Answer", "routing_info": None})
     # Mock redis_cache.get directly
     from backend.app.core.redis import redis_cache
-    with patch.object(redis_cache, "get", AsyncMock(return_value="Cached LLM Answer")):
+    with patch.object(redis_cache, "get", AsyncMock(return_value=cached_payload)):
         state = {
             "intent": MagicMock(intent="chat"),
             "history": [],

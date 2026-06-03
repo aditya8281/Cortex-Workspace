@@ -5,12 +5,12 @@ import keyring
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 from backend.app.core.config import settings
 from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.user import User
-from backend.app.models.llm_model import CortexProvider, CortexModel
+from backend.app.models.llm_model import CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute
 from backend.app.ai.model_registry import ModelRegistry, store_key_securely, retrieve_key_securely
 from sqlalchemy.orm import Session
 
@@ -334,3 +334,95 @@ async def delete_model(
         raise HTTPException(status_code=500, detail=f"Failed to delete model: {str(e)}")
 
     return {"message": f"Model {model_name} deleted successfully"}
+
+
+class SelectProfileRequest(BaseModel):
+    name: str
+
+
+class TaskRouteMapping(BaseModel):
+    task_type: str
+    primary_model: str
+    fallback_model: str
+
+
+class UpdateRoutesRequest(BaseModel):
+    routes: List[TaskRouteMapping]
+
+
+@router.get("/routing/profiles")
+def get_routing_profiles(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    profiles = db.query(CortexRoutingProfile).all()
+    if not profiles:
+        ModelRegistry.seed_if_empty(db)
+        profiles = db.query(CortexRoutingProfile).all()
+    return [{"name": p.name, "is_active": p.is_active} for p in profiles]
+
+
+@router.post("/routing/profiles/select")
+def select_routing_profile(payload: SelectProfileRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    profiles = db.query(CortexRoutingProfile).all()
+    target_profile = None
+    for p in profiles:
+        if p.name.lower() == payload.name.lower():
+            target_profile = p
+            p.is_active = True
+        else:
+            p.is_active = False
+    
+    if not target_profile:
+        raise HTTPException(status_code=404, detail=f"Routing profile '{payload.name}' not found")
+        
+    db.commit()
+    return {"message": f"Profile '{target_profile.name}' is now active"}
+
+
+@router.get("/routing/routes")
+def get_routing_routes(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    active_profile = db.query(CortexRoutingProfile).filter(CortexRoutingProfile.is_active.is_(True)).first()
+    if not active_profile:
+        active_profile = db.query(CortexRoutingProfile).filter(CortexRoutingProfile.name == "Balanced").first()
+        if active_profile:
+            active_profile.is_active = True
+            db.commit()
+            
+    if not active_profile:
+        ModelRegistry.seed_if_empty(db)
+        active_profile = db.query(CortexRoutingProfile).filter(CortexRoutingProfile.is_active.is_(True)).first()
+        
+    profile_name = active_profile.name if active_profile else "Balanced"
+    routes = db.query(CortexTaskRoute).filter(CortexTaskRoute.profile_name == profile_name).all()
+    return {
+        "profile_name": profile_name,
+        "routes": [{"task_type": r.task_type, "primary_model": r.primary_model, "fallback_model": r.fallback_model} for r in routes]
+    }
+
+
+@router.post("/routing/routes")
+def update_routing_routes(payload: UpdateRoutesRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    for mapping in payload.routes:
+        route = db.query(CortexTaskRoute).filter(
+            CortexTaskRoute.profile_name == "Custom",
+            CortexTaskRoute.task_type == mapping.task_type
+        ).first()
+        if route:
+            route.primary_model = mapping.primary_model
+            route.fallback_model = mapping.fallback_model
+        else:
+            new_route = CortexTaskRoute(
+                profile_name="Custom",
+                task_type=mapping.task_type,
+                primary_model=mapping.primary_model,
+                fallback_model=mapping.fallback_model
+            )
+            db.add(new_route)
+            
+    profiles = db.query(CortexRoutingProfile).all()
+    for p in profiles:
+        if p.name == "Custom":
+            p.is_active = True
+        else:
+            p.is_active = False
+            
+    db.commit()
+    return {"message": "Custom routes updated and Custom profile activated"}
