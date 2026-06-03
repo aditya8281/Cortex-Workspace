@@ -5,9 +5,6 @@ from backend.app.executor.tool_intelligence import ToolIntelligence
 from backend.app.executor.tool_fusion import ToolFusionEngine
 from backend.app.executor.context_compiler import ContextCompiler
 
-# -------------------------------
-# STATE LAYER (NEW)
-# -------------------------------
 from backend.app.state.manager import StateManager
 from backend.app.state.models import SystemEvent, EventType
 
@@ -18,10 +15,6 @@ class GraphRunner:
         self.executor = executor
         self.tools = self.executor.tool_registry
         self.tracer = self.executor.tracer
-
-        # -------------------------------
-        # SYSTEM STATE (NEW)
-        # -------------------------------
         self.state = StateManager()
 
     # -------------------------------------------------
@@ -36,10 +29,14 @@ class GraphRunner:
             "tool_map": {},
             "llm": None,
             "completed": set(),
-            "execution_trace": []  # NEW: DAG capture
+            "execution_trace": []
         }
 
         execution_id = self.tracer.create_session()
+
+        # 🔥 CRITICAL FIX: bind execution context
+        self.state.set_execution_id(execution_id)
+
         pending_steps = graph.steps.copy()
 
         # -------------------------------------------------
@@ -56,82 +53,85 @@ class GraphRunner:
             source="GraphRunner"
         ))
 
-        while pending_steps:
+        try:
 
-            ready_steps = [
-                s for s in pending_steps
-                if self._is_ready(s, state)
-            ]
+            while pending_steps:
 
-            if not ready_steps:
-                break
+                ready_steps = [
+                    s for s in pending_steps
+                    if self._is_ready(s, state)
+                ]
 
-            results = await asyncio.gather(
-                *[
-                    self._execute_step(
-                        execution_id,
-                        step,
-                        state,
-                        query,
-                        user_id
-                    )
-                    for step in ready_steps
-                ],
-                return_exceptions=True
-            )
+                if not ready_steps:
+                    break
 
-            for step, result in zip(ready_steps, results):
+                results = await asyncio.gather(
+                    *[
+                        self._execute_step(
+                            execution_id,
+                            step,
+                            state,
+                            query,
+                            user_id
+                        )
+                        for step in ready_steps
+                    ],
+                    return_exceptions=True
+                )
 
-                state["completed"].add(step.id)
-                state["tool_map"][step.id] = result
-                step.result = result
+                for step, result in zip(ready_steps, results):
 
-                # -------------------------------
-                # DAG TRACE CAPTURE (NEW)
-                # -------------------------------
-                state["execution_trace"].append({
-                    "step_id": step.id,
-                    "type": step.type,
-                    "name": step.name,
-                    "depends_on": step.depends_on,
-                    "result": str(result)[:500]
-                })
+                    state["completed"].add(step.id)
+                    state["tool_map"][step.id] = result
+                    step.result = result
 
-                if step.type == "memory":
-                    state["memory"] = result
+                    state["execution_trace"].append({
+                        "step_id": step.id,
+                        "type": step.type,
+                        "name": step.name,
+                        "depends_on": step.depends_on,
+                        "result": str(result)[:500]
+                    })
 
-                elif step.type == "tool":
-                    tool_result = self._normalize_tool(result)
-                    if tool_result:
-                        state["tools"].append(tool_result)
+                    if step.type == "memory":
+                        state["memory"] = result
 
-                elif step.type == "llm":
-                    state["llm"] = result
+                    elif step.type == "tool":
+                        tool_result = self._normalize_tool(result)
+                        if tool_result:
+                            state["tools"].append(tool_result)
 
-                pending_steps.remove(step)
+                    elif step.type == "llm":
+                        state["llm"] = result
 
-        # -------------------------------------------------
-        # POST PROCESSING
-        # -------------------------------------------------
-        state["tools"] = ToolIntelligence().process(state["tools"])
-        state["tools"] = ToolFusionEngine().process(state["tools"])
+                    pending_steps.remove(step)
 
-        # -------------------------------------------------
-        # GRAPH COMPLETION EVENT (NEW)
-        # -------------------------------------------------
-        self.state.emit_event(SystemEvent(
-            type=EventType.EXECUTION_COMPLETED,
-            payload={
-                "execution_id": execution_id,
-                "query": query,
-                "tool_count": len(state["tools"]),
-                "steps_executed": len(state["execution_trace"]),
-                "status": "success"
-            },
-            source="GraphRunner"
-        ))
+            # -------------------------------------------------
+            # POST PROCESSING
+            # -------------------------------------------------
+            state["tools"] = ToolIntelligence().process(state["tools"])
+            state["tools"] = ToolFusionEngine().process(state["tools"])
 
-        return state
+            # -------------------------------------------------
+            # GRAPH END EVENT
+            # -------------------------------------------------
+            self.state.emit_event(SystemEvent(
+                type=EventType.EXECUTION_COMPLETED,
+                payload={
+                    "execution_id": execution_id,
+                    "query": query,
+                    "tool_count": len(state["tools"]),
+                    "steps_executed": len(state["execution_trace"]),
+                    "status": "success"
+                },
+                source="GraphRunner"
+            ))
+
+            return state
+
+        finally:
+            # 🔥 CRITICAL CLEANUP
+            self.state.clear_execution_id()
 
     # -------------------------------------------------
     # READY CHECK
@@ -160,9 +160,6 @@ class GraphRunner:
 
         try:
 
-            # -------------------------------
-            # STEP START TRACE (NEW)
-            # -------------------------------
             self.state.emit_event(SystemEvent(
                 type=EventType.TOOL_EXECUTED,
                 payload={
@@ -226,7 +223,6 @@ class GraphRunner:
     # MEMORY
     # -------------------------------------------------
     async def _run_memory(self, query, user_id):
-
         if user_id is None:
             return None
 
