@@ -1,5 +1,7 @@
 import httpx
 from backend.app.ai.base import BaseLLM
+from backend.app.core.config import settings
+from backend.app.ai.exceptions import ModelNotInstalledError
 
 
 class LocalLLM(BaseLLM):
@@ -9,7 +11,6 @@ class LocalLLM(BaseLLM):
 
     def __init__(self, model: str = "llama3"):
         self.model = model
-        self.url = "http://localhost:11434/api/generate"
 
     async def generate(self, prompt: str, system_prompt: str | None = None, model: str | None = None) -> str:
         full_prompt = prompt
@@ -27,10 +28,17 @@ class LocalLLM(BaseLLM):
             "stream": False
         }
 
-        async with httpx.AsyncClient(timeout=120) as client:
-            response = await client.post(self.url, json=payload)
+        url = f"{settings.OLLAMA_URL.rstrip('/')}/api/generate"
 
-        response.raise_for_status()
+        async with httpx.AsyncClient(timeout=120) as client:
+            try:
+                response = await client.post(url, json=payload)
+                response.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    raise ModelNotInstalledError(model_name) from e
+                raise e
+
         data = response.json()
 
         return data.get("response", "")

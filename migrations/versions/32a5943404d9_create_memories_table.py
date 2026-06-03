@@ -27,11 +27,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime, server_default=sa.func.now(), nullable=False),
     )
 
-    op.create_index(
-        "ix_memories_user_id",
-        "memories",
-        ["user_id"]
-    )
+
 
     op.create_index(
         "ix_memories_created_at",

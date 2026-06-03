@@ -21,6 +21,7 @@ if config.config_file_name is not None:
 
 from backend.app.db.base import Base
 from backend.app.models.user import User
+from backend.app.models.user_settings import UserSettings
 from backend.app.ai.memory.models import Memory
 
 target_metadata = Base.metadata

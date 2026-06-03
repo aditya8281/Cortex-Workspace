@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     AI_API_URL: str | None = None
 
     LOCAL_MODEL: str = "llama3"
+    OLLAMA_URL: str = "http://localhost:11434"
 
     @field_validator("DEBUG", mode="before")
     @classmethod

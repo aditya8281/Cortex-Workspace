@@ -1,0 +1,19 @@
+FROM python:3.14-slim
+
+WORKDIR /app
+
+# Install system dependencies needed for compiling python packages if any
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml uv.lock ./
+
+RUN pip install --no-cache-dir uv && uv sync --frozen --no-dev
+
+COPY . .
+
+# Ensure data directory exists for SQLite db
+RUN mkdir -p /data
+
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"]

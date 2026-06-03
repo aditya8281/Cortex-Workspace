@@ -30,8 +30,12 @@ class APILLM(BaseLLM):
             "Content-Type": "application/json"
         }
 
+        url = self.base_url
+        if url and not url.endswith(("/chat/completions", "/generate")):
+            url = f"{url.rstrip('/')}/chat/completions"
+
         async with httpx.AsyncClient(timeout=60) as client:
-            response = await client.post(self.base_url, json=payload, headers=headers)
+            response = await client.post(url, json=payload, headers=headers)
 
         response.raise_for_status()
         data = response.json()

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import { getExecutionReplay, listExecutions } from "./api/execution";
 import { getMe, login, register, logout, getUsers, updateUser, deleteUser } from "./api/auth";
-import { askQuestion, getChatHistory, type AskResponse, type ChatTurn, type ModelConfig } from "./api/ai";
+import { askQuestion, getChatHistory, getInstalledModels, deleteModel, getUserSettings, updateUserSettings, pullModel, type AskResponse, type ChatTurn, type ModelConfig, type InstalledModel } from "./api/ai";
 
 type User = {
   id: number;
@@ -379,6 +379,137 @@ function App() {
     setModelConfig(prev => ({ ...prev, [field]: value }));
   };
 
+  // Model library states
+  const [installedModels, setInstalledModels] = useState<InstalledModel[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [pullProgress, setPullProgress] = useState<{ status: string; percent: number } | null>(null);
+  const [pullingModelName, setPullingModelName] = useState<string | null>(null);
+  const [missingModel, setMissingModel] = useState<string | null>(null);
+
+  // API key states
+  const [apiBaseUrl, setApiBaseUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSavedMessage, setSettingsSavedMessage] = useState<string | null>(null);
+
+  // Load API keys from sessionStorage (guests) or backend (users)
+  useEffect(() => {
+    if (token) {
+      async function loadSettings() {
+        try {
+          const settings = await getUserSettings();
+          if (settings.api_base_url) setApiBaseUrl(settings.api_base_url);
+          if (settings.api_key_masked) setApiKey(settings.api_key_masked);
+        } catch (e) {
+          console.error("Failed to load user settings", e);
+        }
+      }
+      loadSettings();
+    } else {
+      setApiBaseUrl(sessionStorage.getItem("cortex_api_base_url") || "");
+      setApiKey(sessionStorage.getItem("cortex_api_key") || "");
+    }
+  }, [token]);
+
+  const handleApiKeyChange = (val: string) => {
+    setApiKey(val);
+    if (!token) {
+      sessionStorage.setItem("cortex_api_key", val);
+    }
+  };
+
+  const handleApiBaseUrlChange = (val: string) => {
+    setApiBaseUrl(val);
+    if (!token) {
+      sessionStorage.setItem("cortex_api_base_url", val);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSettingsLoading(true);
+    setSettingsSavedMessage(null);
+    try {
+      const result = await updateUserSettings({
+        api_base_url: apiBaseUrl,
+        api_key: apiKey
+      });
+      if (result.api_key_masked) {
+        setApiKey(result.api_key_masked);
+      }
+      setSettingsSavedMessage("Credentials encrypted and saved!");
+      setTimeout(() => setSettingsSavedMessage(null), 3000);
+    } catch (e) {
+      console.error("Failed to save credentials", e);
+      setError("Failed to encrypt and save credentials on server.");
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const fetchInstalledModels = async () => {
+    setLoadingModels(true);
+    try {
+      const list = await getInstalledModels();
+      setInstalledModels(list);
+    } catch (e) {
+      console.error("Failed to get installed models", e);
+    } finally {
+      setLoadingModels(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showModelConfig) {
+      fetchInstalledModels();
+    }
+  }, [showModelConfig]);
+
+  const handlePullModel = async (modelName: string) => {
+    setPullingModelName(modelName);
+    setPullProgress({ status: "Starting download...", percent: 0 });
+    try {
+      await pullModel(modelName, (prog) => {
+        setPullProgress({
+          status: prog.status,
+          percent: prog.percent
+        });
+      });
+      await fetchInstalledModels();
+      if (missingModel === modelName || (modelName === "qwen3:8b" && missingModel === "Qwen3 8B (Q4_K_M quantization)")) {
+        setMissingModel(null);
+      }
+    } catch (e: any) {
+      console.error("Download failed", e);
+      setPullProgress(prev => ({
+        status: `Error: ${e.message || "Failed to download model"}`,
+        percent: prev?.percent || 0
+      }));
+    }
+  };
+
+  const handleDeleteModel = async (modelName: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${modelName}?`)) {
+      return;
+    }
+    try {
+      await deleteModel(modelName);
+      await fetchInstalledModels();
+    } catch (e) {
+      console.error("Failed to delete model", e);
+      alert("Failed to delete model.");
+    }
+  };
+
+  const curatedModels = [
+    { id: "qwen3:8b", name: "Qwen3 8B (Q4_K_M)" },
+    { id: "llama3", name: "Llama 3 8B" },
+    { id: "mistral", name: "Mistral 7B" },
+    { id: "codellama", name: "CodeLlama 7B" },
+    { id: "gemma2", name: "Gemma 2 9B" },
+    { id: "phi3", name: "Phi-3 Mini" }
+  ];
+
   // Executions telemetry state
   const [executions, setExecutions] = useState<ExecutionListItem[]>([]);
   const [selectedExecution, setSelectedExecution] = useState<string | null>(null);
@@ -729,7 +860,12 @@ function App() {
     setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, title: newTitle, messages: updatedMessages } : s));
 
     try {
-      const result: AskResponse = await askQuestion(queryToSend, !!token, history, modelConfig);
+      const configWithKeys = {
+        ...modelConfig,
+        api_key: apiKey,
+        api_base_url: apiBaseUrl
+      };
+      const result: AskResponse = await askQuestion(queryToSend, !!token, history, configWithKeys);
 
       const assistantMsg: ChatMessage = {
         id: Math.random().toString(36).substring(7),
@@ -749,6 +885,11 @@ function App() {
         setTelemetryTab("detail");
       }
     } catch (err: any) {
+      if (err.response?.status === 422 && err.response?.data?.error === "model_not_installed") {
+        setMissingModel(err.response.data.model);
+        setIsGenerating(false);
+        return;
+      }
       setError("AI Gateway did not respond. Verify local LLM / Ollama server is running.");
       const errorMsg: ChatMessage = {
         id: Math.random().toString(36).substring(7),
@@ -942,6 +1083,127 @@ function App() {
                 <span className="badge-dot" />
                 Active: <strong>{modelConfig.inference_engine}</strong> · <strong>{modelConfig.llm_model}</strong>
               </div>
+
+              {modelConfig.inference_engine === "API" && (
+                <div className="config-api-section">
+                  <hr className="config-divider" />
+                  <h4>🔑 External API Key</h4>
+                  
+                  <div className="config-group">
+                    <label className="config-label">Base URL</label>
+                    <input 
+                      type="text"
+                      className="config-input"
+                      placeholder="https://api.openai.com/v1"
+                      value={apiBaseUrl}
+                      onChange={(e) => handleApiBaseUrlChange(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="config-group">
+                    <label className="config-label">API Key</label>
+                    <div className="config-input-password-wrapper">
+                      <input 
+                        type={showApiKey ? "text" : "password"}
+                        className="config-input"
+                        placeholder="sk-..."
+                        value={apiKey}
+                        onChange={(e) => handleApiKeyChange(e.target.value)}
+                      />
+                      <button 
+                        type="button"
+                        className="toggle-password-btn"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                      >
+                        {showApiKey ? "👁️" : "👁️‍🗨️"}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {token ? (
+                    <button 
+                      type="button" 
+                      className="btn btn-save-keys" 
+                      onClick={handleSaveSettings}
+                      disabled={settingsLoading}
+                    >
+                      {settingsLoading ? "Saving..." : "Save Credentials"}
+                    </button>
+                  ) : (
+                    <div className="guest-keys-notice">
+                      ⚠️ Stored locally for this session. Sign in to save permanently.
+                    </div>
+                  )}
+                  {settingsSavedMessage && (
+                    <div className="settings-saved-msg">
+                      {settingsSavedMessage}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {modelConfig.inference_engine === "Ollama" && (
+                <>
+                  <hr className="config-divider" />
+                  
+                  {/* Installed Model Library */}
+                  <div className="model-library-section">
+                    <h4>🗃️ Installed Models</h4>
+                    {loadingModels ? (
+                      <div className="library-loading">Loading list...</div>
+                    ) : installedModels.length === 0 ? (
+                      <div className="library-empty">No local models found.</div>
+                    ) : (
+                      <div className="installed-models-list">
+                        {installedModels.map((model) => (
+                          <div key={model.name} className="model-library-row">
+                            <div className="model-library-info">
+                              <span className="model-lib-name" title={model.name}>{model.name}</span>
+                              <span className="model-lib-size">{(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB</span>
+                            </div>
+                            {currentUser?.role === "admin" && (
+                              <button 
+                                type="button"
+                                className="delete-model-btn"
+                                onClick={() => handleDeleteModel(model.name)}
+                                title="Delete model"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Curated Download List */}
+                  <div className="model-download-section">
+                    <h4>📥 Download Popular Models</h4>
+                    <div className="available-download-list">
+                      {curatedModels
+                        .filter(cur => !installedModels.some(inst => inst.name === cur.id || inst.name.startsWith(cur.id + ":")))
+                        .map(cur => (
+                          <div key={cur.id} className="model-download-row">
+                            <span className="model-dl-name">{cur.name}</span>
+                            <button 
+                              type="button"
+                              className="btn-download-model"
+                              onClick={() => handlePullModel(cur.id)}
+                              title="Download"
+                            >
+                              ⬇️
+                            </button>
+                          </div>
+                        ))
+                      }
+                      {curatedModels.filter(cur => !installedModels.some(inst => inst.name === cur.id || inst.name.startsWith(cur.id + ":"))).length === 0 && (
+                        <div className="library-empty">All popular models installed!</div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1499,6 +1761,90 @@ function App() {
                   </button>
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pull Progress Overlay Modal */}
+      {pullingModelName && (
+        <div className="pull-overlay">
+          <div className="pull-modal">
+            <div className="pull-modal-header">
+              <h3>Downloading Model</h3>
+            </div>
+            <div className="pull-modal-body">
+              <p className="pull-model-name">Model: <strong>{pullingModelName}</strong></p>
+              {pullProgress && (
+                <>
+                  <div className="progress-bar-container">
+                    <div 
+                      className="progress-bar-fill" 
+                      style={{ width: `${pullProgress.percent}%` }}
+                    />
+                  </div>
+                  <div className="pull-status-row">
+                    <span className="pull-status-text">{pullProgress.status}</span>
+                    <span className="pull-percent">{pullProgress.percent}%</span>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="pull-modal-actions">
+              {pullProgress?.status.startsWith("Error:") || pullProgress?.status === "success" || pullProgress?.percent === 100 || !pullProgress ? (
+                <button 
+                  type="button"
+                  className="btn btn-close-pull" 
+                  onClick={() => {
+                    setPullingModelName(null);
+                    setPullProgress(null);
+                  }}
+                >
+                  Close
+                </button>
+              ) : (
+                <div className="pulling-spinner-row">
+                  <span className="pulling-indicator">Downloading, please do not close this window...</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Missing Model Prompt Modal */}
+      {missingModel && (
+        <div className="missing-model-overlay">
+          <div className="missing-model-modal">
+            <div className="missing-model-header">
+              <h3>Model Required</h3>
+            </div>
+            <div className="missing-model-body">
+              <p>The selected model <strong>{missingModel}</strong> is not currently installed in your Ollama library.</p>
+              <p>Would you like to download it now or switch to another model?</p>
+            </div>
+            <div className="missing-model-actions">
+              <button 
+                type="button" 
+                className="btn btn-download-now" 
+                onClick={() => {
+                  const modelToPull = missingModel;
+                  setMissingModel(null);
+                  handlePullModel(modelToPull);
+                }}
+              >
+                Download Now
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-switch-model" 
+                onClick={() => {
+                  setMissingModel(null);
+                  setShowModelConfig(true);
+                }}
+              >
+                Switch Model
+              </button>
             </div>
           </div>
         </div>

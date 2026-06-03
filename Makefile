@@ -118,19 +118,25 @@ clean:
 # ============================================================================
 
 docker-build:
-	docker build -t cortex-workspace:latest .
+	docker compose build
 
 docker-up:
-	docker-compose up -d
+	docker compose up -d
+
+docker-dev:
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 docker-down:
-	docker-compose down
+	docker compose down
 
 docker-logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 docker-shell:
-	docker-compose exec app /bin/bash
+	docker compose exec backend /bin/bash
+
+docker-gpu:
+	@echo "To enable GPU acceleration, uncomment the 'deploy' block in docker-compose.yml under the 'ollama' service, then run: docker compose up -d"
 
 # ============================================================================
 # DOCS
