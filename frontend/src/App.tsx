@@ -6,12 +6,14 @@ import {
   getChatHistory,
   getInstalledModels,
   getUserSettings,
+  getWorkspaceIntelligence,
   pullModel,
   updateUserSettings,
   type AskResponse,
   type ChatTurn,
   type InstalledModel,
   type ModelConfig,
+  type WorkspaceIntelligenceResponse,
 } from "./api/ai";
 import {
   deleteUser,
@@ -83,7 +85,7 @@ type ReplayData = {
   replay: ReplayStep[];
 };
 
-type PanelTab = "traces" | "models" | "admin";
+type PanelTab = "traces" | "models" | "workspace" | "admin";
 type AuthMode = "login" | "register" | "none";
 type ProviderKey = "openai" | "nvidia" | "groq" | "openrouter" | "custom";
 
@@ -492,6 +494,8 @@ function App() {
   const [executionData, setExecutionData] = useState<ReplayData | null>(null);
   const [loadingExecutions, setLoadingExecutions] = useState(false);
   const [loadingReplay, setLoadingReplay] = useState(false);
+  const [workspaceIntelligence, setWorkspaceIntelligence] = useState<WorkspaceIntelligenceResponse | null>(null);
+  const [loadingWorkspace, setLoadingWorkspace] = useState(false);
 
   const [usersList, setUsersList] = useState<AppUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -717,6 +721,24 @@ function App() {
       void loadModels();
     }
   }, [panelTab, modelConfig.inference_engine]);
+
+  useEffect(() => {
+    if (panelTab !== "workspace") return;
+
+    const loadWorkspaceIntelligence = async () => {
+      setLoadingWorkspace(true);
+      try {
+        const data = await getWorkspaceIntelligence();
+        setWorkspaceIntelligence(data);
+      } catch {
+        setWorkspaceIntelligence(null);
+      } finally {
+        setLoadingWorkspace(false);
+      }
+    };
+
+    void loadWorkspaceIntelligence();
+  }, [panelTab]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -1413,6 +1435,9 @@ function App() {
               <button type="button" className={panelTab === "models" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("models")}>
                 Models
               </button>
+              <button type="button" className={panelTab === "workspace" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("workspace")}>
+                Workspace
+              </button>
               {currentUser?.role === "admin" && (
                 <button type="button" className={panelTab === "admin" ? "tab-btn is-active" : "tab-btn"} onClick={() => setPanelTab("admin")}>
                   Admin
@@ -1712,6 +1737,147 @@ function App() {
                       ))}
                     </div>
                   </>
+                )}
+              </div>
+            )}
+
+            {panelTab === "workspace" && (
+              <div className="inspector-panel">
+                <div className="panel-head">
+                  <div>
+                    <p className="eyebrow">Workspace intelligence</p>
+                    <h3>Project understanding layer</h3>
+                  </div>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => {
+                      setLoadingWorkspace(true);
+                      void getWorkspaceIntelligence()
+                        .then(setWorkspaceIntelligence)
+                        .catch(() => setWorkspaceIntelligence(null))
+                        .finally(() => setLoadingWorkspace(false));
+                    }}
+                  >
+                    ↻
+                  </button>
+                </div>
+
+                {loadingWorkspace ? (
+                  <div className="mini-empty">Building workspace understanding...</div>
+                ) : !workspaceIntelligence ? (
+                  <div className="mini-empty">No workspace summary available yet.</div>
+                ) : (
+                  <div className="scroll-stack">
+                    <div className="mini-stat">
+                      <span>Project</span>
+                      <strong>{workspaceIntelligence.project_name}</strong>
+                    </div>
+
+                    <div className="mini-empty" style={{ textAlign: "left" }}>
+                      {workspaceIntelligence.purpose}
+                    </div>
+
+                    <div className="settings-block">
+                      <label>Architecture</label>
+                      <div className="chip-wrap">
+                        {workspaceIntelligence.architecture.map((item) => (
+                          <span key={item} className="meta-chip">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="settings-block">
+                      <label>Frameworks</label>
+                      <div className="chip-wrap">
+                        {workspaceIntelligence.frameworks.map((item) => (
+                          <span key={item} className="meta-chip">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="settings-block">
+                      <label>Entrypoints</label>
+                      <div className="scroll-stack">
+                        {workspaceIntelligence.entrypoints.map((entry) => (
+                          <div key={entry.path} className="model-row">
+                            <div>
+                              <strong>{entry.path}</strong>
+                              <span>{entry.role}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="settings-block">
+                      <label>APIs</label>
+                      <div className="scroll-stack">
+                        {workspaceIntelligence.apis.map((apiLine) => (
+                          <div key={apiLine} className="mini-empty" style={{ textAlign: "left" }}>
+                            {apiLine}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="settings-block">
+                      <label>Execution flow</label>
+                      <div className="scroll-stack">
+                        {workspaceIntelligence.execution_flow.map((step) => (
+                          <div key={step} className="mini-empty" style={{ textAlign: "left" }}>
+                            {step}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="settings-block">
+                      <label>Build and config</label>
+                      <div className="chip-wrap">
+                        {workspaceIntelligence.config.map((item) => (
+                          <span key={item} className="meta-chip">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="scroll-stack" style={{ marginTop: "10px" }}>
+                        {workspaceIntelligence.build_process.map((line) => (
+                          <div key={line} className="mini-empty" style={{ textAlign: "left" }}>
+                            {line}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="settings-block">
+                      <label>Key files</label>
+                      <div className="chip-wrap">
+                        {workspaceIntelligence.key_files.map((file) => (
+                          <span key={file} className="meta-chip">
+                            {file}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {workspaceIntelligence.warnings.length > 0 && (
+                      <div className="settings-block">
+                        <label>Warnings</label>
+                        <div className="scroll-stack">
+                          {workspaceIntelligence.warnings.map((warning) => (
+                            <div key={warning} className="mini-empty" style={{ textAlign: "left" }}>
+                              {warning}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}

@@ -40,6 +40,27 @@ export type UserSettings = {
   api_key_masked: string | null;
 };
 
+export type WorkspaceIntelligenceEntryPoint = {
+  path: string;
+  role: string;
+};
+
+export type WorkspaceIntelligenceResponse = {
+  project_name: string;
+  purpose: string;
+  architecture: string[];
+  dependencies: string[];
+  frameworks: string[];
+  entrypoints: WorkspaceIntelligenceEntryPoint[];
+  apis: string[];
+  execution_flow: string[];
+  config: string[];
+  build_process: string[];
+  key_files: string[];
+  warnings: string[];
+  evidence: { path: string; snippet: string }[];
+};
+
 export async function askQuestion(
   query: string, 
   useAuthenticatedChat = false, 
@@ -72,6 +93,11 @@ export async function deleteModel(modelName: string): Promise<void> {
 
 export async function getUserSettings(): Promise<UserSettings> {
   const res = await api.get("/users/me/settings");
+  return res.data;
+}
+
+export async function getWorkspaceIntelligence(): Promise<WorkspaceIntelligenceResponse> {
+  const res = await api.get("/workspace/intelligence");
   return res.data;
 }
 

@@ -6,6 +6,7 @@ from backend.app.api.v1.ai import router as ai_router
 from backend.app.api.v1.execution import router as execution_router
 from backend.app.api.v1.models import router as models_router
 from backend.app.api.v1.user_settings import router as user_settings_router
+from backend.app.api.v1.workspace import router as workspace_router
 
 api_router = APIRouter()
 
@@ -41,4 +42,10 @@ api_router.include_router(
     user_settings_router,
     prefix="/users/me/settings",
     tags=["User Settings"]
+)
+
+api_router.include_router(
+    workspace_router,
+    prefix="/workspace",
+    tags=["Workspace"]
 )
