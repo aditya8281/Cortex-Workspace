@@ -10,6 +10,7 @@ class BaseLLM(ABC):
     async def generate(
         self,
         prompt: str,
-        system_prompt: str | None = None
+        system_prompt: str | None = None,
+        model: str | None = None
     ) -> str:
         raise NotImplementedError

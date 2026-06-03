@@ -11,14 +11,18 @@ class LocalLLM(BaseLLM):
         self.model = model
         self.url = "http://localhost:11434/api/generate"
 
-    async def generate(self, prompt: str, system_prompt: str | None = None) -> str:
+    async def generate(self, prompt: str, system_prompt: str | None = None, model: str | None = None) -> str:
         full_prompt = prompt
 
         if system_prompt:
             full_prompt = f"{system_prompt}\n\nUser: {prompt}"
 
+        model_name = model or self.model
+        if model_name == "Qwen3 8B (Q4_K_M quantization)":
+            model_name = "qwen3:8b"
+
         payload = {
-            "model": self.model,
+            "model": model_name,
             "prompt": full_prompt,
             "stream": False
         }

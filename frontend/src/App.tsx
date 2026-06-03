@@ -1,14 +1,49 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { getExecutionReplay, listExecutions } from "./api/execution";
-import { getMe, login, register, logout } from "./api/auth";
-import { askQuestion, type AskResponse, type ChatTurn } from "./api/ai";
+import { getMe, login, register, logout, getUsers, updateUser, deleteUser } from "./api/auth";
+import { askQuestion, getChatHistory, type AskResponse, type ChatTurn, type ModelConfig } from "./api/ai";
 
 type User = {
   id: number;
   email: string;
   full_name: string;
+  role: string;
 };
+
+type ChatSession = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: string;
+};
+
+const QUICK_CARDS = [
+  {
+    icon: "🔍",
+    title: "Search Codebase",
+    desc: "Find class definitions, functions, or variable usages in files.",
+    prompt: "search for class AIExecutor in the codebase and show its location"
+  },
+  {
+    icon: "📋",
+    title: "System Scan",
+    desc: "Inspect system configs, services, dependencies, and CPU/memory.",
+    prompt: "scan the system configurations and summarize the active services"
+  },
+  {
+    icon: "⚙️",
+    title: "Explain Graph",
+    desc: "Understand how the GraphRunner controls runtime execution steps.",
+    prompt: "explain how GraphRunner works in backend/app/executor/graph_runner.py"
+  },
+  {
+    icon: "⚡",
+    title: "AI Capabilities",
+    desc: "Ask general inquiries to see what tools the AI is capable of running.",
+    prompt: "what are you capable of in this workspace? show me all your tools"
+  }
+];
 
 type ExecutionSummary = {
   total_events?: number;
@@ -294,18 +329,55 @@ function App() {
   const [authFullName, setAuthFullName] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // AI Chat state
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      sender: "assistant",
-      text: "Welcome to Cortex Workspace. I can help search files, scan system configurations, and run code analyses. Try asking a question below!",
-      timestamp: new Date().toLocaleTimeString(),
-    },
-  ]);
+  // Chat sessions state
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string>("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Input query and generating states
   const [inputQuery, setInputQuery] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "replay">("chat");
+  
+  // Navigation states
+  const [activeTab, setActiveTab] = useState<"chat" | "admin">("chat");
+  const [showTelemetry, setShowTelemetry] = useState(false);
+  const [telemetryTab, setTelemetryTab] = useState<"list" | "detail">("list");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Admin user management state
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [editFullName, setEditFullName] = useState("");
+  const [editRole, setEditRole] = useState("");
+
+  // Model configuration (persisted per-session in localStorage)
+  const [modelConfig, setModelConfig] = useState<ModelConfig>(() => {
+    try {
+      const saved = localStorage.getItem("cortex_model_config");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      llm_model: "qwen3:8b",
+      embedding_model: "BAAI/bge-small-en-v1.5",
+      vector_db: "FAISS",
+      inference_engine: "Ollama",
+      code_parsing: "Tree-sitter",
+    };
+  });
+  const [showModelConfig, setShowModelConfig] = useState(false);
+
+  // Persist model config whenever it changes
+  useEffect(() => {
+    localStorage.setItem("cortex_model_config", JSON.stringify(modelConfig));
+  }, [modelConfig]);
+
+  const updateModelConfig = (field: keyof ModelConfig, value: string) => {
+    setModelConfig(prev => ({ ...prev, [field]: value }));
+  };
 
   // Executions telemetry state
   const [executions, setExecutions] = useState<ExecutionListItem[]>([]);
@@ -336,6 +408,199 @@ function App() {
 
     fetchMe();
   }, [token]);
+
+  // Load sessions from localStorage or backend
+  useEffect(() => {
+    const key = currentUser ? `cortex_sessions_user_${currentUser.id}` : `cortex_sessions_guest`;
+    const localSaved = localStorage.getItem(key);
+    
+    if (localSaved) {
+      try {
+        const parsed = JSON.parse(localSaved);
+        if (parsed && parsed.length > 0) {
+          setSessions(parsed);
+          setActiveSessionId(parsed[0].id);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse local sessions", e);
+      }
+    }
+    
+    // If no local sessions and logged in, load backend history as an imported session
+    if (currentUser) {
+      async function importHistory() {
+        try {
+          const history = await getChatHistory();
+          if (history && history.length > 0) {
+            const importedMessages: ChatMessage[] = [];
+            importedMessages.push({
+              id: "welcome",
+              sender: "assistant",
+              text: "Welcome to Cortex Workspace. I loaded your previous session history from the database below.",
+              timestamp: new Date().toLocaleTimeString(),
+            });
+            
+            history.forEach((item, index) => {
+              importedMessages.push({
+                id: `imported-user-${index}`,
+                sender: "user",
+                text: item.query,
+                timestamp: "",
+              });
+              importedMessages.push({
+                id: `imported-assistant-${index}`,
+                sender: "assistant",
+                text: item.response,
+                timestamp: "",
+              });
+            });
+            
+            const importedSession: ChatSession = {
+              id: `imported-${Date.now()}`,
+              title: "Imported History",
+              messages: importedMessages,
+              createdAt: new Date().toISOString()
+            };
+            
+            setSessions([importedSession]);
+            setActiveSessionId(importedSession.id);
+          } else {
+            createFreshSession();
+          }
+        } catch (err) {
+          console.error("Failed to import backend history", err);
+          createFreshSession();
+        }
+      }
+      importHistory();
+    } else {
+      createFreshSession();
+    }
+  }, [currentUser, token]);
+
+  const createFreshSession = () => {
+    const freshSession: ChatSession = {
+      id: `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      title: "New Chat",
+      messages: [
+        {
+          id: "welcome",
+          sender: "assistant",
+          text: "Welcome to Cortex Workspace. I can help search files, scan system configurations, and run code analyses. Try asking a question below!",
+          timestamp: new Date().toLocaleTimeString(),
+        }
+      ],
+      createdAt: new Date().toISOString()
+    };
+    setSessions([freshSession]);
+    setActiveSessionId(freshSession.id);
+  };
+
+  // Save sessions to localStorage when they change
+  useEffect(() => {
+    if (sessions.length > 0) {
+      const key = currentUser ? `cortex_sessions_user_${currentUser.id}` : `cortex_sessions_guest`;
+      localStorage.setItem(key, JSON.stringify(sessions));
+    }
+  }, [sessions, currentUser]);
+
+  const handleNewChat = () => {
+    const freshSession: ChatSession = {
+      id: `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      title: "New Chat",
+      messages: [
+        {
+          id: "welcome",
+          sender: "assistant",
+          text: "Welcome to Cortex Workspace. I can help search files, scan system configurations, and run code analyses. Try asking a question below!",
+          timestamp: new Date().toLocaleTimeString(),
+        }
+      ],
+      createdAt: new Date().toISOString()
+    };
+    setSessions(prev => [freshSession, ...prev]);
+    setActiveSessionId(freshSession.id);
+    setActiveTab("chat");
+  };
+
+  const deleteSession = (idToDelete: string) => {
+    const updated = sessions.filter(s => s.id !== idToDelete);
+    if (updated.length === 0) {
+      createFreshSession();
+    } else {
+      setSessions(updated);
+      if (activeSessionId === idToDelete) {
+        setActiveSessionId(updated[0].id);
+      }
+    }
+  };
+
+  const renameSession = (idToRename: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    setSessions(prev => prev.map(s => s.id === idToRename ? { ...s, title: newTitle.trim() } : s));
+  };
+
+  // Admin: load user accounts list
+  const loadUsers = async () => {
+    setLoadingUsers(true);
+    setAdminError(null);
+    try {
+      const users = await getUsers();
+      setUsersList(users);
+    } catch (err: any) {
+      setAdminError(err.response?.data?.detail || "Failed to load users list.");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "admin" && currentUser?.role === "admin") {
+      loadUsers();
+    }
+  }, [activeTab, currentUser]);
+
+  const startEdit = (user: User) => {
+    setEditingUserId(user.id);
+    setEditEmail(user.email);
+    setEditFullName(user.full_name);
+    setEditRole(user.role);
+  };
+
+  const cancelEdit = () => {
+    setEditingUserId(null);
+  };
+
+  const handleUpdateUser = async (userId: number) => {
+    try {
+      await updateUser(userId, editEmail, editFullName, editRole);
+      setEditingUserId(null);
+      await loadUsers();
+      if (userId === currentUser?.id) {
+        const updatedMe = await getMe();
+        setCurrentUser(updatedMe);
+      }
+    } catch (err: any) {
+      setAdminError(err.response?.data?.detail || "Failed to update user.");
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (userId === currentUser?.id) {
+      setAdminError("Cannot delete yourself!");
+      return;
+    }
+    if (!window.confirm("Are you sure you want to delete this user?")) {
+      return;
+    }
+    try {
+      await deleteUser(userId);
+      await loadUsers();
+    } catch (err: any) {
+      setAdminError(err.response?.data?.detail || "Failed to delete user.");
+    }
+  };
 
   // Load executions list
   const loadExecutionsList = async (showLoading = false) => {
@@ -395,6 +660,7 @@ function App() {
         const data = await login(authEmail, authPassword);
         setToken(data.access_token);
         setAuthMode("none");
+        setActiveTab("chat");
         clearAuthForm();
       } else if (authMode === "register") {
         await register(authEmail, authFullName, authPassword);
@@ -402,6 +668,7 @@ function App() {
         const data = await login(authEmail, authPassword);
         setToken(data.access_token);
         setAuthMode("none");
+        setActiveTab("chat");
         clearAuthForm();
       }
     } catch (err: any) {
@@ -413,6 +680,7 @@ function App() {
     logout();
     setToken(null);
     setCurrentUser(null);
+    setActiveTab("chat");
     loadExecutionsList(true);
   };
 
@@ -424,34 +692,44 @@ function App() {
   };
 
   // Handle Chat Queries
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputQuery.trim() || isGenerating) return;
+  const handleSendMessage = async (e?: React.FormEvent, customQuery?: string) => {
+    if (e) e.preventDefault();
+    const queryToSend = customQuery !== undefined ? customQuery : inputQuery;
+    if (!queryToSend.trim() || isGenerating) return;
 
-    const userQuery = inputQuery;
     setInputQuery("");
     setIsGenerating(true);
     setError(null);
 
-    // Add user message to log
+    const activeSession = sessions.find(s => s.id === activeSessionId);
+    if (!activeSession) return;
+
     const userMsg: ChatMessage = {
       id: Math.random().toString(36).substring(7),
       sender: "user",
-      text: userQuery,
+      text: queryToSend,
       timestamp: new Date().toLocaleTimeString(),
     };
 
-    const history: ChatTurn[] = chatMessages
+    const history: ChatTurn[] = activeSession.messages
       .filter((msg) => msg.id !== "welcome")
       .map((msg) => ({
         role: msg.sender,
         content: msg.text,
       }));
 
-    setChatMessages((prev) => [...prev, userMsg]);
+    const updatedMessages = [...activeSession.messages, userMsg];
+    let newTitle = activeSession.title;
+    
+    // Auto-rename from "New Chat" on first query
+    if (activeSession.title === "New Chat") {
+      newTitle = queryToSend.length > 28 ? queryToSend.substring(0, 25).trim() + "..." : queryToSend;
+    }
+
+    setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, title: newTitle, messages: updatedMessages } : s));
 
     try {
-      const result: AskResponse = await askQuestion(userQuery, !!token, history);
+      const result: AskResponse = await askQuestion(queryToSend, !!token, history, modelConfig);
 
       const assistantMsg: ChatMessage = {
         id: Math.random().toString(36).substring(7),
@@ -460,12 +738,15 @@ function App() {
         executionId: result.execution_id,
         timestamp: new Date().toLocaleTimeString(),
       };
-      setChatMessages((prev) => [...prev, assistantMsg]);
+
+      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...updatedMessages, assistantMsg] } : s));
 
       // Automatically reload execution telemetry list and highlight the execution trace
       if (result.execution_id) {
         await loadExecutionsList();
         setSelectedExecution(result.execution_id);
+        setShowTelemetry(true);
+        setTelemetryTab("detail");
       }
     } catch (err: any) {
       setError("AI Gateway did not respond. Verify local LLM / Ollama server is running.");
@@ -475,7 +756,7 @@ function App() {
         text: "Error: Failed to process query. Please check server logs.",
         timestamp: new Date().toLocaleTimeString(),
       };
-      setChatMessages((prev) => [...prev, errorMsg]);
+      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: [...updatedMessages, errorMsg] } : s));
     } finally {
       setIsGenerating(false);
     }
@@ -483,273 +764,666 @@ function App() {
 
   const inspectMsgExecution = (executionId: string) => {
     setSelectedExecution(executionId);
-    setActiveTab("replay");
+    setShowTelemetry(true);
+    setTelemetryTab("detail");
   };
 
+  const activeSession = sessions.find(s => s.id === activeSessionId);
+
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div className="brand-section">
-          <p className="eyebrow">Cortex Workspace</p>
-          <h1>Execution Intelligence Console</h1>
-          <p className="subtitle">
-            Local-first AI operating system, execution replay, and repo intelligence.
-          </p>
+    <div className={`app-shell ${isSidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
+      {/* Collapsible Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-logo">C</div>
+          <div className="brand-info">
+            <h2>CORTEX</h2>
+            <span className="brand-tagline">AI Operating System</span>
+          </div>
         </div>
 
-        <div className="user-controls">
+        <button className="btn new-chat-btn" onClick={handleNewChat}>
+          <span className="plus-icon">+</span> New Chat
+        </button>
+
+        <div className="sidebar-sessions">
+          <div className="sessions-header">Recent Chats</div>
+          <div className="sessions-list">
+            {sessions.map((session) => {
+              const isActive = session.id === activeSessionId;
+              const isRenaming = renamingId === session.id;
+
+              return (
+                <div
+                  key={session.id}
+                  className={`session-item ${isActive ? "active" : ""}`}
+                >
+                  {isRenaming ? (
+                    <input
+                      type="text"
+                      className="session-rename-input"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          renameSession(session.id, renameValue);
+                          setRenamingId(null);
+                        } else if (e.key === "Escape") {
+                          setRenamingId(null);
+                        }
+                      }}
+                      onBlur={() => {
+                        renameSession(session.id, renameValue);
+                        setRenamingId(null);
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <>
+                      <span className="chat-icon">💬</span>
+                      <span
+                        className="session-title"
+                        onClick={() => {
+                          setActiveSessionId(session.id);
+                          setActiveTab("chat");
+                        }}
+                        onDoubleClick={() => {
+                          setRenamingId(session.id);
+                          setRenameValue(session.title);
+                        }}
+                      >
+                        {session.title}
+                      </span>
+                      <div className="session-actions">
+                        <button
+                          className="session-action-btn edit-btn"
+                          onClick={() => {
+                            setRenamingId(session.id);
+                            setRenameValue(session.title);
+                          }}
+                          title="Rename"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          className="session-action-btn delete-btn"
+                          onClick={() => deleteSession(session.id)}
+                          title="Delete"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Model Configuration Panel */}
+        <div className="model-config-section">
+          <button
+            className="model-config-toggle"
+            onClick={() => setShowModelConfig(!showModelConfig)}
+          >
+            <span className="model-config-icon">⚙️</span>
+            <span>Model Config</span>
+            <span className="model-config-chevron">{showModelConfig ? "▲" : "▼"}</span>
+          </button>
+
+          {showModelConfig && (
+            <div className="model-config-panel">
+              <div className="config-group">
+                <label className="config-label">🤖 Main LLM</label>
+                <select
+                  className="config-select"
+                  value={modelConfig.llm_model}
+                  onChange={e => updateModelConfig("llm_model", e.target.value)}
+                >
+                  <option value="qwen3:8b">Qwen3 8B (Q4_K_M)</option>
+                  <option value="llama3">Llama 3 8B</option>
+                  <option value="mistral">Mistral 7B</option>
+                  <option value="codellama">CodeLlama 7B</option>
+                  <option value="gemma2">Gemma 2 9B</option>
+                  <option value="phi3">Phi-3 Mini</option>
+                </select>
+              </div>
+
+              <div className="config-group">
+                <label className="config-label">🧬 Embedding Model</label>
+                <select
+                  className="config-select"
+                  value={modelConfig.embedding_model}
+                  onChange={e => updateModelConfig("embedding_model", e.target.value)}
+                >
+                  <option value="BAAI/bge-small-en-v1.5">BGE Small EN v1.5</option>
+                  <option value="all-MiniLM-L6-v2">MiniLM L6 v2</option>
+                  <option value="all-mpnet-base-v2">MPNet Base v2</option>
+                </select>
+              </div>
+
+              <div className="config-group">
+                <label className="config-label">🗄️ Vector Database</label>
+                <select
+                  className="config-select"
+                  value={modelConfig.vector_db}
+                  onChange={e => updateModelConfig("vector_db", e.target.value)}
+                >
+                  <option value="FAISS">FAISS</option>
+                </select>
+              </div>
+
+              <div className="config-group">
+                <label className="config-label">⚡ Inference Engine</label>
+                <select
+                  className="config-select"
+                  value={modelConfig.inference_engine}
+                  onChange={e => updateModelConfig("inference_engine", e.target.value)}
+                >
+                  <option value="Ollama">Ollama (Local)</option>
+                  <option value="API">External API</option>
+                </select>
+              </div>
+
+              <div className="config-group">
+                <label className="config-label">🌳 Code Parsing</label>
+                <select
+                  className="config-select"
+                  value={modelConfig.code_parsing}
+                  onChange={e => updateModelConfig("code_parsing", e.target.value)}
+                >
+                  <option value="Tree-sitter">Tree-sitter (AST)</option>
+                  <option value="Plain">Plain (Overlap)</option>
+                </select>
+              </div>
+
+              <div className="config-active-badge">
+                <span className="badge-dot" />
+                Active: <strong>{modelConfig.inference_engine}</strong> · <strong>{modelConfig.llm_model}</strong>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="sidebar-footer">
           {currentUser ? (
-            <div className="user-profile">
+            <div className="user-profile-card">
               <div className="user-avatar">{currentUser.full_name[0].toUpperCase()}</div>
               <div className="user-details">
                 <span className="user-name">{currentUser.full_name}</span>
-                <span className="user-email">{currentUser.email}</span>
+                <span className="user-role-badge">{currentUser.role}</span>
               </div>
-              <button className="btn logout-button" onClick={handleLogoutClick}>
-                Sign Out
+              <button className="logout-icon-btn" onClick={handleLogoutClick} title="Sign Out">
+                🚪
               </button>
             </div>
           ) : (
-            <div className="auth-actions">
-              <span className="anonymous-badge">Guest Mode (Ask-only)</span>
-              <button className="btn login-trigger" onClick={() => setAuthMode("login")}>
-                Sign In
-              </button>
-              <button className="btn register-trigger" onClick={() => setAuthMode("register")}>
-                Create Account
-              </button>
+            <div className="sidebar-auth-prompt">
+              <div className="guest-badge">Guest Mode (Local)</div>
+              <div className="auth-btn-row">
+                <button className="btn btn-signin" onClick={() => setAuthMode("login")}>
+                  Sign In
+                </button>
+                <button className="btn btn-signup" onClick={() => setAuthMode("register")}>
+                  Sign Up
+                </button>
+              </div>
             </div>
           )}
         </div>
-      </header>
+      </aside>
 
-      {error ? <div className="banner error">{error}</div> : null}
-
-      <main className="workspace">
-        {/* Left Column: Executions Telemetry Log */}
-        <section className="panel list-panel">
-          <div className="panel-heading">
-            <h2>Telemetry Runs</h2>
-            <button className="refresh-telemetry-btn" onClick={() => loadExecutionsList(true)}>
-              ↻
+      {/* Main Container */}
+      <div className="main-layout">
+        {/* Topbar */}
+        <header className="topbar">
+          <div className="topbar-left">
+            <button
+              className="sidebar-toggle-btn"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
+            >
+              {isSidebarOpen ? "◀" : "▶"}
             </button>
+            
+            {activeTab === "chat" && activeSession && (
+              <div className="topbar-session-title">
+                {renamingId === activeSession.id ? (
+                  <input
+                    type="text"
+                    className="topbar-rename-input"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        renameSession(activeSession.id, renameValue);
+                        setRenamingId(null);
+                      } else if (e.key === "Escape") {
+                        setRenamingId(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      renameSession(activeSession.id, renameValue);
+                      setRenamingId(null);
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <h2>{activeSession.title}</h2>
+                    <button
+                      className="edit-session-title-btn"
+                      onClick={() => {
+                        setRenamingId(activeSession.id);
+                        setRenameValue(activeSession.title);
+                      }}
+                    >
+                      ✏️
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === "admin" && <h2>Admin User Console</h2>}
           </div>
 
-          <div className="list">
-            {executions.map((item) => {
-              const isActive = item.execution_id === selectedExecution;
-
-              return (
+          <div className="topbar-actions">
+            {currentUser?.role === "admin" && (
+              <div className="admin-tab-toggle-container">
                 <button
-                  key={item.execution_id}
-                  type="button"
-                  className={`execution-card ${isActive ? "active" : ""}`}
-                  onClick={() => setSelectedExecution(item.execution_id)}
+                  className={`tab-btn ${activeTab === "chat" ? "active" : ""}`}
+                  onClick={() => setActiveTab("chat")}
                 >
-                  <div className="execution-card__top">
-                    <span className="execution-id">{item.execution_id.slice(0, 13)}...</span>
-                    <span className={`status-pill status-${item.status}`}>{item.status}</span>
-                  </div>
-
-                  <div className="execution-card__meta">
-                    <span>{item.event_count ?? 0} events</span>
-                    <span>{item.summary?.steps_executed ?? 0} steps</span>
-                  </div>
-
-                  <div className="execution-card__footer">
-                    <span>{item.summary?.tools_used?.length ?? 0} tools</span>
-                    <span>{item.last_timestamp ? new Date(item.last_timestamp).toLocaleTimeString() : "No time"}</span>
-                  </div>
+                  Chat Console
                 </button>
-              );
-            })}
+                <button
+                  className={`tab-btn ${activeTab === "admin" ? "active" : ""}`}
+                  onClick={() => setActiveTab("admin")}
+                >
+                  Admin Console
+                </button>
+              </div>
+            )}
 
-            {!loadingExecutions && executions.length === 0 ? (
-              <div className="empty-state">No telemetry traces found. Run a chat query to generate logs.</div>
-            ) : null}
-          </div>
-        </section>
-
-        {/* Center Column: Toggleable Chat Console vs Execution Replay */}
-        <section className="panel center-panel">
-          <div className="panel-tabs">
             <button
-              className={`tab-button ${activeTab === "chat" ? "active" : ""}`}
-              onClick={() => setActiveTab("chat")}
+              className={`telemetry-toggle-btn ${showTelemetry ? "active" : ""}`}
+              onClick={() => setShowTelemetry(!showTelemetry)}
             >
-              Chat Console
-            </button>
-            <button
-              className={`tab-button ${activeTab === "replay" ? "active" : ""}`}
-              onClick={() => setActiveTab("replay")}
-              disabled={!selectedExecution}
-            >
-              Replay Timeline {!selectedExecution && "(None Selected)"}
+              📊 {showTelemetry ? "Telemetry: Open" : "Telemetry: Closed"}
             </button>
           </div>
+        </header>
 
-          {activeTab === "chat" ? (
-            <div className="chat-container">
-              <div className="chat-messages">
-                {chatMessages.map((msg) => (
-                  <div key={msg.id} className={`chat-bubble-container ${msg.sender}`}>
-                    <div className="chat-bubble">
-                      <div className="chat-bubble-header">
-                        <strong>{msg.sender === "user" ? "You" : "Cortex Assistant"}</strong>
-                        <span className="chat-time">{msg.timestamp}</span>
+        {error ? <div className="banner error">{error}</div> : null}
+
+        <div className="workspace-container">
+          <main className="workspace-main-panel">
+            {activeTab === "chat" && (
+              <div className="chat-container">
+                <div className="chat-scroll-area">
+                  {activeSession && activeSession.messages.length <= 1 ? (
+                    <div className="chat-empty-state">
+                      <div className="cortex-logo-container">
+                        <div className="cortex-logo">C</div>
+                        <h1>Cortex Workspace</h1>
+                        <p>How can I help you manage, search, and audit your code today?</p>
                       </div>
-                      {renderMessageText(msg.text)}
-                      {msg.executionId && (
-                        <div className="chat-bubble-actions">
+
+                      <div className="quick-cards-grid">
+                        {QUICK_CARDS.map((card, idx) => (
                           <button
-                            className="inspect-trace-btn"
-                            onClick={() => inspectMsgExecution(msg.executionId!)}
+                            key={idx}
+                            type="button"
+                            className="quick-card"
+                            onClick={(e) => handleSendMessage(e, card.prompt)}
                           >
-                            🔍 Inspect Execution Trace
+                            <span className="quick-card-icon">{card.icon}</span>
+                            <div className="quick-card-info">
+                              <h3>{card.title}</h3>
+                              <p>{card.desc}</p>
+                            </div>
                           </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="chat-messages">
+                      {activeSession && activeSession.messages.map((msg) => (
+                        <div key={msg.id} className={`chat-bubble-container ${msg.sender}`}>
+                          <div className="chat-avatar">
+                            {msg.sender === "user" ? "U" : "C"}
+                          </div>
+                          <div className="chat-bubble">
+                            <div className="chat-bubble-header">
+                              <strong>{msg.sender === "user" ? "You" : "Cortex Assistant"}</strong>
+                              <span className="chat-time">{msg.timestamp}</span>
+                            </div>
+                            {renderMessageText(msg.text)}
+                            {msg.executionId && (
+                              <div className="chat-bubble-actions">
+                                <button
+                                  className="inspect-trace-btn"
+                                  onClick={() => inspectMsgExecution(msg.executionId!)}
+                                >
+                                  🔍 Inspect Execution Trace
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {isGenerating && (
+                        <div className="chat-bubble-container assistant">
+                          <div className="chat-avatar">C</div>
+                          <div className="chat-bubble typing">
+                            <div className="typing-dots">
+                              <span></span>
+                              <span></span>
+                              <span></span>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                ))}
-                {isGenerating && (
-                  <div className="chat-bubble-container assistant">
-                    <div className="chat-bubble typing">
-                      <div className="typing-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                      </div>
-                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={(e) => handleSendMessage(e)} className="chat-input-form">
+                  <input
+                    type="text"
+                    placeholder={
+                      token
+                        ? "Ask assistant to run tools, review logs or explain codes..."
+                        : "Guest Mode: Ask anything..."
+                    }
+                    value={inputQuery}
+                    onChange={(e) => setInputQuery(e.target.value)}
+                    disabled={isGenerating}
+                  />
+                  <button type="submit" disabled={isGenerating || !inputQuery.trim()}>
+                    {isGenerating ? "Routing..." : "Send"}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {activeTab === "admin" && currentUser?.role === "admin" && (
+              <div className="admin-container">
+                <div className="panel-heading">
+                  <h2>User Records Management</h2>
+                  <button className="refresh-telemetry-btn" onClick={loadUsers}>
+                    ↻
+                  </button>
+                </div>
+
+                {adminError && <div className="banner error">{adminError}</div>}
+
+                {loadingUsers ? (
+                  <div className="empty-state">Loading user records...</div>
+                ) : (
+                  <div className="admin-table-container">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Full Name</th>
+                          <th>Email Address</th>
+                          <th>Role</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {usersList.map((user) => {
+                          const isEditing = editingUserId === user.id;
+
+                          return (
+                            <tr key={user.id} className={isEditing ? "editing-row" : ""}>
+                              <td>{user.id}</td>
+                              <td>
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    className="admin-edit-input"
+                                    value={editFullName}
+                                    onChange={(e) => setEditFullName(e.target.value)}
+                                  />
+                                ) : (
+                                  user.full_name
+                                )}
+                              </td>
+                              <td>
+                                {isEditing ? (
+                                  <input
+                                    type="email"
+                                    className="admin-edit-input"
+                                    value={editEmail}
+                                    onChange={(e) => setEditEmail(e.target.value)}
+                                  />
+                                ) : (
+                                  user.email
+                                )}
+                              </td>
+                              <td>
+                                {isEditing ? (
+                                  <select
+                                    className="admin-edit-select"
+                                    value={editRole}
+                                    onChange={(e) => setEditRole(e.target.value)}
+                                  >
+                                    <option value="user">User</option>
+                                    <option value="admin">Admin</option>
+                                  </select>
+                                ) : (
+                                  <span className={`role-badge role-${user.role}`}>
+                                    {user.role}
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                {isEditing ? (
+                                  <div className="admin-action-buttons">
+                                    <button
+                                      className="btn btn-save"
+                                      onClick={() => handleUpdateUser(user.id)}
+                                    >
+                                      Save
+                                    </button>
+                                    <button className="btn btn-cancel" onClick={cancelEdit}>
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="admin-action-buttons">
+                                    <button className="btn btn-edit" onClick={() => startEdit(user)}>
+                                      Edit
+                                    </button>
+                                    {user.id !== currentUser?.id && (
+                                      <button
+                                        className="btn btn-delete"
+                                        onClick={() => handleDeleteUser(user.id)}
+                                      >
+                                        Delete
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
+            )}
+          </main>
 
-              <form onSubmit={handleSendMessage} className="chat-input-form">
-                <input
-                  type="text"
-                  placeholder={
-                    token
-                      ? "Ask assistant to run tools, review logs or explain codes..."
-                      : "Guest Mode: Ask anything..."
-                  }
-                  value={inputQuery}
-                  onChange={(e) => setInputQuery(e.target.value)}
-                  disabled={isGenerating}
-                />
-                <button type="submit" disabled={isGenerating || !inputQuery.trim()}>
-                  {isGenerating ? "Routing..." : "Send"}
+          {/* Telemetry drawer panel on the right */}
+          {showTelemetry && (
+            <aside className="panel telemetry-panel">
+              <div className="telemetry-header">
+                <div className="telemetry-tabs">
+                  <button
+                    className={`telemetry-tab-btn ${telemetryTab === "list" ? "active" : ""}`}
+                    onClick={() => setTelemetryTab("list")}
+                  >
+                    Traces
+                  </button>
+                  <button
+                    className={`telemetry-tab-btn ${telemetryTab === "detail" ? "active" : ""}`}
+                    onClick={() => setTelemetryTab("detail")}
+                    disabled={!selectedExecution}
+                  >
+                    Active Trace
+                  </button>
+                </div>
+                <button className="close-telemetry-btn" onClick={() => setShowTelemetry(false)}>
+                  ✕
                 </button>
-              </form>
-            </div>
-          ) : (
-            <div className="replay-container">
-              <div className="panel-heading">
-                <h2>Execution step-by-step replay</h2>
-                <span className="execution-id-subtitle">ID: {selectedExecution}</span>
               </div>
 
-              {!executionData ? (
-                <div className="empty-state">
-                  {loadingReplay ? "Loading trace timeline..." : "Select an execution telemetry run on the left."}
+              {telemetryTab === "list" ? (
+                <div className="telemetry-list-container">
+                  <div className="panel-heading">
+                    <h2>Telemetry Runs</h2>
+                    <button className="refresh-telemetry-btn" onClick={() => loadExecutionsList(true)}>
+                      ↻
+                    </button>
+                  </div>
+
+                  <div className="list">
+                    {executions.map((item) => {
+                      const isActive = item.execution_id === selectedExecution;
+
+                      return (
+                        <button
+                          key={item.execution_id}
+                          type="button"
+                          className={`execution-card ${isActive ? "active" : ""}`}
+                          onClick={() => {
+                            setSelectedExecution(item.execution_id);
+                            setTelemetryTab("detail");
+                          }}
+                        >
+                          <div className="execution-card__top">
+                            <span className="execution-id">{item.execution_id.slice(0, 13)}...</span>
+                            <span className={`status-pill status-${item.status}`}>{item.status}</span>
+                          </div>
+
+                          <div className="execution-card__meta">
+                            <span>{item.event_count ?? 0} events</span>
+                            <span>{item.summary?.steps_executed ?? 0} steps</span>
+                          </div>
+
+                          <div className="execution-card__footer">
+                            <span>{item.summary?.tools_used?.length ?? 0} tools</span>
+                            <span>{item.last_timestamp ? new Date(item.last_timestamp).toLocaleTimeString() : "No time"}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {!loadingExecutions && executions.length === 0 ? (
+                      <div className="empty-state">No telemetry traces found. Run a chat query to generate logs.</div>
+                    ) : null}
+                  </div>
                 </div>
               ) : (
-                <div className="timeline">
-                  {executionData.replay.map((step) => (
-                    <article key={step.step} className="timeline-item">
-                      <div className="timeline-item__head">
-                        <div className="timeline-step-badge">Step {step.step}</div>
-                        <strong>{step.action}</strong>
-                        <span className="timeline-time">{step.raw?.timestamp ? new Date(step.raw.timestamp).toLocaleTimeString() : "Unknown"}</span>
-                      </div>
-
-                      <div className="timeline-item__body">
-                        <div className="timeline-meta-row">
-                          <span className="meta-label">Type:</span>
-                          <span className="meta-value font-mono">{step.raw?.type ?? "event"}</span>
-                        </div>
-                        <div className="timeline-meta-row">
-                          <span className="meta-label">Source:</span>
-                          <span className="meta-value font-mono">{step.raw?.source ?? "system"}</span>
-                        </div>
-                        {step.raw?.human_readable && (
-                          <div className="timeline-explanation">
-                            <p>{step.raw.human_readable}</p>
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* Right Column: Telemetry Inspector */}
-        <section className="panel inspector-panel">
-          <div className="panel-heading">
-            <h2>Inspector Dashboard</h2>
-            <span className={`status-pill status-${executionData?.status ?? "idle"}`}>
-              {executionData?.status ?? "Idle"}
-            </span>
-          </div>
-
-          {!executionData ? (
-            <div className="empty-state">No execution run selected for inspection.</div>
-          ) : (
-            <div className="inspector">
-              <div className="inspector-card">
-                <label>Execution Identity</label>
-                <p className="font-mono selectable-id">{executionData.execution_id}</p>
-              </div>
-
-              <div className="inspector-card">
-                <label>Execution Status</label>
-                <p className="capitalize-text">{executionData.status}</p>
-              </div>
-
-              <div className="inspector-card-group">
-                <div className="inspector-card half">
-                  <label>Total Steps</label>
-                  <p className="large-stat">{executionData.summary?.steps_executed ?? 0}</p>
-                </div>
-
-                <div className="inspector-card half">
-                  <label>Errors</label>
-                  <p className={`large-stat ${executionData.summary?.error_count ? "text-danger" : ""}`}>
-                    {executionData.summary?.error_count ?? 0}
-                  </p>
-                </div>
-              </div>
-
-              <div className="inspector-card">
-                <label>Tracer Duration</label>
-                <p className="large-stat">
-                  {executionData.summary?.duration_ms != null
-                    ? `${(executionData.summary.duration_ms / 1000).toFixed(2)} s`
-                    : "0.00 s"}
-                </p>
-              </div>
-
-              <div className="inspector-card">
-                <label>Resolved Agent Tools</label>
-                <div className="chips">
-                  {(executionData.summary?.tools_used ?? []).length > 0 ? (
-                    executionData.summary.tools_used?.map((tool) => (
-                      <span key={tool} className="chip">
-                        {tool}
-                      </span>
-                    ))
+                <div className="telemetry-detail-container">
+                  {!executionData ? (
+                    <div className="empty-state">
+                      {loadingReplay ? "Loading trace timeline..." : "Select a trace from the Traces tab."}
+                    </div>
                   ) : (
-                    <span className="muted">No tools invoked during execution.</span>
+                    <div className="inspector-and-replay">
+                      <div className="inspector-summary">
+                        <div className="inspector-row-group">
+                          <div className="inspector-stat">
+                            <label>Status</label>
+                            <span className={`status-pill status-${executionData.status}`}>{executionData.status}</span>
+                          </div>
+                          <div className="inspector-stat">
+                            <label>Duration</label>
+                            <span className="stat-val">
+                              {executionData.summary?.duration_ms != null
+                                ? `${(executionData.summary.duration_ms / 1000).toFixed(2)}s`
+                                : "0.00s"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="inspector-row-group">
+                          <div className="inspector-stat">
+                            <label>Steps</label>
+                            <span className="stat-val">{executionData.summary?.steps_executed ?? 0}</span>
+                          </div>
+                          <div className="inspector-stat">
+                            <label>Errors</label>
+                            <span className={`stat-val ${executionData.summary?.error_count ? "text-danger" : ""}`}>
+                              {executionData.summary?.error_count ?? 0}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="inspector-card">
+                          <label>Resolved Agent Tools</label>
+                          <div className="chips">
+                            {(executionData.summary?.tools_used ?? []).length > 0 ? (
+                              executionData.summary.tools_used?.map((tool) => (
+                                <span key={tool} className="chip">
+                                  {tool}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="muted">No tools invoked.</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="timeline-section">
+                        <h3>Step-by-Step Replay</h3>
+                        <div className="timeline">
+                          {executionData.replay.map((step) => (
+                            <article key={step.step} className="timeline-item">
+                              <div className="timeline-item__head">
+                                <div className="timeline-step-badge">Step {step.step}</div>
+                                <strong>{step.action}</strong>
+                                <span className="timeline-time">
+                                  {step.raw?.timestamp ? new Date(step.raw.timestamp).toLocaleTimeString() : "Unknown"}
+                                </span>
+                              </div>
+
+                              <div className="timeline-item__body">
+                                <div className="timeline-meta-row">
+                                  <span className="meta-label">Type:</span>
+                                  <span className="meta-value font-mono">{step.raw?.type ?? "event"}</span>
+                                </div>
+                                <div className="timeline-meta-row">
+                                  <span className="meta-label">Source:</span>
+                                  <span className="meta-value font-mono">{step.raw?.source ?? "system"}</span>
+                                </div>
+                                {step.raw?.human_readable && (
+                                  <div className="timeline-explanation">
+                                    <p>{step.raw.human_readable}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            </div>
+              )}
+            </aside>
           )}
-        </section>
-      </main>
+        </div>
+      </div>
 
       {/* Premium Glassmorphism Auth Modals */}
       {authMode !== "none" && (

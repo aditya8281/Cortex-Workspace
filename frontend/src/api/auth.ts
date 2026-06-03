@@ -26,3 +26,22 @@ export async function getMe() {
 export function logout() {
   localStorage.removeItem("cortex_token");
 }
+
+export async function getUsers() {
+  const res = await api.get("/users");
+  return res.data;
+}
+
+export async function updateUser(userId: number, email: string, fullName: string, role: string) {
+  const res = await api.put(`/users/${userId}`, {
+    email,
+    full_name: fullName,
+    role,
+  });
+  return res.data;
+}
+
+export async function deleteUser(userId: number) {
+  const res = await api.delete(`/users/${userId}`);
+  return res.data;
+}

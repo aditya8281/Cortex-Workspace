@@ -9,8 +9,10 @@ class EmbeddingModel:
 
     def __init__(
         self,
-        model_name: str = "all-MiniLM-L6-v2"
+        model_name: str = "BAAI/bge-small-en-v1.5"
     ):
+        if model_name == "bge-small-en-v1.5":
+            model_name = "BAAI/bge-small-en-v1.5"
         self.model_name = model_name
         self.model = None
 

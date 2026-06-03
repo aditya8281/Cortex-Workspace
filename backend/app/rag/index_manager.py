@@ -10,10 +10,20 @@ class IndexManager:
     def __init__(
         self,
         repo_path: str,
-        index_path: str = ".cortex"
+        index_path: str = ".cortex",
+        embedding_model: str = None,
+        vector_db: str = None,
+        code_parsing: str = None
     ):
         self.repo_path = repo_path
-        self.index_path = index_path
+        self.embedding_model = embedding_model or "BAAI/bge-small-en-v1.5"
+        self.vector_db = vector_db or "FAISS"
+        self.code_parsing = code_parsing or "Tree-sitter"
+
+        # Build an isolated subfolder key per config so indices never collide
+        safe = lambda s: s.replace("/", "_").replace(" ", "-").replace("(", "").replace(")", "")
+        index_key = f"index_{safe(self.embedding_model)}_{safe(self.vector_db)}_{safe(self.code_parsing)}"
+        self.index_path = str(Path(index_path) / index_key)
 
     def get_store(self):
         from backend.app.rag.retriever import RepoRetriever
@@ -21,7 +31,11 @@ class IndexManager:
         base = Path(self.index_path)
         state_file = base / "file_states.json"
         
-        retriever = RepoRetriever()
+        retriever = RepoRetriever(
+            embedding_model=self.embedding_model,
+            vector_db=self.vector_db,
+            code_parsing=self.code_parsing
+        )
         files = retriever.scanner.scan(self.repo_path)
         
         # Calculate current file modification times

@@ -21,6 +21,12 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserUpdate(BaseModel):
+    email: EmailStr
+    full_name: str
+    role: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

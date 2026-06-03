@@ -54,6 +54,14 @@ def fixture_client(tmp_path):
 
 
 def test_create_user(client):
+    # Pre-populate a dummy first user so that the created user gets "user" role
+    dummy_payload = {
+        "email": "dummyadmin@example.com",
+        "full_name": "Dummy Admin",
+        "password": "securepassword123"
+    }
+    client.post("/api/v1/users", json=dummy_payload)
+
     payload = {
         "email": "test@example.com",
         "full_name": "Test User",

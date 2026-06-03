@@ -52,8 +52,17 @@ class RagTool(RegisteredTool):
         return {"should_run": True, "reason": "rag", "params": {}}
 
     async def run(self, context: ToolContext, params):
+        state = context.state or {}
+        embedding_model = state.get("embedding_model")
+        vector_db = state.get("vector_db")
+        code_parsing = state.get("code_parsing")
 
-        results = self.executor.rag.search(context.query)
+        results = self.executor.rag.search(
+            context.query,
+            embedding_model=embedding_model,
+            vector_db=vector_db,
+            code_parsing=code_parsing
+        )
 
         if not results:
             return {"chunks": [], "count": 0}

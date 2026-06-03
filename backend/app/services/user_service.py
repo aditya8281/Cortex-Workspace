@@ -1,10 +1,7 @@
 from sqlalchemy.orm import Session
-
 from backend.app.models.user import User
-from backend.app.schemas.user import UserCreate
+from backend.app.schemas.user import UserCreate, UserUpdate
 from backend.app.core.security import hash_password, verify_password, create_access_token
-
-
 def create_user(db: Session, user: UserCreate):
     # Check if email is already registered
     existing_user = db.query(User).filter(User.email == user.email).first()
@@ -13,10 +10,15 @@ def create_user(db: Session, user: UserCreate):
 
     hashed_pw = hash_password(user.password)
 
+    # First user is automatically created as an admin
+    is_first = db.query(User).count() == 0
+    role = "admin" if is_first else "user"
+
     db_user = User(
         email=user.email,
         full_name=user.full_name,
-        hashed_password=hashed_pw
+        hashed_password=hashed_pw,
+        role=role
     )
 
     db.add(db_user)
@@ -60,3 +62,24 @@ def login_user(db: Session, email: str, password: str):
         "access_token": token,
         "token_type": "bearer"
     }
+
+
+def delete_user(db: Session, user_id: int) -> bool:
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        return False
+    db.delete(db_user)
+    db.commit()
+    return True
+
+
+def update_user(db: Session, user_id: int, user_update: UserUpdate) -> User | None:
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
+        return None
+    db_user.email = user_update.email
+    db_user.full_name = user_update.full_name
+    db_user.role = user_update.role
+    db.commit()
+    db.refresh(db_user)
+    return db_user

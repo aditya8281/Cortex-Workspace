@@ -12,9 +12,13 @@ class APILLM(BaseLLM):
         self.base_url = base_url
         self.model = model
 
-    async def generate(self, prompt: str, system_prompt: str | None = None) -> str:
+    async def generate(self, prompt: str, system_prompt: str | None = None, model: str | None = None) -> str:
+        model_name = model or self.model
+        if model_name == "Qwen3 8B (Q4_K_M quantization)":
+            model_name = "qwen3:8b"
+
         payload = {
-            "model": self.model,
+            "model": model_name,
             "messages": [
                 {"role": "system", "content": system_prompt or "You are a helpful AI assistant."},
                 {"role": "user", "content": prompt}

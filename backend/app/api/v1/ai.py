@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from backend.app.ai.gateway import AIGateway
 from backend.app.api.deps import get_current_user
 from backend.app.models.user import User
+from backend.app.ai.memory.repository import MemoryRepository
 
 router = APIRouter()
 gateway = AIGateway()
@@ -18,6 +19,11 @@ class ChatTurn(BaseModel):
 class QueryRequest(BaseModel):
     query: str
     history: Optional[List[ChatTurn]] = None
+    llm_model: Optional[str] = None
+    embedding_model: Optional[str] = None
+    vector_db: Optional[str] = None
+    inference_engine: Optional[str] = None
+    code_parsing: Optional[str] = None
 
 
 class AIResponse(BaseModel):
@@ -34,7 +40,12 @@ async def ask_public(payload: QueryRequest):
     """
     result = await gateway.route(
         query=payload.query,
-        history=payload.history
+        history=payload.history,
+        llm_model=payload.llm_model,
+        embedding_model=payload.embedding_model,
+        vector_db=payload.vector_db,
+        inference_engine=payload.inference_engine,
+        code_parsing=payload.code_parsing
     )
     return AIResponse(
         query=payload.query,
@@ -54,7 +65,12 @@ async def chat_private(
     result = await gateway.route(
         query=payload.query,
         user_id=current_user.id,
-        history=payload.history
+        history=payload.history,
+        llm_model=payload.llm_model,
+        embedding_model=payload.embedding_model,
+        vector_db=payload.vector_db,
+        inference_engine=payload.inference_engine,
+        code_parsing=payload.code_parsing
     )
     return AIResponse(
         query=payload.query,
@@ -62,3 +78,15 @@ async def chat_private(
         user_id=current_user.id,
         execution_id=result.execution_id
     )
+
+
+@router.get("/history")
+def get_chat_history(
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get recent query-response history for the current user.
+    """
+    repository = MemoryRepository()
+    return repository.get_recent_history(user_id=current_user.id, limit=limit)

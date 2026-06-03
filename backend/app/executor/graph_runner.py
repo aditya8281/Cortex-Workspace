@@ -17,7 +17,19 @@ class GraphRunner:
         self.tracer = self.executor.tracer
         self.state = self.executor.state
 
-    async def run(self, graph: ExecutionGraph, query: str, user_id: int | None, intent=None, history=None):
+    async def run(
+        self,
+        graph: ExecutionGraph,
+        query: str,
+        user_id: int | None,
+        intent=None,
+        history=None,
+        llm_model: str | None = None,
+        embedding_model: str | None = None,
+        vector_db: str | None = None,
+        inference_engine: str | None = None,
+        code_parsing: str | None = None
+    ):
 
         state = {
             "execution_id": None,
@@ -31,6 +43,11 @@ class GraphRunner:
             "errors": [],
             "intent": intent,
             "history": history,
+            "llm_model": llm_model,
+            "embedding_model": embedding_model,
+            "vector_db": vector_db,
+            "inference_engine": inference_engine,
+            "code_parsing": code_parsing,
         }
 
         execution_id = self.tracer.create_session()
@@ -330,7 +347,12 @@ class GraphRunner:
                 "Do not make up fake code, fake directories, or fake research papers."
             )
 
-        return await self.executor.llm.generate(prompt, system_prompt=system_prompt)
+        return await self.executor.llm.generate(
+            prompt,
+            system_prompt=system_prompt,
+            model=state.get("llm_model"),
+            inference_engine=state.get("inference_engine")
+        )
 
     def _preview(self, value):
         if value is None:
