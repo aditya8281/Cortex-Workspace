@@ -30,8 +30,8 @@ export function ModelsPage() {
 
   const [activeTab, setActiveTab] = useState<"models" | "routing">("models");
 
-  // Routing queries
-  useQuery({
+  // Routing queries — result not used in render but keeps the query in cache
+  const { data: routingProfiles = [] } = useQuery({
     queryKey: ["routingProfiles"],
     queryFn: getRoutingProfiles,
   });
@@ -368,7 +368,7 @@ export function ModelsPage() {
                             {p.is_enabled ? (
                               <Badge variant="accent">Enabled</Badge>
                             ) : (
-                               <Badge variant="secondary">Disabled</Badge>
+                               <Badge variant="default" className="opacity-60">Disabled</Badge>
                             )}
                           </div>
                         </button>
@@ -574,15 +574,20 @@ export function ModelsPage() {
           </>
         ) : (
           <div className="space-y-8">
-            {/* Routing Profiles grid */}
+            {/* Routing Profiles grid — uses live API data, falls back to defaults */}
             <div className="grid gap-4 sm:grid-cols-5">
-              {[
-                { name: "Balanced", desc: "Balanced performance, latency, and cost." },
-                { name: "Coding Heavy", desc: "Always routes coding queries to Sonnet." },
-                { name: "Local Only", desc: "Ensures no cloud models are utilized." },
-                { name: "Maximum Quality", desc: "Routes all tasks to largest cloud models." },
-                { name: "Custom", desc: "User-defined task-to-model routing rules." }
-              ].map((prof) => {
+              {(() => {
+                const PROFILE_DESCS: Record<string, string> = {
+                  "Balanced": "Balanced performance, latency, and cost.",
+                  "Coding Heavy": "Always routes coding queries to Sonnet.",
+                  "Local Only": "Ensures no cloud models are utilized.",
+                  "Maximum Quality": "Routes all tasks to largest cloud models.",
+                  "Custom": "User-defined task-to-model routing rules.",
+                };
+                const profileList = routingProfiles.length > 0
+                  ? routingProfiles.map((p) => ({ name: p.name, desc: PROFILE_DESCS[p.name] ?? "" }))
+                  : Object.entries(PROFILE_DESCS).map(([name, desc]) => ({ name, desc }));
+                return profileList.map((prof) => {
                 const isActive = activeProfileName.toLowerCase() === prof.name.toLowerCase();
                 return (
                   <button
@@ -607,7 +612,8 @@ export function ModelsPage() {
                     </p>
                   </button>
                 );
-              })}
+              });
+              })()}
             </div>
 
             {/* Mappings Table */}
