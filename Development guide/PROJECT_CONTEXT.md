@@ -4,41 +4,43 @@ Last verified: 2026-06-03
 
 ## What This Project Is
 
-Cortex Workspace is an AI operating system for a personal computer and, later, an online platform.
+Cortex Workspace is not just a chatbot.
 
-The goal is not just a chatbot. The goal is a local-first assistant that can:
+It is being built as a local-first AI operating system and engineering platform for a personal computer, with a path to a later online product.
 
-- talk in a polished chat UI
-- understand and search the whole laptop
-- read and analyze local repositories
-- find files, documents, and knowledge across the machine
-- explain bugs, architecture, and codebase state
-- help build projects like a senior engineering copilot
-- switch between local models and popular hosted LLMs through API keys
-- later expand into an online, multi-user, cloud-capable product
-- eventually feel like the OS itself is intelligent and assistant-driven
+The core goal is to make the machine feel assistant-driven:
 
-If another AI model reads this file, it should understand the product vision immediately and know what kind of system to build next.
+- a polished chat UI
+- local server-based execution
+- whole-laptop awareness
+- repository awareness
+- file and document search across the machine
+- bug finding and codebase explanation
+- model switching across local and hosted providers
+- execution replay and debugging
+- tool orchestration and observability
+- a foundation that can later become cloud-capable
+
+If another AI model reads this file, it should immediately understand the product direction and the expected architecture.
 
 ## Final Goal
 
-The final product should become a full assistant layer for the computer:
+The final product should behave like an AI layer on top of the computer:
 
-- a local server starts the system
-- a frontend chat interface gives the user a clean conversational experience
-- the backend can search the laptop, repository, and memory
-- the assistant can inspect and explain the repo, project state, and code bugs
+- the user runs a local server
+- the UI provides a good chat-first workspace
+- the backend can inspect files, repos, memories, and execution traces
 - the assistant can answer questions like:
-  - "Where is the PDF about transformers on my laptop?"
-  - "What does this repository do?"
-  - "What bugs or mismatches exist here?"
-  - "Generate project context from the current codebase."
-  - "Help me plan and build the next feature."
-- the assistant can route to:
-  - local models like Ollama or other local providers
-  - hosted providers like OpenAI-compatible APIs, Anthropic-style APIs, or future providers
-- the system stays expandable so local features can later become online features
-- the final product has a strong CI/CD pipeline, testing, and deployable architecture
+  - where a PDF or document lives on the laptop
+  - what a repository does
+  - what bugs or mismatches exist in the codebase
+  - how to generate project context from the current repo state
+  - how to plan and build the next feature
+- the system can route requests to:
+  - local models such as Ollama or other local providers
+  - hosted providers through API keys
+- the platform stays expandable so local-only features can later become online features
+- the project eventually gets proper testing, CI/CD, and deployable architecture
 
 ## Product Principles
 
@@ -49,69 +51,53 @@ The final product should become a full assistant layer for the computer:
 - Provider agnostic
 - Repository aware
 - OS aware
-- Frontend first-class, not an afterthought
-- Easy to grow from single-user desktop assistant to online platform
+- Frontend is first-class
+- Built for single-user desktop use first, then platform expansion
 
 ## Current Codebase State
 
-The repo is currently a backend-first FastAPI application with:
+The repository is currently a backend-first FastAPI application with:
 
 - user authentication and profile APIs
 - a graph-driven AI execution engine
-- a reusable tool abstraction layer
-- structured tool results with fusion and intelligence scoring
-- an adaptive tool-feedback loop for future selection bias
+- structured tool results
+- tool fusion and tool intelligence scoring
+- an adaptive tool feedback loop
 - repository search and lightweight RAG
 - persistent conversation memory
 - file-system and system inspection agents
-
-The repository does not yet have the final frontend experience. The top-level `docker-compose.yml` is currently empty.
-
-## Current Stack
-
-- Python 3.14
-- FastAPI
-- SQLAlchemy 2.0
-- Alembic
-- Pydantic v2 / `pydantic-settings`
-- JWT auth with `python-jose`
-- Password hashing with `passlib` and Argon2/Bcrypt
-- FAISS for vector search
-- `sentence-transformers` for embeddings
-- `httpx` for LLM provider calls
-- `pytest` for tests
+- execution state persistence for replay and debugging
+- a React/Vite/TypeScript frontend workspace
 
 ## Runtime Entry Point
 
-The application starts in [backend/app/main.py](./backend/app/main.py).
+The application starts in [backend/app/main.py](../backend/app/main.py).
 
-Key behavior:
+Behavior:
 
 - calls `setup_logging()`
-- creates a FastAPI app with `settings.APP_NAME`, `settings.DEBUG`, and version `0.1.0`
+- creates the FastAPI app
 - registers `RequestLoggingMiddleware`
-- mounts the API router under `settings.API_V1_PREFIX`
-- exposes a simple `GET /` root response
+- mounts the API router under `/api/v1`
+- exposes `GET /` as a basic status endpoint
 
-The app imports both the `User` and `Memory` ORM models so SQLAlchemy metadata is registered at startup.
+The app imports the ORM models that need metadata registration at startup.
 
 ## Configuration
 
-Settings live in [backend/app/core/config.py](./backend/app/core/config.py).
+Settings live in [backend/app/core/config.py](../backend/app/core/config.py).
 
 Important values:
 
 - `APP_NAME=Cortex Workspace`
 - `API_V1_PREFIX=/api/v1`
-- `DEBUG` is normalized defensively so values like `true`, `false`, `release`, `prod`, and `production` do not crash app import
-- `DATABASE_URL` and `SECRET_KEY` are required from the environment or `.env`
+- `DEBUG` is normalized defensively
+- `DATABASE_URL` and `SECRET_KEY` come from the environment or `.env`
 - AI settings are read from `AI_MODE`, `AI_MODEL`, `AI_API_KEY`, `AI_API_URL`, and `LOCAL_MODEL`
-
-The repo includes [.env.example](./.env.example). The local `.env` currently uses SQLite and a development secret placeholder.
 
 ## API Surface
 
-API routing is assembled in [backend/app/api/router.py](./backend/app/api/router.py).
+Routing is assembled in [backend/app/api/router.py](../backend/app/api/router.py).
 
 Current endpoints:
 
@@ -126,16 +112,20 @@ Current endpoints:
 - `GET /api/v1/me`
 - `POST /api/v1/ai/ask`
 - `POST /api/v1/ai/chat`
+- `GET /api/v1/execution`
+- `GET /api/v1/execution/{execution_id}`
+- `GET /api/v1/execution/{execution_id}/replay`
+- `GET /api/v1/execution/{execution_id}/tools`
 
 Important note:
 
-- the login route is `POST /api/v1/login`, not `POST /api/v1/users/login`
+- the execution router is mounted at `/api/v1/execution`, so the handler paths are relative and must not repeat `/execution`
 
 ## Data Model
 
 ### Users
 
-The user ORM model is in [backend/app/models/user.py](./backend/app/models/user.py).
+The user ORM model is in [backend/app/models/user.py](../backend/app/models/user.py).
 
 Fields:
 
@@ -143,17 +133,11 @@ Fields:
 - `email`
 - `full_name`
 - `hashed_password`
-- `role` with default `"user"`
-
-The matching Alembic chain is:
-
-- `af83dc13972a_create_users_table.py`
-- `e4834d8614aa_add_hashed_password_to_users.py`
-- `3a5b9f32d36d_add_role_field_to_users.py`
+- `role`
 
 ### Memories
 
-The memory ORM model is in [backend/app/ai/memory/models.py](./backend/app/ai/memory/models.py).
+The memory ORM model is in [backend/app/ai/memory/models.py](../backend/app/ai/memory/models.py).
 
 Fields:
 
@@ -163,237 +147,187 @@ Fields:
 - `response`
 - `created_at`
 
-The memory migration is [migrations/versions/32a5943404d9_create_memories_table.py](./migrations/versions/32a5943404d9_create_memories_table.py).
-
 ## Authentication
 
-Authentication helpers live in [backend/app/core/security.py](./backend/app/core/security.py).
+Authentication helpers live in [backend/app/core/security.py](../backend/app/core/security.py).
 
 Behavior:
 
 - passwords are hashed before storage
 - tokens are JWTs with an `exp` claim
-- `get_current_user()` reads the bearer token, decodes the `sub` claim, and loads the user from the database
+- `get_current_user()` decodes the bearer token and loads the user
 - `/api/v1/me` is protected by `HTTPBearer`
 
 ## AI Layer
 
-### Gateway and Executor
+### Execution Flow
 
-The request flow is graph-based:
+The current execution flow is:
 
-`API -> AIGateway -> AIExecutor -> IntentClassifier -> Planner.build_graph() -> GraphRunner -> ToolRegistry / Memory / LLM -> ResponseBuilder`
+`API -> AIGateway -> AIExecutor -> IntentClassifier -> Planner -> GraphRunner -> ToolRegistry / Memory / LLM -> ResponseBuilder`
 
 Relevant files:
 
-- [backend/app/ai/gateway.py](./backend/app/ai/gateway.py)
-- [backend/app/executor/executor.py](./backend/app/executor/executor.py)
-- [backend/app/executor/intent_classifier.py](./backend/app/executor/intent_classifier.py)
-- [backend/app/executor/planner.py](./backend/app/executor/planner.py)
-- [backend/app/executor/graph.py](./backend/app/executor/graph.py)
-- [backend/app/executor/graph_runner.py](./backend/app/executor/graph_runner.py)
-- [backend/app/executor/tool_registry.py](./backend/app/executor/tool_registry.py)
-- [backend/app/executor/tool_intelligence.py](./backend/app/executor/tool_intelligence.py)
-- [backend/app/executor/tool_fusion.py](./backend/app/executor/tool_fusion.py)
-- [backend/app/executor/context_compiler.py](./backend/app/executor/context_compiler.py)
-- [backend/app/executor/tool_feedback.py](./backend/app/executor/tool_feedback.py)
-- [backend/app/executor/tracer.py](./backend/app/executor/tracer.py)
-- [backend/app/executor/response_builder.py](./backend/app/executor/response_builder.py)
+- [backend/app/ai/gateway.py](../backend/app/ai/gateway.py)
+- [backend/app/executor/executor.py](../backend/app/executor/executor.py)
+- [backend/app/executor/intent_classifier.py](../backend/app/executor/intent_classifier.py)
+- [backend/app/executor/planner.py](../backend/app/executor/planner.py)
+- [backend/app/executor/graph.py](../backend/app/executor/graph.py)
+- [backend/app/executor/graph_runner.py](../backend/app/executor/graph_runner.py)
+- [backend/app/executor/tool_registry.py](../backend/app/executor/tool_registry.py)
+- [backend/app/executor/tool_intelligence.py](../backend/app/executor/tool_intelligence.py)
+- [backend/app/executor/tool_fusion.py](../backend/app/executor/tool_fusion.py)
+- [backend/app/executor/context_compiler.py](../backend/app/executor/context_compiler.py)
+- [backend/app/executor/tool_feedback.py](../backend/app/executor/tool_feedback.py)
+- [backend/app/executor/tracer.py](../backend/app/executor/tracer.py)
+- [backend/app/executor/response_builder.py](../backend/app/executor/response_builder.py)
 
-Current executor behavior:
+Current behavior:
 
-- classifies the query into an `IntentDecision` with `intent`, `confidence`, `confidence_level`, `subtype`, and `keywords`
-- builds an execution graph rather than a flat plan
-- runs a dedicated memory step first
-- executes tool steps via the `ToolRegistry`
-- runs the final LLM step after memory and tool dependencies are satisfied
-- compiles LLM context from memory + structured tool results
-- filters and ranks tools before final synthesis
-- stores tool usage signals for future adaptive selection
-- stores authenticated conversation memory after the response is generated
-- passes the final assembled context to `ResponseBuilder`
+- the query is classified into an `IntentDecision`
+- the planner builds a graph rather than a flat plan
+- the graph always starts with memory recall
+- tools are selected from intent plus tool bias
+- the graph runner executes memory, tool, and LLM steps
+- tool execution is routed through the tool registry
+- tool results are structured with `ToolResult`
+- tool fusion removes duplication and noisy outputs
+- tool intelligence ranks results before synthesis
+- the final LLM step compiles context from memory plus tools
+- the response builder turns the assembled context into the final answer
 
-Important implementation detail:
+Important implementation details:
 
-- `user_id` is checked with `is not None`, so `0` is not treated as missing
-- `GraphRunner` records memory, tool, and LLM outputs back into state so the executor can rebuild the final response correctly
-- built-in tool adapters are registered automatically for `file_search`, `system_scanner`, and `rag`
-- the system-scanner adapter now passes the query through correctly
+- `user_id` is checked with `is not None`
+- `GraphRunner` is the main emitter for execution events
+- `StateManager` plus `StateStore` is the persisted source of truth for replayable executions
+- `ExecutionTracer` is for timing and step tracing, not the replay source of truth
+- built-in tools are registered automatically
+- tool execution now flows through the shared tool abstraction
 
-### Providers
+## Providers
 
-Provider selection lives in [backend/app/ai/providers/registry.py](./backend/app/ai/providers/registry.py).
+Provider selection lives in [backend/app/ai/providers/registry.py](../backend/app/ai/providers/registry.py).
 
 Supported modes:
 
-- `local` -> [backend/app/ai/local_llm.py](./backend/app/ai/local_llm.py) via Ollama at `http://localhost:11434/api/generate`
-- `api` -> [backend/app/ai/api_llm.py](./backend/app/ai/api_llm.py) using an OpenAI-compatible chat-completions payload
+- `local` -> [backend/app/ai/local_llm.py](../backend/app/ai/local_llm.py) via Ollama-style local generation
+- `api` -> [backend/app/ai/api_llm.py](../backend/app/ai/api_llm.py) via an OpenAI-compatible request shape
 
-The router is a simple mode switch, not a complex multi-provider balancer yet.
+The router is a simple mode switch right now.
 
 ## RAG and Repository Search
 
 There are two chunkers in the repo:
 
-- [backend/app/rag/text_chunker.py](./backend/app/rag/text_chunker.py) is a simple chunk utility covered by tests
-- [backend/app/ai/ingestion/chunker.py](./backend/app/ai/ingestion/chunker.py) is the chunker used by the repository retriever pipeline
+- [backend/app/rag/text_chunker.py](../backend/app/rag/text_chunker.py)
+- [backend/app/ai/ingestion/chunker.py](../backend/app/ai/ingestion/chunker.py)
 
 The active RAG pipeline is:
 
-- [backend/app/ai/ingestion/scanner.py](./backend/app/ai/ingestion/scanner.py) scans `.py`, `.md`, and `.txt` files
-- [backend/app/ai/ingestion/extractor.py](./backend/app/ai/ingestion/extractor.py) reads file contents
-- [backend/app/ai/ingestion/chunker.py](./backend/app/ai/ingestion/chunker.py) chunks text for embedding
-- [backend/app/rag/embeddings.py](./backend/app/rag/embeddings.py) encodes chunks using `SentenceTransformer("all-MiniLM-L6-v2")`
-- [backend/app/rag/vector_store.py](./backend/app/rag/vector_store.py) stores vectors in FAISS
-- [backend/app/rag/storage.py](./backend/app/rag/storage.py) persists `index.faiss` and `metadata.pkl`
-- [backend/app/rag/index_manager.py](./backend/app/rag/index_manager.py) loads `.cortex` if present, otherwise returns an empty `VectorStore(dim=384)`
-- [backend/app/rag/service.py](./backend/app/rag/service.py) exposes `search(query, top_k)`
+- [backend/app/ai/ingestion/scanner.py](../backend/app/ai/ingestion/scanner.py) scans source files
+- [backend/app/ai/ingestion/extractor.py](../backend/app/ai/ingestion/extractor.py) reads file contents
+- [backend/app/ai/ingestion/chunker.py](../backend/app/ai/ingestion/chunker.py) chunks text
+- [backend/app/rag/embeddings.py](../backend/app/rag/embeddings.py) generates embeddings
+- [backend/app/rag/vector_store.py](../backend/app/rag/vector_store.py) stores vectors in FAISS
+- [backend/app/rag/storage.py](../backend/app/rag/storage.py) persists the index files
+- [backend/app/rag/index_manager.py](../backend/app/rag/index_manager.py) loads the local index
+- [backend/app/rag/service.py](../backend/app/rag/service.py) exposes search
 
 Operational note:
 
 - repository indexing is not rebuilt automatically on startup
-- use [scripts/rebuild_index.py](./scripts/rebuild_index.py) to regenerate `.cortex`
-- the rebuild script now skips saving if no indexable content is found
+- use [scripts/rebuild_index.py](../scripts/rebuild_index.py) to regenerate the local index
 
-## Agent Utilities
+## State and Replay
 
-### File Search Agent
+Current state modules:
 
-[backend/app/agent/file_search.py](./backend/app/agent/file_search.py)
+- [backend/app/state/manager.py](../backend/app/state/manager.py)
+- [backend/app/state/models.py](../backend/app/state/models.py)
+- [backend/app/state/registry.py](../backend/app/state/registry.py)
+- [backend/app/state/events.py](../backend/app/state/events.py)
+- [backend/app/state/store.py](../backend/app/state/store.py)
 
-- keyword search across the workspace
-- scans file names and text content
-- skips hidden and dependency directories
+Purpose:
 
-### System Scanner
+- persist execution events
+- keep an in-memory state registry
+- support execution listing
+- support replay and debugging
 
-[backend/app/agent/system_scanner.py](./backend/app/agent/system_scanner.py)
+Replay behavior:
 
-- reports OS, Python runtime, free disk space, database presence, and migration count
-- performs lightweight readiness checks only
+- `ExecutionReplayEngine` reads persisted events from SQLite
+- `/api/v1/execution/{execution_id}/replay` returns:
+  - `execution_id`
+  - `status`
+  - `summary`
+  - `replay`
+- `/api/v1/execution` returns execution list items for the frontend sidebar
 
-## Tool Framework
+## Frontend
 
-The reusable tool layer lives in [backend/app/tools/](./backend/app/tools/).
+Frontend stack:
 
-Key files:
+- React
+- Vite
+- TypeScript
 
-- [backend/app/tools/base.py](./backend/app/tools/base.py)
-- [backend/app/tools/metadata.py](./backend/app/tools/metadata.py)
-- [backend/app/tools/builtins.py](./backend/app/tools/builtins.py)
-- [backend/app/tools/discovery.py](./backend/app/tools/discovery.py)
+Current tree:
 
-Current state:
+- [frontend/src/App.tsx](../frontend/src/App.tsx)
+- [frontend/src/App.css](../frontend/src/App.css)
+- [frontend/src/index.css](../frontend/src/index.css)
+- [frontend/src/api](../frontend/src/api)
 
-- `BaseTool` defines `decide()` and `run()` for autonomous execution
-- `RegisteredTool` binds tools to metadata
-- `ToolMetadata` holds capability hints, priority, and tags
-- `ToolResult` is the runtime object used across the executor pipeline
-- `ToolRegistry` auto-registers the built-in executor tools when an executor instance is passed in
-- `discover_tools()` exists for future package-based tool discovery, but the current repo ships only the built-in adapters
+Current UI:
 
-## Database and Migrations
+- 3-column workspace
+- left: execution list
+- center: execution timeline
+- right: inspector
 
-Database wiring:
+Current frontend state:
 
-- [backend/app/db/base.py](./backend/app/db/base.py)
-- [backend/app/db/session.py](./backend/app/db/session.py)
-- [migrations/env.py](./migrations/env.py)
+- the execution list is now backed by the backend execution list endpoint
+- the replay panel reads from the replay API
+- the inspector reads summary data from the same replay response
 
-Important migration detail:
+## Current Phase
 
-- Alembic imports both `User` and `Memory` so future autogeneration sees the full ORM metadata
+Phase 1 completion work.
 
-## Tests
+Primary objectives:
 
-Test coverage currently includes:
+1. Stable execution IDs
+2. Execution event persistence
+3. Replay engine reliability
+4. Replay API stabilization
+5. Timeline UI stabilization
+6. Inspector UI stabilization
+7. Tool usage analytics
+8. Execution debugging foundation
 
-- auth flows
-- user CRUD and login
-- AI gateway routing
-- memory recall behavior
-- RAG utilities
+## Future Direction
 
-Test support files:
+After the local assistant is stable, the next major expansions are:
 
-- [tests/conftest.py](./tests/conftest.py) creates isolated SQLite databases for tests and mocks `sentence_transformers`
-- [tests/test_auth.py](./tests/test_auth.py)
-- [tests/test_ai_gateway.py](./tests/test_ai_gateway.py)
-- [tests/test_rag.py](./tests/test_rag.py)
-
-## Current Limitations
-
-- `docker-compose.yml` exists but is empty
-- there is no frontend app yet
-- automatic RAG rebuild at startup is intentionally disabled
-- `README.md` is still sparse compared to the codebase
-- system diagnostics are intentionally lightweight rather than production-grade observability
-- the final laptop-wide OS assistant, frontend, and online platform are still vision goals, not finished product features
-
-## Roadmap To The Final Goal
-
-### Phase 1: Stable Local Assistant
-
-- keep the local FastAPI backend reliable
-- keep the graph executor, memory, and tools working together
-- make the chat experience smooth and useful
-- keep local model support stable via Ollama or other local providers
-
-### Phase 2: Strong Desktop Intelligence
-
-- add OS-wide file discovery and indexing
-- expand repo understanding and bug analysis
-- improve memory and contextual recall
-- allow the assistant to answer questions about local files, docs, and codebases
-- support project-building assistance, not just Q&A
-
-### Phase 3: Provider Flexibility
-
-- support switching between local and hosted providers
-- keep provider configuration explicit and pluggable
-- support multiple API-key-backed model vendors
-- unify responses and tool usage across providers
-
-### Phase 4: Frontend Experience
-
-- build a polished chat UI
-- show tool activity, memory, repo context, and file search results
-- support conversational workflows and project management
-- make the interface feel like an assistant operating system layer
-
-### Phase 5: Platform Expansion
-
-- make the backend ready for online use
-- separate local-only and cloud-ready components
-- add tenancy, auth, and infrastructure concerns where needed
-- build a CI/CD pipeline for testing, deployment, and release automation
+- richer model routing
+- better OS-wide file intelligence
+- stronger repo indexing and context generation
+- online/cloud mode
+- collaboration features
+- CI/CD hardening
+- production deployment readiness
 
 ## What Future AI Should Do With This File
 
-If a model reads this file, it should:
+When another AI model reads this file, it should:
 
-1. Understand the product vision first.
-2. Treat the current repo as a local-first backend foundation.
-3. Prefer changes that keep the system modular, provider-agnostic, and expandable.
-4. Preserve support for local models and hosted models.
-5. Improve the assistant’s real-world ability to inspect the laptop, repository, and project state.
-6. Build toward a strong frontend, offline-first UX, and later online expansion.
-7. Keep CI/CD, tests, and observability in the roadmap from the start.
-
-## Recent Fixes / Mismatches Resolved
-
-- normalized `DEBUG` parsing so nonstandard environment values do not crash app import
-- changed executor memory checks to use `user_id is not None`
-- fixed `AIExecutor` initialization order so `tool_registry` and `tracer` exist before `GraphRunner` is created
-- wired graph execution state so memory, tool, and LLM outputs are preserved for final response building
-- ensured the LLM step waits for memory and tool steps before running
-- fixed `ExecutionTracer.report()` to read from sessions instead of a missing attribute
-- fixed `ExecutionSession.created_at` to use a per-session timestamp
-- added built-in tool adapters and auto-registration so graph tool steps can actually execute
-- normalized graph runner tool outputs so responses use readable tool content instead of raw envelopes
-- aligned the shared `ToolResult` shape across executor, tools, and feedback layers
-- connected the planner to the adaptive tool-bias signal
-- fixed the system scanner tool to pass the query into the scanner
-- updated the context compiler to understand structured tool objects
-- guarded the index rebuild script against empty content
-- imported `Memory` in Alembic env so migrations stay aligned with the ORM
+1. Treat the local-first AI OS assistant vision as the top priority.
+2. Keep the execution replay pipeline consistent with the backend event store.
+3. Preserve the 3-panel frontend workspace pattern.
+4. Prefer production-grade fixes over quick hacks.
+5. Avoid reintroducing duplicate observability paths.
+6. Keep the codebase expandable toward online and multi-provider support.

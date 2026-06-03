@@ -1,72 +1,50 @@
 from typing import Optional
 
-from .registry import StateRegistry
 from .events import EventBus
+from .registry import StateRegistry
 from .store import StateStore
 from .models import SystemEvent
 
 
 class StateManager:
-    """
-    Single entry point for ALL system state operations.
-    Now execution-aware for replay system.
-    """
-
     def __init__(self):
         self.registry = StateRegistry()
         self.events = EventBus()
         self.store = StateStore()
-
-        # -----------------------------
-        # CURRENT EXECUTION CONTEXT
-        # -----------------------------
         self._current_execution_id: Optional[str] = None
 
-    # -------------------------------------------------
-    # EXECUTION CONTEXT CONTROL
-    # -------------------------------------------------
-    def set_execution_id(self, execution_id: str):
-        """
-        Called by GraphRunner at execution start
-        """
+    def set_execution_id(self, execution_id: str) -> None:
         self._current_execution_id = execution_id
 
-    def clear_execution_id(self):
-        """
-        Called at execution end
-        """
+    def clear_execution_id(self) -> None:
         self._current_execution_id = None
 
     def get_execution_id(self) -> Optional[str]:
         return self._current_execution_id
 
-    # -----------------------------
-    # READ STATE
-    # -----------------------------
     def get_state(self):
         return self.registry.get_state()
 
-    # -----------------------------
-    # UPDATE STATE
-    # -----------------------------
     def update_state(self, updater_fn):
         self.registry.update(updater_fn)
 
-    # -----------------------------
-    # EMIT EVENT (EXECUTION-AWARE)
-    # -----------------------------
-    def emit_event(self, event: SystemEvent):
+    def emit_event(
+        self,
+        event: SystemEvent,
+        execution_id: Optional[str] = None
+    ) -> None:
         self.events.emit(event)
-
-        # 🔥 CRITICAL FIX: attach execution_id
         self.store.save_event(
             event,
-            execution_id=self._current_execution_id
+            execution_id=execution_id or self._current_execution_id,
         )
 
-    # -----------------------------
-    # SNAPSHOT SYSTEM STATE
-    # -----------------------------
-    def snapshot(self):
+    def snapshot(self) -> None:
         state = self.registry.get_state()
         self.store.save_snapshot(state)
+
+    def get_events(self, execution_id: str):
+        return self.store.get_events_by_execution(execution_id)
+
+    def list_executions(self, limit: int = 50):
+        return self.store.list_executions(limit=limit)

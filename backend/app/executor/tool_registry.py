@@ -5,12 +5,6 @@ from backend.app.tools.builtins import FileSearchTool, RagTool, SystemScannerToo
 
 
 class ToolRegistry:
-    """
-    SINGLE RESPONSIBILITY:
-    - store tools
-    - provide unified execution access
-    """
-
     def __init__(self, executor=None):
         self.executor = executor
         self.tools: Dict[str, BaseTool] = {}
@@ -20,15 +14,9 @@ class ToolRegistry:
             self.register(SystemScannerTool(executor))
             self.register(RagTool(executor))
 
-    # -------------------------------------------------
-    # REGISTRATION
-    # -------------------------------------------------
     def register(self, tool: BaseTool):
         self.tools[tool.name] = tool
 
-    # -------------------------------------------------
-    # LOOKUP
-    # -------------------------------------------------
     def get(self, name: str) -> Optional[BaseTool]:
         return self.tools.get(name)
 
@@ -38,9 +26,6 @@ class ToolRegistry:
     def all(self) -> List[BaseTool]:
         return list(self.tools.values())
 
-    # -------------------------------------------------
-    # SINGLE EXECUTION AUTHORITY (IMPORTANT FIX)
-    # -------------------------------------------------
     async def execute(
         self,
         name: str,
@@ -57,5 +42,4 @@ class ToolRegistry:
                 reason="tool_not_found"
             )
 
-        # DELEGATE TO BASE TOOL EXECUTION PIPELINE
         return await tool.execute(context)

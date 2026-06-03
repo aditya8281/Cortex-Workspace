@@ -8,16 +8,10 @@ from backend.app.executor.graph import ExecutionGraph, ExecutionStep
 
 
 class Planner:
-
-    # -------------------------------------------------
-    # LEGACY PATH (UNCHANGED)
-    # -------------------------------------------------
     def build_plan(self, intent):
-
         tool_candidates = []
 
         if isinstance(intent, IntentDecision):
-
             tools = []
 
             if intent.intent == IntentType.TOOL:
@@ -74,20 +68,12 @@ class Planner:
             intent=IntentType.CHAT,
             use_memory=True,
             use_llm=True,
-            tools=[],
-            tool_candidates=[]
-        )
+                tools=[],
+                tool_candidates=[]
+            )
 
-    # -------------------------------------------------
-    # 🧠 NEW: ADAPTIVE GRAPH BUILDER
-    # -------------------------------------------------
     def build_graph(self, intent, tool_bias: dict[str, float] | None = None):
-
         graph = ExecutionGraph()
-
-        # -------------------------
-        # MEMORY STEP
-        # -------------------------
         graph.add_step(
             ExecutionStep(
                 id="memory_step",
@@ -97,9 +83,6 @@ class Planner:
             )
         )
 
-        # -------------------------
-        # TOOL SELECTION BASED ON BIAS
-        # -------------------------
         tools = self._select_tools(intent, tool_bias)
 
         for i, tool in enumerate(tools):
@@ -113,9 +96,6 @@ class Planner:
                 )
             )
 
-        # -------------------------
-        # FINAL LLM STEP
-        # -------------------------
         graph.add_step(
             ExecutionStep(
                 id="llm_step",
@@ -130,14 +110,8 @@ class Planner:
 
         return graph
 
-    # -------------------------------------------------
-    # 🧠 TOOL SELECTION ENGINE (CORE INTELLIGENCE)
-    # -------------------------------------------------
     def _select_tools(self, intent, tool_bias: dict[str, float] | None):
-
         tools = []
-
-        # base rules first
         if isinstance(intent, IntentDecision):
 
             if intent.intent == IntentType.TOOL:
@@ -159,13 +133,9 @@ class Planner:
             elif intent == IntentType.RAG:
                 tools.append("rag")
 
-        # -------------------------
-        # APPLY BIAS (NEW INTELLIGENCE)
-        # -------------------------
         if not tool_bias:
             return tools
 
-        # sort tools by historical performance
         tools = sorted(
             tools,
             key=lambda t: tool_bias.get(t, 0.5),

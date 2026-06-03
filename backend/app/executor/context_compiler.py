@@ -1,11 +1,9 @@
 class ContextCompiler:
-
     def compile(self, tools, memory=None, query=""):
-
         blocks = []
 
         if memory:
-            blocks.append("🧠 Memory Context:\n" + str(memory))
+            blocks.append("Memory Context:\n" + str(memory))
 
         if tools:
             blocks.append(self._format_tools(tools))
@@ -15,8 +13,7 @@ class ContextCompiler:
         return "\n\n".join(blocks)
 
     def _format_tools(self, tools):
-
-        blocks = ["🛠 Tool Context:"]
+        blocks = ["Tool Context:"]
 
         for t in tools:
             blocks.append(
@@ -35,7 +32,6 @@ Output:
         return "\n".join(blocks)
 
     def _compress_output(self, output):
-
         if output is None:
             return "None"
 

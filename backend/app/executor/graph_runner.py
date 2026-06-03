@@ -1,4 +1,5 @@
 import asyncio
+
 from backend.app.executor.graph import ExecutionGraph, ExecutionStep
 from backend.app.tools.base import ToolContext, ToolResult
 from backend.app.executor.tool_intelligence import ToolIntelligence
@@ -10,38 +11,31 @@ from backend.app.state.models import SystemEvent, EventType
 
 
 class GraphRunner:
-
     def __init__(self, executor):
         self.executor = executor
         self.tools = self.executor.tool_registry
         self.tracer = self.executor.tracer
-        self.state = StateManager()
+        self.state = self.executor.state
 
-    # -------------------------------------------------
-    # MAIN EXECUTION LOOP
-    # -------------------------------------------------
     async def run(self, graph: ExecutionGraph, query: str, user_id: int | None):
 
         state = {
+            "execution_id": None,
             "query": query,
             "memory": None,
             "tools": [],
             "tool_map": {},
             "llm": None,
             "completed": set(),
-            "execution_trace": []
+            "execution_trace": [],
+            "errors": [],
         }
 
         execution_id = self.tracer.create_session()
-
-        # 🔥 CRITICAL FIX: bind execution context
-        self.state.set_execution_id(execution_id)
+        state["execution_id"] = execution_id
 
         pending_steps = graph.steps.copy()
 
-        # -------------------------------------------------
-        # GRAPH START EVENT
-        # -------------------------------------------------
         self.state.emit_event(SystemEvent(
             type=EventType.TOOL_EXECUTED,
             payload={
@@ -51,36 +45,29 @@ class GraphRunner:
                 "steps": len(graph.steps)
             },
             source="GraphRunner"
-        ))
+        ), execution_id=execution_id)
 
         try:
-
             while pending_steps:
-
                 ready_steps = [
                     s for s in pending_steps
                     if self._is_ready(s, state)
                 ]
 
                 if not ready_steps:
+                    state["errors"].append({
+                        "stage": "scheduler",
+                        "error": "no_ready_steps",
+                        "remaining_steps": [step.id for step in pending_steps],
+                    })
                     break
 
                 results = await asyncio.gather(
-                    *[
-                        self._execute_step(
-                            execution_id,
-                            step,
-                            state,
-                            query,
-                            user_id
-                        )
-                        for step in ready_steps
-                    ],
+                    *[self._execute_step(execution_id, step, state, query, user_id) for step in ready_steps],
                     return_exceptions=True
                 )
 
                 for step, result in zip(ready_steps, results):
-
                     state["completed"].add(step.id)
                     state["tool_map"][step.id] = result
                     step.result = result
@@ -90,7 +77,7 @@ class GraphRunner:
                         "type": step.type,
                         "name": step.name,
                         "depends_on": step.depends_on,
-                        "result": str(result)[:500]
+                        "result": self._preview(result)
                     })
 
                     if step.type == "memory":
@@ -100,21 +87,30 @@ class GraphRunner:
                         tool_result = self._normalize_tool(result)
                         if tool_result:
                             state["tools"].append(tool_result)
+                            if tool_result.status == "error":
+                                state["errors"].append({
+                                    "step_id": step.id,
+                                    "tool": tool_result.tool,
+                                    "error": tool_result.meta.get("error") or tool_result.meta.get("reason") or "tool_error",
+                                })
 
                     elif step.type == "llm":
                         state["llm"] = result
 
+                    if isinstance(result, ToolResult) and result.status == "error":
+                        state["errors"].append({
+                            "step_id": step.id,
+                            "type": step.type,
+                            "name": step.name,
+                            "error": result.meta.get("error") or result.meta.get("reason") or "step_error",
+                        })
+
                     pending_steps.remove(step)
 
-            # -------------------------------------------------
-            # POST PROCESSING
-            # -------------------------------------------------
             state["tools"] = ToolIntelligence().process(state["tools"])
             state["tools"] = ToolFusionEngine().process(state["tools"])
 
-            # -------------------------------------------------
-            # GRAPH END EVENT
-            # -------------------------------------------------
+            status = "failed" if state["errors"] else "success"
             self.state.emit_event(SystemEvent(
                 type=EventType.EXECUTION_COMPLETED,
                 payload={
@@ -122,26 +118,21 @@ class GraphRunner:
                     "query": query,
                     "tool_count": len(state["tools"]),
                     "steps_executed": len(state["execution_trace"]),
-                    "status": "success"
+                    "status": status,
+                    "error_count": len(state["errors"]),
+                    "errors": state["errors"][:5],
                 },
                 source="GraphRunner"
-            ))
+            ), execution_id=execution_id)
 
             return state
 
         finally:
-            # 🔥 CRITICAL CLEANUP
             self.state.clear_execution_id()
 
-    # -------------------------------------------------
-    # READY CHECK
-    # -------------------------------------------------
     def _is_ready(self, step: ExecutionStep, state) -> bool:
         return all(dep in state["completed"] for dep in step.depends_on)
 
-    # -------------------------------------------------
-    # STEP EXECUTION
-    # -------------------------------------------------
     async def _execute_step(
         self,
         execution_id,
@@ -150,7 +141,6 @@ class GraphRunner:
         query,
         user_id
     ):
-
         self.tracer.start(
             execution_id,
             step.id,
@@ -159,7 +149,6 @@ class GraphRunner:
         )
 
         try:
-
             self.state.emit_event(SystemEvent(
                 type=EventType.TOOL_EXECUTED,
                 payload={
@@ -169,17 +158,14 @@ class GraphRunner:
                     "name": step.name
                 },
                 source="GraphRunner"
-            ))
+            ), execution_id=execution_id)
 
             if step.type == "memory":
                 result = await self._run_memory(query, user_id)
-
             elif step.type == "tool":
                 result = await self._run_tool(step.name, query, state, user_id)
-
             elif step.type == "llm":
                 result = await self._run_llm(state, query)
-
             else:
                 result = None
 
@@ -189,10 +175,22 @@ class GraphRunner:
                 result=result
             )
 
+            self.state.emit_event(SystemEvent(
+                type=EventType.TOOL_EXECUTED,
+                payload={
+                    "stage": "step_completed",
+                    "step_id": step.id,
+                    "type": step.type,
+                    "name": step.name,
+                    "status": "success",
+                    "result_preview": self._preview(result)
+                },
+                source="GraphRunner"
+            ), execution_id=execution_id)
+
             return result
 
         except Exception as e:
-
             self.tracer.end(
                 execution_id,
                 step.id,
@@ -200,15 +198,18 @@ class GraphRunner:
             )
 
             self.state.emit_event(SystemEvent(
-                type=EventType.EXECUTION_COMPLETED,
+                type=EventType.TOOL_EXECUTED,
                 payload={
                     "execution_id": execution_id,
                     "step_id": step.id,
-                    "status": "step_failed",
+                    "stage": "step_failed",
+                    "type": step.type,
+                    "name": step.name,
+                    "status": "failed",
                     "error": str(e)
                 },
                 source="GraphRunner"
-            ))
+            ), execution_id=execution_id)
 
             return ToolResult(
                 tool=step.name or "unknown",
@@ -219,9 +220,6 @@ class GraphRunner:
                 meta={"error": str(e)}
             )
 
-    # -------------------------------------------------
-    # MEMORY
-    # -------------------------------------------------
     async def _run_memory(self, query, user_id):
         if user_id is None:
             return None
@@ -231,13 +229,8 @@ class GraphRunner:
             query=query
         )
 
-    # -------------------------------------------------
-    # TOOL EXECUTION
-    # -------------------------------------------------
     async def _run_tool(self, tool_name, query, state, user_id):
-
         tool = self.tools.get(tool_name)
-
         if not tool:
             return ToolResult(
                 tool=tool_name,
@@ -254,42 +247,9 @@ class GraphRunner:
             state=state
         )
 
-        decision = tool.decide(context)
+        return await self.tools.execute(tool_name, context)
 
-        if not decision.get("should_run"):
-            return ToolResult(
-                tool=tool_name,
-                output=None,
-                confidence=1.0,
-                relevance=0.0,
-                status="skipped",
-                meta={"reason": decision.get("reason", "no reason")}
-            )
-
-        raw_output = await tool.run(
-            context,
-            decision.get("params", {})
-        )
-
-        reflection = tool.reflect(raw_output)
-
-        return ToolResult(
-            tool=tool_name,
-            output=raw_output,
-            confidence=decision.get("confidence", 1.0),
-            relevance=1.0,
-            status="success",
-            meta={
-                "reflection": reflection,
-                "params": decision.get("params", {})
-            }
-        )
-
-    # -------------------------------------------------
-    # NORMALIZER
-    # -------------------------------------------------
     def _normalize_tool(self, result):
-
         if result is None:
             return None
 
@@ -305,11 +265,7 @@ class GraphRunner:
             meta={"wrapped": True}
         )
 
-    # -------------------------------------------------
-    # LLM
-    # -------------------------------------------------
     async def _run_llm(self, state, query):
-
         compiler = ContextCompiler()
 
         prompt = compiler.compile(
@@ -319,3 +275,28 @@ class GraphRunner:
         )
 
         return await self.executor.llm.generate(prompt)
+
+    def _preview(self, value):
+        if value is None:
+            return None
+
+        if isinstance(value, ToolResult):
+            return {
+                "tool": value.tool,
+                "status": value.status,
+                "confidence": value.confidence,
+                "relevance": value.relevance,
+                "output": self._preview(value.output),
+            }
+
+        if isinstance(value, dict):
+            preview = {}
+            for key in list(value.keys())[:6]:
+                preview[key] = self._preview(value[key])
+            return preview
+
+        if isinstance(value, list):
+            return [self._preview(item) for item in value[:5]]
+
+        text = str(value)
+        return text[:500]

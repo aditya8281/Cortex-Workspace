@@ -4,59 +4,33 @@ from backend.app.tools.base import ToolResult
 
 
 class ResponseBuilder:
-
     def build(self, ctx: ExecutionContext) -> ExecutionResult:
-
         sections = []
 
-        # -------------------------------------------------
-        # MEMORY LAYER (low priority, contextual grounding)
-        # -------------------------------------------------
         if ctx.memory:
-            sections.append(
-                "🧠 Memory Context:\n" + str(ctx.memory)
-            )
+            sections.append("Memory Context:\n" + str(ctx.memory))
 
-        # -------------------------------------------------
-        # TOOL LAYER (structured + confidence-aware)
-        # -------------------------------------------------
         if ctx.tool_results:
-            tool_block = self._format_tools(ctx.tool_results)
-            sections.append(tool_block)
+            sections.append(self._format_tools(ctx.tool_results))
 
-        # -------------------------------------------------
-        # LLM LAYER (final reasoning output)
-        # -------------------------------------------------
         if ctx.llm_response:
-            sections.append(
-                "🤖 Final Response:\n" + str(ctx.llm_response)
-            )
+            sections.append("Final Response:\n" + str(ctx.llm_response))
 
-        # -------------------------------------------------
-        # FALLBACK
-        # -------------------------------------------------
         if not sections:
-            sections.append(
-                "🤖 Final Response:\nNo usable context found to generate response."
-            )
+            sections.append("Final Response:\nNo usable context found.")
 
         return ExecutionResult(
             answer="\n\n".join(sections),
             source="executor_v2",
-            memory_used=ctx.memory is not None
+            memory_used=ctx.memory is not None,
+            execution_id=ctx.execution_id
         )
 
-    # -------------------------------------------------
-    # TOOL FORMATTING ENGINE (IMPORTANT UPGRADE)
-    # -------------------------------------------------
     def _format_tools(self, tools: list[ToolResult]) -> str:
-
-        blocks = ["🛠 Tool Results (Structured):"]
+        blocks = ["Tool Results:"]
 
         for t in tools:
-
-            # skip low-quality / failed tools
-            if getattr(t, "status", None) in ["error"]:
+            if getattr(t, "status", None) in {"error", "skipped"}:
                 continue
 
             blocks.append(
@@ -76,11 +50,7 @@ Meta:
 
         return "\n".join(blocks)
 
-    # -------------------------------------------------
-    # OUTPUT COMPRESSION
-    # -------------------------------------------------
     def _compress_output(self, output):
-
         if output is None:
             return "None"
 
@@ -96,11 +66,7 @@ Meta:
 
         return str(output)[:500]
 
-    # -------------------------------------------------
-    # META COMPRESSION
-    # -------------------------------------------------
     def _compress_meta(self, meta):
-
         if not meta:
             return {}
 

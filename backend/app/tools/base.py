@@ -14,9 +14,6 @@ class ToolContext:
         self.state = state or {}
 
 
-# -------------------------------------------------
-# FINAL TOOL RESULT (RUNTIME OBJECT)
-# -------------------------------------------------
 class ToolResult:
     def __init__(
         self,
@@ -45,6 +42,8 @@ class ToolResult:
             "confidence": self.confidence,
             "relevance": self.relevance,
             "status": self.status,
+            "skipped": self.skipped,
+            "reason": self.reason,
             "meta": self.meta,
         }
 
@@ -95,10 +94,15 @@ class BaseTool(ABC):
         )
 
     def reflect(self, result: ToolResult) -> Dict[str, Any]:
+        status = getattr(result, "status", None) if isinstance(result, ToolResult) else None
+
+        if status is None and result is not None:
+            status = "success"
+
         return {
             "tool": self.name,
             "success": result is not None,
-            "status": getattr(result, "status", None)
+            "status": status
         }
 
 
