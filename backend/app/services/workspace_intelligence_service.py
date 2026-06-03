@@ -419,23 +419,30 @@ class WorkspaceIntelligenceService:
         return {"nodes": nodes[:24], "edges": edges[:20]}
 
     def _build_knowledge_graph(self, concepts: list[str], relationships: list[dict[str, str]]) -> dict[str, Any]:
-        nodes = concepts[:12]
+        nodes = list(concepts[:12])
         edges: list[dict[str, str]] = []
 
+        # Base concepts connection
         for index in range(max(0, len(nodes) - 1)):
             edges.append({"source": nodes[index], "target": nodes[index + 1], "relation": "related_to"})
 
-        if relationships:
-            first = relationships[0]
-            edges.append(
-                {
-                    "source": first["source"],
-                    "target": first["target"],
-                    "relation": first["relation"],
-                }
-            )
+        # Map all relationship edges, and dynamically collect nodes
+        for rel in relationships:
+            source = rel.get("source")
+            target = rel.get("target")
+            relation = rel.get("relation")
+            if source and target and relation:
+                edges.append({
+                    "source": source,
+                    "target": target,
+                    "relation": relation
+                })
+                if source not in nodes:
+                    nodes.append(source)
+                if target not in nodes:
+                    nodes.append(target)
 
-        return {"nodes": nodes, "edges": edges[:18]}
+        return {"nodes": nodes, "edges": edges}
 
     def _detect_query_classes(self) -> list[dict[str, str]]:
         return [
