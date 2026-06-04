@@ -18,7 +18,8 @@ class AIGateway:
         inference_engine: str | None = None,
         code_parsing: str | None = None,
         api_key: str | None = None,
-        api_base_url: str | None = None
+        api_base_url: str | None = None,
+        context_items: list = None
     ) -> ExecutionResult:
 
         result = await self.executor.execute(
@@ -31,7 +32,8 @@ class AIGateway:
             inference_engine=inference_engine,
             code_parsing=code_parsing,
             api_key=api_key,
-            api_base_url=api_base_url
+            api_base_url=api_base_url,
+            context_items=context_items
         )
 
         return result

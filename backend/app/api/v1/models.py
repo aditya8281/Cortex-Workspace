@@ -441,6 +441,15 @@ def update_routing_routes(payload: UpdateRoutesRequest, db: Session = Depends(ge
 
 MARKETPLACE_CATALOG = [
     {
+        "name": "qwen3:8b",
+        "display_name": "Qwen 3 8B",
+        "size": "5.2 GB",
+        "context_length": 32768,
+        "vram_requirement_gb": 8,
+        "best_use_case": "General Chat & Complex Reasoning",
+        "tags": ["Chat", "General"],
+    },
+    {
         "name": "qwen2.5-coder:7b",
         "display_name": "Qwen 2.5 Coder 7B",
         "size": "4.7 GB",
@@ -572,6 +581,27 @@ def get_gpu_info() -> dict:
     }
 
 
+def check_is_installed(model_name: str, installed_names: set) -> bool:
+    if model_name in installed_names:
+        return True
+        
+    def normalize(n: str) -> str:
+        if ":" in n:
+            n = n.split(":")[0]
+        return n.lower().replace("-", "").replace("_", "").replace(".", "")
+        
+    m_norm = normalize(model_name)
+    for inst in installed_names:
+        inst_norm = normalize(inst)
+        if m_norm == inst_norm:
+            return True
+        if (m_norm.startswith(inst_norm) or inst_norm.startswith(m_norm)) and any(
+            x in m_norm for x in ["llama", "qwen", "gemma", "mistral", "deepseek", "phi"]
+        ):
+            return True
+    return False
+
+
 @router.get("/marketplace")
 async def get_marketplace():
     """
@@ -589,21 +619,7 @@ async def get_marketplace():
     catalog = []
     for model in MARKETPLACE_CATALOG:
         m_name = model["name"]
-        
-        # Check if installed
-        is_installed = False
-        if m_name in installed_names:
-            is_installed = True
-        elif f"{m_name}:latest" in installed_names:
-            is_installed = True
-        elif m_name.endswith(":latest") and m_name[:-7] in installed_names:
-            is_installed = True
-        else:
-            # Check prefix/suffix matches
-            for inst in installed_names:
-                if inst == m_name or inst.startswith(m_name + ":") or m_name.startswith(inst + ":"):
-                    is_installed = True
-                    break
+        is_installed = check_is_installed(m_name, installed_names)
         
         catalog.append({
             **model,

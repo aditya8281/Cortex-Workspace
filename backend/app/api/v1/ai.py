@@ -11,6 +11,7 @@ from backend.app.models.user_settings import UserSettings
 from backend.app.api.v1.user_settings import decrypt_key
 from backend.app.ai.exceptions import ModelNotInstalledError
 from backend.app.ai.memory.repository import MemoryRepository
+from backend.app.schemas.context_item import ContextItem
 
 router = APIRouter()
 gateway = AIGateway()
@@ -31,6 +32,7 @@ class QueryRequest(BaseModel):
     code_parsing: Optional[str] = None
     api_key: Optional[str] = None
     api_base_url: Optional[str] = None
+    context_items: Optional[List[ContextItem]] = None
 
 
 class AIResponse(BaseModel):
@@ -56,7 +58,8 @@ async def ask_public(payload: QueryRequest):
             inference_engine=payload.inference_engine,
             code_parsing=payload.code_parsing,
             api_key=payload.api_key,
-            api_base_url=payload.api_base_url
+            api_base_url=payload.api_base_url,
+            context_items=payload.context_items
         )
         return AIResponse(
             query=payload.query,
@@ -103,7 +106,8 @@ async def chat_private(
             inference_engine=payload.inference_engine,
             code_parsing=payload.code_parsing,
             api_key=api_key,
-            api_base_url=api_base_url
+            api_base_url=api_base_url,
+            context_items=payload.context_items
         )
         return AIResponse(
             query=payload.query,

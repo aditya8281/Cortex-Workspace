@@ -31,7 +31,8 @@ class GraphRunner:
         inference_engine: str | None = None,
         code_parsing: str | None = None,
         api_key: str | None = None,
-        api_base_url: str | None = None
+        api_base_url: str | None = None,
+        context_items: list = None
     ):
 
         state = {
@@ -53,6 +54,7 @@ class GraphRunner:
             "code_parsing": code_parsing,
             "api_key": api_key,
             "api_base_url": api_base_url,
+            "context_items": context_items
         }
 
         execution_id = self.tracer.create_session()
@@ -352,10 +354,10 @@ class GraphRunner:
                         "role": role,
                         "content": content
                     })
-        
+
         if not chat_history and user_id is not None:
             try:
-                db_history = self.executor.memory.get_recent_history(user_id)
+                db_history = MemoryRepository().get_recent_history(user_id)
                 chat_history = []
                 for turn in db_history:
                     chat_history.append({
@@ -369,11 +371,15 @@ class GraphRunner:
             except Exception:
                 pass
 
+        # Get context items from state
+        context_items = state.get("context_items", [])
+
         prompt = compiler.compile(
             tools=state["tools"],
             memory=state["memory"],
             chat_history=chat_history,
-            query=query
+            query=query,
+            context_items=context_items
         )
 
         intent = state.get("intent")
@@ -406,7 +412,7 @@ class GraphRunner:
         llm_model = state.get("llm_model") or ""
         inference_engine = state.get("inference_engine") or ""
         api_base_url = state.get("api_base_url") or ""
-        
+
         cache_payload = f"{prompt}||{system_prompt}||{llm_model}||{inference_engine}||{api_base_url}"
         cache_hash = hashlib.md5(cache_payload.encode("utf-8")).hexdigest()
         cache_key = f"llm_cache:{cache_hash}"
@@ -422,30 +428,44 @@ class GraphRunner:
             except Exception:
                 pass
 
-        logging.getLogger(__name__).info(f"LLM Response cache MISS for key {cache_key}. Querying LLM via IntelligentRouter...")
-        
+        logging.getLogger(__name__).info(f"LLM Response cache MISS for key {cache_key}. Executing OrchestratorAgent...")
+
         chat_history_dicts = []
         if chat_history:
             chat_history_dicts = chat_history
 
-        res_dict = await self.executor.router.route_and_generate(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            model=state.get("llm_model"),
+        # Route and execute via OrchestratorAgent
+        response = await self.executor.orchestrator.execute(
+            query=query,
+            context=None,
             history=chat_history_dicts,
+            user_id=user_id,
+            context_items=context_items,
+            llm_model=state.get("llm_model"),
             inference_engine=state.get("inference_engine"),
             api_key=state.get("api_key"),
             api_base_url=state.get("api_base_url")
         )
 
-        response = res_dict["response"]
-        state["routing_info"] = res_dict["routing_info"]
+        # Get underlying model routing info and orchestrator trace
+        routing_info = getattr(self.executor, "last_routing_info", None) or {}
+        orchestrator_trace = getattr(self.executor.orchestrator, "last_trace", None) or {}
+        
+        merged_routing_info = {
+            **routing_info,
+            **orchestrator_trace
+        }
+        state["routing_info"] = merged_routing_info
 
         if response:
             import json
+            cache_payload = {
+                "response": response,
+                "routing_info": merged_routing_info
+            }
             await redis_cache.set(
                 cache_key,
-                json.dumps(res_dict),
+                json.dumps(cache_payload),
                 expire_seconds=settings.LLM_CACHE_TTL_SECONDS
             )
 

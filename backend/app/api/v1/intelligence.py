@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from backend.app.api.deps import get_current_user_optional, get_db
 from backend.app.intelligence.exclusions import ExclusionConfig
 from backend.app.intelligence.memory_service import PersistentMemoryService
-from backend.app.intelligence.models import RepositoryProfile
+from backend.app.intelligence.models import RepositoryProfile, KnowledgeEntry
 from backend.app.intelligence.permissions import PermissionService
 from backend.app.intelligence.proactive_service import ProactiveService
 from backend.app.intelligence.schemas import (
@@ -87,6 +87,30 @@ def search_knowledge(
         db, q, limit=limit, user_id=current_user.id if current_user else None
     )
     return KnowledgeSearchResponse(results=results)
+
+
+@router.get("/knowledge")
+def list_knowledge(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    q = db.query(KnowledgeEntry)
+    if current_user:
+        q = q.filter(
+            (KnowledgeEntry.user_id == current_user.id)
+            | (KnowledgeEntry.user_id.is_(None))
+        )
+    rows = q.order_by(KnowledgeEntry.updated_at.desc()).limit(limit).all()
+    return [
+        {
+            "id": row.id,
+            "title": row.title,
+            "summary": row.content[:300],
+            "category": row.category,
+        }
+        for row in rows
+    ]
 
 
 @router.get("/repositories")

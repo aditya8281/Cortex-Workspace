@@ -10,7 +10,9 @@ import {
   getRoutingAnalytics,
   getRoutingProfiles,
   selectRoutingProfile,
-  getAllModels
+  getAllModels,
+  getProviders,
+  updateProvider
 } from "@/api/ai";
 import {
   Activity,
@@ -36,9 +38,7 @@ export function PerformancePage() {
 
   const [activeTab, setActiveTab] = useState<"overview" | "health" | "routing" | "settings">("overview");
 
-  // Local state for toggles that are simulated/persisted in localStorage
-  const [localOnly, setLocalOnly] = useState(() => localStorage.getItem("cortex_local_only") === "true");
-  const [cloudEnabled, setCloudEnabled] = useState(() => localStorage.getItem("cortex_cloud_enabled") !== "false");
+  // Local state for privacy shield (pure client side)
   const [privacyShield, setPrivacyShield] = useState(() => localStorage.getItem("cortex_privacy_shield") === "true");
 
   // Query performance summary
@@ -74,6 +74,12 @@ export function PerformancePage() {
     queryFn: getAllModels,
   });
 
+  // Query providers list to see which ones are enabled/disabled
+  const { data: providers = [] } = useQuery({
+    queryKey: ["providers"],
+    queryFn: getProviders,
+  });
+
   const selectProfileMutation = useMutation({
     mutationFn: selectRoutingProfile,
     onSuccess: (res: any) => {
@@ -87,16 +93,54 @@ export function PerformancePage() {
     }
   });
 
+  const updateProviderMutation = useMutation({
+    mutationFn: async (args: { name: string; is_enabled: boolean }) => {
+      const p = providers.find((prov) => prov.name === args.name);
+      if (!p) throw new Error(`Provider ${args.name} not found`);
+      return updateProvider(args.name, {
+        name: p.name,
+        base_url: p.base_url || undefined,
+        is_enabled: args.is_enabled,
+        is_custom: p.is_custom
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["providers"] });
+    }
+  });
+
+  // Determine active profile
+  const activeProfile = routingProfiles.find((p) => p.is_active)?.name || "Balanced";
+
+  // Derive localOnly status from active routing profile
+  const localOnly = activeProfile.toLowerCase() === "local only";
+
+  // Identify local vs cloud providers
+  const isLocalProvider = (name: string) =>
+    ["ollama", "lm studio", "lm-studio", "system"].includes(name.toLowerCase());
+  const cloudProviders = providers.filter((p) => !isLocalProvider(p.name));
+  
+  // Derive cloudEnabled status: true if any cloud provider is enabled
+  const cloudEnabled = cloudProviders.length > 0
+    ? cloudProviders.some((p) => p.is_enabled)
+    : true;
+
   const handleToggleLocalOnly = (val: boolean) => {
-    setLocalOnly(val);
+    selectProfileMutation.mutate(val ? "Local Only" : "Balanced");
     localStorage.setItem("cortex_local_only", String(val));
-    setToast(val ? "Cortex locked to Local Only models" : "Cloud routing unlocked");
   };
 
-  const handleToggleCloud = (val: boolean) => {
-    setCloudEnabled(val);
-    localStorage.setItem("cortex_cloud_enabled", String(val));
-    setToast(val ? "Cloud model providers enabled" : "Cloud model providers disabled");
+  const handleToggleCloud = async (val: boolean) => {
+    try {
+      const cloudProviders = providers.filter((p) => !isLocalProvider(p.name));
+      for (const p of cloudProviders) {
+        await updateProviderMutation.mutateAsync({ name: p.name, is_enabled: val });
+      }
+      localStorage.setItem("cortex_cloud_enabled", String(val));
+      setToast(val ? "Cloud model providers enabled" : "Cloud model providers disabled");
+    } catch (err: any) {
+      setToast(`Failed to update providers: ${err.message}`);
+    }
   };
 
   const handleTogglePrivacy = (val: boolean) => {
@@ -105,8 +149,6 @@ export function PerformancePage() {
     setToast(val ? "Privacy Shield enabled: query logs disabled" : "Query logging enabled");
   };
 
-  // Determine active profile
-  const activeProfile = routingProfiles.find((p) => p.is_active)?.name || "Balanced";
 
   return (
     <div className="container mx-auto space-y-8 p-6 max-w-7xl">

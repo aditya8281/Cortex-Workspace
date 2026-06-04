@@ -96,9 +96,21 @@ export function ChatView() {
                     <span className="shrink-0 font-medium text-cortex-text">{msg.routingInfo.provider}</span>
                     <span className="shrink-0 opacity-40">|</span>
                     <span className="shrink-0 font-medium text-cortex-accent">{msg.routingInfo.response_time.toFixed(2)}s</span>
+                    
+                    {msg.routingInfo.agent_selected && (
+                      <>
+                        <span className="shrink-0 opacity-40">|</span>
+                        <span className="shrink-0 font-semibold text-purple-400">🤖 {msg.routingInfo.agent_selected}</span>
+                        <span className="shrink-0 text-cortex-muted">({(msg.routingInfo.agent_confidence * 100).toFixed(0)}% conf)</span>
+                        {msg.routingInfo.agent_execution_time !== undefined && (
+                          <span className="shrink-0 font-medium text-purple-300">in {msg.routingInfo.agent_execution_time.toFixed(2)}s</span>
+                        )}
+                      </>
+                    )}
+                    
                     <span className="shrink-0 opacity-40">|</span>
-                    <span className="italic truncate max-w-[200px] sm:max-w-[300px]" title={msg.routingInfo.selection_reason}>
-                      {msg.routingInfo.selection_reason}
+                    <span className="italic truncate max-w-[200px] sm:max-w-[300px]" title={msg.routingInfo.agent_reason || msg.routingInfo.selection_reason}>
+                      {msg.routingInfo.agent_reason || msg.routingInfo.selection_reason}
                     </span>
                   </div>
                 )}

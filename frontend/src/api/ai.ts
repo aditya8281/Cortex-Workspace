@@ -1,4 +1,6 @@
 import { api } from "./client";
+import type { ContextItem } from "@/types/cortex";
+
 
 export type AskResponse = {
   query: string;
@@ -13,6 +15,10 @@ export type AskResponse = {
     fallback_used?: boolean;
     fallback_reason?: string | null;
     classified_task?: string;
+    agent_selected?: string;
+    agent_confidence?: number;
+    agent_execution_time?: number;
+    agent_reason?: string;
   } | null;
 };
 
@@ -132,13 +138,28 @@ export type WorkspaceIntelligenceResponse = {
 };
 
 export async function askQuestion(
-  query: string, 
-  useAuthenticatedChat = false, 
+  query: string,
+  useAuthenticatedChat = false,
   history?: ChatTurn[],
-  modelConfig?: ModelConfig
+  modelConfig?: ModelConfig,
+  contextItems?: ContextItem[]
 ): Promise<AskResponse> {
   const url = useAuthenticatedChat ? "/ai/chat" : "/ai/ask";
-  const res = await api.post(url, { query, history, ...modelConfig });
+  const res = await api.post(url, {
+    query,
+    history,
+    ...modelConfig,
+    // Map camelCase fields to snake_case for backend
+    context_items: contextItems?.map((c) => ({
+      id: c.id,
+      kind: c.kind,
+      title: c.title,
+      detail: c.detail,
+      path: c.path,
+      url: c.url,
+      content_preview: c.contentPreview,
+    })),
+  });
   return res.data;
 }
 

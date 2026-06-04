@@ -1,6 +1,12 @@
 class ContextCompiler:
-    def compile(self, tools, memory=None, chat_history=None, query=""):
+    def compile(self, tools, memory=None, chat_history=None, query="", context_items=None):
         blocks = []
+
+        # Add attached context items first (highest priority)
+        if context_items:
+            context_block = self._format_context_items(context_items)
+            if context_block:
+                blocks.append(context_block)
 
         if chat_history:
             history_str = "Recent Conversation History:\n"
@@ -39,7 +45,6 @@ Tool: {getattr(t, 'tool', 'unknown')}
 Status: {getattr(t, 'status', 'unknown')}
 Confidence: {getattr(t, 'confidence', 0.0)}
 Relevance: {getattr(t, 'relevance', 0.0)}
-Skipped: {getattr(t, 'skipped', False)}
 
 Output:
 {self._compress_output(getattr(t, 'output', None))}
@@ -59,3 +64,37 @@ Output:
             return {k: output[k] for k in list(output.keys())[:6]}
 
         return str(output)[:500]
+
+    def _format_context_items(self, context_items):
+        """Format attached context items into a structured prompt block."""
+        if not context_items:
+            return None
+
+        blocks = ["=== Attached Context ==="]
+        for item in context_items:
+            kind = getattr(item, "kind", "unknown")
+            title = getattr(item, "title", "")
+            header = f"\n[{kind.upper()}] {title}"
+            blocks.append(header)
+
+            # Prefer resolved content > content_preview > detail > path/url
+            resolved = getattr(item, "resolved_content", None)
+            preview = getattr(item, "content_preview", None)
+            detail = getattr(item, "detail", None)
+            path = getattr(item, "path", None)
+            url = getattr(item, "url", None)
+
+            if resolved:
+                blocks.append(resolved[:6000])
+            elif preview:
+                blocks.append(preview[:3000])
+            elif detail:
+                blocks.append(detail)
+
+            if path and not resolved:
+                blocks.append(f"Path: {path}")
+            if url and not resolved:
+                blocks.append(f"URL: {url}")
+
+        blocks.append("=== End of Attached Context ===")
+        return "\n".join(blocks)

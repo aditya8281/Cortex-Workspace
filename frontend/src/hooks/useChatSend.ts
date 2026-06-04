@@ -2,6 +2,7 @@ import { askQuestion } from "@/api/ai";
 import type { ChatTurn } from "@/api/ai";
 import { useAppStore } from "@/stores/appStore";
 import { useChatStore } from "@/stores/chatStore";
+import { useContextStore } from "@/stores/contextStore";
 
 export function useChatSend() {
   const token = useAppStore((s) => s.token);
@@ -18,6 +19,9 @@ export function useChatSend() {
 
   const send = async (query: string) => {
     if (!activeSession || !query.trim()) return;
+
+    // Snapshot context items at send time
+    const contextItems = useContextStore.getState().toPayload();
 
     const userMessage = {
       id: `msg-${crypto.randomUUID()}`,
@@ -41,11 +45,13 @@ export function useChatSend() {
       if (activeSession.selectedModel) {
         configPayload.llm_model = activeSession.selectedModel;
       }
-      const response = await askQuestion(query, Boolean(token), history, {
-        ...configPayload,
-        api_key: apiKey,
-        api_base_url: apiBaseUrl,
-      });
+      const response = await askQuestion(
+        query,
+        Boolean(token),
+        history,
+        { ...configPayload, api_key: apiKey, api_base_url: apiBaseUrl },
+        contextItems.length > 0 ? contextItems : undefined
+      );
 
       appendMessages(activeSession.id, [
         {

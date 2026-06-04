@@ -19,6 +19,7 @@ from backend.app.core.paths import PROJECT_ROOT
 
 from backend.app.executor.tool_registry import ToolRegistry
 from backend.app.executor.context import ExecutionContext
+from backend.app.executor.context_resolver import ContextResolver
 
 from backend.app.executor.tool_feedback import ToolFeedbackStore
 from backend.app.state.manager import StateManager
@@ -44,6 +45,9 @@ class AIExecutor:
         self.tracer = ExecutionTracer()
         self.graph_runner = GraphRunner(self)
         self.tool_feedback = ToolFeedbackStore()
+        self.context_resolver = ContextResolver()
+        from backend.app.agent.orchestrator import OrchestratorAgent
+        self.orchestrator = OrchestratorAgent(self)
 
     async def execute(
         self,
@@ -56,12 +60,18 @@ class AIExecutor:
         inference_engine: str | None = None,
         code_parsing: str | None = None,
         api_key: str | None = None,
-        api_base_url: str | None = None
+        api_base_url: str | None = None,
+        context_items: list = None
     ) -> ExecutionResult:
 
         logger.info(f"executor_started user_id={user_id} query={query[:100]}")
 
         try:
+            # Resolve context items before building the execution graph
+            if context_items:
+                context_items = await self.context_resolver.resolve(context_items)
+                logger.info(f"context_resolved items={len(context_items)}")
+
             intent = self.classifier.classify(query)
             tool_bias = self.tool_feedback.get_tool_bias()
             graph = self.planner.build_graph(intent, tool_bias=tool_bias)
@@ -79,7 +89,8 @@ class AIExecutor:
                 inference_engine=inference_engine,
                 code_parsing=code_parsing,
                 api_key=api_key,
-                api_base_url=api_base_url
+                api_base_url=api_base_url,
+                context_items=context_items
             )
 
             ctx = self._build_execution_context(
