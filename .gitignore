@@ -18,6 +18,7 @@ state.db
 *.db.backup.*
 .ruff_cache/
 .cortex/
+.cortex_memory_path
 
 # Node / frontend caches
 node_modules/

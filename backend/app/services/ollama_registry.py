@@ -6,8 +6,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
-import httpx
+from sqlalchemy import func
 
 from backend.app.models.ollama_registry import OllamaRegistryModel, OllamaDownloadProgress
 from backend.app.services.ollama_scraper import OllamaLibraryScraper, FALLBACK_MODELS
@@ -25,7 +24,6 @@ FAMILY_CONTEXT_DEFAULTS = {
     "vicuna": 4096,
     "wizardlm": 4096,
     "openhermes": 4096,
-    "neural-chat": 8192,
 }
 
 
@@ -212,7 +210,6 @@ class OllamaRegistryService:
         
         # Apply text search on model_id, display_name, description
         if query:
-            query_lower = query.lower()
             q = q.filter(
                 (OllamaRegistryModel.model_id.ilike(f"%{query}%")) |
                 (OllamaRegistryModel.display_name.ilike(f"%{query}%")) |
@@ -262,7 +259,7 @@ class OllamaRegistryService:
     def list_installed_models(db: Session) -> list[dict]:
         """Get only models marked as installed"""
         models = db.query(OllamaRegistryModel).filter(
-            OllamaRegistryModel.is_installed == True
+            OllamaRegistryModel.is_installed
         ).all()
         
         return [
@@ -316,7 +313,7 @@ class OllamaRegistryService:
             if 'B' in param_str:
                 try:
                     return float(param_str.replace('B', ''))
-                except:
+                except ValueError:
                     return 0
             return 0
         
@@ -436,7 +433,6 @@ class OllamaDownloadService:
         This would be called by a background task.
         """
         import asyncio
-        import subprocess
         
         progress = db.query(OllamaDownloadProgress).filter(
             OllamaDownloadProgress.id == progress_id

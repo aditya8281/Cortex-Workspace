@@ -1,11 +1,10 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
 import uuid
 from sqlalchemy.orm import Session
 from backend.app.api.deps import get_db
 from backend.app.services.context_manager import ContextManager
-from backend.app.schemas.context_item import ContextItem, AttachContextRequest
+from backend.app.schemas.context_item import AttachContextRequest
 from backend.app.models.context_item import ContextItem as DBContextItem
 
 # Create a new router for context endpoints

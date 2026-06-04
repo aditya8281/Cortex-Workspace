@@ -30,8 +30,7 @@ def create_new_user(
             status_code=400,
             detail="Email already registered"
         )
-
-    return db_user
+    return UserResponse.model_validate(db_user)
 
 
 # -----------------------------
@@ -94,15 +93,26 @@ def login(
     payload: UserLogin,
     db: Session = Depends(get_db)
 ):
-    token = login_user(db, payload.email, payload.password)
+    token_data = login_user(db, payload.email, payload.password)
 
-    if not token:
+    if not token_data:
         raise HTTPException(
             status_code=401,
             detail="Invalid email or password"
         )
 
-    return token
+    # Ensure user field is included
+    if "user" not in token_data or token_data["user"] is None:
+        user = db.query(User).filter(User.email == payload.email).first()
+        if user:
+            token_data["user"] = {
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "role": user.role
+            }
+    
+    return token_data
 
 @router.get("/me")
 def get_me(current_user: User = Depends(get_current_user)):

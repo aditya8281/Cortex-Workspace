@@ -144,10 +144,10 @@ async def test_get_local_models():
 
         local_models = await ModelRegistry.get_local_models()
         assert len(local_models) == 2
-        assert local_models[0]["name"] == "llama3:8b"
-        assert local_models[0]["provider"] == "Ollama"
-        assert local_models[1]["name"] == "meta-llama-3-8b-instruct"
-        assert local_models[1]["provider"] == "LM Studio"
+        assert local_models[0].display_name == "llama3:8b"
+        assert local_models[0].provider_name == "Ollama"
+        assert local_models[1].display_name == "meta-llama-3-8b-instruct"
+        assert local_models[1].provider_name == "LM Studio"
 
 
 @pytest.mark.asyncio
@@ -423,7 +423,7 @@ def test_model_download_job_routes(client):
 
 
 def test_workspace_sync_route_exists(client):
-    with patch("backend.app.api.v1.workspace.sync_service.run_full_sync", new_callable=AsyncMock) as mock_sync:
+    with patch("backend.app.api.v1.workspace.sync_service.run_full_sync", new_callable=AsyncMock):
         response = client.post("/api/v1/workspace/sync")
         assert response.status_code == 200
         data = response.json()

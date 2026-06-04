@@ -188,7 +188,7 @@ async def pull_model(
         "model_id": model_id,
         "progress_id": progress_id,
         "pull_command": model["pull_command"],
-        "message": f"Download started. Use progress_id to track status.",
+        "message": "Download started. Use progress_id to track status.",
     }
 
 

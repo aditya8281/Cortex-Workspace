@@ -1,8 +1,6 @@
 import logging
 import faiss
 import numpy as np
-from pathlib import Path
-from backend.app.core.paths import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 

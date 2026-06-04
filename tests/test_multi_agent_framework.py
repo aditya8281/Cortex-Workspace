@@ -1,30 +1,14 @@
 import pytest
-import time
-import json
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from backend.app.db.base import Base
 # Import all models to ensure metadata is complete before creating tables
-from backend.app.models.user import User
-from backend.app.models.user_profile import UserProfile
-from backend.app.models.user_settings import UserSettings
-from backend.app.models.llm_model import (
-    CortexProvider,
-    CortexModel,
-    CortexRoutingProfile,
-    CortexTaskRoute,
-    CortexModelMetric,
-    CortexModelEvent
-)
-from backend.app.models.context_item import ContextItem as DBContextItem
 
-from backend.app.agent.base import BaseAgent
 from backend.app.agent.registry import AgentRegistry
-from backend.app.agent.orchestrator import OrchestratorAgent, ContextBuilder, OrchestrationGraph, OrchestrationNode, NodeStatus
+from backend.app.agent.orchestrator import OrchestratorAgent, ContextBuilder, OrchestrationGraph, OrchestrationNode
 from backend.app.agent.agents import (
     ChatAgent,
     SearchAgent,
@@ -360,7 +344,7 @@ async def test_context_builder_caching(db_session):
         assert ctx1 == ctx2
         
         # Build third time with different user
-        ctx3 = await builder.build(query="caching test query", user_id=66)
+        await builder.build(query="caching test query", user_id=66)
         assert search_mock.call_count == 2
 
 

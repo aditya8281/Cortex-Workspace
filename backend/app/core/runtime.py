@@ -11,10 +11,9 @@ All system-level operations MUST go through this layer.
 No direct os.* or pathlib usage allowed in business logic.
 """
 
-import os
 import shutil
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Callable, Union
+from typing import Optional, List, Union
 from abc import ABC, abstractmethod
 import platform
 from dataclasses import dataclass

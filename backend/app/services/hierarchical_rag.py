@@ -1,16 +1,12 @@
-import os
 import re
 import json
-import hashlib
 import logging
 from typing import List, Dict, Any, Optional
 from pathlib import Path
-import numpy as np
 from sqlalchemy.orm import Session
 
 from backend.app.models.hierarchical_memory import HierarchicalNode
 from backend.app.services.hierarchical_indexing import HierarchicalIndexingService
-from backend.app.core.redis import redis_cache
 
 logger = logging.getLogger(__name__)
 

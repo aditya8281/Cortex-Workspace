@@ -2,14 +2,12 @@ import os
 import json
 import platform
 from pathlib import Path
-from typing import List, Set
-from backend.app.core.paths import PROJECT_ROOT
+from typing import List
 from backend.app.core.config import settings
 from backend.app.core.system_paths import (
     LINUX_BLOCKED_SYSTEM_PATHS,
     MACOS_BLOCKED_SYSTEM_PATHS,
     WINDOWS_BLOCKED_SYSTEM_PATHS,
-    COMMON_IGNORED_DIRS,
 )
 
 # Module-level variable exposed for unit test mock patching compatibility

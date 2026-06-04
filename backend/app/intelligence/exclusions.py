@@ -6,7 +6,6 @@ import json
 import os
 from pathlib import Path
 
-from backend.app.core.paths import PROJECT_ROOT
 
 DEFAULT_IGNORED_DIR_NAMES = frozenset(
     {

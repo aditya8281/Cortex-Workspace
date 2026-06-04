@@ -1,10 +1,9 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
 
 from backend.app.api.deps import get_current_user_optional, get_db
-from backend.app.intelligence.schemas import SyncRunResponse, SyncStatusResponse
+from backend.app.intelligence.schemas import SyncRunResponse
 from backend.app.intelligence.sync_service import SyncService
 from backend.app.models.user import User
 

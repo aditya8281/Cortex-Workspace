@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 import json
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -12,7 +11,6 @@ from backend.app.db.base import Base
 from backend.app.api.deps import get_db
 from backend.app.models.hierarchical_memory import HierarchicalNode
 from backend.app.services.hierarchical_rag import HierarchicalRAGService
-from backend.app.agent.orchestrator import ContextBuilder
 
 
 @pytest.fixture(name="db_session", scope="function")

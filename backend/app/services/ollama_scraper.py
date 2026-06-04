@@ -1,8 +1,7 @@
 """Ollama library scraper - fetches and parses model data from ollama.com/library"""
 
-import json
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 import httpx
 from bs4 import BeautifulSoup

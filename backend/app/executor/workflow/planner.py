@@ -116,15 +116,11 @@ class WorkflowPlanner:
             return step_id - 1
 
         # Independent context collection can run in parallel.
-        memory_step_id: int | None = None
         search_step_id: int | None = None
-        rag_step_id: int | None = None
         read_step_id: int | None = None
-        write_step_id: int | None = None
-        terminal_step_id: int | None = None
 
         if signals.memory or (intent is not None and self._intent_requires_memory(intent)):
-            memory_step_id = add_step(
+            add_step(
                 "memory_search",
                 args={"query": query},
                 fallback_tools=[],
@@ -143,7 +139,7 @@ class WorkflowPlanner:
             )
 
         if signals.rag or (intent is not None and self._intent_prefers_rag(intent)):
-            rag_step_id = add_step(
+            add_step(
                 "rag_retrieve",
                 args={"query": query},
                 fallback_tools=["rag"],
@@ -167,7 +163,7 @@ class WorkflowPlanner:
 
         if signals.write:
             write_depends = [read_step_id] if read_step_id is not None else []
-            write_step_id = add_step(
+            add_step(
                 "write_file",
                 args=self._build_write_args(query, signals),
                 depends_on=write_depends,
@@ -177,7 +173,7 @@ class WorkflowPlanner:
             )
 
         if signals.terminal:
-            terminal_step_id = add_step(
+            add_step(
                 "terminal_execute",
                 args={"command": self._extract_command(query)},
                 depends_on=[],

@@ -2,7 +2,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from pathlib import Path
 import json
 
 from backend.app.main import app
@@ -10,7 +9,6 @@ from backend.app.db.base import Base
 from backend.app.api.deps import get_db
 from backend.app.services.context_manager import ContextManager
 from backend.app.schemas.context_item import ContextItem
-from backend.app.models.context_item import ContextItem as DBContextItem
 from backend.app.executor.context_resolver import ContextResolver
 from backend.app.intelligence.models import RepositoryProfile, KnowledgeEntry
 

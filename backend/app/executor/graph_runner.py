@@ -357,6 +357,7 @@ class GraphRunner:
 
         if not chat_history and user_id is not None:
             try:
+                from backend.app.ai.memory.repository import MemoryRepository
                 db_history = MemoryRepository().get_recent_history(user_id)
                 chat_history = []
                 for turn in db_history:

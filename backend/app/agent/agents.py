@@ -1,5 +1,4 @@
 from typing import List, Dict, Any, Optional
-import os
 import re
 from pathlib import Path
 from backend.app.agent.base import BaseAgent
@@ -7,7 +6,7 @@ from backend.app.core.logging import get_logger
 from backend.app.db.session import SessionLocal
 from backend.app.intelligence.memory_service import PersistentMemoryService
 from backend.app.intelligence.system_actions import SystemActionsService
-from backend.app.intelligence.models import RepositoryProfile, KnowledgeEntry
+from backend.app.intelligence.models import RepositoryProfile
 
 logger = get_logger(__name__)
 
@@ -112,8 +111,8 @@ class SearchAgent(BaseAgent):
             f"=== Search Agent Results ===\n"
             f"[File Search Results]:\n{file_results}\n\n"
             f"[Semantic Code Chunks]:\n" + ("\n---\n".join(semantic_results) if semantic_results else "No semantic hits.") + "\n\n"
-            f"[Retrieved Memories]:\n" + ("\n".join(memory_results) if memory_results else "No matching memories.") + "\n"
-            f"============================="
+            "[Retrieved Memories]:\n" + ("\n".join(memory_results) if memory_results else "No matching memories.") + "\n"
+            "============================="
         )
 
         prompt = f"{context or ''}\n\n{search_context}\n\nUser Query:\n{query}"
@@ -293,7 +292,7 @@ class MemoryAgent(BaseAgent):
                 
                 # Write to DB memory
                 mem_service = PersistentMemoryService()
-                entry = mem_service.add_document_memory(
+                mem_service.add_document_memory(
                     db,
                     title=f"Memory: {extracted_title}",
                     content=extracted_content,

@@ -282,7 +282,6 @@ class MemoryManager:
             session.reset_db_engine()
 
             # Close active state store connections
-            from backend.app.state.manager import StateManager
             # We can re-bind the engine later when it gets called.
 
             # 3. Safely copy existing vault contents to the new directory (migration)

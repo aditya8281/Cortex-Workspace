@@ -1,8 +1,6 @@
-import os
-import shutil
 import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from backend.app.services.memory_manager import memory_manager
 
@@ -87,7 +85,6 @@ def test_read_write_abstractions(setup_test_vault):
 
 
 def test_vault_migration(setup_test_vault, tmp_path):
-    old_vault = setup_test_vault
     new_vault = tmp_path / "cortex_memory_new"
     
     # Write some dummy test file to old vault
@@ -113,7 +110,6 @@ def test_vault_migration(setup_test_vault, tmp_path):
 
 
 def test_vault_export_import(setup_test_vault, tmp_path):
-    vault_path = setup_test_vault
     backup_zip = tmp_path / "backup.zip"
     
     # Write test file

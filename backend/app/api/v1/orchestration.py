@@ -1,10 +1,9 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_db, get_current_user
-from backend.app.models.user import User
+from backend.app.api.deps import get_db
 from backend.app.executor.executor import AIExecutor
 from backend.app.schemas.context_item import ContextItem
 
@@ -37,6 +36,11 @@ class ExecuteAgentRequest(BaseModel):
 
 
 class RouteTaskRequest(BaseModel):
+    query: str
+    context: Optional[str] = None
+
+
+class DebugExecutionGraphRequest(BaseModel):
     query: str
     context: Optional[str] = None
 
@@ -143,5 +147,16 @@ async def route_task(payload: RouteTaskRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/debug_execution_graph")
+async def debug_execution_graph(query: str, context: Optional[str] = None):
+    """
+    Return the planned orchestration graph without executing any agents.
+    """
+    try:
+        executor = AIExecutor()
+        return executor.orchestrator.debug_execution_graph(query=query, context=context)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 

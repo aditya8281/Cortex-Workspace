@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import logging
 
-from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
 from backend.app.core.redis import redis_cache

@@ -1,34 +1,35 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+export function cn(...classes: (string | undefined | null | false)[]) {
+  return classes.filter(Boolean).join(" ");
 }
 
-export function formatTimestamp(value?: string | null) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
+export function formatDate(date: string | Date): string {
+  const d = new Date(date);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
     month: "short",
     day: "numeric",
-  }).format(new Date(value));
+  });
 }
 
-export function formatNumber(value?: number | null, digits = 0, fallback = "0") {
-  if (value == null || !Number.isFinite(value)) return fallback;
-  return value.toFixed(digits);
+export function formatTime(date: string | Date): string {
+  const d = new Date(date);
+  return d.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-export function formatRelativeGroup(iso: string): "today" | "yesterday" | "week" | "month" | "older" {
-  const date = new Date(iso);
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffDays = Math.floor((startOfToday.getTime() - startOfDate.getTime()) / 86400000);
-  if (diffDays === 0) return "today";
-  if (diffDays === 1) return "yesterday";
-  if (diffDays < 7) return "week";
-  if (diffDays < 30) return "month";
-  return "older";
+export function formatBytes(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  return `${value.toFixed(2)} ${units[unitIndex]}`;
+}
+
+export function truncate(str: string, length: number): string {
+  return str.length > length ? str.substring(0, length) + "..." : str;
 }

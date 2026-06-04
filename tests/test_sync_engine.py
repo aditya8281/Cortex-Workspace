@@ -1,7 +1,4 @@
 import pytest
-import os
-import json
-from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -138,7 +135,6 @@ def test_discovery_includes_standard_home_roots(tmp_path):
         patch("backend.app.core.config.settings.WORKSPACE_ROOT", str(workspace)),
         patch("backend.app.intelligence.discovery.settings.WORKSPACE_ROOT", str(workspace)),
     ):
-        config = SyncScopeConfig()
         discovery = FilesystemDiscovery()
         roots = {str(path) for path in discovery.discover_roots()}
 

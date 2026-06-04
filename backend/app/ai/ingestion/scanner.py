@@ -3,7 +3,7 @@ from pathlib import Path
 
 from backend.app.core.config import settings
 from backend.app.intelligence.discovery import FilesystemDiscovery
-from backend.app.intelligence.exclusions import ExclusionConfig, default_exclusions
+from backend.app.intelligence.exclusions import default_exclusions
 
 
 class RepoScanner:

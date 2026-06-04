@@ -14,7 +14,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from backend.app.core.logging import get_logger
-from backend.app.core.paths import PROJECT_ROOT
 from backend.app.db.session import SessionLocal
 from backend.app.intelligence.discovery import FilesystemDiscovery
 from backend.app.intelligence.exclusions import default_exclusions

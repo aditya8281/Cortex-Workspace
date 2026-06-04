@@ -1,158 +1,102 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import {
-  Activity,
-  Brain,
-  FolderGit2,
-  GitBranch,
-  LayoutDashboard,
-  MessageSquarePlus,
-  MessagesSquare,
-  Network,
-  RefreshCw,
-  Search,
-  Settings,
-  User,
-  ChevronLeft,
-  Cpu,
-  ShoppingBag,
-  BarChart3,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useAppStore } from "@/stores/appStore";
-import { useChatStore } from "@/stores/chatStore";
-import { useProfileStore } from "@/stores/profileStore";
-import { SessionList } from "./SessionList";
-import { useState } from "react";
+import React from "react";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
+import { useAuth } from "@/hooks/useAuth";
+import { toggleSidebar, setCurrentTab } from "@/state/slices/ui";
+import type { RootState } from "@/state/store";
+import { Menu, Home, MessageSquare, Settings } from "lucide-react";
 
-const NAV = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/chat", icon: MessagesSquare, label: "Chats" },
-  { to: "/profile", icon: User, label: "Profile" },
-  { to: "/projects", icon: FolderGit2, label: "Projects" },
-  { to: "/repositories", icon: GitBranch, label: "Repositories" },
-  { to: "/memory", icon: Brain, label: "Memory" },
-  { to: "/graph", icon: Network, label: "Knowledge Graph" },
-  { to: "/sync", icon: RefreshCw, label: "Sync Center" },
-  { to: "/activity", icon: Activity, label: "Activity" },
-  { to: "/models", icon: Cpu, label: "Models" },
-  { to: "/marketplace", icon: ShoppingBag, label: "Marketplace" },
-  { to: "/performance", icon: BarChart3, label: "Performance" },
-  { to: "/settings", icon: Settings, label: "Settings" },
-];
+export function Sidebar() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const dispatch = useDispatch();
+  const { user, logout } = useAuth();
+  const { sidebarOpen } = useSelector((state: RootState) => state.ui);
 
-export function Sidebar({ mobile = false }: { mobile?: boolean }) {
-  const navigate = useNavigate();
-  const collapsed = useAppStore((s) => s.sidebarCollapsed) && !mobile;
-  const setCollapsed = useAppStore((s) => s.setSidebarCollapsed);
-  const setMobileOpen = useAppStore((s) => s.setMobileSidebarOpen);
-  const newSession = useChatStore((s) => s.newSession);
-  const profile = useProfileStore((s) => s.profile);
-  const completion = useProfileStore((s) => s.completionPercent);
-  const [search, setSearch] = useState("");
+  const isAdmin = user?.role === "admin";
 
-  const navItem = (to: string, Icon: typeof LayoutDashboard, label: string) => (
-    <NavLink
-      key={to}
-      to={to}
-      end={to === "/"}
-      onClick={() => mobile && setMobileOpen(false)}
-      className={({ isActive }) =>
-        cn(
-          "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98]",
-          isActive
-            ? "bg-cortex-accent-soft/80 text-cortex-accent shadow-[0_0_0_1px_rgba(109,156,255,0.15)] before:absolute before:left-1 before:top-1/2 before:h-5 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-cortex-accent before:shadow-[0_0_18px_rgba(109,156,255,0.55)]"
-            : "text-cortex-muted hover:bg-white/6 hover:text-cortex-text",
-          collapsed && !mobile && "justify-center px-2",
-        )
-      }
-      title={collapsed && !mobile ? label : undefined}
-    >
-      <Icon className="h-4 w-4 shrink-0" />
-      {(!collapsed || mobile) && <span>{label}</span>}
-    </NavLink>
-  );
+  const userMenuItems = [
+    { icon: MessageSquare, label: "Chat", href: "/dashboard/chat" },
+    { icon: Home, label: "Models", href: "/dashboard/models" },
+    { icon: Home, label: "Memory", href: "/dashboard/memory" },
+    { icon: Home, label: "Sync", href: "/dashboard/sync" },
+    { icon: Home, label: "Search", href: "/dashboard/search" },
+    { icon: Settings, label: "Settings", href: "/dashboard/settings" },
+  ];
 
-  const displayName = profile.displayName || "Your profile";
+  const adminMenuItems = [
+    { icon: Home, label: "Overview", href: "/admin/dashboard" },
+    { icon: Home, label: "Health", href: "/admin/health" },
+    { icon: Home, label: "Providers", href: "/admin/providers" },
+    { icon: Home, label: "Models", href: "/admin/models" },
+    { icon: Home, label: "Users", href: "/admin/users" },
+    { icon: Home, label: "Services", href: "/admin/services" },
+    { icon: Home, label: "Logs", href: "/admin/logs" },
+    { icon: Settings, label: "Config", href: "/admin/config" },
+  ];
+
+  const menuItems = isAdmin ? adminMenuItems : userMenuItems;
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   return (
     <aside
-      className={cn(
-        "flex h-full flex-col border-r border-cortex-border/70 bg-cortex-surface/85 backdrop-blur-2xl transition-[width] duration-300 ease-out",
-        collapsed && !mobile ? "w-[68px]" : "w-[280px]",
-        mobile && "w-full",
-      )}
+      className={`${
+        sidebarOpen ? "w-64" : "w-20"
+      } bg-background border-r border-border h-screen flex flex-col transition-all duration-300 fixed md:relative`}
     >
-      <div className="flex items-center gap-2 border-b border-cortex-border/60 p-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cortex-accent to-cyan-400 font-bold text-cortex-bg shadow-[0_12px_32px_rgba(109,156,255,0.25)]">
-          C
-        </div>
-        {(!collapsed || mobile) && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">Cortex</p>
-            <p className="text-xs text-cortex-muted">AI Operating System</p>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border">
+        {sidebarOpen && <h1 className="text-xl font-bold text-white">CORTEX</h1>}
+        <button
+          onClick={() => dispatch(toggleSidebar())}
+          className="p-1 hover:bg-surface rounded transition-colors"
+        >
+          <Menu size={20} className="text-primary" />
+        </button>
+      </div>
+
+      {/* Menu Items */}
+      <nav className="flex-1 overflow-y-auto py-4">
+        {menuItems.map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-4 py-3 mx-2 rounded transition-colors ${
+                isActive
+                  ? "bg-primary text-white"
+                  : "text-gray-400 hover:text-white hover:bg-surface"
+              }`}
+              onClick={() => dispatch(setCurrentTab(item.label.toLowerCase()))}
+            >
+              <item.icon size={20} />
+              {sidebarOpen && <span>{item.label}</span>}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Footer - User Info & Logout */}
+      <div className="border-t border-border p-4 space-y-2">
+        {sidebarOpen && (
+          <div className="text-sm">
+            <p className="text-gray-400">Logged in as</p>
+            <p className="text-white font-medium truncate">{user?.full_name}</p>
           </div>
         )}
-        {!mobile && (
-        <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} aria-label="Collapse">
-          <ChevronLeft className={cn("h-4 w-4 transition-transform duration-200", collapsed && "rotate-180")} />
-        </Button>
-      )}
-      </div>
-
-      {(!collapsed || mobile) && (
         <button
-          type="button"
-          onClick={() => {
-            navigate("/profile");
-            if (mobile) setMobileOpen(false);
-          }}
-        className="mx-3 mt-3 flex items-center gap-2 rounded-2xl border border-cortex-border/70 bg-cortex-elevated/60 p-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-cortex-accent/30 hover:bg-cortex-elevated/80"
+          onClick={handleLogout}
+          className="w-full px-3 py-2 bg-danger hover:bg-red-700 text-white rounded text-sm transition-colors"
         >
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-            style={{ background: profile.avatarColor }}
-          >
-            {displayName.charAt(0).toUpperCase() || "?"}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{displayName}</p>
-            <p className="text-[10px] text-cortex-muted">Profile {completion()}% complete</p>
-          </div>
+          {sidebarOpen ? "Logout" : "↓"}
         </button>
-      )}
-
-      <div className="p-3">
-        <Button
-          className="w-full"
-          onClick={() => {
-            newSession();
-            navigate("/chat");
-            if (mobile) setMobileOpen(false);
-          }}
-        >
-          <MessageSquarePlus className="h-4 w-4" />
-          {(!collapsed || mobile) && "New chat"}
-        </Button>
       </div>
-
-      <nav className="space-y-1 px-2">{NAV.map((n) => navItem(n.to, n.icon, n.label))}</nav>
-
-      {(!collapsed || mobile) && (
-        <div className="mt-4 flex min-h-0 flex-1 flex-col border-t border-cortex-border/60 px-2 pt-3">
-          <div className="mb-2 flex items-center gap-2 px-1">
-            <Search className="h-3.5 w-3.5 shrink-0 text-cortex-muted" />
-            <Input
-              placeholder="Search chats…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 border-0 bg-transparent px-0 focus-visible:ring-0"
-            />
-          </div>
-          <SessionList search={search} mobile={mobile} />
-        </div>
-      )}
     </aside>
   );
 }

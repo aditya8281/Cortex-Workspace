@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 from backend.app.agent.base import BaseAgent
 
 class AgentRegistry:

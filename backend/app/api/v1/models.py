@@ -1,13 +1,10 @@
-import json
 import asyncio
 import httpx
 import logging
 import keyring
 import platform
 import subprocess
-from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from sqlalchemy import func, Integer
@@ -17,6 +14,7 @@ from backend.app.core.redis import redis_cache
 from backend.app.api.deps import get_current_user, get_current_user_optional, get_db
 from backend.app.ai.model_downloads import model_download_manager
 from backend.app.models.user import User
+from backend.app.models.user_settings import UserSettings
 from backend.app.models.llm_model import (
     CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute,
     CortexModelMetric, CortexModelEvent,
@@ -493,8 +491,6 @@ def delete_custom_model(model_name: str, db: Session = Depends(get_db), current_
     
     return {"message": "Custom model deleted successfully"}
 
-
-from backend.app.models.user_settings import UserSettings
 
 @router.post("/select")
 def select_model(

@@ -12,12 +12,11 @@ import threading
 from backend.app.core.runtime import get_runtime
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, List, Dict, Optional
+from typing import Any, List
 
 from sqlalchemy.orm import Session
 
 from backend.app.ai.ingestion.scanner import RepoScanner
-from backend.app.core.paths import PROJECT_ROOT
 from backend.app.core.config import settings
 from backend.app.intelligence.discovery import FilesystemDiscovery
 from backend.app.intelligence.memory_service import PersistentMemoryService

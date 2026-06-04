@@ -5,9 +5,8 @@ from pathlib import Path
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_current_user_optional, get_db
+from backend.app.api.deps import get_current_user_optional
 from backend.app.models.user import User
 from backend.app.services.memory_manager import memory_manager
 

@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from sqlalchemy.orm import Session
 
 from backend.app.ai.gateway import AIGateway
@@ -23,7 +23,7 @@ class ChatTurn(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = Field(..., min_length=1, max_length=10000)
     history: Optional[List[ChatTurn]] = None
     llm_model: Optional[str] = None
     embedding_model: Optional[str] = None
@@ -33,6 +33,12 @@ class QueryRequest(BaseModel):
     api_key: Optional[str] = None
     api_base_url: Optional[str] = None
     context_items: Optional[List[ContextItem]] = None
+    
+    @validator('query')
+    def validate_query(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Query cannot be empty')
+        return v.strip()
 
 
 class AIResponse(BaseModel):

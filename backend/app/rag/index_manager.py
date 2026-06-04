@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 from backend.app.rag.vector_store import VectorStore

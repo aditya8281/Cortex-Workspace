@@ -264,6 +264,54 @@ class OrchestratorAgent(BaseAgent):
         }
         return mapping.get(agent.name, "Chat")
 
+    def build_execution_graph(self, task_class: str) -> OrchestrationGraph:
+        """
+        Build the orchestration graph without executing it.
+        Useful for debug/introspection endpoints and tests.
+        """
+        graph = OrchestrationGraph(self)
+
+        if task_class in ["Coding", "Execution", "Repository Analysis"]:
+            graph.add_node(OrchestrationNode("RepositoryAgent", "RepositoryAgent"))
+            graph.add_node(OrchestrationNode("SearchAgent", "SearchAgent"))
+
+            primary_agent_name = "ExecutionAgent" if task_class == "Execution" else "CodingAgent"
+            graph.add_node(OrchestrationNode(primary_agent_name, primary_agent_name, ["RepositoryAgent", "SearchAgent"]))
+            graph.add_node(OrchestrationNode("VerificationAgent", "VerificationAgent", [primary_agent_name]))
+
+        elif task_class in ["Search", "Research"]:
+            primary_agent_name = "SearchAgent" if task_class == "Search" else "ResearchAgent"
+            graph.add_node(OrchestrationNode(primary_agent_name, primary_agent_name))
+            graph.add_node(OrchestrationNode("VerificationAgent", "VerificationAgent", [primary_agent_name]))
+
+        elif task_class == "Planning":
+            graph.add_node(OrchestrationNode("PlanningAgent", "PlanningAgent"))
+            graph.add_node(OrchestrationNode("VerificationAgent", "VerificationAgent", ["PlanningAgent"]))
+
+        elif task_class == "Memory Retrieval":
+            graph.add_node(OrchestrationNode("MemoryAgent", "MemoryAgent"))
+
+        else:
+            graph.add_node(OrchestrationNode("ChatAgent", "ChatAgent"))
+
+        return graph
+
+    def debug_execution_graph(self, query: str, context: Optional[str] = None) -> Dict[str, Any]:
+        best_agent, confidence_score = self.registry.route_request(query, context)
+        task_class = self.classify_task(query, context)
+        graph = self.build_execution_graph(task_class)
+
+        return {
+            "query": query,
+            "agent_selected": best_agent.name,
+            "confidence": confidence_score,
+            "classified_task": task_class,
+            "graph_structure": {
+                "nodes": [node.to_dict() for node in graph.nodes.values()],
+                "execution_order": graph.execution_order,
+            },
+        }
+
     async def execute(
         self,
         query: str,

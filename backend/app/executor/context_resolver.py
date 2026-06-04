@@ -217,8 +217,8 @@ class ContextResolver:
             f"{folder_summary}\n"
             f"\nImportant Files:\n"
             f"  - " + ("\n  - ".join(important_files[:15]) if important_files else "None identified") + ("\n  - ... (more)" if len(important_files) > 15 else "") + "\n"
-            f"\nFolder Tree:\n" + "\n".join(tree_lines) + "\n"
-            f"=== End of Folder Context ==="
+            "\nFolder Tree:\n" + "\n".join(tree_lines) + "\n"
+            "=== End of Folder Context ==="
         )
         
         return _set_resolved(item, content)
@@ -315,13 +315,13 @@ class ContextResolver:
                 
                 try:
                     imp_files = json.loads(profile.important_files_json or "[]")
-                    lines.append(f"Important Files:\n  - " + "\n  - ".join(imp_files))
+                    lines.append("Important Files:\n  - " + "\n  - ".join(imp_files))
                 except Exception:
                     lines.append("Important Files: Could not decode json")
                 
                 try:
                     deps = json.loads(profile.dependencies_json or "[]")
-                    lines.append(f"Dependencies:\n  - " + "\n  - ".join(deps[:30]) + (f"\n  - ... ({len(deps)-30} more)" if len(deps) > 30 else ""))
+                    lines.append("Dependencies:\n  - " + "\n  - ".join(deps[:30]) + (f"\n  - ... ({len(deps)-30} more)" if len(deps) > 30 else ""))
                 except Exception:
                     lines.append("Dependencies: Could not decode json")
 
@@ -342,10 +342,10 @@ class ContextResolver:
                         lines.append(f"Tech Stack: {profile.tech_stack}")
                         
                         imp_files = json.loads(profile.important_files_json or "[]")
-                        lines.append(f"Important Files:\n  - " + "\n  - ".join(imp_files))
+                        lines.append("Important Files:\n  - " + "\n  - ".join(imp_files))
                         
                         deps = json.loads(profile.dependencies_json or "[]")
-                        lines.append(f"Dependencies:\n  - " + "\n  - ".join(deps[:30]) + (f"\n  - ... ({len(deps)-30} more)" if len(deps) > 30 else ""))
+                        lines.append("Dependencies:\n  - " + "\n  - ".join(deps[:30]) + (f"\n  - ... ({len(deps)-30} more)" if len(deps) > 30 else ""))
                     except Exception as e:
                         lines.append(f"[Could not analyze repository path: {e}]")
                 else:
