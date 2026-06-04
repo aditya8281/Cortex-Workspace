@@ -19,14 +19,19 @@ state.db
 .ruff_cache/
 .cortex/
 .cortex_memory_path
+.cortex_memory/
 
 # Node / frontend caches
 node_modules/
 frontend/node_modules/
+.next/
+frontend/.next/
 .vite/
 frontend/.vite/
 coverage/
 frontend/coverage/
+*.tsbuildinfo
+frontend/*.tsbuildinfo
 
 # Logs and temp files
 *.log
