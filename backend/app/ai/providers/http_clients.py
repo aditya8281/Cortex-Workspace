@@ -92,7 +92,7 @@ def _openai_headers(api_key: str) -> dict[str, str]:
 
 async def _list_openai_compatible_models(base_url: str, api_key: str) -> list[dict[str, Any]]:
     url = f"{base_url.rstrip('/')}/models"
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with httpx.AsyncClient(timeout=8) as client:
         response = await client.get(url, headers=_openai_headers(api_key))
         response.raise_for_status()
         data = response.json()
@@ -120,7 +120,7 @@ async def _list_anthropic_models(base_url: str, api_key: str) -> list[dict[str, 
         "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
     }
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with httpx.AsyncClient(timeout=8) as client:
         response = await client.get(url, headers=headers)
         response.raise_for_status()
         data = response.json()
@@ -144,7 +144,7 @@ async def _list_anthropic_models(base_url: str, api_key: str) -> list[dict[str, 
 async def _list_gemini_models(base_url: str, api_key: str) -> list[dict[str, Any]]:
     url = f"{base_url.rstrip('/')}/models"
     params = {"key": api_key}
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with httpx.AsyncClient(timeout=8) as client:
         response = await client.get(url, params=params)
         response.raise_for_status()
         data = response.json()

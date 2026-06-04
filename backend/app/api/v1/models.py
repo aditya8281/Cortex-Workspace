@@ -15,6 +15,7 @@ from sqlalchemy import func, Integer
 from backend.app.core.config import settings
 from backend.app.core.redis import redis_cache
 from backend.app.api.deps import get_current_user, get_current_user_optional, get_db
+from backend.app.ai.model_downloads import model_download_manager
 from backend.app.models.user import User
 from backend.app.models.llm_model import (
     CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute,
@@ -362,7 +363,7 @@ def select_model(
 async def list_installed_models():
     url = f"{settings.OLLAMA_URL.rstrip('/')}/api/tags"
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=3) as client:
             response = await client.get(url)
             response.raise_for_status()
             data = response.json()
@@ -389,7 +390,7 @@ async def check_model(model_name: str):
 
     url = f"{settings.OLLAMA_URL.rstrip('/')}/api/tags"
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=3) as client:
             response = await client.get(url)
             response.raise_for_status()
             data = response.json()
@@ -411,36 +412,37 @@ async def pull_model(payload: PullModelPayload):
     model_name = payload.model
     if model_name == "Qwen3 8B (Q4_K_M quantization)":
         model_name = "qwen3:8b"
+    job = model_download_manager.start_download(model_name)
+    return job
 
-    async def event_generator():
-        url = f"{settings.OLLAMA_URL.rstrip('/')}/api/pull"
-        async with httpx.AsyncClient(timeout=3600) as client:
-            try:
-                async with client.stream("POST", url, json={"name": model_name}) as response:
-                    if response.status_code != 200:
-                        yield f"data: {json.dumps({'status': 'error', 'message': f'Failed to start pull: {response.status_code}'})}\n\n"
-                        return
 
-                    async for line in response.aiter_lines():
-                        if not line:
-                            continue
-                        try:
-                            chunk = json.loads(line)
-                            status = chunk.get("status", "")
-                            completed = chunk.get("completed", 0)
-                            total = chunk.get("total", 0)
+@router.get("/downloads")
+def list_model_downloads():
+    return model_download_manager.list_jobs()
 
-                            percent = 0
-                            if total > 0:
-                                percent = int((completed / total) * 100)
 
-                            yield f"data: {json.dumps({'status': status, 'completed': completed, 'total': total, 'percent': percent})}\n\n"
-                        except json.JSONDecodeError:
-                            yield f"data: {json.dumps({'status': 'pulling', 'message': line})}\n\n"
-            except Exception as e:
-                yield f"data: {json.dumps({'status': 'error', 'message': str(e)})}\n\n"
+@router.get("/downloads/{job_id}")
+def get_model_download(job_id: str):
+    job = model_download_manager.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Download job not found")
+    return job
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@router.post("/downloads/{job_id}/cancel")
+def cancel_model_download(job_id: str):
+    try:
+        return model_download_manager.cancel_download(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Download job not found")
+
+
+@router.post("/downloads/{job_id}/resume")
+def resume_model_download(job_id: str):
+    try:
+        return model_download_manager.resume_download(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Download job not found")
 
 
 @router.delete("/{model_name:path}")
@@ -658,15 +660,19 @@ async def get_marketplace(query: Optional[str] = None):
     """
     installed_models = []
     try:
-        installed_models = await list_installed_models()
+        installed_models = await asyncio.wait_for(list_installed_models(), timeout=4)
     except Exception as e:
         logger.warning(f"Failed to fetch installed models in marketplace: {e}")
 
     installed_names = {m.get("name") for m in installed_models}
     
     catalog = []
+    jobs_by_model = {job.get("model"): job for job in model_download_manager.list_jobs()}
     try:
-        registry_models = await ModelRegistry.get_dynamic_ollama_marketplace(query=query)
+        registry_models = await asyncio.wait_for(
+            ModelRegistry.get_dynamic_ollama_marketplace(query=query),
+            timeout=8,
+        )
     except Exception as exc:
         logger.warning("Failed to fetch Ollama registry marketplace: %s", exc)
         registry_models = []
@@ -675,6 +681,7 @@ async def get_marketplace(query: Optional[str] = None):
         catalog = []
         for model_info in installed_models:
             details = model_info.get("details", {})
+            job = jobs_by_model.get(model_info.get("name"))
             catalog.append(
                 {
                     "name": model_info.get("name"),
@@ -692,6 +699,8 @@ async def get_marketplace(query: Optional[str] = None):
                     "source": "Ollama Installed Models",
                     "is_installed": True,
                     "download_status": "installed",
+                    "download_job_id": job.get("id") if job else None,
+                    "download_percent": job.get("percent", 100) if job else 100,
                 }
             )
         return catalog
@@ -699,12 +708,15 @@ async def get_marketplace(query: Optional[str] = None):
     for model in registry_models:
         m_name = model["name"]
         is_installed = check_is_installed(m_name, installed_names)
+        job = jobs_by_model.get(m_name)
 
         catalog.append(
             {
                 **model,
                 "is_installed": is_installed,
-                "download_status": "installed" if is_installed else "available",
+                "download_status": "installed" if is_installed else (job.get("status") if job else "available"),
+                "download_job_id": job.get("id") if job else None,
+                "download_percent": job.get("percent", 0) if job else 0,
             }
         )
     return catalog

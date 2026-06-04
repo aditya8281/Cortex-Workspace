@@ -1,11 +1,12 @@
 import pytest
-from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch, MagicMock
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from backend.app.main import app
+from backend.app.api.router import api_router
+from backend.app.core.config import settings
 from backend.app.db.base import Base
 from backend.app.models.llm_model import CortexProvider, CortexModel
 from backend.app.ai.model_registry import (
@@ -45,21 +46,16 @@ def fixture_client(tmp_path):
         finally:
             db.close()
 
+    test_app = FastAPI()
+    test_app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
     from backend.app.api.deps import get_db
-    app.dependency_overrides[get_db] = override_get_db
-    original_lifespan_context = app.router.lifespan_context
-
-    @asynccontextmanager
-    async def noop_lifespan(_app):
-        yield
-
-    app.router.lifespan_context = noop_lifespan
+    test_app.dependency_overrides[get_db] = override_get_db
     try:
-        with TestClient(app) as test_client:
+        with TestClient(test_app) as test_client:
             yield test_client
     finally:
-        app.router.lifespan_context = original_lifespan_context
-    app.dependency_overrides.clear()
+        test_app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=test_engine)
     test_engine.dispose()
 
@@ -215,6 +211,102 @@ def test_api_validate_provider_endpoint(client):
         assert response.json()["valid"] is True
 
 
+def test_provider_model_list_endpoint(client):
+    with patch("backend.app.api.v1.models.ModelRegistry.validate_provider", new_callable=AsyncMock) as mock_val:
+        mock_val.return_value = {
+            "valid": True,
+            "models": ["custom-a", "custom-b"],
+            "default_model": "custom-a",
+            "error": None,
+        }
+        create_response = client.post(
+            "/api/v1/models/providers",
+            json={
+                "name": "CustomAI",
+                "base_url": "http://localhost:8000/v1",
+                "api_key": "secret",
+                "is_enabled": True,
+                "is_custom": True,
+            },
+        )
+        assert create_response.status_code == 200
+
+        response = client.get("/api/v1/models/providers/CustomAI/models")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["provider_name"] == "CustomAI"
+        assert data["valid"] is True
+        assert data["models"] == ["custom-a", "custom-b"]
+
+
+def test_provider_default_update_and_delete(client):
+    with patch("backend.app.api.v1.models.ModelRegistry.validate_provider", new_callable=AsyncMock) as mock_val:
+        mock_val.return_value = {
+            "valid": True,
+            "models": ["custom-a"],
+            "default_model": "custom-a",
+            "error": None,
+        }
+        create_response = client.post(
+            "/api/v1/models/providers",
+            json={
+                "name": "DisposableAI",
+                "base_url": "http://localhost:9000/v1",
+                "api_key": "secret",
+                "is_enabled": True,
+                "is_custom": True,
+            },
+        )
+        assert create_response.status_code == 200
+
+    update_response = client.put(
+        "/api/v1/models/providers/DisposableAI/default-model",
+        json={"default_model_name": "custom-a"},
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["default_model_name"] == "custom-a"
+
+    delete_response = client.delete("/api/v1/models/providers/DisposableAI")
+    assert delete_response.status_code == 200
+
+
+def test_installed_and_check_endpoints_use_live_ollama(client):
+    class FakeResponse:
+        def __init__(self, payload):
+            self.status_code = 200
+            self._payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self._payload
+
+    with patch("backend.app.api.v1.models.httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = FakeResponse(
+            {
+                "models": [
+                    {
+                        "name": "llama3:8b",
+                        "size": 123,
+                        "details": {
+                            "family": "llama",
+                            "parameter_size": "8B",
+                            "quantization_level": "Q4_0",
+                        },
+                    }
+                ]
+            }
+        )
+        installed_response = client.get("/api/v1/models/installed")
+        assert installed_response.status_code == 200
+        assert installed_response.json()[0]["name"] == "llama3:8b"
+
+        check_response = client.get("/api/v1/models/check/llama3:8b")
+        assert check_response.status_code == 200
+        assert check_response.json()["installed"] is True
+
+
 def test_api_select_model(client):
     with patch("backend.app.api.v1.models.ModelRegistry.list_models", new_callable=AsyncMock) as mock_models:
         mock_models.return_value = [
@@ -283,6 +375,51 @@ async def test_marketplace_uses_live_sources_only(client):
         assert response.json() == []
         mock_registry.assert_awaited()
         mock_installed.assert_awaited()
+
+
+def test_model_download_job_routes(client):
+    fake_job = {
+        "id": "job-1",
+        "model": "llama3:8b",
+        "status": "queued",
+        "percent": 0,
+        "completed": 0,
+        "total": 0,
+        "message": "Queued for download",
+        "error": None,
+        "created_at": "2026-01-01T00:00:00+00:00",
+        "updated_at": "2026-01-01T00:00:00+00:00",
+    }
+
+    with patch("backend.app.api.v1.models.model_download_manager.start_download", return_value=fake_job) as mock_start, \
+         patch("backend.app.api.v1.models.model_download_manager.list_jobs", return_value=[fake_job]) as mock_list, \
+         patch("backend.app.api.v1.models.model_download_manager.get_job", return_value=fake_job) as mock_get, \
+         patch("backend.app.api.v1.models.model_download_manager.cancel_download", return_value={**fake_job, "status": "cancelled"}) as mock_cancel, \
+         patch("backend.app.api.v1.models.model_download_manager.resume_download", return_value={**fake_job, "status": "queued"}) as mock_resume:
+        response = client.post("/api/v1/models/pull", json={"model": "llama3:8b"})
+        assert response.status_code == 200
+        assert response.json()["id"] == "job-1"
+        mock_start.assert_called_with("llama3:8b")
+
+        response = client.get("/api/v1/models/downloads")
+        assert response.status_code == 200
+        assert response.json()[0]["id"] == "job-1"
+        mock_list.assert_called()
+
+        response = client.get("/api/v1/models/downloads/job-1")
+        assert response.status_code == 200
+        assert response.json()["id"] == "job-1"
+        mock_get.assert_called_with("job-1")
+
+        response = client.post("/api/v1/models/downloads/job-1/cancel")
+        assert response.status_code == 200
+        assert response.json()["status"] == "cancelled"
+        mock_cancel.assert_called_with("job-1")
+
+        response = client.post("/api/v1/models/downloads/job-1/resume")
+        assert response.status_code == 200
+        assert response.json()["status"] == "queued"
+        mock_resume.assert_called_with("job-1")
 
 
 def test_workspace_sync_route_exists(client):

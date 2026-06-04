@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/appStore";
@@ -10,7 +10,10 @@ import {
   updateProvider,
   deleteProvider,
   deleteModel,
-  pullModel,
+  startModelDownload,
+  listModelDownloads,
+  cancelModelDownload,
+  resumeModelDownload,
   getRoutingProfiles,
   selectRoutingProfile,
   getRoutingRoutes,
@@ -58,16 +61,6 @@ const TASKS = [
   { task_type: "debugging", label: "Debugging", helper: "Error analysis and root-cause fixing." },
 ] as const;
 
-const DEFAULT_MODEL_HINTS: Record<string, string> = {
-  chat: "qwen3:8b",
-  coding: "qwen2.5-coder:7b",
-  search: "qwen3:8b",
-  repository_analysis: "qwen3:8b",
-  planning: "gpt-4o-mini",
-  memory: "qwen3:8b",
-  debugging: "qwen2.5-coder:7b",
-};
-
 function formatLabel(value?: string | null) {
   if (!value) return "N/A";
   return value
@@ -100,14 +93,11 @@ export function ModelsPage() {
   const [isValidating, setIsValidating] = useState(false);
 
   const [pullModelName, setPullModelName] = useState("");
-  const [pullProgress, setPullProgress] = useState<{
-    status: string;
-    percent: number;
-    completed?: number;
-    total?: number;
-  } | null>(null);
-  const [isPulling, setIsPulling] = useState(false);
-  const pullAbortRef = useRef<AbortController | null>(null);
+  const { data: downloadJobs = [] } = useQuery({
+    queryKey: ["modelDownloads"],
+    queryFn: listModelDownloads,
+    refetchInterval: 2000,
+  });
 
   const { data: models = [], isLoading: loadingModels, refetch: refetchModels } = useQuery<RegisteredModel[]>({
     queryKey: ["models"],
@@ -135,8 +125,8 @@ export function ModelsPage() {
   const [routeDrafts, setRouteDrafts] = useState<TaskRoute[]>(() =>
     TASKS.map((task) => ({
       task_type: task.task_type,
-      primary_model: DEFAULT_MODEL_HINTS[task.task_type] || "Auto",
-      fallback_model: "qwen3:8b",
+      primary_model: "Auto",
+      fallback_model: "Auto",
     })),
   );
 
@@ -338,40 +328,31 @@ export function ModelsPage() {
   const handlePull = async () => {
     if (!pullModelName.trim()) return;
 
-    setIsPulling(true);
-    setPullProgress({ status: "Starting pull...", percent: 0 });
-    pullAbortRef.current?.abort();
-    pullAbortRef.current = new AbortController();
-
     try {
-      await pullModel(
-        pullModelName.trim(),
-        (progress) => {
-          setPullProgress(progress);
-        },
-        pullAbortRef.current.signal,
-      );
-      setToast(`Downloaded ${pullModelName.trim()}`);
+      const job = await startModelDownload(pullModelName.trim());
+      setToast(`Download ${job.status}: ${job.model}`);
       setPullModelName("");
-      setPullProgress(null);
       qc.invalidateQueries({ queryKey: ["models"] });
       qc.invalidateQueries({ queryKey: ["marketplace"] });
+      qc.invalidateQueries({ queryKey: ["modelDownloads"] });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Download failed";
       setToast(message);
-      setPullProgress((prev) => (prev ? { ...prev, status: "Failed", percent: prev.percent || 0 } : { status: "Failed", percent: 0 }));
-    } finally {
-      setIsPulling(false);
-      pullAbortRef.current = null;
     }
   };
 
-  const cancelPull = () => {
-    pullAbortRef.current?.abort();
-    pullAbortRef.current = null;
-    setIsPulling(false);
-    setPullProgress(null);
+  const cancelPull = async () => {
+    if (!activeDownload) return;
+    await cancelModelDownload(activeDownload.id);
+    qc.invalidateQueries({ queryKey: ["modelDownloads"] });
     setToast("Download cancelled.");
+  };
+
+  const resumePull = async () => {
+    if (!activeDownload) return;
+    await resumeModelDownload(activeDownload.id);
+    qc.invalidateQueries({ queryKey: ["modelDownloads"] });
+    setToast("Download resumed.");
   };
 
   const updateRoute = (taskType: string, field: "primary_model" | "fallback_model", value: string) => {
@@ -389,18 +370,21 @@ export function ModelsPage() {
   ];
 
   const providerModelHint = providerModelChoices.length > 0 ? providerModelChoices : allModelNames;
+  const activeDownload = downloadJobs.find(
+    (job) => job.model === pullModelName.trim() && !["completed", "failed", "cancelled"].includes(job.status),
+  ) || downloadJobs.find((job) => !["completed", "failed", "cancelled"].includes(job.status));
 
   useEffect(() => {
     const draftRoutes = TASKS.map((task) => {
       const existing = activeRoutes.find((route) => route.task_type === task.task_type);
       return existing || {
         task_type: task.task_type,
-        primary_model: DEFAULT_MODEL_HINTS[task.task_type] || "Auto",
-        fallback_model: "qwen3:8b",
+        primary_model: allModelNames[0] || "Auto",
+        fallback_model: allModelNames[1] || allModelNames[0] || "Auto",
       };
     });
     setRouteDrafts(draftRoutes);
-  }, [activeRoutes, activeProfileName]);
+  }, [activeRoutes, activeProfileName, allModelNames]);
 
   return (
     <div className="h-full overflow-y-auto bg-cortex-background px-4 py-6 md:px-8">
@@ -893,37 +877,40 @@ export function ModelsPage() {
                       value={pullModelName}
                       onChange={(e) => setPullModelName(e.target.value)}
                       placeholder="qwen2.5-coder:7b, llama3.1, mistral..."
-                      disabled={isPulling}
                     />
-                    <Button onClick={handlePull} disabled={!pullModelName.trim() || isPulling} className="gap-2">
-                      {isPulling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    <Button onClick={handlePull} disabled={!pullModelName.trim()} className="gap-2">
+                      <Download className="h-4 w-4" />
                       Pull
                     </Button>
                   </div>
-                  {isPulling && (
-                    <Button variant="secondary" onClick={cancelPull}>
-                      Cancel download
-                    </Button>
-                  )}
-
-                  {pullProgress && (
+                  {activeDownload && (
                     <div className="rounded-2xl border border-cortex-border bg-cortex-elevated/40 p-4">
                       <div className="flex items-center justify-between text-xs font-semibold text-cortex-text">
-                        <span>{pullProgress.status}</span>
-                        <span>{pullProgress.percent}%</span>
+                        <span>{activeDownload.model}</span>
+                        <span>{activeDownload.percent}%</span>
                       </div>
                       <div className="mt-3 h-2 overflow-hidden rounded-full bg-cortex-border">
-                        <div className="h-full rounded-full bg-cortex-accent transition-all duration-300" style={{ width: `${pullProgress.percent}%` }} />
+                        <div className="h-full rounded-full bg-cortex-accent transition-all duration-300" style={{ width: `${activeDownload.percent}%` }} />
                       </div>
                       <p className="mt-2 text-[11px] text-cortex-muted">
-                        {pullProgress.completed !== undefined && pullProgress.total ? (
+                        {activeDownload.completed !== undefined && activeDownload.total ? (
                           <>
-                            {(pullProgress.completed / 1024 / 1024 / 1024).toFixed(2)} GB / {(pullProgress.total / 1024 / 1024 / 1024).toFixed(2)} GB
+                            {(activeDownload.completed / 1024 / 1024 / 1024).toFixed(2)} GB / {(activeDownload.total / 1024 / 1024 / 1024).toFixed(2)} GB
                           </>
                         ) : (
-                          "Waiting for download telemetry..."
+                          activeDownload.message || "Waiting for download telemetry..."
                         )}
                       </p>
+                      <div className="mt-3 flex gap-2">
+                        <Button variant="secondary" onClick={cancelPull}>
+                          Cancel download
+                        </Button>
+                        {(activeDownload.status === "cancelled" || activeDownload.status === "failed") && (
+                          <Button variant="secondary" onClick={resumePull}>
+                            Resume download
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </CardContent>

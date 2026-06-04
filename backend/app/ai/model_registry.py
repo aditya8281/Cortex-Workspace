@@ -5,6 +5,7 @@ import hashlib
 import base64
 import logging
 import re
+import asyncio
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 import keyring
@@ -282,7 +283,7 @@ class ModelRegistry:
         return models
 
     @classmethod
-    async def get_dynamic_ollama_marketplace(cls, query: str | None = None, max_pages: int = 12) -> List[Dict[str, Any]]:
+    async def get_dynamic_ollama_marketplace(cls, query: str | None = None, max_pages: int = 100) -> List[Dict[str, Any]]:
         """
         Scrape the public Ollama registry so the marketplace stays dynamic.
         The registry is paginated; we walk pages until they stop yielding models.
@@ -291,7 +292,7 @@ class ModelRegistry:
         collected: list[dict[str, Any]] = []
         seen: set[str] = set()
 
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=5, follow_redirects=True) as client:
             for page in range(1, max_pages + 1):
                 params: dict[str, Any] = {"page": page}
                 if query:
@@ -355,9 +356,6 @@ class ModelRegistry:
                             "download_status": "available",
                         }
                     )
-
-                if len(matches) < 5:
-                    break
 
         return collected
 
@@ -518,7 +516,14 @@ class ModelRegistry:
             if not provider.is_enabled:
                 continue
 
-            provider_models = await cls._refresh_provider_models(db, provider)
+            try:
+                provider_models = await asyncio.wait_for(
+                    cls._refresh_provider_models(db, provider),
+                    timeout=10,
+                )
+            except Exception as exc:
+                logger.warning("Timed out refreshing provider models for %s: %s", provider.name, exc)
+                provider_models = []
             if not provider_models:
                 provider_models = []
                 for model in db.query(CortexModel).filter(
@@ -557,7 +562,10 @@ class ModelRegistry:
             return {"valid": False, "error": "Base URL is required"}
 
         try:
-            models = await list_provider_models(normalized_name, base_url, api_key)
+            models = await asyncio.wait_for(
+                list_provider_models(normalized_name, base_url, api_key),
+                timeout=10,
+            )
         except Exception as exc:
             return {"valid": False, "error": f"Failed to list models: {exc}"}
 
@@ -566,23 +574,22 @@ class ModelRegistry:
             test_model = models[0].get("id") or models[0].get("name")
 
         if not test_model:
-            defaults = {
-                "OpenAI": "gpt-4o-mini",
-                "Anthropic": "claude-3-5-haiku-latest",
-                "Google Gemini": "gemini-1.5-flash",
-                "OpenRouter": "openai/gpt-oss-20b",
-                "Groq": "llama-3.1-8b-instant",
-                "Together AI": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
-                "DeepSeek": "deepseek-chat",
+            return {
+                "valid": False,
+                "models": [],
+                "default_model": None,
+                "error": "Provider did not return any models",
             }
-            test_model = defaults.get(normalized_name, "gpt-4o-mini")
 
         try:
             llm = build_provider_llm(normalized_name, api_key=api_key, base_url=base_url, model=test_model)
-            answer = await llm.generate(
-                prompt="ping",
-                system_prompt="Respond with exactly one short word.",
-                model=test_model,
+            answer = await asyncio.wait_for(
+                llm.generate(
+                    prompt="ping",
+                    system_prompt="Respond with exactly one short word.",
+                    model=test_model,
+                ),
+                timeout=20,
             )
             return {
                 "valid": True,

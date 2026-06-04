@@ -218,60 +218,42 @@ export async function updateUserSettings(settings: { api_base_url?: string; api_
   return res.data;
 }
 
-export async function pullModel(
-  modelName: string,
-  onProgress: (progress: { status: string; percent: number; completed: number; total: number }) => void,
-  signal?: AbortSignal
-): Promise<void> {
-  const token = localStorage.getItem("cortex_token");
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
+export type ModelDownloadJob = {
+  id: string;
+  model: string;
+  status: "queued" | "running" | "paused" | "completed" | "failed" | "cancelled";
+  percent: number;
+  completed: number;
+  total: number;
+  message: string;
+  error?: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
-  const baseUrl = (api.defaults.baseURL || import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1").replace(/\/$/, "");
+export async function startModelDownload(modelName: string): Promise<ModelDownloadJob> {
+  const res = await api.post("/models/pull", { model: modelName });
+  return res.data;
+}
 
-  const response = await fetch(`${baseUrl}/models/pull`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ model: modelName }),
-    signal,
-  });
+export async function listModelDownloads(): Promise<ModelDownloadJob[]> {
+  const res = await api.get("/models/downloads");
+  return res.data;
+}
 
-  if (!response.ok) {
-    throw new Error(`Failed to start pulling model: ${response.statusText}`);
-  }
+export async function getModelDownload(jobId: string): Promise<ModelDownloadJob> {
+  const res = await api.get(`/models/downloads/${encodeURIComponent(jobId)}`);
+  return res.data;
+}
 
-  const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error("No response body reader available");
-  }
+export async function cancelModelDownload(jobId: string): Promise<ModelDownloadJob> {
+  const res = await api.post(`/models/downloads/${encodeURIComponent(jobId)}/cancel`);
+  return res.data;
+}
 
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        try {
-          const dataStr = line.slice(6).trim();
-          const parsed = JSON.parse(dataStr);
-          onProgress(parsed);
-        } catch (e) {
-          console.error("Failed to parse SSE line", line, e);
-        }
-      }
-    }
-  }
+export async function resumeModelDownload(jobId: string): Promise<ModelDownloadJob> {
+  const res = await api.post(`/models/downloads/${encodeURIComponent(jobId)}/resume`);
+  return res.data;
 }
 
 export type RegisteredModel = {

@@ -670,16 +670,9 @@ export function PerformancePage() {
                       {m.name} ({m.provider})
                     </option>
                   ))}
-                  {/* Fallback hardcoded if models empty */}
-                  {models.length === 0 && (
-                    <>
-                      <option value="qwen2.5-coder:7b">qwen2.5-coder:7b (Ollama)</option>
-                      <option value="llama3:8b">llama3:8b (Ollama)</option>
-                    </>
-                  )}
                 </select>
                 <span className="text-[10px] text-cortex-muted block">
-                  Model utilized when task routing fails or is bypassed.
+                  Uses a live registered model when routing fails or is bypassed.
                 </span>
               </div>
 

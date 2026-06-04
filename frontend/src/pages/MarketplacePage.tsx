@@ -1,8 +1,17 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/appStore";
-import { getMarketplace, getHardwareInfo, pullModel, type MarketplaceModel } from "@/api/ai";
+import {
+  getMarketplace,
+  getHardwareInfo,
+  listModelDownloads,
+  startModelDownload,
+  cancelModelDownload,
+  resumeModelDownload,
+  type MarketplaceModel,
+  type ModelDownloadJob,
+} from "@/api/ai";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,26 +30,17 @@ import {
 
 type FilterKey = "all" | "coding" | "chat" | "reasoning" | "cloud" | "installed" | "fast";
 
-type DownloadState = {
-  percent: number;
-  status: string;
-  completed?: number;
-  total?: number;
-  error?: string;
-  startedAt: number;
-};
-
 function formatGb(value?: number | null) {
   if (value == null || Number.isNaN(value)) return "N/A";
   return `${value.toFixed(1)} GB`;
 }
 
-function formatEta(download?: DownloadState) {
+function formatEta(download?: ModelDownloadJob) {
   if (!download?.total || !download?.completed || download.completed <= 0 || download.completed >= download.total) {
     return "ETA unavailable";
   }
 
-  const elapsedSeconds = Math.max((Date.now() - download.startedAt) / 1000, 1);
+  const elapsedSeconds = Math.max((Date.now() - new Date(download.created_at).getTime()) / 1000, 1);
   const bytesPerSecond = download.completed / elapsedSeconds;
   if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) return "ETA unavailable";
 
@@ -60,13 +60,17 @@ export function MarketplacePage() {
   const setToast = useAppStore((s) => s.setToast);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
-  const [downloads, setDownloads] = useState<Record<string, DownloadState>>({});
-  const abortRef = useRef<Record<string, AbortController>>({});
 
   const { data: hardware, isLoading: loadingHardware } = useQuery({
     queryKey: ["hardwareInfo"],
     queryFn: getHardwareInfo,
     refetchInterval: 15000,
+  });
+
+  const { data: downloadJobs = [] } = useQuery({
+    queryKey: ["modelDownloads"],
+    queryFn: listModelDownloads,
+    refetchInterval: 2000,
   });
 
   const { data: catalog = [], isLoading: loadingCatalog } = useQuery<MarketplaceModel[]>({
@@ -101,78 +105,32 @@ export function MarketplacePage() {
   }, [activeFilter, catalog]);
 
   const handleDownload = async (modelName: string) => {
-    const controller = new AbortController();
-    abortRef.current[modelName] = controller;
-    setDownloads((prev) => ({
-      ...prev,
-      [modelName]: {
-        percent: 0,
-        status: "Starting pull...",
-        startedAt: Date.now(),
-      },
-    }));
-
     try {
-      await pullModel(
-        modelName,
-        (progress) => {
-          setDownloads((prev) => ({
-            ...prev,
-            [modelName]: {
-              ...prev[modelName],
-              percent: progress.percent,
-              status: progress.status || "Downloading...",
-              completed: progress.completed,
-              total: progress.total,
-              startedAt: prev[modelName]?.startedAt || Date.now(),
-            },
-          }));
-        },
-        controller.signal,
-      );
-
-      setDownloads((prev) => ({
-        ...prev,
-        [modelName]: {
-          ...(prev[modelName] || { startedAt: Date.now() }),
-          percent: 100,
-          status: "Completed",
-        },
-      }));
-      setToast(`Downloaded ${modelName}`);
+      const job = await startModelDownload(modelName);
+      setToast(`${job.status}: ${job.model}`);
       qc.invalidateQueries({ queryKey: ["marketplace"] });
       qc.invalidateQueries({ queryKey: ["models"] });
+      qc.invalidateQueries({ queryKey: ["modelDownloads"] });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Download failed";
-      if (message.toLowerCase().includes("abort")) {
-        setToast(`Cancelled ${modelName}`);
-      } else {
-        setToast(`Failed to download ${modelName}: ${message}`);
-      }
-      setDownloads((prev) => ({
-        ...prev,
-        [modelName]: {
-          ...(prev[modelName] || { startedAt: Date.now() }),
-          percent: 0,
-          status: "Failed",
-          error: message,
-        },
-      }));
-    } finally {
-      delete abortRef.current[modelName];
+      setToast(`Failed to download ${modelName}: ${message}`);
     }
   };
 
-  const cancelDownload = (modelName: string) => {
-    abortRef.current[modelName]?.abort();
-    delete abortRef.current[modelName];
-    setDownloads((prev) => ({
-      ...prev,
-      [modelName]: {
-        ...(prev[modelName] || { startedAt: Date.now() }),
-        status: "Cancelled",
-      },
-    }));
+  const cancelDownload = async (modelName: string) => {
+    const activeJob = downloadJobs.find((job) => job.model === modelName && !["completed", "failed", "cancelled"].includes(job.status));
+    if (!activeJob) return;
+    await cancelModelDownload(activeJob.id);
+    qc.invalidateQueries({ queryKey: ["modelDownloads"] });
+    setToast(`Cancelled ${modelName}`);
+  };
+
+  const resumeDownload = async (modelName: string) => {
+    const resumable = downloadJobs.find((job) => job.model === modelName && ["cancelled", "failed"].includes(job.status));
+    if (!resumable) return;
+    await resumeModelDownload(resumable.id);
+    qc.invalidateQueries({ queryKey: ["modelDownloads"] });
+    setToast(`Resumed ${modelName}`);
   };
 
   const marketStats = [
@@ -306,7 +264,7 @@ export function MarketplacePage() {
                     <Button
                       className="w-full gap-2"
                       onClick={() => handleDownload(model.name)}
-                      disabled={Boolean(downloads[model.name]) || model.is_installed}
+                      disabled={model.is_installed || downloadJobs.some((job) => job.model === model.name && ["queued", "running"].includes(job.status))}
                     >
                       <Download className="h-4 w-4" />
                       {model.is_installed ? "Installed" : "Quick install"}
@@ -363,7 +321,8 @@ export function MarketplacePage() {
         ) : filteredCatalog.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredCatalog.map((model) => {
-              const downloadProgress = downloads[model.name];
+              const downloadProgress = downloadJobs.find((job) => job.model === model.name && !["completed", "failed", "cancelled"].includes(job.status))
+                || downloadJobs.find((job) => job.model === model.name);
               const showWarning = !hardware?.gpu.detected && model.vram_requirement_gb >= 6;
               const isVramTooLow = hardware?.gpu.detected && model.vram_requirement_gb > hardware.gpu.total_vram_gb;
               const warningText = isVramTooLow
@@ -457,10 +416,20 @@ export function MarketplacePage() {
                         {downloadProgress.error && (
                           <p className="text-[11px] text-red-300">{downloadProgress.error}</p>
                         )}
-                        <Button variant="secondary" size="sm" onClick={() => cancelDownload(model.name)} className="gap-2">
-                          <Pause className="h-3.5 w-3.5" />
-                          Cancel
-                        </Button>
+                        <div className="flex gap-2">
+                          {(downloadProgress.status === "queued" || downloadProgress.status === "running") && (
+                            <Button variant="secondary" size="sm" onClick={() => cancelDownload(model.name)} className="gap-2">
+                              <Pause className="h-3.5 w-3.5" />
+                              Cancel
+                            </Button>
+                          )}
+                          {(downloadProgress.status === "cancelled" || downloadProgress.status === "failed") && (
+                            <Button variant="secondary" size="sm" onClick={() => resumeDownload(model.name)} className="gap-2">
+                              <Download className="h-3.5 w-3.5" />
+                              Resume
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ) : model.is_installed ? (
                       <Button disabled className="w-full border border-cortex-success/30 bg-cortex-success/10 text-cortex-success">
