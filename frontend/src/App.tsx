@@ -36,6 +36,9 @@ const ModelsPage = lazy(() =>
 const MarketplacePage = lazy(() =>
   import("@/pages/MarketplacePage").then((m) => ({ default: m.MarketplacePage })),
 );
+const ModelDiscoveryPage = lazy(() =>
+  import("@/pages/ModelDiscoveryPage").then((m) => ({ default: m.ModelDiscoveryPage })),
+);
 const PerformancePage = lazy(() =>
   import("@/pages/PerformancePage").then((m) => ({ default: m.PerformancePage })),
 );
@@ -154,6 +157,14 @@ export default function App() {
               element={
                 <Suspense fallback={<PageLoader />}>
                   <ModelsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="models/discover"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ModelDiscoveryPage />
                 </Suspense>
               }
             />
