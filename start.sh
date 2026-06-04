@@ -89,7 +89,7 @@ echo -e "\n${BOLD}${GREEN}====================================================${
 echo -e "${BOLD}${GREEN}  ✓ Setup complete! Launching development servers...  ${RESET}"
 echo -e "${BOLD}${GREEN}====================================================${RESET}"
 echo -e "${CYAN}Backend API will be live at:   ${BOLD}http://localhost:8000${RESET}"
-echo -e "${CYAN}Frontend UI will be live at:    ${BOLD}http://localhost:5173${RESET}"
+echo -e "${CYAN}Frontend UI will be live at:    ${BOLD}http://localhost:3000${RESET}"
 echo -e "Press ${BOLD}Ctrl+C${RESET} to terminate both servers concurrently.\n"
 
 # Process cleanup handler
