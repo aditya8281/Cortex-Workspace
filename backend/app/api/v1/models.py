@@ -33,6 +33,7 @@ class ProviderPayload(BaseModel):
     name: str
     base_url: Optional[str] = None
     api_key: Optional[str] = None
+    default_model_name: Optional[str] = None
     is_enabled: bool = True
     is_custom: bool = False
 
@@ -41,6 +42,10 @@ class ValidatePayload(BaseModel):
     name: str
     base_url: str
     api_key: str
+
+
+class DefaultModelPayload(BaseModel):
+    default_model_name: str
 
 
 class SelectModelPayload(BaseModel):
@@ -75,6 +80,7 @@ def list_providers(db: Session = Depends(get_db)):
             "base_url": p.base_url,
             "is_enabled": p.is_enabled,
             "is_custom": p.is_custom,
+            "default_model_name": p.default_model_name,
             "has_key": bool(retrieve_key_securely(p.name, p.api_key_encrypted))
         })
     return res
@@ -91,6 +97,31 @@ async def validate_provider(payload: ValidatePayload):
         api_key=payload.api_key
     )
     return result
+
+
+@router.get("/providers/{provider_name}/models")
+async def get_provider_models(provider_name: str, db: Session = Depends(get_db)):
+    provider = db.query(CortexProvider).filter(CortexProvider.name == provider_name).first()
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    api_key = retrieve_key_securely(provider.name, provider.api_key_encrypted)
+    base_url = provider.base_url or ""
+    if not base_url:
+        raise HTTPException(status_code=400, detail="Provider base URL is missing")
+
+    try:
+        models = await ModelRegistry.validate_provider(provider.name, base_url, api_key)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    return {
+        "provider_name": provider.name,
+        "default_model_name": provider.default_model_name,
+        "models": models.get("models", []),
+        "valid": models.get("valid", False),
+        "error": models.get("error"),
+    }
 
 
 @router.post("/providers")
@@ -125,24 +156,28 @@ async def create_provider(payload: ProviderPayload, db: Session = Depends(get_db
         base_url=payload.base_url,
         api_key_encrypted=encrypted_key,
         is_enabled=payload.is_enabled,
-        is_custom=payload.is_custom
+        is_custom=payload.is_custom,
+        default_model_name=payload.default_model_name,
     )
     db.add(provider)
     db.commit()
     db.refresh(provider)
 
     # 3. If validated, fetch models and register them
-    if payload.is_enabled and payload.base_url and payload.api_key:
-        val_res = await ModelRegistry.validate_provider(payload.name, payload.base_url, payload.api_key)
-        for model_name in val_res.get("models", []):
-            model = CortexModel(
-                name=model_name,
-                provider_name=provider.name,
-                status="active",
-                is_local=False,
-                is_custom=True
-            )
-            db.add(model)
+    if payload.is_enabled:
+        val_res = await ModelRegistry.validate_provider(payload.name, payload.base_url or "", payload.api_key or "")
+        if val_res.get("valid") and not provider.default_model_name:
+            provider.default_model_name = val_res.get("default_model") or provider.default_model_name
+        discovered_models = [
+            {
+                "name": model_name,
+                "status": "active",
+                "is_local": False,
+                "active": True,
+            }
+            for model_name in val_res.get("models", [])
+        ]
+        ModelRegistry._upsert_provider_models(db, provider.name, discovered_models)
         db.commit()
 
     return {"message": "Provider created successfully", "id": provider.id}
@@ -180,27 +215,49 @@ async def update_provider(provider_name: str, payload: ProviderPayload, db: Sess
     
     if payload.base_url is not None:
         provider.base_url = payload.base_url
+    if payload.default_model_name is not None:
+        provider.default_model_name = payload.default_model_name
     provider.is_enabled = payload.is_enabled
     db.commit()
 
     # Register models if enabled
-    if payload.is_enabled and api_key_to_use:
+    if payload.is_enabled:
         base_url_to_use = provider.base_url or ""
-        val_res = await ModelRegistry.validate_provider(provider.name, base_url_to_use, api_key_to_use)
-        # Clear old models for this provider
-        db.query(CortexModel).filter(CortexModel.provider_name == provider.name, CortexModel.is_local.is_(False)).delete()
-        for model_name in val_res.get("models", []):
-            model = CortexModel(
-                name=model_name,
-                provider_name=provider.name,
-                status="active",
-                is_local=False,
-                is_custom=True
-            )
-            db.add(model)
+        val_res = await ModelRegistry.validate_provider(provider.name, base_url_to_use, api_key_to_use or "")
+        if val_res.get("valid") and not provider.default_model_name:
+            provider.default_model_name = val_res.get("default_model") or provider.default_model_name
+        discovered_models = [
+            {
+                "name": model_name,
+                "status": "active",
+                "is_local": False,
+                "active": True,
+            }
+            for model_name in val_res.get("models", [])
+        ]
+        ModelRegistry._upsert_provider_models(db, provider.name, discovered_models)
         db.commit()
 
     return {"message": "Provider updated successfully"}
+
+
+@router.put("/providers/{provider_name}/default-model")
+def set_provider_default_model(
+    provider_name: str,
+    payload: DefaultModelPayload,
+    db: Session = Depends(get_db),
+):
+    provider = db.query(CortexProvider).filter(CortexProvider.name == provider_name).first()
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    provider.default_model_name = payload.default_model_name
+    db.commit()
+    return {
+        "message": "Default model updated successfully",
+        "provider_name": provider.name,
+        "default_model_name": provider.default_model_name,
+    }
 
 
 @router.delete("/providers/{provider_name}")
@@ -231,8 +288,12 @@ def select_model(payload: SelectModelPayload):
     """
     Select model for current session.
     """
-    # Simply echo or persist state ( ZUSTAND client-side remembers state )
-    return {"status": "success", "selected_model": payload.model_name}
+    logger.info("Model selected session=%s model=%s", payload.session_id, payload.model_name)
+    return {
+        "status": "success",
+        "selected_model": payload.model_name,
+        "session_id": payload.session_id,
+    }
 
 
 # ==========================================
@@ -603,9 +664,9 @@ def check_is_installed(model_name: str, installed_names: set) -> bool:
 
 
 @router.get("/marketplace")
-async def get_marketplace():
+async def get_marketplace(query: Optional[str] = None):
     """
-    Get the marketplace model catalog.
+    Get the dynamic Ollama marketplace catalog.
     Checks installed Ollama models and overlays download status.
     """
     installed_models = []
@@ -617,15 +678,36 @@ async def get_marketplace():
     installed_names = {m.get("name") for m in installed_models}
     
     catalog = []
-    for model in MARKETPLACE_CATALOG:
+    try:
+        registry_models = await ModelRegistry.get_dynamic_ollama_marketplace(query=query)
+    except Exception as exc:
+        logger.warning("Failed to fetch Ollama registry marketplace: %s", exc)
+        registry_models = []
+
+    if not registry_models:
+        registry_models = [
+            {
+                **model,
+                "display_name": model["display_name"],
+                "parameters": model["name"],
+                "pull_command": f"ollama pull {model['name']}",
+                "performance_tier": "balanced",
+                "source": "Fallback catalog",
+            }
+            for model in MARKETPLACE_CATALOG
+        ]
+
+    for model in registry_models:
         m_name = model["name"]
         is_installed = check_is_installed(m_name, installed_names)
-        
-        catalog.append({
-            **model,
-            "is_installed": is_installed,
-            "download_status": "installed" if is_installed else "available"
-        })
+
+        catalog.append(
+            {
+                **model,
+                "is_installed": is_installed,
+                "download_status": "installed" if is_installed else "available",
+            }
+        )
     return catalog
 
 
@@ -853,4 +935,3 @@ def get_metrics_analytics(db: Session = Depends(get_db)):
             {"profile_name": k, "count": v} for k, v in profile_distribution.items()
         ]
     }
-

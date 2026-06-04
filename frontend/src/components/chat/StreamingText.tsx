@@ -27,5 +27,12 @@ export function StreamingText({ text, animate = true, className }: Props) {
     return () => window.clearInterval(id);
   }, [text, animate]);
 
-  return <MarkdownMessage content={visible || " "} className={className} />;
+  return (
+    <div className={className}>
+      <MarkdownMessage content={visible || " "} />
+      {animate && visible.length < text.length && (
+        <span className="ml-0.5 inline-block h-4 w-2 translate-y-[2px] rounded-sm bg-cortex-accent/70 align-middle animate-pulse" />
+      )}
+    </div>
+  );
 }

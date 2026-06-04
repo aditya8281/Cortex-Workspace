@@ -104,7 +104,7 @@ export function SessionList({ search, mobile }: Props) {
                 <div className="relative px-1">
                   {renamingSessionId === item.session.id ? (
                     <input
-                      className="w-full rounded-lg border border-cortex-border bg-cortex-elevated px-2 py-1.5 text-sm"
+                      className="w-full rounded-xl border border-cortex-border/80 bg-cortex-elevated/85 px-2 py-1.5 text-sm shadow-sm focus:border-cortex-accent/30 focus:ring-2 focus:ring-cortex-accent/20"
                       value={renameValue}
                       onChange={(e) => setRenaming(item.session.id, e.target.value)}
                       onBlur={() => commitRename(item.session.id)}
@@ -120,12 +120,15 @@ export function SessionList({ search, mobile }: Props) {
                         if (mobile) setMobileOpen(false);
                       }}
                       className={cn(
-                        "group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition",
+                        "group relative flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm transition-all duration-200 ease-out hover:-translate-y-0.5",
                         activeId === item.session.id
-                          ? "bg-white/10 text-cortex-text"
-                          : "text-cortex-muted hover:bg-white/5 hover:text-cortex-text",
+                          ? "bg-cortex-accent-soft/80 text-cortex-text shadow-[0_0_0_1px_rgba(109,156,255,0.12)]"
+                          : "text-cortex-muted hover:bg-white/6 hover:text-cortex-text",
                       )}
                     >
+                      {activeId === item.session.id && (
+                        <span className="absolute left-0 top-2 bottom-2 w-1 rounded-full bg-cortex-accent shadow-[0_0_16px_rgba(109,156,255,0.55)]" />
+                      )}
                       <span className="flex-1 truncate">{item.session.title}</span>
                       {item.session.pinned && <Pin className="h-3 w-3 shrink-0 opacity-60" />}
                       <button
@@ -196,9 +199,9 @@ function MenuBtn({
   onClick: () => void;
 }) {
   return (
-    <button
+      <button
       type="button"
-      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-white/5"
+      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition hover:bg-white/6 hover:text-cortex-text"
       onClick={onClick}
     >
       <Icon className="h-3.5 w-3.5" />

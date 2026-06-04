@@ -220,7 +220,8 @@ export async function updateUserSettings(settings: { api_base_url?: string; api_
 
 export async function pullModel(
   modelName: string,
-  onProgress: (progress: { status: string; percent: number; completed: number; total: number }) => void
+  onProgress: (progress: { status: string; percent: number; completed: number; total: number }) => void,
+  signal?: AbortSignal
 ): Promise<void> {
   const token = localStorage.getItem("cortex_token");
   const headers: HeadersInit = {
@@ -236,6 +237,7 @@ export async function pullModel(
     method: "POST",
     headers,
     body: JSON.stringify({ model: modelName }),
+    signal,
   });
 
   if (!response.ok) {
@@ -275,6 +277,7 @@ export async function pullModel(
 export type RegisteredModel = {
   id?: number;
   name: string;
+  display_name?: string;
   provider: string;
   context_length?: number | null;
   parameters?: string | null;
@@ -282,6 +285,13 @@ export type RegisteredModel = {
   vram_estimate?: string | null;
   status: string;
   is_local: boolean;
+  tags?: string[];
+  pull_command?: string;
+  performance_tier?: string;
+  vram_requirement_gb?: number;
+  best_use_case?: string;
+  default_for_provider?: boolean;
+  source?: string;
 };
 
 export type Provider = {
@@ -291,6 +301,7 @@ export type Provider = {
   is_enabled: boolean;
   is_custom: boolean;
   has_key: boolean;
+  default_model_name?: string | null;
 };
 
 export async function getAllModels(): Promise<RegisteredModel[]> {
@@ -307,7 +318,7 @@ export async function validateProvider(
   name: string,
   base_url: string,
   api_key: string
-): Promise<{ valid: boolean; models: string[]; test_response?: string; error?: string }> {
+): Promise<ProviderModelsResponse> {
   const res = await api.post("/models/providers/validate", { name, base_url, api_key });
   return res.data;
 }
@@ -316,6 +327,7 @@ export async function createProvider(provider: {
   name: string;
   base_url?: string;
   api_key?: string;
+  default_model_name?: string;
   is_enabled: boolean;
   is_custom: boolean;
 }): Promise<unknown> {
@@ -329,6 +341,7 @@ export async function updateProvider(
     name: string;
     base_url?: string;
     api_key?: string;
+    default_model_name?: string;
     is_enabled: boolean;
     is_custom: boolean;
   }
@@ -342,8 +355,8 @@ export async function deleteProvider(name: string): Promise<unknown> {
   return res.data;
 }
 
-export async function selectModel(model_name: string): Promise<unknown> {
-  const res = await api.post("/models/select", { model_name });
+export async function selectModel(model_name: string, session_id?: string): Promise<unknown> {
+  const res = await api.post("/models/select", { model_name, session_id });
   return res.data;
 }
 
@@ -393,6 +406,11 @@ export interface MarketplaceModel {
   tags: string[];
   is_installed: boolean;
   download_status: "installed" | "available";
+  pull_command?: string;
+  performance_tier?: string;
+  capabilities?: string[];
+  vram_estimate?: string;
+  source?: string;
 }
 
 export interface HardwareInfo {
@@ -467,8 +485,8 @@ export interface RoutingAnalytics {
   }[];
 }
 
-export async function getMarketplace(): Promise<MarketplaceModel[]> {
-  const res = await api.get("/models/marketplace");
+export async function getMarketplace(query?: string): Promise<MarketplaceModel[]> {
+  const res = await api.get("/models/marketplace", { params: query ? { query } : undefined });
   return res.data;
 }
 
@@ -492,4 +510,28 @@ export async function getRoutingAnalytics(): Promise<RoutingAnalytics> {
   return res.data;
 }
 
+export interface ProviderModelsResponse {
+  provider_name?: string;
+  default_model_name?: string | null;
+  default_model?: string | null;
+  models: string[];
+  valid: boolean;
+  test_response?: string | null;
+  error?: string | null;
+}
 
+export async function getProviderModels(providerName: string): Promise<ProviderModelsResponse> {
+  const res = await api.get(`/models/providers/${encodeURIComponent(providerName)}/models`);
+  return res.data;
+}
+
+export async function setProviderDefaultModel(providerName: string, defaultModelName: string): Promise<{
+  message: string;
+  provider_name: string;
+  default_model_name: string | null;
+}> {
+  const res = await api.put(`/models/providers/${encodeURIComponent(providerName)}/default-model`, {
+    default_model_name: defaultModelName,
+  });
+  return res.data;
+}

@@ -14,6 +14,7 @@ class CortexProvider(Base):
     api_key_encrypted: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_custom: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    default_model_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
 

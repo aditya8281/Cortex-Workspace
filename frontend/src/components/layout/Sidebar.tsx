@@ -60,10 +60,10 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
       onClick={() => mobile && setMobileOpen(false)}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+          "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-200 ease-out hover:-translate-y-0.5 active:scale-[0.98]",
           isActive
-            ? "bg-cortex-accent-soft text-cortex-accent"
-            : "text-cortex-muted hover:bg-white/5 hover:text-cortex-text",
+            ? "bg-cortex-accent-soft/80 text-cortex-accent shadow-[0_0_0_1px_rgba(109,156,255,0.15)] before:absolute before:left-1 before:top-1/2 before:h-5 before:w-1 before:-translate-y-1/2 before:rounded-full before:bg-cortex-accent before:shadow-[0_0_18px_rgba(109,156,255,0.55)]"
+            : "text-cortex-muted hover:bg-white/6 hover:text-cortex-text",
           collapsed && !mobile && "justify-center px-2",
         )
       }
@@ -79,13 +79,13 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
   return (
     <aside
       className={cn(
-        "flex h-full flex-col border-r border-cortex-border bg-cortex-surface/95 backdrop-blur-md",
+        "flex h-full flex-col border-r border-cortex-border/70 bg-cortex-surface/85 backdrop-blur-2xl transition-[width] duration-300 ease-out",
         collapsed && !mobile ? "w-[68px]" : "w-[280px]",
         mobile && "w-full",
       )}
     >
-      <div className="flex items-center gap-2 border-b border-cortex-border p-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cortex-accent font-bold text-white">
+      <div className="flex items-center gap-2 border-b border-cortex-border/60 p-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cortex-accent to-cyan-400 font-bold text-cortex-bg shadow-[0_12px_32px_rgba(109,156,255,0.25)]">
           C
         </div>
         {(!collapsed || mobile) && (
@@ -95,10 +95,10 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
           </div>
         )}
         {!mobile && (
-          <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} aria-label="Collapse">
-            <ChevronLeft className={cn("h-4 w-4 transition", collapsed && "rotate-180")} />
-          </Button>
-        )}
+        <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} aria-label="Collapse">
+          <ChevronLeft className={cn("h-4 w-4 transition-transform duration-200", collapsed && "rotate-180")} />
+        </Button>
+      )}
       </div>
 
       {(!collapsed || mobile) && (
@@ -108,7 +108,7 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
             navigate("/profile");
             if (mobile) setMobileOpen(false);
           }}
-          className="mx-3 mt-3 flex items-center gap-2 rounded-lg border border-cortex-border bg-cortex-elevated/60 p-2 text-left transition hover:border-cortex-accent/40"
+        className="mx-3 mt-3 flex items-center gap-2 rounded-2xl border border-cortex-border/70 bg-cortex-elevated/60 p-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-cortex-accent/30 hover:bg-cortex-elevated/80"
         >
           <div
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
@@ -137,10 +137,10 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
         </Button>
       </div>
 
-      <nav className="space-y-0.5 px-2">{NAV.map((n) => navItem(n.to, n.icon, n.label))}</nav>
+      <nav className="space-y-1 px-2">{NAV.map((n) => navItem(n.to, n.icon, n.label))}</nav>
 
       {(!collapsed || mobile) && (
-        <div className="mt-4 flex min-h-0 flex-1 flex-col border-t border-cortex-border px-2 pt-3">
+        <div className="mt-4 flex min-h-0 flex-1 flex-col border-t border-cortex-border/60 px-2 pt-3">
           <div className="mb-2 flex items-center gap-2 px-1">
             <Search className="h-3.5 w-3.5 shrink-0 text-cortex-muted" />
             <Input

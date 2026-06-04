@@ -2,6 +2,11 @@ import logging
 from typing import Any
 
 from backend.app.ai.providers.registry import ProviderRegistry
+from backend.app.ai.providers.http_clients import (
+    build_provider_llm,
+    normalize_provider_name,
+    provider_default_base_url,
+)
 from backend.app.db.session import SessionLocal
 from backend.app.models.llm_model import CortexProvider, CortexModel
 from backend.app.ai.model_registry import retrieve_key_securely
@@ -51,20 +56,14 @@ class LLMRouter:
                         if provider:
                             if not provider.is_enabled:
                                 raise ValueError(f"Provider {provider.name} is disabled. Enable it in Models settings.")
-                            
                             key = api_key or retrieve_key_securely(provider.name, provider.api_key_encrypted)
-                            base_url = api_base_url or provider.base_url
+                            base_url = api_base_url or provider.base_url or provider_default_base_url(provider.name)
                             
                             if not key:
                                 raise ValueError(f"API Key is missing for provider {provider.name}")
                             if not base_url:
                                 raise ValueError(f"Base URL is missing for provider {provider.name}")
-                                
-                            llm = APILLM(
-                                api_key=key,
-                                base_url=base_url,
-                                model=model_name
-                            )
+                            llm = build_provider_llm(provider.name, api_key=key, base_url=base_url, model=model_name)
                 else:
                     # Let's check if the model name contains a provider prefix (e.g. "openai/gpt-4o")
                     # or is detected in local tags
@@ -72,16 +71,12 @@ class LLMRouter:
                         parts = model_name.split("/", 1)
                         prov_name = parts[0]
                         mod_name = parts[1]
-                        provider = db.query(CortexProvider).filter(CortexProvider.name.ilike(prov_name)).first()
+                        provider = db.query(CortexProvider).filter(CortexProvider.name.ilike(normalize_provider_name(prov_name))).first()
                         if provider and provider.is_enabled:
                             key = api_key or retrieve_key_securely(provider.name, provider.api_key_encrypted)
-                            base_url = api_base_url or provider.base_url
+                            base_url = api_base_url or provider.base_url or provider_default_base_url(provider.name)
                             if key and base_url:
-                                llm = APILLM(
-                                    api_key=key,
-                                    base_url=base_url,
-                                    model=mod_name
-                                )
+                                llm = build_provider_llm(provider.name, api_key=key, base_url=base_url, model=mod_name)
         except Exception as e:
             logger.warning(f"Failed to route model {model} through registry, falling back: {e}")
         finally:

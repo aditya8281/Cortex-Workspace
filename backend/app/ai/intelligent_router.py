@@ -14,6 +14,11 @@ from backend.app.ai.model_registry import retrieve_key_securely
 from backend.app.ai.local_llm import LocalLLM
 from backend.app.ai.api_llm import APILLM
 from backend.app.ai.providers.registry import ProviderRegistry
+from backend.app.ai.providers.http_clients import (
+    build_provider_llm,
+    normalize_provider_name,
+    provider_default_base_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -220,17 +225,18 @@ class IntelligentRouter:
                             raise ValueError(f"Provider {provider.name} is disabled. Enable it in Models settings.")
                         
                         key = api_key or retrieve_key_securely(provider.name, provider.api_key_encrypted)
-                        base_url = api_base_url or provider.base_url
+                        base_url = api_base_url or provider.base_url or provider_default_base_url(provider.name)
                         
                         if not key:
                             raise ValueError(f"API Key is missing for provider {provider.name}")
                         if not base_url:
                             raise ValueError(f"Base URL is missing for provider {provider.name}")
                             
-                        return APILLM(
+                        return build_provider_llm(
+                            provider.name,
                             api_key=key,
                             base_url=base_url,
-                            model=db_model_name
+                            model=db_model_name,
                         ), db_model_name, provider.name
             
             # 2. Check fallback mapping if model name contains prefix (e.g. "openai/gpt-4o")
@@ -238,15 +244,16 @@ class IntelligentRouter:
                 parts = db_model_name.split("/", 1)
                 prov_name = parts[0]
                 mod_name = parts[1]
-                provider = db.query(CortexProvider).filter(CortexProvider.name.ilike(prov_name)).first()
+                provider = db.query(CortexProvider).filter(CortexProvider.name.ilike(normalize_provider_name(prov_name))).first()
                 if provider and provider.is_enabled:
                     key = api_key or retrieve_key_securely(provider.name, provider.api_key_encrypted)
-                    base_url = api_base_url or provider.base_url
+                    base_url = api_base_url or provider.base_url or provider_default_base_url(provider.name)
                     if key and base_url:
-                        return APILLM(
+                        return build_provider_llm(
+                            provider.name,
                             api_key=key,
                             base_url=base_url,
-                            model=mod_name
+                            model=mod_name,
                         ), mod_name, provider.name
             
             # 3. Check for any enabled provider matches or fall back to manual config
@@ -260,10 +267,11 @@ class IntelligentRouter:
                     _raw_url = api_base_url or ai_settings.api_url
                     if not _raw_key or not _raw_url:
                         raise ValueError("Credentials missing for manual API configuration")
-                    return APILLM(
+                    return build_provider_llm(
+                        "OpenAI",
                         api_key=str(_raw_key),
                         base_url=str(_raw_url),
-                        model=db_model_name
+                        model=db_model_name,
                     ), db_model_name, "External API"
 
             # If model name matches one of our default local models, try local routing

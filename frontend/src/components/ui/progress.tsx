@@ -16,9 +16,9 @@ export function Progress({ value, className, label }: ProgressProps) {
           <span>{Math.round(clamped)}%</span>
         </div>
       )}
-      <div className="h-2 overflow-hidden rounded-full bg-cortex-elevated">
+      <div className="h-2 overflow-hidden rounded-full bg-cortex-elevated/80">
         <div
-          className="h-full rounded-full bg-cortex-accent transition-all duration-300"
+          className="h-full rounded-full bg-gradient-to-r from-cortex-accent via-sky-400 to-cyan-400 transition-all duration-300 animate-shimmer"
           style={{ width: `${clamped}%` }}
         />
       </div>

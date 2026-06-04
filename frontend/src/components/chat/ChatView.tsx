@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { StreamingText } from "./StreamingText";
 import { ChatComposer } from "./ChatComposer";
@@ -54,7 +55,7 @@ export function ChatView() {
                 <button
                   key={item.label}
                   type="button"
-                  className="rounded-xl border border-cortex-border bg-cortex-surface/60 p-4 text-left text-sm transition hover:border-cortex-accent/40 hover:bg-cortex-accent-soft"
+                  className="rounded-2xl border border-cortex-border/80 bg-cortex-surface/65 p-4 text-left text-sm shadow-sm transition duration-200 ease-out hover:-translate-y-0.5 hover:border-cortex-accent/30 hover:bg-cortex-accent-soft"
                   onClick={() => useChatStore.getState().setInputQuery(item.prompt)}
                 >
                   <span className="font-medium text-cortex-text">{item.label}</span>
@@ -64,71 +65,89 @@ export function ChatView() {
             </div>
           )}
 
-          {session.messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={cn("flex gap-3", msg.sender === "user" ? "justify-end" : "justify-start")}
-            >
-              {msg.sender === "assistant" && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cortex-accent-soft text-xs font-bold text-cortex-accent">
-                  C
-                </div>
-              )}
-              <div
-                className={cn(
-                  "max-w-[85%] rounded-2xl px-4 py-3",
-                  msg.sender === "user"
-                    ? "bg-cortex-accent text-white"
-                    : "border border-cortex-border bg-cortex-surface",
-                )}
+          <AnimatePresence initial={false}>
+            {session.messages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                layout
+                initial={{ opacity: 0, x: msg.sender === "user" ? 18 : -18, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className={cn("flex gap-3", msg.sender === "user" ? "justify-end" : "justify-start")}
               >
-                {msg.sender === "user" ? (
-                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-                ) : streamId === msg.id ? (
-                  <StreamingText text={msg.text} animate />
-                ) : (
-                  <MarkdownMessage content={msg.text} />
-                )}
-                {msg.routingInfo && (
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-cortex-border/40 pt-2 text-[10px] text-cortex-muted">
-                    <Badge variant="accent" className="text-[9px] py-0.5 px-1.5 shrink-0">
-                      {msg.routingInfo.model_used}
-                    </Badge>
-                    <span className="shrink-0 font-medium text-cortex-text">{msg.routingInfo.provider}</span>
-                    <span className="shrink-0 opacity-40">|</span>
-                    <span className="shrink-0 font-medium text-cortex-accent">{msg.routingInfo.response_time.toFixed(2)}s</span>
-                    
-                    {msg.routingInfo.agent_selected && (
-                      <>
-                        <span className="shrink-0 opacity-40">|</span>
-                        <span className="shrink-0 font-semibold text-purple-400">🤖 {msg.routingInfo.agent_selected}</span>
-                        <span className="shrink-0 text-cortex-muted">({((msg.routingInfo.agent_confidence ?? 0) * 100).toFixed(0)}% conf)</span>
-                        {msg.routingInfo.agent_execution_time !== undefined && (
-                          <span className="shrink-0 font-medium text-purple-300">in {msg.routingInfo.agent_execution_time.toFixed(2)}s</span>
-                        )}
-                      </>
-                    )}
-                    
-                    <span className="shrink-0 opacity-40">|</span>
-                    <span className="italic truncate max-w-[200px] sm:max-w-[300px]" title={msg.routingInfo.agent_reason || msg.routingInfo.selection_reason}>
-                      {msg.routingInfo.agent_reason || msg.routingInfo.selection_reason}
-                    </span>
+                {msg.sender === "assistant" && (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-cortex-border/60 bg-gradient-to-br from-cortex-accent-soft via-cortex-surface to-cortex-elevated text-xs font-bold text-cortex-accent shadow-sm">
+                    C
                   </div>
                 )}
-                {msg.routingInfo && msg.routingInfo.collaboration_graph && (
-                  <div className="mt-3 border-t border-cortex-border/30 pt-2.5">
-                    <button
-                      type="button"
-                      className="flex items-center gap-1 text-[11px] font-semibold text-cortex-accent hover:underline"
-                      onClick={() => setOpenTraces(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
-                    >
-                      {openTraces[msg.id] ? "▼ Hide Agent Trace Details" : "▶ View Agent Collaboration Trace"}
-                    </button>
-                    
-                    {openTraces[msg.id] && (
-                      <div className="mt-3.5 space-y-4 rounded-xl border border-cortex-border/60 bg-cortex-elevated/40 p-4.5 text-xs text-cortex-text animate-in fade-in slide-in-from-top-2 duration-200">
-                        {/* 1. Summary details */}
-                        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4 border-b border-cortex-border/30 pb-3">
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-3xl px-4 py-3 shadow-sm backdrop-blur-sm",
+                    msg.sender === "user"
+                      ? "bg-gradient-to-br from-cortex-accent via-sky-500 to-cyan-500 text-white shadow-[0_18px_45px_rgba(109,156,255,0.22)]"
+                      : "border border-cortex-border/70 bg-cortex-surface/80",
+                  )}
+                >
+                  {msg.sender === "user" ? (
+                    <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                  ) : streamId === msg.id ? (
+                    <div className="space-y-2">
+                      <StreamingText text={msg.text} animate />
+                      <div className="flex items-center gap-1.5 text-cortex-muted">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cortex-accent" />
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cortex-accent [animation-delay:140ms]" />
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cortex-accent [animation-delay:280ms]" />
+                      </div>
+                    </div>
+                  ) : (
+                    <MarkdownMessage content={msg.text} />
+                  )}
+                  {msg.routingInfo && (
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-cortex-border/40 pt-2 text-[10px] text-cortex-muted">
+                      <Badge variant="accent" className="text-[9px] py-0.5 px-1.5 shrink-0">
+                        {msg.routingInfo.model_used}
+                      </Badge>
+                      <span className="shrink-0 font-medium text-cortex-text">{msg.routingInfo.provider}</span>
+                      <span className="shrink-0 opacity-40">|</span>
+                      <span className="shrink-0 font-medium text-cortex-accent">{msg.routingInfo.response_time.toFixed(2)}s</span>
+
+                      {msg.routingInfo.agent_selected && (
+                        <>
+                          <span className="shrink-0 opacity-40">|</span>
+                          <span className="shrink-0 font-semibold text-purple-400">🤖 {msg.routingInfo.agent_selected}</span>
+                          <span className="shrink-0 text-cortex-muted">({((msg.routingInfo.agent_confidence ?? 0) * 100).toFixed(0)}% conf)</span>
+                          {msg.routingInfo.agent_execution_time !== undefined && (
+                            <span className="shrink-0 font-medium text-purple-300">in {msg.routingInfo.agent_execution_time.toFixed(2)}s</span>
+                          )}
+                        </>
+                      )}
+
+                      <span className="shrink-0 opacity-40">|</span>
+                      <span className="italic truncate max-w-[200px] sm:max-w-[300px]" title={msg.routingInfo.agent_reason || msg.routingInfo.selection_reason}>
+                        {msg.routingInfo.agent_reason || msg.routingInfo.selection_reason}
+                      </span>
+                    </div>
+                  )}
+                  {msg.routingInfo && msg.routingInfo.collaboration_graph && (
+                    <div className="mt-3 border-t border-cortex-border/30 pt-2.5">
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 text-[11px] font-semibold text-cortex-accent transition hover:opacity-80"
+                        onClick={() => setOpenTraces(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                      >
+                        {openTraces[msg.id] ? "▼ Hide Agent Trace Details" : "▶ View Agent Collaboration Trace"}
+                      </button>
+
+                      {openTraces[msg.id] && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          className="mt-3.5 space-y-4 rounded-2xl border border-cortex-border/60 bg-cortex-elevated/45 p-4 text-xs text-cortex-text"
+                        >
+                          <div className="grid grid-cols-2 gap-3.5 border-b border-cortex-border/30 pb-3 sm:grid-cols-4">
                           <div>
                             <span className="block text-[10px] uppercase font-bold text-cortex-muted">Task Class</span>
                             <span className="font-semibold text-purple-400">{msg.routingInfo.classified_task || "Chat"}</span>
@@ -161,11 +180,11 @@ export function ChatView() {
                         </div>
 
                         {/* 2. Collaboration graph nodes */}
-                        <div className="space-y-3">
-                          <h4 className="text-[10px] font-bold uppercase tracking-wider text-cortex-muted mb-1.5">Collaboration Graph & Node Timeline</h4>
-                          <div className="relative pl-4 border-l border-cortex-border/40 space-y-4">
-                            {msg.routingInfo.collaboration_graph.map((node) => (
-                              <div key={node.id} className="relative">
+                          <div className="space-y-3">
+                            <h4 className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-cortex-muted">Collaboration Graph & Node Timeline</h4>
+                            <div className="relative space-y-4 border-l border-cortex-border/40 pl-4">
+                              {msg.routingInfo.collaboration_graph.map((node) => (
+                                <div key={node.id} className="relative">
                                 {/* Dot indicator */}
                                 <span className={cn(
                                   "absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full border-2 border-cortex-surface",
@@ -189,48 +208,47 @@ export function ChatView() {
                                     <span>{(node.confidence * 100).toFixed(0)}% conf</span>
                                   </div>
                                 </div>
-                                <p className="mt-1 text-[11px] text-cortex-muted italic">{node.reasoning_summary}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* 3. Verification Report */}
-                        {msg.routingInfo.verification_results && (
-                          <div className="rounded-lg bg-cortex-surface/40 border border-cortex-border/30 p-3">
-                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-cortex-muted mb-2">VerificationAgent Diagnostic Details</h4>
-                            <div className="space-y-2">
-                              {msg.routingInfo.verification_results.issues.length > 0 ? (
-                                <div className="space-y-1.5">
-                                  <p className="text-[11px] font-semibold text-red-400">Issues Flagged:</p>
-                                  <ul className="list-disc pl-4 text-[11px] text-red-300/90 space-y-0.5">
-                                    {msg.routingInfo.verification_results.issues.map((issue, idx) => (
-                                      <li key={idx}>{issue}</li>
-                                    ))}
-                                  </ul>
+                                  <p className="mt-1 text-[11px] italic text-cortex-muted">{node.reasoning_summary}</p>
                                 </div>
-                              ) : (
-                                <p className="text-[11px] font-semibold text-green-400">✅ All validations passed. No hallucinations or invalid file paths detected.</p>
-                              )}
-                              
-                              {/* Raw report preview */}
-                              <pre className="mt-2 block max-h-36 overflow-y-auto rounded bg-black/30 p-2 font-mono text-[10px] text-gray-300 whitespace-pre-wrap">
-                                {msg.routingInfo.verification_results.report}
-                              </pre>
+                              ))}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    )}
+
+                          {msg.routingInfo.verification_results && (
+                            <div className="rounded-xl border border-cortex-border/30 bg-cortex-surface/40 p-3">
+                              <h4 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-cortex-muted">VerificationAgent Diagnostic Details</h4>
+                              <div className="space-y-2">
+                                {msg.routingInfo.verification_results.issues.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    <p className="text-[11px] font-semibold text-red-400">Issues Flagged:</p>
+                                    <ul className="list-disc space-y-0.5 pl-4 text-[11px] text-red-300/90">
+                                      {msg.routingInfo.verification_results.issues.map((issue, idx) => (
+                                        <li key={idx}>{issue}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : (
+                                  <p className="text-[11px] font-semibold text-green-400">✅ All validations passed. No hallucinations or invalid file paths detected.</p>
+                                )}
+
+                                <pre className="mt-2 block max-h-36 overflow-y-auto rounded-lg bg-black/30 p-2 font-mono text-[10px] text-gray-300 whitespace-pre-wrap">
+                                  {msg.routingInfo.verification_results.report}
+                                </pre>
+                              </div>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-2 flex items-center gap-2 text-[10px] opacity-60">
+                    <span>{msg.timestamp}</span>
+                    {msg.executionId && <Badge variant="accent">trace</Badge>}
                   </div>
-                )}
-                <div className="mt-2 flex items-center gap-2 text-[10px] opacity-60">
-                  <span>{msg.timestamp}</span>
-                  {msg.executionId && <Badge variant="accent">trace</Badge>}
                 </div>
-              </div>
-            </div>
-          ))}
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {isGenerating && (
             <div className="flex items-center gap-2 text-sm text-cortex-muted">

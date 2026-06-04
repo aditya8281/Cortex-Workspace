@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from "react";
 import { Send, ChevronDown, Check, Plus, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useChatStore } from "@/stores/chatStore";
 import { useChatSend } from "@/hooks/useChatSend";
 import { useQuery } from "@tanstack/react-query";
-import { getAllModels } from "@/api/ai";
+import { getAllModels, selectModel } from "@/api/ai";
 import { cn } from "@/lib/utils";
 import { useContextStore } from "@/stores/contextStore";
 import { ContextAttacher } from "@/components/chat/ContextAttacher";
@@ -98,8 +99,14 @@ export function ChatComposer() {
       {/* ------------------------------------------------------------------ */}
       {/* Context chips — appear above the input when items are attached      */}
       {/* ------------------------------------------------------------------ */}
+      <AnimatePresence>
       {contextItems.length > 0 && (
-        <div className="mx-auto mb-2.5 flex max-w-3xl flex-wrap gap-1.5 px-1">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          className="mx-auto mb-2.5 flex max-w-3xl flex-wrap gap-1.5 px-1"
+        >
           {contextItems.map((item) => {
             const colorClass = KIND_COLORS[item.kind] ?? "bg-cortex-elevated border-cortex-border text-cortex-text";
             const emoji = KIND_EMOJI[item.kind] ?? "📎";
@@ -110,22 +117,23 @@ export function ChatComposer() {
                   "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-all",
                   colorClass
                 )}
-              >
-                <span>{emoji}</span>
-                <span className="max-w-[120px] truncate">{item.title}</span>
-                <button
-                  type="button"
-                  className="ml-0.5 rounded-full p-0.5 opacity-60 hover:opacity-100 transition-opacity"
-                  onClick={() => removeContext(item.id)}
-                  aria-label={`Remove ${item.title}`}
                 >
-                  <X className="h-2.5 w-2.5" />
+                  <span>{emoji}</span>
+                  <span className="max-w-[120px] truncate">{item.title}</span>
+                  <button
+                    type="button"
+                    className="ml-0.5 rounded-full p-0.5 opacity-60 transition-opacity hover:opacity-100"
+                    onClick={() => removeContext(item.id)}
+                    aria-label={`Remove ${item.title}`}
+                  >
+                    <X className="h-2.5 w-2.5" />
                 </button>
               </span>
             );
           })}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ------------------------------------------------------------------ */}
       {/* Toolbar row: model selector + attach button                         */}
@@ -135,7 +143,7 @@ export function ChatComposer() {
         <div className="relative" ref={modelDropdownRef}>
           <button
             type="button"
-            className="flex items-center gap-1.5 rounded-lg border border-cortex-border bg-cortex-elevated/80 px-2.5 py-1.5 text-xs font-semibold text-cortex-text transition hover:border-cortex-accent/40 hover:bg-cortex-accent-soft"
+            className="flex items-center gap-1.5 rounded-full border border-cortex-border/80 bg-cortex-elevated/75 px-3 py-1.5 text-xs font-semibold text-cortex-text shadow-sm transition hover:-translate-y-0.5 hover:border-cortex-accent/30 hover:bg-cortex-accent-soft"
             onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
           >
             <span className="text-cortex-muted">Model:</span>
@@ -144,7 +152,7 @@ export function ChatComposer() {
           </button>
 
           {modelDropdownOpen && (
-            <div className="absolute bottom-full left-0 mb-1.5 z-50 max-h-72 w-72 overflow-y-auto rounded-xl border border-cortex-border bg-cortex-surface/95 p-1.5 shadow-2xl backdrop-blur-lg">
+            <div className="absolute bottom-full left-0 z-50 mb-1.5 max-h-72 w-72 overflow-y-auto rounded-2xl border border-cortex-border/80 bg-cortex-surface/95 p-1.5 shadow-2xl backdrop-blur-2xl">
               <button
                 type="button"
                 className={cn(
@@ -153,6 +161,7 @@ export function ChatComposer() {
                 )}
                 onClick={() => {
                   if (activeSession) updateSession(activeSession.id, { selectedModel: "Auto" });
+                  if (activeSession) void selectModel("Auto", activeSession.id);
                   setModelDropdownOpen(false);
                 }}
               >
@@ -180,6 +189,7 @@ export function ChatComposer() {
                     )}
                     onClick={() => {
                       if (activeSession) updateSession(activeSession.id, { selectedModel: m.name });
+                      if (activeSession) void selectModel(m.name, activeSession.id);
                       setModelDropdownOpen(false);
                     }}
                   >
@@ -209,6 +219,7 @@ export function ChatComposer() {
                     )}
                     onClick={() => {
                       if (activeSession) updateSession(activeSession.id, { selectedModel: m.name });
+                      if (activeSession) void selectModel(m.name, activeSession.id);
                       setModelDropdownOpen(false);
                     }}
                   >
@@ -229,10 +240,10 @@ export function ChatComposer() {
           <button
             type="button"
             className={cn(
-              "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition",
+              "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
               attacherOpen
-                ? "border-cortex-accent/50 bg-cortex-accent-soft text-cortex-accent"
-                : "border-cortex-border bg-cortex-elevated/80 text-cortex-muted hover:border-cortex-accent/40 hover:bg-cortex-accent-soft hover:text-cortex-text"
+                ? "border-cortex-accent/50 bg-cortex-accent-soft text-cortex-accent shadow-[0_0_0_1px_rgba(109,156,255,0.12)]"
+                : "border-cortex-border/80 bg-cortex-elevated/75 text-cortex-muted hover:border-cortex-accent/30 hover:bg-cortex-accent-soft hover:text-cortex-text"
             )}
             onClick={() => setAttacherOpen(!attacherOpen)}
           >
@@ -246,7 +257,7 @@ export function ChatComposer() {
           </button>
 
           {attacherOpen && (
-            <div className="absolute bottom-full left-0 mb-1.5 z-50">
+            <div className="absolute bottom-full left-0 z-50 mb-1.5">
               <ContextAttacher onClose={() => setAttacherOpen(false)} />
             </div>
           )}
@@ -256,17 +267,17 @@ export function ChatComposer() {
       {/* ------------------------------------------------------------------ */}
       {/* Input row                                                            */}
       {/* ------------------------------------------------------------------ */}
-      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-xl border border-cortex-border bg-cortex-elevated p-2 shadow-sm">
+      <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-3xl border border-cortex-border/80 bg-cortex-surface/80 p-2.5 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
         <textarea
           value={local}
           onChange={(e) => setLocal(e.target.value)}
           onKeyDown={onKeyDown}
           rows={1}
           placeholder="Ask Cortex about your machine, repos, or memory…"
-          className="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2.5 text-sm text-cortex-text placeholder:text-cortex-muted focus:outline-none"
+          className="max-h-40 min-h-[48px] flex-1 resize-none bg-transparent px-2 py-2.5 text-sm text-cortex-text placeholder:text-cortex-muted/70 focus:outline-none"
         />
         <Button type="submit" size="icon" disabled={isGenerating || !local.trim()} aria-label="Send">
-          <Send className="h-4 w-4" />
+          <Send className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
         </Button>
       </div>
       <p className="mx-auto mt-2 max-w-3xl text-center text-xs text-cortex-muted">

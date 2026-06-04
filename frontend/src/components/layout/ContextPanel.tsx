@@ -23,14 +23,14 @@ export function ContextPanel() {
   const { data: proactive = [] } = useProactiveNotifications();
 
   return (
-    <aside className="hidden h-full w-[300px] shrink-0 flex-col border-l border-cortex-border bg-cortex-surface/60 backdrop-blur-md xl:flex">
-      <div className="border-b border-cortex-border p-4">
+    <aside className="hidden h-full w-[300px] shrink-0 flex-col border-l border-cortex-border/70 bg-cortex-surface/70 backdrop-blur-2xl xl:flex">
+      <div className="border-b border-cortex-border/70 p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-cortex-muted">Context</p>
         <h2 className="text-sm font-medium">Live intelligence</h2>
       </div>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {items.length > 0 && (
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm">This conversation</CardTitle>
             </CardHeader>
@@ -38,7 +38,7 @@ export function ContextPanel() {
               {items.map((item) => {
                 const Icon = kindIcon[item.kind];
                 return (
-                  <div key={item.id} className="flex gap-2 rounded-lg bg-cortex-elevated/80 p-2 text-xs">
+                  <div key={item.id} className="flex gap-2 rounded-xl border border-cortex-border/50 bg-cortex-elevated/75 p-2 text-xs transition hover:border-cortex-accent/20 hover:bg-cortex-elevated/90">
                     <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cortex-accent" />
                     <div>
                       <p className="font-medium">{item.title}</p>
@@ -51,13 +51,13 @@ export function ContextPanel() {
           </Card>
         )}
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">Relevant repositories</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 p-4 pt-0">
             {repos.slice(0, 4).map((repo) => (
-              <div key={repo.path} className="rounded-lg border border-cortex-border p-2 text-xs">
+              <div key={repo.path} className="rounded-xl border border-cortex-border/60 bg-cortex-elevated/65 p-2 text-xs transition hover:border-cortex-accent/20 hover:bg-cortex-elevated/85">
                 <p className="font-medium">{repo.name}</p>
                 <p className="line-clamp-2 text-cortex-muted">{repo.summary}</p>
                 <Badge variant="accent" className="mt-1">
@@ -70,7 +70,7 @@ export function ContextPanel() {
         </Card>
 
         {proactive.length > 0 && (
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm">Observations</CardTitle>
             </CardHeader>
@@ -79,7 +79,7 @@ export function ContextPanel() {
                 <div
                   key={n.id}
                   className={cn(
-                    "rounded-lg border p-2 text-xs",
+                    "rounded-xl border p-2 text-xs transition hover:-translate-y-0.5",
                     n.priority === "high" ? "border-cortex-warn/40" : "border-cortex-border",
                   )}
                 >

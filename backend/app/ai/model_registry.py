@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import httpx
 import hashlib
 import base64
 import logging
+import re
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 import keyring
@@ -9,6 +12,12 @@ from cryptography.fernet import Fernet
 
 from backend.app.core.config import settings
 from backend.app.models.llm_model import CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute
+from backend.app.ai.providers.http_clients import (
+    build_provider_llm,
+    list_provider_models,
+    normalize_provider_name,
+    provider_default_base_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +64,10 @@ class ModelRegistry:
             default_providers = [
                 {"name": "OpenAI", "base_url": "https://api.openai.com/v1", "is_custom": False},
                 {"name": "Anthropic", "base_url": "https://api.anthropic.com/v1", "is_custom": False},
-                {"name": "Google", "base_url": "https://generativelanguage.googleapis.com/v1beta", "is_custom": False},
+                {"name": "Google Gemini", "base_url": "https://generativelanguage.googleapis.com/v1beta", "is_custom": False},
                 {"name": "OpenRouter", "base_url": "https://openrouter.ai/api/v1", "is_custom": False},
                 {"name": "Groq", "base_url": "https://api.groq.com/openai/v1", "is_custom": False},
-                {"name": "Together", "base_url": "https://api.together.xyz/v1", "is_custom": False},
+                {"name": "Together AI", "base_url": "https://api.together.xyz/v1", "is_custom": False},
                 {"name": "DeepSeek", "base_url": "https://api.deepseek.com/v1", "is_custom": False},
             ]
             for p in default_providers:
@@ -66,7 +75,8 @@ class ModelRegistry:
                     name=p["name"],
                     base_url=p["base_url"],
                     is_enabled=False,
-                    is_custom=p["is_custom"]
+                    is_custom=p["is_custom"],
+                    default_model_name=None,
                 )
                 db.add(provider)
             db.commit()
@@ -265,115 +275,319 @@ class ModelRegistry:
         return models
 
     @classmethod
+    async def get_dynamic_ollama_marketplace(cls, query: str | None = None, max_pages: int = 12) -> List[Dict[str, Any]]:
+        """
+        Scrape the public Ollama registry so the marketplace stays dynamic.
+        The registry is paginated; we walk pages until they stop yielding models.
+        """
+        url = "https://registry.ollama.com/search"
+        collected: list[dict[str, Any]] = []
+        seen: set[str] = set()
+
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            for page in range(1, max_pages + 1):
+                params: dict[str, Any] = {"page": page}
+                if query:
+                    params["q"] = query
+
+                try:
+                    response = await client.get(url, params=params)
+                    response.raise_for_status()
+                except Exception as exc:
+                    logger.warning("Failed to fetch Ollama registry page %s: %s", page, exc)
+                    break
+
+                html = response.text
+                matches = list(
+                    re.finditer(
+                        r'<li[^>]*x-test-model[^>]*>.*?<a href="/library/(?P<slug>[^"]+)"[^>]*>.*?'
+                        r'<span[^>]*x-test-search-response-title[^>]*>(?P<name>.*?)</span>.*?'
+                        r'<p class="max-w-lg break-words text-neutral-800 text-md">(?P<desc>.*?)</p>.*?'
+                        r'(?P<tags>(?:<span[^>]*x-test-capability[^>]*>.*?</span>|<span class="inline-flex my-1 items-center rounded-md bg-cyan-50[^>]*>.*?</span>|<span[^>]*x-test-size[^>]*>.*?</span>)+)',
+                        html,
+                        re.S,
+                    )
+                )
+
+                if not matches:
+                    break
+
+                for match in matches:
+                    slug = match.group("slug").strip()
+                    if slug in seen:
+                        continue
+                    seen.add(slug)
+
+                    tag_blob = match.group("tags")
+                    capabilities = re.findall(r"x-test-capability[^>]*>(.*?)</span>", tag_blob, re.S)
+                    capabilities = [re.sub(r"<.*?>", "", cap).strip() for cap in capabilities if cap.strip()]
+                    sizes = re.findall(r"x-test-size[^>]*>(.*?)</span>", tag_blob, re.S)
+                    sizes = [re.sub(r"<.*?>", "", size).strip() for size in sizes if size.strip()]
+
+                    size_label = ", ".join(sizes[:3]) if sizes else "various"
+                    largest_size = cls._largest_size_value(sizes)
+                    vram_estimate = cls._estimate_vram_from_size(largest_size)
+                    performance_tier = cls._performance_tier(sizes, capabilities)
+
+                    collected.append(
+                        {
+                            "name": slug,
+                            "display_name": re.sub(r"<.*?>", "", match.group("name")).strip(),
+                            "size": size_label,
+                            "parameters": size_label,
+                            "context_length": cls._context_hint_from_capabilities(capabilities),
+                            "vram_requirement_gb": vram_estimate,
+                            "best_use_case": re.sub(r"<.*?>", "", match.group("desc")).strip(),
+                            "tags": cls._marketplace_tags(capabilities),
+                            "pull_command": f"ollama pull {slug}",
+                            "vram_estimate": f"~{vram_estimate} GB",
+                            "performance_tier": performance_tier,
+                            "capabilities": capabilities,
+                            "source": "Ollama Registry",
+                            "is_installed": False,
+                            "download_status": "available",
+                        }
+                    )
+
+                if len(matches) < 5:
+                    break
+
+        return collected
+
+    @staticmethod
+    def _largest_size_value(sizes: List[str]) -> float:
+        max_val = 0.0
+        for size in sizes:
+            cleaned = size.lower().replace("b", "").replace(",", "").strip()
+            try:
+                max_val = max(max_val, float(cleaned))
+            except Exception:
+                continue
+        return max_val
+
+    @staticmethod
+    def _estimate_vram_from_size(size_b: float) -> float:
+        if size_b <= 0:
+            return 4.0
+        # A heuristic estimate that keeps the marketplace useful without pretending
+        # to be exact across quantization formats.
+        return round(max(2.0, size_b * 1.35), 1)
+
+    @staticmethod
+    def _performance_tier(sizes: List[str], capabilities: List[str]) -> str:
+        size_b = ModelRegistry._largest_size_value(sizes)
+        if "cloud" in {cap.lower() for cap in capabilities}:
+            return "cloud"
+        if "thinking" in {cap.lower() for cap in capabilities} or size_b >= 30:
+            return "high"
+        if size_b <= 4:
+            return "fast"
+        if size_b <= 12:
+            return "balanced"
+        return "high"
+
+    @staticmethod
+    def _marketplace_tags(capabilities: List[str]) -> List[str]:
+        tags = []
+        cap_lower = {cap.lower() for cap in capabilities}
+        if "coding" in cap_lower or "tools" in cap_lower:
+            tags.append("Coding")
+        if "thinking" in cap_lower:
+            tags.append("Reasoning")
+        if "vision" in cap_lower:
+            tags.append("Vision")
+        if "cloud" in cap_lower:
+            tags.append("Cloud")
+        if not tags:
+            tags.append("Chat")
+        return tags
+
+    @staticmethod
+    def _context_hint_from_capabilities(capabilities: List[str]) -> int:
+        cap_lower = {cap.lower() for cap in capabilities}
+        if "cloud" in cap_lower:
+            return 131072
+        if "thinking" in cap_lower:
+            return 32768
+        if "vision" in cap_lower:
+            return 16384
+        return 8192
+
+    @classmethod
+    def _upsert_provider_models(
+        cls,
+        db: Session,
+        provider_name: str,
+        discovered_models: List[Dict[str, Any]],
+    ) -> None:
+        existing = {
+            row.name: row
+            for row in db.query(CortexModel).filter(
+                CortexModel.provider_name == provider_name,
+                CortexModel.is_local.is_(False),
+            ).all()
+        }
+        active_names = {m.get("name") or m.get("id") for m in discovered_models}
+
+        for model_data in discovered_models:
+            name = model_data.get("name") or model_data.get("id")
+            if not name:
+                continue
+
+            row = existing.get(name)
+            if row is None:
+                row = CortexModel(
+                    name=name,
+                    provider_name=provider_name,
+                    status="active" if model_data.get("active", True) else "unavailable",
+                    is_local=False,
+                    is_custom=provider_name not in {"OpenAI", "Anthropic", "Google Gemini", "OpenRouter", "Groq", "Together AI", "DeepSeek"},
+                )
+                db.add(row)
+
+            row.context_length = model_data.get("context_length")
+            row.parameters = model_data.get("parameters") or row.parameters
+            row.quantization = model_data.get("quantization") or row.quantization
+            row.vram_estimate = model_data.get("vram_estimate") or row.vram_estimate
+            row.status = "active" if model_data.get("active", True) else "unavailable"
+
+        for row in existing.values():
+            if row.name not in active_names:
+                row.status = "unavailable"
+
+    @classmethod
+    async def _refresh_provider_models(cls, db: Session, provider: CortexProvider) -> List[Dict[str, Any]]:
+        api_key = retrieve_key_securely(provider.name, provider.api_key_encrypted)
+        base_url = provider.base_url or provider_default_base_url(provider.name) or ""
+        if not base_url:
+            return []
+
+        try:
+            live_models = await list_provider_models(provider.name, base_url, api_key)
+        except Exception as exc:
+            logger.warning("Provider model sync failed for %s: %s", provider.name, exc)
+            return []
+
+        normalized: list[dict[str, Any]] = []
+        for model in live_models:
+            model_id = model.get("id") or model.get("name")
+            if not model_id:
+                continue
+            normalized.append(
+                {
+                    "name": model_id,
+                    "id": model_id,
+                    "provider": provider.name,
+                    "context_length": model.get("context_length"),
+                    "parameters": model.get("parameters") or "unknown",
+                    "quantization": model.get("quantization") or "unknown",
+                    "vram_estimate": model.get("vram_estimate") or "N/A",
+                    "status": "active" if model.get("active", True) else "unavailable",
+                    "is_local": False,
+                    "default_for_provider": provider.default_model_name == model_id,
+                }
+            )
+
+        cls._upsert_provider_models(db, provider.name, normalized)
+        db.commit()
+        return normalized
+
+    @classmethod
     async def list_models(cls, db: Session) -> List[Dict[str, Any]]:
         cls.seed_if_empty(db)
 
-        # Get local models dynamically
         local_models = await cls.get_local_models()
-        
-        # Get active cloud models from DB
-        cloud_models = []
-        providers = db.query(CortexProvider).filter(CortexProvider.is_enabled.is_(True)).all()
-        active_provider_names = {p.name for p in providers}
-        
-        db_models = db.query(CortexModel).all()
-        for m in db_models:
-            if not m.is_local:
-                is_active = m.provider_name in active_provider_names
-                cloud_models.append({
-                    "id": m.id,
-                    "name": m.name,
-                    "provider": m.provider_name,
-                    "context_length": m.context_length,
-                    "parameters": m.parameters,
-                    "quantization": m.quantization,
-                    "vram_estimate": m.vram_estimate,
-                    "status": "active" if is_active else "unavailable",
-                    "is_local": False
-                })
+        for row in local_models:
+            row.setdefault("id", row.get("name"))
+            row.setdefault("display_name", row.get("name"))
+            row.setdefault("pull_command", f"ollama pull {row.get('name')}")
+            row.setdefault("tags", ["Chat"])
+            row.setdefault("best_use_case", "Local model")
+            row.setdefault("performance_tier", "balanced")
+
+        cloud_models: list[dict[str, Any]] = []
+        providers = db.query(CortexProvider).all()
+        for provider in providers:
+            if not provider.is_enabled:
+                continue
+
+            provider_models = await cls._refresh_provider_models(db, provider)
+            if not provider_models:
+                provider_models = []
+                for model in db.query(CortexModel).filter(
+                    CortexModel.provider_name == provider.name,
+                    CortexModel.is_local.is_(False),
+                ).all():
+                    provider_models.append(
+                        {
+                            "id": model.name,
+                            "name": model.name,
+                            "display_name": model.name,
+                            "provider": provider.name,
+                            "context_length": model.context_length,
+                            "parameters": model.parameters,
+                            "quantization": model.quantization,
+                            "vram_estimate": model.vram_estimate,
+                            "status": model.status,
+                            "is_local": False,
+                            "default_for_provider": provider.default_model_name == model.name,
+                        }
+                    )
+
+            cloud_models.extend(provider_models)
 
         return local_models + cloud_models
 
     @classmethod
     async def validate_provider(cls, name: str, base_url: str, api_key: str) -> Dict[str, Any]:
         """
-        Validate provider endpoint, API key, model list, and run a completion.
+        Validate provider endpoint, API key, model list, and run a lightweight completion.
         """
+        normalized_name = normalize_provider_name(name)
+        if not base_url:
+            base_url = provider_default_base_url(normalized_name) or ""
+        if not base_url:
+            return {"valid": False, "error": "Base URL is required"}
+
         try:
-            # 1. Endpoint & API key check: try to fetch models list
-            url = base_url
-            if not url:
-                return {"valid": False, "error": "Base URL is required"}
+            models = await list_provider_models(normalized_name, base_url, api_key)
+        except Exception as exc:
+            return {"valid": False, "error": f"Failed to list models: {exc}"}
 
-            models_url = url
-            if not models_url.endswith(("/models", "/v1/models")):
-                models_url = f"{models_url.rstrip('/')}/models"
-                if "/v1" not in models_url and "api.openai.com" in models_url:
-                    models_url = f"{base_url.rstrip('/')}/v1/models"
+        test_model = None
+        if models:
+            test_model = models[0].get("id") or models[0].get("name")
 
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
+        if not test_model:
+            defaults = {
+                "OpenAI": "gpt-4o-mini",
+                "Anthropic": "claude-3-5-haiku-latest",
+                "Google Gemini": "gemini-1.5-flash",
+                "OpenRouter": "openai/gpt-oss-20b",
+                "Groq": "llama-3.1-8b-instant",
+                "Together AI": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+                "DeepSeek": "deepseek-chat",
             }
+            test_model = defaults.get(normalized_name, "gpt-4o-mini")
 
-            models = []
-            async with httpx.AsyncClient(timeout=10) as client:
-                # Retrieve models list
-                resp = await client.get(models_url, headers=headers)
-                if resp.status_code != 200:
-                    # Let's try alternate OpenAI endpoint mapping
-                    if "api.openai.com" in models_url:
-                        alt_url = "https://api.openai.com/v1/models"
-                        resp = await client.get(alt_url, headers=headers)
-
-                if resp.status_code == 200:
-                    data = resp.json()
-                    # Some endpoints return list of models
-                    if isinstance(data, dict):
-                        for m in data.get("data", []):
-                            if isinstance(m, dict) and "id" in m:
-                                models.append(m["id"])
-                else:
-                    return {"valid": False, "error": f"Failed to connect: Status code {resp.status_code}. Response: {resp.text[:200]}"}
-
-            # 2. Run lightweight test completion
-            chat_url = url
-            if not chat_url.endswith(("/chat/completions", "/generate")):
-                chat_url = f"{chat_url.rstrip('/')}/chat/completions"
-                if "/v1" not in chat_url and "api.openai.com" in chat_url:
-                    chat_url = f"{base_url.rstrip('/')}/v1/chat/completions"
-
-            # Select a default model for verification
-            test_model = "gpt-4o-mini"
-            if models:
-                # Find a model matching common patterns or use the first one
-                test_model = models[0]
-                for m in models:
-                    if "mini" in m.lower() or "flash" in m.lower() or "haiku" in m.lower():
-                        test_model = m
-                        break
-
-            payload = {
-                "model": test_model,
-                "messages": [
-                    {"role": "user", "content": "ping"}
-                ],
-                "max_tokens": 5
+        try:
+            llm = build_provider_llm(normalized_name, api_key=api_key, base_url=base_url, model=test_model)
+            answer = await llm.generate(
+                prompt="ping",
+                system_prompt="Respond with exactly one short word.",
+                model=test_model,
+            )
+            return {
+                "valid": True,
+                "models": [model.get("id") or model.get("name") for model in models if model.get("id") or model.get("name")],
+                "default_model": test_model,
+                "test_response": answer[:120],
+                "error": None,
             }
-
-            async with httpx.AsyncClient(timeout=15) as client:
-                comp_resp = await client.post(chat_url, json=payload, headers=headers)
-                if comp_resp.status_code == 200:
-                    comp_data = comp_resp.json()
-                    answer = comp_data["choices"][0]["message"]["content"]
-                    return {
-                        "valid": True,
-                        "models": models[:25], # limit list count
-                        "test_response": answer,
-                        "error": None
-                    }
-                else:
-                    return {"valid": False, "error": f"API key accepted, but test completion failed with status {comp_resp.status_code}: {comp_resp.text[:200]}"}
-
-        except Exception as e:
-            return {"valid": False, "error": f"Validation exception: {str(e)}"}
+        except Exception as exc:
+            return {
+                "valid": False,
+                "models": [model.get("id") or model.get("name") for model in models if model.get("id") or model.get("name")],
+                "default_model": test_model,
+                "error": f"API key accepted, but test completion failed: {exc}",
+            }
