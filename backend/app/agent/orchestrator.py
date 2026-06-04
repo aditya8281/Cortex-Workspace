@@ -5,10 +5,10 @@ from backend.app.agent.registry import AgentRegistry
 from backend.app.agent.agents import (
     ChatAgent,
     SearchAgent,
-    RepoAnalysisAgent,
+    RepositoryAgent,
     CodingAgent,
     PlanningAgent,
-    MemoryRetrievalAgent,
+    MemoryAgent,
     ExecutionAgent,
     ResearchAgent
 )
@@ -28,6 +28,7 @@ class ContextBuilder:
     """
     def __init__(self, executor: Any):
         self.executor = executor
+        self._cached_contexts: Dict[str, str] = {}
 
     async def build(
         self,
@@ -36,6 +37,16 @@ class ContextBuilder:
         context_items: Optional[List[Any]] = None,
         user_id: Optional[int] = None
     ) -> str:
+        import hashlib
+        # Build stable cache key
+        history_key = str(history) if history else ""
+        items_key = ",".join(str(getattr(item, "id", item)) for item in context_items) if context_items else ""
+        cache_key = hashlib.md5(f"{query}||{history_key}||{items_key}||{user_id}".encode("utf-8")).hexdigest()
+
+        if cache_key in self._cached_contexts:
+            logger.info("ContextBuilder: context cache HIT")
+            return self._cached_contexts[cache_key]
+
         blocks = []
 
         # 1. Attached Context (Highest priority)
@@ -105,7 +116,9 @@ class ContextBuilder:
         except Exception as e:
             logger.warning(f"ContextBuilder failed RAG search: {e}")
 
-        return "\n\n".join(blocks)
+        compiled_context = "\n\n".join(blocks)
+        self._cached_contexts[cache_key] = compiled_context
+        return compiled_context
 
 
 class OrchestratorAgent(BaseAgent):
@@ -122,10 +135,10 @@ class OrchestratorAgent(BaseAgent):
         # Register default subagents
         self.registry.register(ChatAgent(executor))
         self.registry.register(SearchAgent(executor))
-        self.registry.register(RepoAnalysisAgent(executor))
+        self.registry.register(RepositoryAgent(executor))
         self.registry.register(CodingAgent(executor))
         self.registry.register(PlanningAgent(executor))
-        self.registry.register(MemoryRetrievalAgent(executor))
+        self.registry.register(MemoryAgent(executor))
         self.registry.register(ExecutionAgent(executor))
         self.registry.register(ResearchAgent(executor))
 
@@ -139,10 +152,10 @@ class OrchestratorAgent(BaseAgent):
         mapping = {
             "ChatAgent": "Chat",
             "SearchAgent": "Search",
-            "RepoAnalysisAgent": "Repository Analysis",
+            "RepositoryAgent": "Repository Analysis",
             "CodingAgent": "Coding",
             "PlanningAgent": "Planning",
-            "MemoryRetrievalAgent": "Memory Retrieval",
+            "MemoryAgent": "Memory Retrieval",
             "ExecutionAgent": "Execution",
             "ResearchAgent": "Research"
         }

@@ -1,7 +1,12 @@
 from typing import List, Dict, Any, Optional
-import time
+import os
+from pathlib import Path
 from backend.app.agent.base import BaseAgent
 from backend.app.core.logging import get_logger
+from backend.app.db.session import SessionLocal
+from backend.app.intelligence.memory_service import PersistentMemoryService
+from backend.app.intelligence.system_actions import SystemActionsService
+from backend.app.intelligence.models import RepositoryProfile, KnowledgeEntry
 
 logger = get_logger(__name__)
 
@@ -48,17 +53,17 @@ class ChatAgent(BaseAgent):
 
 class SearchAgent(BaseAgent):
     name = "SearchAgent"
-    description = "Searches local workspace files and contents."
-    capabilities = ["search", "file_search"]
+    description = "Handles files search, semantic search, repository retrieval, and memory search."
+    capabilities = ["search", "file_search", "semantic_search", "repo_retrieval", "memory_retrieval"]
 
     def __init__(self, executor: Any):
         self.executor = executor
 
     def confidence(self, query: str, context: Optional[str] = None) -> float:
         q = query.lower()
-        search_keywords = ["find", "search", "locate", "where is", "look for", "grep", "file named", "pdf"]
+        search_keywords = ["find", "search", "locate", "where is", "look for", "grep", "file named", "pdf", "semantic", "memory search", "retrieve"]
         if any(kw in q for kw in search_keywords):
-            return 0.90
+            return 0.92
         return 0.20
 
     async def execute(
@@ -68,14 +73,45 @@ class SearchAgent(BaseAgent):
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
     ) -> str:
-        # Run filesystem file search
-        search_results = self.executor.file_agent.search(query)
+        # 1. Run file search
+        file_results = self.executor.file_agent.search(query)
+        
+        # 2. Run semantic RAG search
+        semantic_results = []
+        try:
+            rag_hits = await self.executor.rag.search(query, top_k=3)
+            for hit in rag_hits:
+                chunk = hit["data"]["chunk"] if isinstance(hit, dict) and "data" in hit else str(hit)
+                semantic_results.append(chunk[:400])
+        except Exception as e:
+            logger.warning(f"SearchAgent semantic retrieval failed: {e}")
+
+        # 3. Run memory search
+        memory_results = []
+        db = SessionLocal()
+        try:
+            mems = PersistentMemoryService().search(db, query, limit=3, user_id=kwargs.get("user_id"))
+            memory_results = [f"- {m['title']}: {m['content'][:200]}" for m in mems]
+        except Exception as e:
+            logger.warning(f"SearchAgent memory search failed: {e}")
+        finally:
+            db.close()
+
         system_prompt = (
-            "You are a file search expert for Cortex Workspace.\n"
-            "Answer the user's file query using the provided Search Results and Context.\n"
-            "List matching files clearly and state if files cannot be found. Do not invent files."
+            "You are a search and retrieval expert for Cortex Workspace.\n"
+            "Synthesize the file results, semantic code results, and memory matches below to answer the query.\n"
+            "Explicitly reference matching files, relevant chunks, or retrieved memories. Be precise."
         )
-        prompt = f"{context or ''}\n\nSearch Results:\n{search_results}\n\nUser Query:\n{query}"
+
+        search_context = (
+            f"=== Search Agent Results ===\n"
+            f"[File Search Results]:\n{file_results}\n\n"
+            f"[Semantic Code Chunks]:\n" + ("\n---\n".join(semantic_results) if semantic_results else "No semantic hits.") + "\n\n"
+            f"[Retrieved Memories]:\n" + ("\n".join(memory_results) if memory_results else "No matching memories.") + "\n"
+            f"============================="
+        )
+
+        prompt = f"{context or ''}\n\n{search_context}\n\nUser Query:\n{query}"
         res = await self.executor.router.route_and_generate(
             prompt=prompt,
             system_prompt=system_prompt,
@@ -89,19 +125,19 @@ class SearchAgent(BaseAgent):
         return res["response"]
 
 
-class RepoAnalysisAgent(BaseAgent):
-    name = "RepoAnalysisAgent"
-    description = "Analyzes repository structure, architecture summaries, and stack configuration."
-    capabilities = ["repo_analysis"]
+class RepositoryAgent(BaseAgent):
+    name = "RepositoryAgent"
+    description = "Analyzes repository architecture, dependencies, summaries, and codebase layout."
+    capabilities = ["repo_analysis", "dependency_analysis", "repo_summaries", "codebase_understanding"]
 
     def __init__(self, executor: Any):
         self.executor = executor
 
     def confidence(self, query: str, context: Optional[str] = None) -> float:
         q = query.lower()
-        repo_keywords = ["architecture", "repo summary", "tech stack", "directory layout", "project structure", "workspace layout", "package.json", "pyproject.toml", "modules"]
+        repo_keywords = ["architecture", "repo summary", "tech stack", "dependency", "project structure", "workspace layout", "modules", "packages", "codebase"]
         if any(kw in q for kw in repo_keywords):
-            return 0.88
+            return 0.90
         return 0.25
 
     async def execute(
@@ -111,12 +147,33 @@ class RepoAnalysisAgent(BaseAgent):
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
     ) -> str:
+        # Load profile details from database
+        db = SessionLocal()
+        profile_details = ""
+        try:
+            profile = db.query(RepositoryProfile).order_by(RepositoryProfile.updated_at.desc()).first()
+            if profile:
+                profile_details = (
+                    f"Repository: {profile.name}\n"
+                    f"Path: {profile.path}\n"
+                    f"Architecture Overview: {profile.architecture_summary}\n"
+                    f"Tech Stack: {profile.tech_stack}\n"
+                    f"Entry Points: {profile.entry_points_json}\n"
+                    f"Dependencies: {profile.dependencies_json[:1000]}"
+                )
+            else:
+                profile_details = "No repository profile indexed in database yet."
+        except Exception as e:
+            logger.warning(f"RepositoryAgent failed to fetch profile: {e}")
+        finally:
+            db.close()
+
         system_prompt = (
-            "You are a software architect analyzing the Cortex Workspace repository structure.\n"
-            "Rely strictly on the provided Context (which includes repository profiles and structure summaries).\n"
-            "Provide a clean, readable architectural explanation."
+            "You are a repository analysis agent for Cortex.\n"
+            "Explain the architecture, structure, dependencies, and code composition using the database profile details.\n"
+            "Be clear and summarize technical stacks concisely."
         )
-        prompt = f"{context or ''}\n\nUser Query:\n{query}"
+        prompt = f"{context or ''}\n\n[Database Repository Profile]:\n{profile_details}\n\nUser Query:\n{query}"
         res = await self.executor.router.route_and_generate(
             prompt=prompt,
             system_prompt=system_prompt,
@@ -132,17 +189,17 @@ class RepoAnalysisAgent(BaseAgent):
 
 class CodingAgent(BaseAgent):
     name = "CodingAgent"
-    description = "Writes, updates, parses, and explains code implementations."
-    capabilities = ["coding"]
+    description = "Generates code, fixes bugs, refactors codebases, and creates unified patch diffs."
+    capabilities = ["coding", "bug_fixing", "refactoring", "patch_creation"]
 
     def __init__(self, executor: Any):
         self.executor = executor
 
     def confidence(self, query: str, context: Optional[str] = None) -> float:
         q = query.lower()
-        coding_keywords = ["code", "class", "function", "write a", "implement", "refactor", "bug", "fix", "syntax", "compile", "method", "python", "typescript", "javascript", "import", "class definition"]
+        coding_keywords = ["code", "class", "function", "write a", "implement", "refactor", "bug", "fix", "syntax", "compile", "diff", "patch", "git diff"]
         if any(kw in q for kw in coding_keywords):
-            return 0.85
+            return 0.90
         return 0.30
 
     async def execute(
@@ -153,9 +210,17 @@ class CodingAgent(BaseAgent):
         **kwargs: Any
     ) -> str:
         system_prompt = (
-            "You are an expert software developer.\n"
-            "Your task is to write correct, clean, readable code and explain implementations.\n"
-            "Use context code blocks if present. Follow design guidelines strictly."
+            "You are an expert developer agent.\n"
+            "Produce clean, standard-compliant implementations.\n"
+            "If the user asks for a patch, diff, or file modification, output a standard unified git diff format:\n"
+            "```diff\n"
+            "--- a/path/to/file.py\n"
+            "+++ b/path/to/file.py\n"
+            "@@ ... @@\n"
+            "- old line\n"
+            "+ new line\n"
+            "```\n"
+            "Be precise with diff changes."
         )
         prompt = f"{context or ''}\n\nUser Query:\n{query}"
         res = await self.executor.router.route_and_generate(
@@ -171,19 +236,100 @@ class CodingAgent(BaseAgent):
         return res["response"]
 
 
-class PlanningAgent(BaseAgent):
-    name = "PlanningAgent"
-    description = "Forms step-by-step implementation plans, roadmaps, and recipes."
-    capabilities = ["planning"]
+class MemoryAgent(BaseAgent):
+    name = "MemoryAgent"
+    description = "Retrieves and updates knowledge database memories, and summarizes inputs."
+    capabilities = ["memory_retrieval", "memory_updates", "summarization", "knowledge_lookup"]
 
     def __init__(self, executor: Any):
         self.executor = executor
 
     def confidence(self, query: str, context: Optional[str] = None) -> float:
         q = query.lower()
-        plan_keywords = ["plan", "steps", "how to", "roadmap", "recipe", "implementation steps", "strategy", "checklist"]
+        memory_keywords = ["memory", "recall", "stored", "learned", "note", "remember", "knowledge", "save to memory", "update note", "summarize"]
+        if any(kw in q for kw in memory_keywords):
+            return 0.92
+        return 0.22
+
+    async def execute(
+        self,
+        query: str,
+        context: Optional[str] = None,
+        history: Optional[List[Dict[str, str]]] = None,
+        **kwargs: Any
+    ) -> str:
+        q_lower = query.lower()
+        db = SessionLocal()
+        try:
+            # Check if this query is a request to save/update a memory
+            save_triggers = ["remember that", "save to memory", "store memory", "learn that", "update memory", "save note"]
+            if any(t in q_lower for t in save_triggers):
+                # Requesting memory storage
+                # Use simple parsing or route to LLM to extract facts
+                extracted_title = "User Fact"
+                extracted_content = query
+                for t in save_triggers:
+                    if t in q_lower:
+                        parts = query.split(t, 1)
+                        if len(parts) > 1 and parts[1].strip():
+                            extracted_content = parts[1].strip()
+                            extracted_title = extracted_content[:30] + "..." if len(extracted_content) > 30 else extracted_content
+                            break
+                
+                # Write to DB memory
+                mem_service = PersistentMemoryService()
+                entry = mem_service.add_document_memory(
+                    db,
+                    title=f"Memory: {extracted_title}",
+                    content=extracted_content,
+                    source_path="user_chat",
+                    user_id=kwargs.get("user_id")
+                )
+                db.commit()
+                return f"🧠 Memory saved successfully!\n- **Title**: Memory: {extracted_title}\n- **Saved Content**: {extracted_content}"
+
+            # General lookup
+            memories = PersistentMemoryService().search(db, query, limit=5, user_id=kwargs.get("user_id"))
+            db_mems_str = ""
+            if memories:
+                db_mems_str = "\n".join(f"- {m['title']}: {m['content']}" for m in memories)
+            else:
+                db_mems_str = "No database memory items match."
+
+            system_prompt = (
+                "You are a memory specialist agent.\n"
+                "Your role is to recall and explain memories from the database matching the query.\n"
+                "Summarize key points if requested."
+            )
+            prompt = f"{context or ''}\n\n[Database Memory List]:\n{db_mems_str}\n\nUser Query:\n{query}"
+            res = await self.executor.router.route_and_generate(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                model=kwargs.get("llm_model"),
+                history=history,
+                inference_engine=kwargs.get("inference_engine"),
+                api_key=kwargs.get("api_key"),
+                api_base_url=kwargs.get("api_base_url")
+            )
+            self.executor.last_routing_info = res.get("routing_info")
+            return res["response"]
+        finally:
+            db.close()
+
+
+class PlanningAgent(BaseAgent):
+    name = "PlanningAgent"
+    description = "Decomposes complex requests into project plans, milestones, roadmaps, and todo lists."
+    capabilities = ["planning", "roadmap_generation", "task_decomposition"]
+
+    def __init__(self, executor: Any):
+        self.executor = executor
+
+    def confidence(self, query: str, context: Optional[str] = None) -> float:
+        q = query.lower()
+        plan_keywords = ["plan", "steps", "how to", "roadmap", "recipe", "implementation steps", "strategy", "checklist", "milestone", "todo"]
         if any(kw in q for kw in plan_keywords):
-            return 0.87
+            return 0.90
         return 0.25
 
     async def execute(
@@ -194,9 +340,9 @@ class PlanningAgent(BaseAgent):
         **kwargs: Any
     ) -> str:
         system_prompt = (
-            "You are a software engineering planner.\n"
-            "Break down the user's request into logical, structured, step-by-step engineering tasks.\n"
-            "Keep the plan clear, actionable, and aligned with standard project layouts."
+            "You are a strategic planning agent.\n"
+            "Generate logical roadmap milestones, check task dependencies, and list explicit implementation tasks.\n"
+            "Format the roadmap beautifully with todo indicators."
         )
         prompt = f"{context or ''}\n\nUser Query:\n{query}"
         res = await self.executor.router.route_and_generate(
@@ -212,20 +358,20 @@ class PlanningAgent(BaseAgent):
         return res["response"]
 
 
-class MemoryRetrievalAgent(BaseAgent):
-    name = "MemoryRetrievalAgent"
-    description = "Recalls and retrieves stored persistent knowledge entries."
-    capabilities = ["memory_retrieval"]
+class ResearchAgent(BaseAgent):
+    name = "ResearchAgent"
+    description = "Conducts deep concept research, explains technical documentation, and analyzes concepts."
+    capabilities = ["research", "documentation_analysis", "concept_explanation"]
 
     def __init__(self, executor: Any):
         self.executor = executor
 
     def confidence(self, query: str, context: Optional[str] = None) -> float:
         q = query.lower()
-        memory_keywords = ["memory", "recall", "stored", "learned", "note", "remember", "knowledge", "history"]
-        if any(kw in q for kw in memory_keywords):
+        research_keywords = ["research", "explain concept", "investigate", "deep dive", "theory", "paper", "pldnet", "rlhf", "documentation", "how does"]
+        if any(kw in q for kw in research_keywords):
             return 0.88
-        return 0.22
+        return 0.35
 
     async def execute(
         self,
@@ -235,8 +381,9 @@ class MemoryRetrievalAgent(BaseAgent):
         **kwargs: Any
     ) -> str:
         system_prompt = (
-            "You are a memory recall agent for Cortex Workspace.\n"
-            "Retrieve and summarize knowledge based on memory context, matching items accurately."
+            "You are an academic and technical research agent.\n"
+            "Deconstruct technical concepts using the code documentation, RAG context, and references.\n"
+            "Write clean, clear explanations."
         )
         prompt = f"{context or ''}\n\nUser Query:\n{query}"
         res = await self.executor.router.route_and_generate(
@@ -254,17 +401,17 @@ class MemoryRetrievalAgent(BaseAgent):
 
 class ExecutionAgent(BaseAgent):
     name = "ExecutionAgent"
-    description = "Performs system status diagnostic checks and executes commands."
-    capabilities = ["execution"]
+    description = "Performs terminal command actions, file operations, and application launching while respecting permissions."
+    capabilities = ["execution", "terminal_action", "file_operation", "app_launch"]
 
     def __init__(self, executor: Any):
         self.executor = executor
 
     def confidence(self, query: str, context: Optional[str] = None) -> float:
         q = query.lower()
-        exec_keywords = ["run command", "execute command", "system status", "diagnostic", "health check", "scan health", "check port", "disk space", "cpu"]
+        exec_keywords = ["run command", "execute command", "launch", "open file", "open folder", "read file", "list directory", "terminal", "system diagnostic"]
         if any(kw in q for kw in exec_keywords):
-            return 0.90
+            return 0.95
         return 0.20
 
     async def execute(
@@ -274,60 +421,97 @@ class ExecutionAgent(BaseAgent):
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
     ) -> str:
-        diagnostics = self.executor.system_agent.scan(query)
-        system_prompt = (
-            "You are a system operations agent.\n"
-            "Analyze system diagnostics and check health reports, providing direct troubleshooting answers."
-        )
-        prompt = f"{context or ''}\n\nSystem Diagnostics:\n{diagnostics}\n\nUser Query:\n{query}"
-        res = await self.executor.router.route_and_generate(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            model=kwargs.get("llm_model"),
-            history=history,
-            inference_engine=kwargs.get("inference_engine"),
-            api_key=kwargs.get("api_key"),
-            api_base_url=kwargs.get("api_base_url")
-        )
-        self.executor.last_routing_info = res.get("routing_info")
-        return res["response"]
+        q_lower = query.lower()
+        db = SessionLocal()
+        try:
+            service = SystemActionsService()
+            action_type = "run_command"
+            paths = []
+            payload = {}
 
+            # Parse query to map action types
+            if "open folder" in q_lower:
+                action_type = "open_folder"
+                # Try to extract path
+                paths = [str(self.executor.file_agent.workspace_root)]
+            elif "open file" in q_lower:
+                action_type = "open_file"
+                paths = [str(self.executor.file_agent.workspace_root / "README.md")]
+            elif "read file" in q_lower:
+                action_type = "read_file"
+                paths = [str(self.executor.file_agent.workspace_root / "pyproject.toml")]
+            elif "list directory" in q_lower:
+                action_type = "list_directory"
+                paths = ["."]
+            else:
+                action_type = "run_command"
+                # If command keyword, extract command string
+                cmd_str = query
+                if "run command" in q_lower:
+                    parts = query.split("run command", 1)
+                    if len(parts) > 1 and parts[1].strip():
+                        cmd_str = parts[1].strip()
+                payload = {"command": cmd_str}
 
-class ResearchAgent(BaseAgent):
-    name = "ResearchAgent"
-    description = "Conducts deep concept research, investigation, and analysis."
-    capabilities = ["research"]
+            # Enforce permission checks via SystemActionsService
+            user_id = kwargs.get("user_id")
+            result = service.plan_action(
+                db,
+                user_id=user_id,
+                action_type=action_type,
+                description=f"Action requested by ExecutionAgent for query: {query}",
+                affected_paths=paths,
+                payload=payload
+            )
 
-    def __init__(self, executor: Any):
-        self.executor = executor
+            status = result.get("status")
+            if status == "approval_required":
+                return (
+                    f"⚠️ **Action Blocked (Approval Required)**\n"
+                    f"- **Reason**: This system command or file modification requires explicit user confirmation under the current automation security settings.\n"
+                    f"- **Action ID**: `{result.get('action_id')}`\n"
+                    f"- **Planned Action**: `{result.get('planned_action')}`\n"
+                    f"- **Description**: {result.get('description')}\n"
+                    f"- **Affected Paths**: `{result.get('affected_paths')}`"
+                )
+            
+            # Action was executed immediately or read action completed
+            res_val = result.get("result") or result
+            
+            if action_type == "read_file":
+                content = res_val.get("content_preview", "")
+                path = res_val.get("path", "")
+                return (
+                    f"✅ **File Read Successfully**\n"
+                    f"- **File**: `{path}`\n\n"
+                    f"```\n{content}\n```"
+                )
+            elif action_type == "list_directory":
+                entries = res_val.get("entries", [])
+                path = res_val.get("path", "")
+                entries_str = "\n".join(f"- {'[DIR] ' if e.get('is_dir') else ''}{e.get('name')}" for e in entries)
+                return (
+                    f"✅ **Directory Listed Successfully**\n"
+                    f"- **Directory**: `{path}`\n\n"
+                    f"{entries_str or 'No entries found.'}"
+                )
+            elif action_type in {"open_file", "open_folder"}:
+                path = res_val.get("opened") or res_val.get("opened_folder", "")
+                return f"✅ **Path Opened Successfully**: `{path}`"
 
-    def confidence(self, query: str, context: Optional[str] = None) -> float:
-        q = query.lower()
-        research_keywords = ["research", "explain concept", "investigate", "deep dive", "theory", "paper", "pldnet", "rlhf"]
-        if any(kw in q for kw in research_keywords):
-            return 0.85
-        return 0.35
+            stdout = res_val.get("stdout", "")
+            stderr = res_val.get("stderr", "")
+            code = res_val.get("returncode", 0)
 
-    async def execute(
-        self,
-        query: str,
-        context: Optional[str] = None,
-        history: Optional[List[Dict[str, str]]] = None,
-        **kwargs: Any
-    ) -> str:
-        system_prompt = (
-            "You are a research agent.\n"
-            "Synthesize deep insights from provided documentation, research concepts, and reference files."
-        )
-        prompt = f"{context or ''}\n\nUser Query:\n{query}"
-        res = await self.executor.router.route_and_generate(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            model=kwargs.get("llm_model"),
-            history=history,
-            inference_engine=kwargs.get("inference_engine"),
-            api_key=kwargs.get("api_key"),
-            api_base_url=kwargs.get("api_base_url")
-        )
-        self.executor.last_routing_info = res.get("routing_info")
-        return res["response"]
+            return (
+                f"✅ **Action Executed Successfully**\n"
+                f"- **Action**: `{action_type}`\n"
+                f"- **Return Code**: `{code}`\n"
+                f"- **Standard Output**:\n```\n{stdout or 'None'}\n```\n"
+                f"- **Standard Error**:\n```\n{stderr or 'None'}\n```"
+            )
+        except Exception as e:
+            logger.error(f"ExecutionAgent fail: {e}")
+            return f"❌ **Execution Error**: {e}"
+        finally:
+            db.close()

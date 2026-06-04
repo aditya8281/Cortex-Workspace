@@ -7,8 +7,11 @@ class ResponseBuilder:
     def build(self, ctx: ExecutionContext) -> ExecutionResult:
         if ctx.llm_response:
             answer = str(ctx.llm_response)
-            if "Final Response:\n" in answer:
-                answer = answer.split("Final Response:\n", 1)[1]
+            import re
+            pattern = re.compile(r'final\s+response\s*:\s*\n*', re.IGNORECASE)
+            parts = pattern.split(answer, 1)
+            if len(parts) > 1:
+                answer = parts[1]
             return ExecutionResult(
                 answer=answer.strip(),
                 source="executor_v2",
