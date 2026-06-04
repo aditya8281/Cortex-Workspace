@@ -12,6 +12,7 @@ from backend.app.api.v1.intelligence import router as intelligence_router
 from backend.app.api.v1.profile import router as profile_router
 from backend.app.api.v1.context import router as context_router
 from backend.app.api.v1.hierarchical import router as hierarchical_router
+from backend.app.api.v1.orchestration import router as orchestration_router
 
 api_router = APIRouter()
 
@@ -83,4 +84,10 @@ api_router.include_router(
     context_router,
     prefix="/context",
     tags=["Context"]
+)
+
+api_router.include_router(
+    orchestration_router,
+    prefix="/sync/orchestration",
+    tags=["Multi-Agent Orchestration"]
 )
