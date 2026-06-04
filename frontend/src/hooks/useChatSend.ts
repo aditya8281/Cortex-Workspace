@@ -13,6 +13,7 @@ export function useChatSend() {
 
   const activeSession = useChatStore((s) => s.getActiveSession());
   const appendMessages = useChatStore((s) => s.appendMessages);
+  const updateMessage = useChatStore((s) => s.updateMessage);
   const setIsGenerating = useChatStore((s) => s.setIsGenerating);
   const buildTitleFromQuery = useChatStore((s) => s.buildTitleFromQuery);
   const updateSession = useChatStore((s) => s.updateSession);
@@ -33,12 +34,40 @@ export function useChatSend() {
     const nextTitle =
       activeSession.title === "New chat" ? buildTitleFromQuery(query) : activeSession.title;
 
+    const assistantId = `msg-${crypto.randomUUID()}`;
+    const stageMessages = [
+      "Searching memory",
+      "Reading files",
+      "Thinking",
+      "Drafting response",
+    ];
+    let stageIndex = 0;
+    let stageTimer: number | null = null;
+
     const history: ChatTurn[] = activeSession.messages
       .filter((m) => m.id !== "welcome")
       .map((m) => ({ role: m.sender, content: m.text }));
 
     appendMessages(activeSession.id, [userMessage], nextTitle);
     setIsGenerating(true);
+    appendMessages(activeSession.id, [
+      {
+        id: assistantId,
+        sender: "assistant",
+        text: stageMessages[0],
+        state: "streaming",
+        liveStage: stageMessages[0],
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    ]);
+
+    stageTimer = window.setInterval(() => {
+      stageIndex = Math.min(stageIndex + 1, stageMessages.length - 1);
+      updateMessage(activeSession.id, assistantId, {
+        text: stageMessages[stageIndex],
+        liveStage: stageMessages[stageIndex],
+      });
+    }, 900);
 
     try {
       const configPayload = { ...modelConfig };
@@ -53,16 +82,14 @@ export function useChatSend() {
         contextItems.length > 0 ? contextItems : undefined
       );
 
-      appendMessages(activeSession.id, [
-        {
-          id: `msg-${crypto.randomUUID()}`,
-          sender: "assistant",
-          text: response.response,
-          executionId: response.execution_id,
-          routingInfo: response.routing_info,
-          timestamp: new Date().toLocaleTimeString(),
-        },
-      ]);
+      updateMessage(activeSession.id, assistantId, {
+        text: response.response,
+        executionId: response.execution_id,
+        routingInfo: response.routing_info,
+        state: "done",
+        liveStage: null,
+        timestamp: new Date().toLocaleTimeString(),
+      });
 
       useChatStore.getState().setContextItems([
         {
@@ -74,15 +101,14 @@ export function useChatSend() {
       ]);
     } catch {
       setToast("Assistant unreachable — check backend or model provider.");
-      appendMessages(activeSession.id, [
-        {
-          id: `msg-${crypto.randomUUID()}`,
-          sender: "assistant",
-          text: "I hit a routing problem while processing that request.",
-          timestamp: new Date().toLocaleTimeString(),
-        },
-      ]);
+      updateMessage(activeSession.id, assistantId, {
+        text: "I hit a routing problem while processing that request.",
+        state: "done",
+        liveStage: null,
+        timestamp: new Date().toLocaleTimeString(),
+      });
     } finally {
+      if (stageTimer) window.clearInterval(stageTimer);
       setIsGenerating(false);
       updateSession(activeSession.id, { title: nextTitle });
     }

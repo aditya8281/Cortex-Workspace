@@ -22,6 +22,8 @@ export type ChatMessage = {
   text: string;
   executionId?: string | null;
   timestamp: string;
+  state?: "pending" | "streaming" | "done";
+  liveStage?: string | null;
   routingInfo?: {
     model_used: string;
     provider: string;

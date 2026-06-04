@@ -54,6 +54,7 @@ type ChatState = {
   setIsGenerating: (v: boolean) => void;
   setContextItems: (items: ContextItem[]) => void;
   appendMessages: (sessionId: string, messages: ChatMessage[], title?: string) => void;
+  updateMessage: (sessionId: string, messageId: string, patch: Partial<ChatMessage>) => void;
   updateSession: (sessionId: string, patch: Partial<ChatSession>) => void;
   deleteSession: (sessionId: string) => void;
   pinSession: (sessionId: string, pinned: boolean) => void;
@@ -113,6 +114,20 @@ export const useChatStore = create<ChatState>()(
           ),
         }));
       },
+
+      updateMessage: (sessionId, messageId, patch) =>
+        set((s) => ({
+          sessions: normalizeSessions(s.sessions).map((session) =>
+            session.id === sessionId
+              ? {
+                  ...session,
+                  messages: session.messages.map((message) =>
+                    message.id === messageId ? { ...message, ...patch } : message,
+                  ),
+                }
+              : session,
+          ),
+        })),
 
       updateSession: (sessionId, patch) =>
         set((s) => ({

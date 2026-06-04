@@ -68,6 +68,9 @@ export function ChatComposer() {
   }, []);
 
   const currentModel = activeSession?.selectedModel || "Auto";
+  const liveStage = [...(activeSession?.messages ?? [])]
+    .reverse()
+    .find((message) => message.sender === "assistant" && message.state === "streaming")?.liveStage;
   const contextItems = listContext();
 
   const submit = async (text?: string) => {
@@ -263,6 +266,26 @@ export function ChatComposer() {
           )}
         </div>
       </div>
+
+      {isGenerating && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-2xl border border-cortex-border/70 bg-cortex-elevated/55 px-4 py-2 text-xs text-cortex-muted"
+        >
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-flex gap-1">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cortex-accent" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cortex-accent [animation-delay:150ms]" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cortex-accent [animation-delay:300ms]" />
+            </span>
+            <span className="font-medium text-cortex-text">Cortex is {liveStage?.toLowerCase() || "thinking"}…</span>
+          </span>
+          <span className="rounded-full border border-cortex-accent/20 bg-cortex-accent-soft/70 px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-cortex-accent">
+            live
+          </span>
+        </motion.div>
+      )}
 
       {/* ------------------------------------------------------------------ */}
       {/* Input row                                                            */}

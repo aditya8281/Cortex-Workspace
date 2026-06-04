@@ -38,7 +38,11 @@ export function useSyncStatus() {
 }
 
 export function useLatestSyncRun() {
-  return useQuery({ queryKey: intelligenceKeys.latestRun, queryFn: getLatestSyncRun });
+  return useQuery({
+    queryKey: intelligenceKeys.latestRun,
+    queryFn: getLatestSyncRun,
+    refetchInterval: 5000,
+  });
 }
 
 export function useRepositoryProfiles() {
@@ -46,7 +50,11 @@ export function useRepositoryProfiles() {
 }
 
 export function useProactiveNotifications() {
-  return useQuery({ queryKey: intelligenceKeys.proactive, queryFn: getProactiveNotifications });
+  return useQuery({
+    queryKey: intelligenceKeys.proactive,
+    queryFn: getProactiveNotifications,
+    refetchInterval: 10000,
+  });
 }
 
 export function useAutomationSettings() {
@@ -58,6 +66,7 @@ export function useWorkspaceIntelligence() {
     queryKey: intelligenceKeys.workspace,
     queryFn: getWorkspaceIntelligence,
     retry: false,
+    refetchInterval: 15000,
   });
 }
 

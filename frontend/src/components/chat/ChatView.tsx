@@ -21,6 +21,7 @@ export function ChatView() {
   const [streamId, setStreamId] = useState<string | null>(null);
   const prevCount = useRef(0);
   const [openTraces, setOpenTraces] = useState<Record<string, boolean>>({});
+  const liveAssistant = [...(session?.messages ?? [])].reverse().find((msg) => msg.sender === "assistant" && msg.state === "streaming");
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -89,6 +90,17 @@ export function ChatView() {
                       : "border border-cortex-border/70 bg-cortex-surface/80",
                   )}
                 >
+                  {msg.sender === "assistant" && msg.state === "streaming" && (
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-cortex-muted">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-cortex-accent/20 bg-cortex-accent-soft/60 px-2 py-1 text-cortex-accent">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cortex-accent" />
+                        {msg.liveStage || "Thinking"}
+                      </span>
+                      <span className="rounded-full border border-cortex-border/70 bg-cortex-surface/70 px-2 py-1">
+                        live response
+                      </span>
+                    </div>
+                  )}
                   {msg.sender === "user" ? (
                     <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
                   ) : streamId === msg.id ? (
@@ -257,7 +269,7 @@ export function ChatView() {
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cortex-accent [animation-delay:150ms]" />
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cortex-accent [animation-delay:300ms]" />
               </span>
-              Cortex is thinking…
+              Cortex is {liveAssistant?.liveStage?.toLowerCase() || "thinking"}…
             </div>
           )}
           <div ref={endRef} />

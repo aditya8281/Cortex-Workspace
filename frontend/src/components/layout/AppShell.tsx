@@ -105,7 +105,9 @@ export function AppShell() {
             <p className="text-xs text-cortex-muted">Personal intelligence layer</p>
           </div>
           <div className="hidden items-center gap-2 rounded-full border border-cortex-border/80 bg-cortex-elevated/70 px-3 py-1.5 text-[11px] font-medium text-cortex-muted lg:flex">
-            <span className="h-2 w-2 rounded-full bg-cortex-success shadow-[0_0_0_4px_rgba(62,220,159,0.14)]" />
+            <span className="relative h-2 w-2 rounded-full bg-cortex-success shadow-[0_0_0_4px_rgba(62,220,159,0.14)]">
+              <span className="absolute inset-0 animate-ping rounded-full bg-cortex-success/60" />
+            </span>
             Live
           </div>
           <Button

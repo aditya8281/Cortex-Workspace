@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 build/
 dist/
+frontend/dist/
 wheels/
 *.egg-info
 .venv
@@ -11,8 +12,23 @@ wheels/
 .pytest_cache/
 .mypy_cache/
 app.db
+app.db-journal
 state.db
 *.db
 *.db.backup.*
 .ruff_cache/
 .cortex/
+
+# Node / frontend caches
+node_modules/
+frontend/node_modules/
+.vite/
+frontend/.vite/
+coverage/
+frontend/coverage/
+
+# Logs and temp files
+*.log
+*.tmp
+tmp/
+.tmp/

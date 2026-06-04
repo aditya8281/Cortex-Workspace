@@ -2,9 +2,9 @@ import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Brain,
-  FileStack,
   FolderGit2,
-  GitBranch,
+  Gauge,
+  Layers,
   Network,
   RefreshCw,
   Search,
@@ -24,6 +24,9 @@ import {
 } from "@/hooks/useIntelligence";
 import { formatTimestamp } from "@/lib/utils";
 import { useChatStore } from "@/stores/chatStore";
+import { useAppStore } from "@/stores/appStore";
+import { useQuery } from "@tanstack/react-query";
+import { getMetricsSummary } from "@/api/ai";
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -32,14 +35,37 @@ export function DashboardPage() {
   const { data: proactive = [] } = useProactiveNotifications();
   const { data: automation } = useAutomationSettings();
   const { data: workspace } = useWorkspaceIntelligence();
+  const { data: metrics } = useQuery({
+    queryKey: ["dashboard-metrics"],
+    queryFn: getMetricsSummary,
+    refetchInterval: 5000,
+  });
   const syncMutation = useTriggerSync();
   const newSession = useChatStore((s) => s.newSession);
+  const activeSession = useChatStore((s) => s.getActiveSession());
+  const modelConfig = useAppStore((s) => s.modelConfig);
+  const activeModel = activeSession?.selectedModel || modelConfig.llm_model;
 
   const stats = [
-    { label: "Repositories known", value: status?.repositories_indexed ?? 0, icon: GitBranch },
-    { label: "Files indexed", value: status?.files_indexed ?? 0, icon: FileStack },
-    { label: "Memory updates", value: status?.memory_updates ?? 0, icon: Brain },
-    { label: "Graph nodes", value: (workspace?.concepts.length ?? 0) + (workspace?.repositories.length ?? 0), icon: Network },
+    { label: "Active model", value: activeModel || "Auto", icon: Layers, detail: activeSession?.title || "Current chat route" },
+    {
+      label: "Memory indexing",
+      value: `${status?.memory_updates ?? 0}`,
+      icon: Brain,
+      detail: status?.sync_status === "syncing" ? `${status?.progress_percent ?? 0}% indexed` : "Idle learning layer",
+    },
+    {
+      label: "Sync progress",
+      value: `${status?.indexed ?? 0}/${status?.total_files ?? 0}`,
+      icon: Network,
+      detail: status?.current_path ? status.current_path.split("/").slice(-2).join("/") : "No active filesystem scan",
+    },
+    {
+      label: "System latency",
+      value: metrics ? `${metrics.avg_response_time_ms.toFixed(0)} ms` : "—",
+      icon: Gauge,
+      detail: metrics ? `${metrics.avg_tokens_per_second.toFixed(0)} tok/s avg` : "No telemetry yet",
+    },
   ];
 
   const feed = [
@@ -95,6 +121,7 @@ export function DashboardPage() {
               <div className="flex flex-wrap gap-2">
                 <Badge variant="accent">Last sync: {formatTimestamp(status?.last_sync_time)}</Badge>
                 <Badge>Automation: {automation?.automation_level ?? "approval"}</Badge>
+                <Badge variant="accent">Model: {activeModel || "Auto"}</Badge>
                 <Badge variant={latest?.status === "running" ? "warn" : "success"}>
                   {latest?.status === "running" ? "Syncing…" : status?.last_sync_status ?? "idle"}
                 </Badge>
@@ -117,6 +144,7 @@ export function DashboardPage() {
                       <div>
                         <p className="text-2xl font-semibold tabular-nums text-cortex-text">{isLoading ? "—" : s.value}</p>
                         <p className="text-xs text-cortex-muted">{s.label}</p>
+                        <p className="mt-1 text-[11px] text-cortex-muted/80 line-clamp-1">{s.detail}</p>
                       </div>
                     </CardContent>
                   </Card>
