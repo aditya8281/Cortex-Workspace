@@ -1,4 +1,5 @@
 import pytest
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, patch, MagicMock
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -46,8 +47,18 @@ def fixture_client(tmp_path):
 
     from backend.app.api.deps import get_db
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
+    original_lifespan_context = app.router.lifespan_context
+
+    @asynccontextmanager
+    async def noop_lifespan(_app):
+        yield
+
+    app.router.lifespan_context = noop_lifespan
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.router.lifespan_context = original_lifespan_context
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=test_engine)
     test_engine.dispose()
@@ -205,9 +216,79 @@ def test_api_validate_provider_endpoint(client):
 
 
 def test_api_select_model(client):
-    payload = {
-        "model_name": "gpt-4o-mini"
-    }
-    response = client.post("/api/v1/models/select", json=payload)
+    with patch("backend.app.api.v1.models.ModelRegistry.list_models", new_callable=AsyncMock) as mock_models:
+        mock_models.return_value = [
+            {"name": "gpt-4o-mini", "id": "gpt-4o-mini", "provider": "OpenAI", "is_local": False}
+        ]
+        payload = {
+            "model_name": "gpt-4o-mini"
+        }
+        response = client.post("/api/v1/models/select", json=payload)
+        assert response.status_code == 200
+        assert response.json()["selected_model"] == "gpt-4o-mini"
+
+
+def test_api_select_model_auto(client):
+    response = client.post("/api/v1/models/select", json={"model_name": "Auto", "session_id": "session-1"})
     assert response.status_code == 200
-    assert response.json()["selected_model"] == "gpt-4o-mini"
+    data = response.json()
+    assert data["selected_model"] == "Auto"
+    assert data["resolved_model"] == "Auto"
+
+
+def test_api_select_model_persists_session_state(client):
+    with patch("backend.app.api.v1.models.ModelRegistry.list_models", new_callable=AsyncMock) as mock_models, \
+         patch("backend.app.api.v1.models.redis_cache.ping", new_callable=AsyncMock) as mock_ping, \
+         patch("backend.app.api.v1.models.redis_cache.set", new_callable=AsyncMock) as mock_set:
+        mock_models.return_value = [
+            {"name": "gpt-4o-mini", "id": "gpt-4o-mini", "provider": "OpenAI", "is_local": False}
+        ]
+        mock_ping.return_value = True
+        response = client.post("/api/v1/models/select", json={"model_name": "gpt-4o-mini", "session_id": "session-2"})
+        assert response.status_code == 200
+        mock_ping.assert_awaited()
+        mock_set.assert_awaited_once()
+        assert "model_selection:session:session-2" in mock_set.await_args.args[0]
+
+
+def test_api_routing_reads_are_public(client):
+    response = client.get("/api/v1/models/routing/profiles")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+    response = client.get("/api/v1/models/routing/routes")
+    assert response.status_code == 200
+    data = response.json()
+    assert "profile_name" in data
+    assert "routes" in data
+
+
+def test_api_metrics_analytics_returns_200(client):
+    response = client.get("/api/v1/models/metrics/analytics")
+    assert response.status_code == 200
+    data = response.json()
+    assert "routing_mode" in data
+    assert "task_distribution" in data
+
+
+@pytest.mark.asyncio
+async def test_marketplace_uses_live_sources_only(client):
+    with patch("backend.app.api.v1.models.ModelRegistry.get_dynamic_ollama_marketplace", new_callable=AsyncMock) as mock_registry, \
+         patch("backend.app.api.v1.models.list_installed_models", new_callable=AsyncMock) as mock_installed:
+        mock_registry.return_value = []
+        mock_installed.return_value = []
+
+        response = client.get("/api/v1/models/marketplace")
+        assert response.status_code == 200
+        assert response.json() == []
+        mock_registry.assert_awaited()
+        mock_installed.assert_awaited()
+
+
+def test_workspace_sync_route_exists(client):
+    with patch("backend.app.api.v1.workspace.sync_service.run_full_sync", new_callable=AsyncMock) as mock_sync:
+        response = client.post("/api/v1/workspace/sync")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "running"
+        assert data["progress_message"] == "Queued workspace sync..."

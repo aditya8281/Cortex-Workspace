@@ -89,8 +89,8 @@ class ModelRegistry:
                 {"name": "claude-3-5-sonnet-latest", "provider_name": "Anthropic", "context_length": 200000, "parameters": "unknown", "quantization": "None", "vram_estimate": "N/A", "is_local": False},
                 {"name": "claude-3-5-haiku-latest", "provider_name": "Anthropic", "context_length": 200000, "parameters": "unknown", "quantization": "None", "vram_estimate": "N/A", "is_local": False},
                 # Google
-                {"name": "gemini-1.5-flash", "provider_name": "Google", "context_length": 1048576, "parameters": "unknown", "quantization": "None", "vram_estimate": "N/A", "is_local": False},
-                {"name": "gemini-1.5-pro", "provider_name": "Google", "context_length": 2097152, "parameters": "unknown", "quantization": "None", "vram_estimate": "N/A", "is_local": False},
+                {"name": "gemini-1.5-flash", "provider_name": "Google Gemini", "context_length": 1048576, "parameters": "unknown", "quantization": "None", "vram_estimate": "N/A", "is_local": False},
+                {"name": "gemini-1.5-pro", "provider_name": "Google Gemini", "context_length": 2097152, "parameters": "unknown", "quantization": "None", "vram_estimate": "N/A", "is_local": False},
                 # Groq
                 {"name": "llama3-70b-8192", "provider_name": "Groq", "context_length": 8192, "parameters": "70B", "quantization": "None", "vram_estimate": "N/A", "is_local": False},
                 {"name": "mixtral-8x7b-32768", "provider_name": "Groq", "context_length": 32768, "parameters": "45B", "quantization": "None", "vram_estimate": "N/A", "is_local": False},
@@ -110,6 +110,13 @@ class ModelRegistry:
                     is_local=m["is_local"]
                 )
                 db.add(model)
+            db.commit()
+
+        # Normalize any legacy seed data so provider/model routing stays consistent.
+        legacy_google_models = db.query(CortexModel).filter(CortexModel.provider_name == "Google").all()
+        if legacy_google_models:
+            for row in legacy_google_models:
+                row.provider_name = "Google Gemini"
             db.commit()
 
         # Seed routing profiles and default task routes if empty

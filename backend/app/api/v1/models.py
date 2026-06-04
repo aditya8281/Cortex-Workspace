@@ -1,4 +1,5 @@
 import json
+import asyncio
 import httpx
 import logging
 import keyring
@@ -9,10 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List
-from sqlalchemy import func
+from sqlalchemy import func, Integer
 
 from backend.app.core.config import settings
-from backend.app.api.deps import get_current_user, get_db
+from backend.app.core.redis import redis_cache
+from backend.app.api.deps import get_current_user, get_current_user_optional, get_db
 from backend.app.models.user import User
 from backend.app.models.llm_model import (
     CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute,
@@ -51,6 +53,20 @@ class DefaultModelPayload(BaseModel):
 class SelectModelPayload(BaseModel):
     model_name: str
     session_id: Optional[str] = None
+
+
+def _format_size_bytes(size: int | None) -> str:
+    if not size or size <= 0:
+        return "0 B"
+    units = ["B", "KB", "MB", "GB", "TB"]
+    value = float(size)
+    for unit in units:
+        if value < 1024 or unit == units[-1]:
+            if unit == "B":
+                return f"{int(value)} {unit}"
+            return f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{value:.1f} TB"
 
 
 @router.get("")
@@ -118,6 +134,7 @@ async def get_provider_models(provider_name: str, db: Session = Depends(get_db))
     return {
         "provider_name": provider.name,
         "default_model_name": provider.default_model_name,
+        "default_model": provider.default_model_name,
         "models": models.get("models", []),
         "valid": models.get("valid", False),
         "error": models.get("error"),
@@ -284,15 +301,56 @@ def delete_provider(provider_name: str, db: Session = Depends(get_db)):
 
 
 @router.post("/select")
-def select_model(payload: SelectModelPayload):
+def select_model(
+    payload: SelectModelPayload,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
     """
     Select model for current session.
     """
+    if payload.model_name != "Auto":
+        try:
+            available_models = asyncio.run(ModelRegistry.list_models(db))
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to resolve model registry: {exc}")
+
+        model_match = next(
+            (
+                model
+                for model in available_models
+                if model.get("name") == payload.model_name or model.get("id") == payload.model_name
+            ),
+            None,
+        )
+        if model_match is None:
+            raise HTTPException(status_code=404, detail=f"Model '{payload.model_name}' not found")
+    else:
+        model_match = {"name": "Auto", "provider": "System", "is_local": True}
+
     logger.info("Model selected session=%s model=%s", payload.session_id, payload.model_name)
+    selection_state = {
+        "selected_model": payload.model_name,
+        "resolved_model": model_match.get("name"),
+        "provider": model_match.get("provider"),
+        "is_local": model_match.get("is_local"),
+    }
+    if payload.session_id or current_user:
+        try:
+            if asyncio.run(redis_cache.ping()):
+                if payload.session_id:
+                    asyncio.run(redis_cache.set(f"model_selection:session:{payload.session_id}", selection_state))
+                if current_user:
+                    asyncio.run(redis_cache.set(f"model_selection:user:{current_user.id}", selection_state))
+        except Exception:
+            logger.warning("Model selection persistence skipped because Redis is unavailable")
     return {
         "status": "success",
         "selected_model": payload.model_name,
         "session_id": payload.session_id,
+        "resolved_model": model_match.get("name"),
+        "provider": model_match.get("provider"),
+        "is_local": model_match.get("is_local"),
     }
 
 
@@ -419,7 +477,7 @@ class UpdateRoutesRequest(BaseModel):
 
 
 @router.get("/routing/profiles")
-def get_routing_profiles(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_routing_profiles(db: Session = Depends(get_db)):
     profiles = db.query(CortexRoutingProfile).all()
     if not profiles:
         ModelRegistry.seed_if_empty(db)
@@ -446,7 +504,7 @@ def select_routing_profile(payload: SelectProfileRequest, db: Session = Depends(
 
 
 @router.get("/routing/routes")
-def get_routing_routes(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_routing_routes(db: Session = Depends(get_db)):
     active_profile = db.query(CortexRoutingProfile).filter(CortexRoutingProfile.is_active.is_(True)).first()
     if not active_profile:
         active_profile = db.query(CortexRoutingProfile).filter(CortexRoutingProfile.name == "Balanced").first()
@@ -494,77 +552,6 @@ def update_routing_routes(payload: UpdateRoutesRequest, db: Session = Depends(ge
             
     db.commit()
     return {"message": "Custom routes updated and Custom profile activated"}
-
-
-# ==========================================
-# Marketplace & Performance Dashboard API
-# ==========================================
-
-MARKETPLACE_CATALOG = [
-    {
-        "name": "qwen3:8b",
-        "display_name": "Qwen 3 8B",
-        "size": "5.2 GB",
-        "context_length": 32768,
-        "vram_requirement_gb": 8,
-        "best_use_case": "General Chat & Complex Reasoning",
-        "tags": ["Chat", "General"],
-    },
-    {
-        "name": "qwen2.5-coder:7b",
-        "display_name": "Qwen 2.5 Coder 7B",
-        "size": "4.7 GB",
-        "context_length": 32768,
-        "vram_requirement_gb": 8,
-        "best_use_case": "Code Generation & Reasoning",
-        "tags": ["Coding", "Chat"],
-    },
-    {
-        "name": "llama3:8b",
-        "display_name": "Llama 3 8B",
-        "size": "4.7 GB",
-        "context_length": 8192,
-        "vram_requirement_gb": 8,
-        "best_use_case": "General Conversation & Instruction",
-        "tags": ["Chat", "General"],
-    },
-    {
-        "name": "gemma2:9b",
-        "display_name": "Gemma 2 9B",
-        "size": "5.5 GB",
-        "context_length": 8192,
-        "vram_requirement_gb": 9,
-        "best_use_case": "High-Quality Chat & Creative Writing",
-        "tags": ["Chat", "General"],
-    },
-    {
-        "name": "mistral:7b",
-        "display_name": "Mistral 7B",
-        "size": "4.1 GB",
-        "context_length": 32768,
-        "vram_requirement_gb": 7,
-        "best_use_case": "Fast Response & Summarization",
-        "tags": ["Chat", "General"],
-    },
-    {
-        "name": "phi3:3.8b",
-        "display_name": "Phi 3 3.8B",
-        "size": "2.2 GB",
-        "context_length": 128000,
-        "vram_requirement_gb": 4,
-        "best_use_case": "Edge Devices & Long Context Chat",
-        "tags": ["Chat", "Small"],
-    },
-    {
-        "name": "deepseek-coder:6.7b",
-        "display_name": "DeepSeek Coder 6.7B",
-        "size": "3.8 GB",
-        "context_length": 16384,
-        "vram_requirement_gb": 6,
-        "best_use_case": "Efficient Code Assistance",
-        "tags": ["Coding"],
-    }
-]
 
 
 def get_os_info() -> str:
@@ -684,18 +671,30 @@ async def get_marketplace(query: Optional[str] = None):
         logger.warning("Failed to fetch Ollama registry marketplace: %s", exc)
         registry_models = []
 
-    if not registry_models:
-        registry_models = [
-            {
-                **model,
-                "display_name": model["display_name"],
-                "parameters": model["name"],
-                "pull_command": f"ollama pull {model['name']}",
-                "performance_tier": "balanced",
-                "source": "Fallback catalog",
-            }
-            for model in MARKETPLACE_CATALOG
-        ]
+    if not registry_models and installed_models:
+        catalog = []
+        for model_info in installed_models:
+            details = model_info.get("details", {})
+            catalog.append(
+                {
+                    "name": model_info.get("name"),
+                    "display_name": model_info.get("name"),
+                    "size": _format_size_bytes(int(model_info.get("size") or 0)),
+                    "parameters": details.get("parameter_size") or "unknown",
+                    "context_length": 0,
+                    "vram_requirement_gb": 0.0,
+                    "best_use_case": "",
+                    "tags": [],
+                    "pull_command": f"ollama pull {model_info.get('name')}",
+                    "vram_estimate": "N/A",
+                    "performance_tier": "installed",
+                    "capabilities": [],
+                    "source": "Ollama Installed Models",
+                    "is_installed": True,
+                    "download_status": "installed",
+                }
+            )
+        return catalog
 
     for model in registry_models:
         m_name = model["name"]
@@ -790,7 +789,16 @@ def get_metrics_summary(db: Session = Depends(get_db)):
     else:
         avg_tps = 0.0
 
-    cache_hit_rate = 86.4 if total_requests > 0 else 0.0
+    cache_hit_rate = 0.0
+    try:
+        stats = asyncio.run(redis_cache.info("stats"))
+        if stats:
+            hits = int(stats.get("keyspace_hits", 0))
+            misses = int(stats.get("keyspace_misses", 0))
+            total = hits + misses
+            cache_hit_rate = round((hits / total) * 100, 1) if total > 0 else 0.0
+    except Exception:
+        cache_hit_rate = 0.0
 
     # 4. Live resource usage
     gpu = get_gpu_info()

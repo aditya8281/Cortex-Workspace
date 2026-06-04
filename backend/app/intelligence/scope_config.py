@@ -27,12 +27,25 @@ class SyncScopeConfig:
         home = str(Path.home().resolve())
         workspace = str(Path(settings.WORKSPACE_ROOT).resolve())
 
+        def add_existing(paths: list[str], candidate: Path) -> None:
+            if candidate.exists():
+                resolved = str(candidate.resolve())
+                if resolved not in paths:
+                    paths.append(resolved)
+
         # Set default includes based on standard home directory children
         default_includes = []
-        for child in ["Documents", "Desktop", "Projects", "Downloads"]:
-            p = Path(home) / child
-            if p.exists():
-                default_includes.append(str(p.resolve()))
+        for child in [
+            "Documents",
+            "documents",
+            "Desktop",
+            "desktop",
+            "Projects",
+            "projects",
+            "Downloads",
+            "downloads",
+        ]:
+            add_existing(default_includes, Path(home) / child)
         if workspace not in default_includes:
             default_includes.append(workspace)
         self.include_folders = default_includes
@@ -67,8 +80,39 @@ class SyncScopeConfig:
                 self.priority_folders = data.get("priority_folders", self.priority_folders)
                 self.ignore_patterns = data.get("ignore_patterns", self.ignore_patterns)
                 self.auto_sync_enabled = data.get("auto_sync_enabled", self.auto_sync_enabled)
+                self._augment_standard_includes()
         except Exception:
             self.save()
+
+    def _augment_standard_includes(self):
+        normalized: list[str] = []
+        for folder in self.include_folders:
+            if folder not in normalized:
+                normalized.append(folder)
+
+        home = Path.home().resolve()
+        workspace = Path(settings.WORKSPACE_ROOT).resolve()
+        for child in [
+            "Documents",
+            "documents",
+            "Desktop",
+            "desktop",
+            "Projects",
+            "projects",
+            "Downloads",
+            "downloads",
+        ]:
+            candidate = home / child
+            if candidate.exists():
+                resolved = str(candidate.resolve())
+                if resolved not in normalized:
+                    normalized.append(resolved)
+
+        workspace_resolved = str(workspace)
+        if workspace.exists() and workspace_resolved not in normalized:
+            normalized.append(workspace_resolved)
+
+        self.include_folders = normalized
 
     def save(self):
         CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,16 @@
+from __future__ import annotations
+
+import hashlib
+import logging
+
+from sqlalchemy.orm import Session
+
+from backend.app.core.config import settings
+from backend.app.core.redis import redis_cache
+from backend.app.db.session import SessionLocal
 from backend.app.rag.index_manager import IndexManager
 from backend.app.rag.retriever import RepoRetriever
+from backend.app.services.hierarchical_rag import HierarchicalRAGService
 
 
 class RAGService:
@@ -13,6 +24,7 @@ class RAGService:
         self._retrievers: dict = {}
         # Keep a default retriever for backward-compat warm-up calls with no config
         self._default_key = "BAAI/bge-small-en-v1.5|FAISS|Tree-sitter"
+        self._hierarchical_rag = HierarchicalRAGService()
 
     def _get_retriever(
         self,
@@ -48,7 +60,8 @@ class RAGService:
         vector_db: str = None,
         code_parsing: str = None
     ):
-        """Pre-warm the retriever for the given (or default) config."""
+        """Pre-warm retrieval backends for the given (or default) config."""
+        self._hierarchical_rag = HierarchicalRAGService()
         self._get_retriever(embedding_model, vector_db, code_parsing)
 
     async def search(
@@ -59,11 +72,6 @@ class RAGService:
         vector_db: str = None,
         code_parsing: str = None
     ):
-        import hashlib
-        import logging
-        from backend.app.core.redis import redis_cache
-        from backend.app.core.config import settings
-
         em = embedding_model or "BAAI/bge-small-en-v1.5"
         vd = vector_db or "FAISS"
         cp = code_parsing or "Tree-sitter"
@@ -77,12 +85,60 @@ class RAGService:
             logging.getLogger(__name__).info(f"RAG search cache HIT for key {cache_key}")
             return cached_results
 
-        logging.getLogger(__name__).info(f"RAG search cache MISS for key {cache_key}. Executing retrieval...")
-        retriever = self._get_retriever(em, vd, cp)
-        results = retriever.retrieve(query, top_k)
+        logging.getLogger(__name__).info(
+            f"RAG search cache MISS for key {cache_key}. Executing hierarchical retrieval..."
+        )
+
+        results = await self._search_hierarchical(query, top_k)
+        if not results:
+            logging.getLogger(__name__).info(
+                "Hierarchical retrieval returned no results; falling back to legacy vector store."
+            )
+            retriever = self._get_retriever(em, vd, cp)
+            legacy_results = retriever.retrieve(query, top_k)
+            results = [
+                {
+                    "score": item.get("score", 0.0),
+                    "id": idx,
+                    "node_type": "chunk",
+                    "text": item.get("data", {}).get("chunk", ""),
+                    "file_path": item.get("data", {}).get("file", ""),
+                    "metadata": item.get("data", {}),
+                    "data": item.get("data", {}),
+                }
+                for idx, item in enumerate(legacy_results)
+            ]
 
         if results:
-            # Cache results for 30 minutes (or same LLM_CACHE_TTL_SECONDS)
             await redis_cache.set(cache_key, results, expire_seconds=settings.LLM_CACHE_TTL_SECONDS)
 
         return results
+
+    async def _search_hierarchical(self, query: str, top_k: int) -> list[dict]:
+        db = SessionLocal()
+        try:
+            results = await self._hierarchical_rag.search(query, db, top_k=top_k)
+        finally:
+            db.close()
+
+        transformed: list[dict] = []
+        for result in results:
+            file_path = result.get("file_path") or ""
+            text = result.get("text") or ""
+            transformed.append(
+                {
+                    "score": result.get("score", 0.0),
+                    "id": result.get("id"),
+                    "node_type": result.get("node_type", "chunk"),
+                    "text": text,
+                    "file_path": file_path,
+                    "metadata": result.get("metadata", {}) or {},
+                    "data": {
+                        "chunk": text,
+                        "file": file_path,
+                        "file_path": file_path,
+                        "metadata": result.get("metadata", {}) or {},
+                    },
+                }
+            )
+        return transformed

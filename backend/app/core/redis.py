@@ -71,6 +71,16 @@ class RedisCache:
             logger.warning(f"Failed to DELETE from Redis key {key}: {e}")
             return False
 
+    async def info(self, section: str | None = None) -> Optional[dict[str, Any]]:
+        try:
+            client = self.get_client()
+            if section:
+                return await client.info(section)
+            return await client.info()
+        except Exception as e:
+            logger.warning(f"Failed to read Redis info: {e}")
+            return None
+
     async def clear_pattern(self, pattern: str) -> bool:
         try:
             client = self.get_client()
