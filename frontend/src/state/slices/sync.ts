@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { SyncRun, WorkspaceIntelligence } from "@/types/api";
 
-interface SyncState {
+export interface SyncState {
   syncRuns: SyncRun[];
   currentRun: SyncRun | null;
   intelligence: WorkspaceIntelligence | null;
@@ -19,7 +19,7 @@ const initialState: SyncState = {
   isIndexing: false,
 };
 
-export const syncSlice = createSlice({
+const syncSlice = createSlice({
   name: "sync",
   initialState,
   reducers: {

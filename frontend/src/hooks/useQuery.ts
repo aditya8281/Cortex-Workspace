@@ -44,10 +44,13 @@ export function useQuery<T>(
     if (options?.enabled === false) return;
     fetch();
 
+    let interval: NodeJS.Timeout | null = null;
     if (options?.refetchInterval) {
-      const interval = setInterval(fetch, options.refetchInterval);
-      return () => clearInterval(interval);
+      interval = setInterval(fetch, options.refetchInterval);
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [fetch, options]);
 
   return { data, loading, error, refetch: fetch };

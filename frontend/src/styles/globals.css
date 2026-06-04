@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 * {
-  @apply border-border;
+  @apply border-slate-800/60;
 }
 
 html {
@@ -11,35 +13,54 @@ html {
 }
 
 body {
-  @apply bg-background text-white;
-  font-family: "Geist", system-ui, sans-serif;
+  @apply bg-[#030712] text-slate-100;
+  font-family: 'Outfit', sans-serif;
 }
 
+/* Custom scrollbars */
 ::-webkit-scrollbar {
-  @apply w-2;
+  @apply w-1.5 h-1.5;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-surface;
+  @apply bg-slate-950/40;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-border rounded;
+  @apply bg-slate-800/80 rounded-full hover:bg-cyan-500/40 transition-colors;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-primary;
+/* Custom font styles */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
 }
 
+/* Glassmorphism panel styles */
+.glass-panel {
+  @apply bg-slate-900/60 backdrop-blur-md border border-slate-800/80;
+}
+
+/* Animation utilities */
 @keyframes fadeIn {
   from {
-    @apply opacity-0;
+    opacity: 0;
+    transform: translateY(2px);
   }
   to {
-    @apply opacity-100;
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 .animate-fade-in {
-  @apply animate-[fadeIn_0.3s_ease-in-out];
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Glowing shadow helper */
+.shadow-glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.08);
+}
+
+.shadow-glow-emerald {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
 }

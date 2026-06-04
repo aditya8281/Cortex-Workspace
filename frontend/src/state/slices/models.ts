@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { CortexModel, CortexProvider, CortexRoutingProfile } from "@/types/api";
 
-interface ModelsState {
+export interface ModelsState {
   models: CortexModel[];
   providers: CortexProvider[];
   routingProfiles: CortexRoutingProfile[];
@@ -19,7 +19,7 @@ const initialState: ModelsState = {
   error: null,
 };
 
-export const modelsSlice = createSlice({
+const modelsSlice = createSlice({
   name: "models",
   initialState,
   reducers: {

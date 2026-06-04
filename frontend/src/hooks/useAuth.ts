@@ -48,12 +48,21 @@ export function useAuth() {
 
   const checkAuth = useCallback(async () => {
     try {
+      const token = authService.getToken();
+      if (!token) {
+        dispatch(clearAuth());
+        return null;
+      }
       const user = await authService.getCurrentUser();
       dispatch(setUser(user));
+      dispatch(setToken(token));
       return user;
     } catch (error) {
       console.error("Auth check error:", error);
       dispatch(clearAuth());
+      if (typeof window !== "undefined") {
+        document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      }
       return null;
     }
   }, [dispatch]);

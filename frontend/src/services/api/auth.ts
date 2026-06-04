@@ -7,6 +7,7 @@ export const authService = {
     const response = await apiClient.post<TokenResponse>(API_ENDPOINTS.AUTH_LOGIN, credentials);
     if (response.data.access_token) {
       localStorage.setItem("auth_token", response.data.access_token);
+      document.cookie = `auth_token=${response.data.access_token}; path=/; max-age=604800; SameSite=Lax`;
       if (response.data.user) {
         localStorage.setItem("user", JSON.stringify(response.data.user));
       }
@@ -27,6 +28,7 @@ export const authService = {
   logout(): void {
     localStorage.removeItem("auth_token");
     localStorage.removeItem("user");
+    document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   },
 
   getToken(): string | null {

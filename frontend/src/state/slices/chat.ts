@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMessage } from "@/types/api";
 
-interface ChatState {
+export interface ChatState {
   messages: ChatMessage[];
   loading: boolean;
   error: string | null;
@@ -15,7 +15,7 @@ const initialState: ChatState = {
   currentModel: "gpt-4",
 };
 
-export const chatSlice = createSlice({
+const chatSlice = createSlice({
   name: "chat",
   initialState,
   reducers: {

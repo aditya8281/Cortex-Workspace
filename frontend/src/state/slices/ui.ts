@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-interface UIState {
+export interface UIState {
   sidebarOpen: boolean;
   currentTab: string;
   notificationCenter: boolean;
@@ -14,7 +14,7 @@ const initialState: UIState = {
   commandPaletteOpen: false,
 };
 
-export const uiSlice = createSlice({
+const uiSlice = createSlice({
   name: "ui",
   initialState,
   reducers: {
