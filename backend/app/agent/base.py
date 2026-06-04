@@ -40,8 +40,13 @@ class BaseAgent(ABC):
         context: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
-        Execute agent tasks and return response text.
+        Execute agent tasks and return a structured dictionary:
+        {
+            "result": str,
+            "confidence": float,
+            "reasoning_summary": str
+        }
         """
         pass

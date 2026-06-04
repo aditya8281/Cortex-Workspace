@@ -42,7 +42,7 @@ export function PerformancePage() {
   const [privacyShield, setPrivacyShield] = useState(() => localStorage.getItem("cortex_privacy_shield") === "true");
 
   // Query performance summary
-  const { data: summary, isLoading: loadingSummary } = useQuery({
+  const { data: summary } = useQuery({
     queryKey: ["metricsSummary"],
     queryFn: getMetricsSummary,
     refetchInterval: 5000, // refresh every 5s
@@ -82,7 +82,7 @@ export function PerformancePage() {
 
   const selectProfileMutation = useMutation({
     mutationFn: selectRoutingProfile,
-    onSuccess: (res: any) => {
+    onSuccess: () => {
       setToast("Routing profile updated");
       qc.invalidateQueries({ queryKey: ["routingProfiles"] });
       qc.invalidateQueries({ queryKey: ["routingRoutes"] });

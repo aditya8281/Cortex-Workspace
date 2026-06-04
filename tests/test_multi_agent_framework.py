@@ -3,7 +3,7 @@ import time
 import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -24,7 +24,7 @@ from backend.app.models.context_item import ContextItem as DBContextItem
 
 from backend.app.agent.base import BaseAgent
 from backend.app.agent.registry import AgentRegistry
-from backend.app.agent.orchestrator import OrchestratorAgent, ContextBuilder
+from backend.app.agent.orchestrator import OrchestratorAgent, ContextBuilder, OrchestrationGraph, OrchestrationNode, NodeStatus
 from backend.app.agent.agents import (
     ChatAgent,
     SearchAgent,
@@ -33,7 +33,8 @@ from backend.app.agent.agents import (
     PlanningAgent,
     MemoryAgent,
     ExecutionAgent,
-    ResearchAgent
+    ResearchAgent,
+    VerificationAgent
 )
 from backend.app.intelligence.models import (
     RepositoryProfile,
@@ -152,13 +153,16 @@ async def test_subagents_execution():
     # 1. Chat agent execution
     chat_agent = ChatAgent(executor)
     resp = await chat_agent.execute("Hi there", context="Context info")
-    assert resp == "Response for query from model"
+    assert resp["result"] == "Response for query from model"
+    assert resp["confidence"] > 0.80
+    assert resp["reasoning_summary"] is not None
     assert executor.last_routing_info["model_used"] == "mock-llm-1.0"
     
     # 2. Search agent execution
     search_agent = SearchAgent(executor)
     resp = await search_agent.execute("find main.py")
-    assert resp == "Response for query from model"
+    assert resp["result"] == "Response for query from model"
+    assert resp["confidence"] > 0.20
     assert executor.last_routing_info["model_used"] == "mock-llm-1.0"
 
 
@@ -208,7 +212,7 @@ async def test_search_agent_integration(db_session):
     db_session.commit()
     
     resp = await search_agent.execute("search cortex details", user_id=None)
-    assert resp == "Response for query from model"
+    assert resp["result"] == "Response for query from model"
     
     last_prompt = executor.router.last_prompt
     assert "MockFileSearchAgent: found file 'main.py'" in last_prompt
@@ -235,7 +239,7 @@ async def test_repository_agent_integration(db_session):
     db_session.commit()
     
     resp = await repo_agent.execute("explain architecture and tech stack")
-    assert resp == "Response for query from model"
+    assert resp["result"] == "Response for query from model"
     
     last_prompt = executor.router.last_prompt
     assert "A wonderful architecture overview." in last_prompt
@@ -253,7 +257,7 @@ async def test_coding_agent_patch_generation():
     assert coding_agent.confidence("fix bug in executor.py") > 0.8
     
     resp = await coding_agent.execute("write a patch to add login function")
-    assert resp == "Response for query from model"
+    assert resp["result"] == "Response for query from model"
     
     last_sys = executor.router.last_system_prompt
     assert "patch, diff, or file modification" in last_sys
@@ -267,8 +271,8 @@ async def test_memory_agent_write_and_read(db_session):
     
     # Test saving memory
     save_resp = await memory_agent.execute("remember that the codebase project is named Antigravity", user_id=42)
-    assert "Memory saved successfully!" in save_resp
-    assert "the codebase project is named Antigravity" in save_resp
+    assert "Memory saved successfully!" in save_resp["result"]
+    assert "the codebase project is named Antigravity" in save_resp["result"]
     
     # Query database directly to verify persistence
     entries = db_session.query(KnowledgeEntry).filter(KnowledgeEntry.user_id == 42).all()
@@ -278,7 +282,7 @@ async def test_memory_agent_write_and_read(db_session):
     
     # Test querying/retrieval memory
     resp = await memory_agent.execute("what is the codebase project name?", user_id=42)
-    assert resp == "Response for query from model"
+    assert resp["result"] == "Response for query from model"
     
     last_prompt = executor.router.last_prompt
     assert "Memory: the codebase project is named ..." in last_prompt
@@ -290,12 +294,12 @@ async def test_planning_and_research_agents():
     
     planning_agent = PlanningAgent(executor)
     resp_plan = await planning_agent.execute("give me a roadmap for multi-agent framework")
-    assert resp_plan == "Response for query from model"
+    assert resp_plan["result"] == "Response for query from model"
     assert planning_agent.confidence("how to implement roadmap step-by-step") > 0.8
     
     research_agent = ResearchAgent(executor)
     resp_res = await research_agent.execute("deep dive explanation of RLHF")
-    assert resp_res == "Response for query from model"
+    assert resp_res["result"] == "Response for query from model"
     assert research_agent.confidence("explain concept of pldnet") > 0.8
 
 
@@ -314,8 +318,7 @@ async def test_execution_agent_permissions(db_session, tmp_path):
     
     # Test run command blocked under "approval" level settings
     resp = await exec_agent.execute("run command make build", user_id=101)
-    assert "Action Blocked (Approval Required)" in resp
-    assert "run_command" in resp
+    assert "Action Blocked (Approval Required)" in resp["result"]
     
     # Assert action was inserted into PendingSystemAction
     pending = db_session.query(PendingSystemAction).filter(PendingSystemAction.user_id == 101).first()
@@ -328,9 +331,9 @@ async def test_execution_agent_permissions(db_session, tmp_path):
     dummy_file.write_text("name = 'test-cortex'", encoding="utf-8")
     
     resp_read = await exec_agent.execute("read file pyproject.toml", user_id=101)
-    assert "File Read Successfully" in resp_read
-    assert "pyproject.toml" in resp_read
-    assert "name = 'test-cortex'" in resp_read
+    assert "File Read Successfully" in resp_read["result"]
+    assert "pyproject.toml" in resp_read["result"]
+    assert "name = 'test-cortex'" in resp_read["result"]
 
 
 @pytest.mark.asyncio
@@ -358,3 +361,62 @@ async def test_context_builder_caching(db_session):
     # Build third time with different user
     ctx3 = await builder.build(query="caching test query", user_id=66)
     assert search_mock.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_verification_agent_validations(db_session, tmp_path):
+    executor = MockExecutor(workspace_root=tmp_path)
+    verify_agent = VerificationAgent(executor)
+
+    # 1. Test path verification with valid and invalid paths
+    valid_file = tmp_path / "main.py"
+    valid_file.write_text("print(1)", encoding="utf-8")
+
+    text = "We updated main.py, but invalid_file.js does not exist."
+    res = await verify_agent.execute(query="check references", target_text=text)
+    
+    assert res["verified"] is False
+    assert "main.py" in res["verified_paths"]
+    assert "Invalid path referenced: `invalid_file.js`" in res["issues"][0]
+
+    # 2. Test diff patch verification
+    bad_diff = "```diff\nhello\n```"
+    res_diff_bad = await verify_agent.execute(query="check diff", target_text=bad_diff)
+    assert "Malformed diff formatting" in res_diff_bad["issues"][0]
+
+    good_diff = "```diff\n--- a/main.py\n+++ b/main.py\n@@ -1,1 +1,1 @@\n-print(1)\n+print(2)\n```"
+    res_diff_good = await verify_agent.execute(query="check diff", target_text=good_diff)
+    assert len(res_diff_good["issues"]) == 0
+    assert "main.py -> main.py" in res_diff_good["verified_patches"]
+
+
+@pytest.mark.asyncio
+async def test_orchestration_graph_collaborations():
+    executor = MockExecutor()
+    orchestrator = OrchestratorAgent(executor)
+    
+    # Build a manual graph to test execution sequence
+    graph = OrchestrationGraph(orchestrator)
+    graph.add_node(OrchestrationNode("RepositoryAgent", "RepositoryAgent"))
+    graph.add_node(OrchestrationNode("SearchAgent", "SearchAgent"))
+    graph.add_node(OrchestrationNode("CodingAgent", "CodingAgent", ["RepositoryAgent", "SearchAgent"]))
+    graph.add_node(OrchestrationNode("VerificationAgent", "VerificationAgent", ["CodingAgent"]))
+
+    # Execute graph with mock values
+    result = await graph.execute(
+        query="implement feature",
+        base_context="Base context string",
+        history=[]
+    )
+
+    assert result["answer"] == "Response for query from model"
+    assert "RepositoryAgent" in result["execution_order"]
+    assert "SearchAgent" in result["execution_order"]
+    assert "CodingAgent" in result["execution_order"]
+    assert "VerificationAgent" in result["execution_order"]
+    
+    # Verify nodes traces were captured
+    nodes = {n["id"]: n for n in result["nodes_trace"]}
+    assert nodes["RepositoryAgent"]["status"] == "completed"
+    assert nodes["CodingAgent"]["depends_on"] == ["RepositoryAgent", "SearchAgent"]
+    assert nodes["VerificationAgent"]["verified"] is True

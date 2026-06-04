@@ -2,6 +2,24 @@ import { api } from "./client";
 import type { ContextItem } from "@/types/cortex";
 
 
+export type GraphNode = {
+  id: string;
+  agent_name: string;
+  depends_on: string[];
+  status: "pending" | "running" | "completed" | "failed";
+  execution_time: number;
+  confidence: number;
+  reasoning_summary: string;
+  verified?: boolean | null;
+  issues?: string[];
+};
+
+export type VerificationResults = {
+  verified: boolean;
+  issues: string[];
+  report: string;
+};
+
 export type AskResponse = {
   query: string;
   response: string;
@@ -19,6 +37,9 @@ export type AskResponse = {
     agent_confidence?: number;
     agent_execution_time?: number;
     agent_reason?: string;
+    execution_order?: string[];
+    collaboration_graph?: GraphNode[];
+    verification_results?: VerificationResults | null;
   } | null;
 };
 

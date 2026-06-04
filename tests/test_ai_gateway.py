@@ -75,14 +75,14 @@ async def test_ai_gateway_llm_routing_and_memory(gateway):
         # 1. First query with user_id: Memory is empty, so it should call LLM and save response.
         response = await gateway.route(query, user_id=42)
         assert "Paris" in response.answer
-        mock_route.assert_called_once()
+        assert mock_route.call_count == 2
 
         # 2. Second query with same keywords: Memory recall context is passed to LLM.
         mock_route.reset_mock()
         mock_route.return_value = {"response": "Paris recall response", "routing_info": None}
         recall_response = await gateway.route("France capital", user_id=42)
         assert "Paris" in recall_response.answer
-        mock_route.assert_called_once()
+        assert mock_route.call_count == 1
 
 
 def test_ai_api_endpoints():

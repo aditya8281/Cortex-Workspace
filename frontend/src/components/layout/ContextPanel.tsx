@@ -1,4 +1,4 @@
-import { FileText, GitBranch, Brain, Lightbulb, Activity } from "lucide-react";
+import { FileText, GitBranch, Brain, Lightbulb, Activity, Folder, Globe, Terminal } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useChatStore } from "@/stores/chatStore";
@@ -7,8 +7,11 @@ import { cn } from "@/lib/utils";
 
 const kindIcon = {
   file: FileText,
+  folder: Folder,
   repo: GitBranch,
   memory: Brain,
+  url: Globe,
+  terminal: Terminal,
   document: FileText,
   concept: Lightbulb,
   activity: Activity,

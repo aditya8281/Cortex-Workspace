@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ContextItem, ContextItemKind } from "@/types/cortex";
+import type { ContextItem } from "@/types/cortex";
 import { useContextStore } from "@/stores/contextStore";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";

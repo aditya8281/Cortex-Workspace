@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional
 import os
+import re
 from pathlib import Path
 from backend.app.agent.base import BaseAgent
 from backend.app.core.logging import get_logger
@@ -31,7 +32,7 @@ class ChatAgent(BaseAgent):
         context: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
-    ) -> str:
+    ) -> Dict[str, Any]:
         system_prompt = (
             "You are a friendly, helpful, local-first AI assistant for Cortex Workspace.\n"
             "Respond directly to the user's greeting or general chat. Be warm, human-like, and conversational.\n"
@@ -48,7 +49,11 @@ class ChatAgent(BaseAgent):
             api_base_url=kwargs.get("api_base_url")
         )
         self.executor.last_routing_info = res.get("routing_info")
-        return res["response"]
+        return {
+            "result": res["response"],
+            "confidence": self.confidence(query, context),
+            "reasoning_summary": "Handled greeting or conversational query directly."
+        }
 
 
 class SearchAgent(BaseAgent):
@@ -72,7 +77,7 @@ class SearchAgent(BaseAgent):
         context: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
-    ) -> str:
+    ) -> Dict[str, Any]:
         # 1. Run file search
         file_results = self.executor.file_agent.search(query)
         
@@ -122,7 +127,11 @@ class SearchAgent(BaseAgent):
             api_base_url=kwargs.get("api_base_url")
         )
         self.executor.last_routing_info = res.get("routing_info")
-        return res["response"]
+        return {
+            "result": res["response"],
+            "confidence": self.confidence(query, context),
+            "reasoning_summary": "Searched codebase files, vector database chunks, and persistent memory to construct response."
+        }
 
 
 class RepositoryAgent(BaseAgent):
@@ -146,7 +155,7 @@ class RepositoryAgent(BaseAgent):
         context: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
-    ) -> str:
+    ) -> Dict[str, Any]:
         # Load profile details from database
         db = SessionLocal()
         profile_details = ""
@@ -184,7 +193,11 @@ class RepositoryAgent(BaseAgent):
             api_base_url=kwargs.get("api_base_url")
         )
         self.executor.last_routing_info = res.get("routing_info")
-        return res["response"]
+        return {
+            "result": res["response"],
+            "confidence": self.confidence(query, context),
+            "reasoning_summary": "Analyzed repository profile data from the intelligence database to output layout and architecture."
+        }
 
 
 class CodingAgent(BaseAgent):
@@ -208,7 +221,7 @@ class CodingAgent(BaseAgent):
         context: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
-    ) -> str:
+    ) -> Dict[str, Any]:
         system_prompt = (
             "You are an expert developer agent.\n"
             "Produce clean, standard-compliant implementations.\n"
@@ -233,7 +246,11 @@ class CodingAgent(BaseAgent):
             api_base_url=kwargs.get("api_base_url")
         )
         self.executor.last_routing_info = res.get("routing_info")
-        return res["response"]
+        return {
+            "result": res["response"],
+            "confidence": self.confidence(query, context),
+            "reasoning_summary": "Generated programming solution or patch diff output matching user constraints."
+        }
 
 
 class MemoryAgent(BaseAgent):
@@ -257,15 +274,13 @@ class MemoryAgent(BaseAgent):
         context: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
-    ) -> str:
+    ) -> Dict[str, Any]:
         q_lower = query.lower()
         db = SessionLocal()
         try:
             # Check if this query is a request to save/update a memory
             save_triggers = ["remember that", "save to memory", "store memory", "learn that", "update memory", "save note"]
             if any(t in q_lower for t in save_triggers):
-                # Requesting memory storage
-                # Use simple parsing or route to LLM to extract facts
                 extracted_title = "User Fact"
                 extracted_content = query
                 for t in save_triggers:
@@ -286,7 +301,12 @@ class MemoryAgent(BaseAgent):
                     user_id=kwargs.get("user_id")
                 )
                 db.commit()
-                return f"🧠 Memory saved successfully!\n- **Title**: Memory: {extracted_title}\n- **Saved Content**: {extracted_content}"
+                result_str = f"🧠 Memory saved successfully!\n- **Title**: Memory: {extracted_title}\n- **Saved Content**: {extracted_content}"
+                return {
+                    "result": result_str,
+                    "confidence": 0.95,
+                    "reasoning_summary": "Saved custom user fact into persistent SQLite database storage."
+                }
 
             # General lookup
             memories = PersistentMemoryService().search(db, query, limit=5, user_id=kwargs.get("user_id"))
@@ -312,7 +332,11 @@ class MemoryAgent(BaseAgent):
                 api_base_url=kwargs.get("api_base_url")
             )
             self.executor.last_routing_info = res.get("routing_info")
-            return res["response"]
+            return {
+                "result": res["response"],
+                "confidence": self.confidence(query, context),
+                "reasoning_summary": "Queried persistent memory base to find related facts."
+            }
         finally:
             db.close()
 
@@ -338,7 +362,7 @@ class PlanningAgent(BaseAgent):
         context: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
-    ) -> str:
+    ) -> Dict[str, Any]:
         system_prompt = (
             "You are a strategic planning agent.\n"
             "Generate logical roadmap milestones, check task dependencies, and list explicit implementation tasks.\n"
@@ -355,7 +379,11 @@ class PlanningAgent(BaseAgent):
             api_base_url=kwargs.get("api_base_url")
         )
         self.executor.last_routing_info = res.get("routing_info")
-        return res["response"]
+        return {
+            "result": res["response"],
+            "confidence": self.confidence(query, context),
+            "reasoning_summary": "Created checklist, decomposition tasks, and chronological steps to fulfill the user request."
+        }
 
 
 class ResearchAgent(BaseAgent):
@@ -379,7 +407,7 @@ class ResearchAgent(BaseAgent):
         context: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
-    ) -> str:
+    ) -> Dict[str, Any]:
         system_prompt = (
             "You are an academic and technical research agent.\n"
             "Deconstruct technical concepts using the code documentation, RAG context, and references.\n"
@@ -396,7 +424,11 @@ class ResearchAgent(BaseAgent):
             api_base_url=kwargs.get("api_base_url")
         )
         self.executor.last_routing_info = res.get("routing_info")
-        return res["response"]
+        return {
+            "result": res["response"],
+            "confidence": self.confidence(query, context),
+            "reasoning_summary": "Analyzed documentation and references to construct a concept explanation."
+        }
 
 
 class ExecutionAgent(BaseAgent):
@@ -420,7 +452,7 @@ class ExecutionAgent(BaseAgent):
         context: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         **kwargs: Any
-    ) -> str:
+    ) -> Dict[str, Any]:
         q_lower = query.lower()
         db = SessionLocal()
         try:
@@ -432,7 +464,6 @@ class ExecutionAgent(BaseAgent):
             # Parse query to map action types
             if "open folder" in q_lower:
                 action_type = "open_folder"
-                # Try to extract path
                 paths = [str(self.executor.file_agent.workspace_root)]
             elif "open file" in q_lower:
                 action_type = "open_file"
@@ -445,7 +476,6 @@ class ExecutionAgent(BaseAgent):
                 paths = ["."]
             else:
                 action_type = "run_command"
-                # If command keyword, extract command string
                 cmd_str = query
                 if "run command" in q_lower:
                     parts = query.split("run command", 1)
@@ -453,7 +483,6 @@ class ExecutionAgent(BaseAgent):
                         cmd_str = parts[1].strip()
                 payload = {"command": cmd_str}
 
-            # Enforce permission checks via SystemActionsService
             user_id = kwargs.get("user_id")
             result = service.plan_action(
                 db,
@@ -466,7 +495,7 @@ class ExecutionAgent(BaseAgent):
 
             status = result.get("status")
             if status == "approval_required":
-                return (
+                result_str = (
                     f"⚠️ **Action Blocked (Approval Required)**\n"
                     f"- **Reason**: This system command or file modification requires explicit user confirmation under the current automation security settings.\n"
                     f"- **Action ID**: `{result.get('action_id')}`\n"
@@ -474,14 +503,18 @@ class ExecutionAgent(BaseAgent):
                     f"- **Description**: {result.get('description')}\n"
                     f"- **Affected Paths**: `{result.get('affected_paths')}`"
                 )
+                return {
+                    "result": result_str,
+                    "confidence": 1.0,
+                    "reasoning_summary": "System action requires explicit user approval under the active security policy."
+                }
             
-            # Action was executed immediately or read action completed
             res_val = result.get("result") or result
             
             if action_type == "read_file":
                 content = res_val.get("content_preview", "")
                 path = res_val.get("path", "")
-                return (
+                result_str = (
                     f"✅ **File Read Successfully**\n"
                     f"- **File**: `{path}`\n\n"
                     f"```\n{content}\n```"
@@ -490,28 +523,144 @@ class ExecutionAgent(BaseAgent):
                 entries = res_val.get("entries", [])
                 path = res_val.get("path", "")
                 entries_str = "\n".join(f"- {'[DIR] ' if e.get('is_dir') else ''}{e.get('name')}" for e in entries)
-                return (
+                result_str = (
                     f"✅ **Directory Listed Successfully**\n"
                     f"- **Directory**: `{path}`\n\n"
                     f"{entries_str or 'No entries found.'}"
                 )
             elif action_type in {"open_file", "open_folder"}:
                 path = res_val.get("opened") or res_val.get("opened_folder", "")
-                return f"✅ **Path Opened Successfully**: `{path}`"
+                result_str = f"✅ **Path Opened Successfully**: `{path}`"
+            else:
+                stdout = res_val.get("stdout", "")
+                stderr = res_val.get("stderr", "")
+                code = res_val.get("returncode", 0)
 
-            stdout = res_val.get("stdout", "")
-            stderr = res_val.get("stderr", "")
-            code = res_val.get("returncode", 0)
-
-            return (
-                f"✅ **Action Executed Successfully**\n"
-                f"- **Action**: `{action_type}`\n"
-                f"- **Return Code**: `{code}`\n"
-                f"- **Standard Output**:\n```\n{stdout or 'None'}\n```\n"
-                f"- **Standard Error**:\n```\n{stderr or 'None'}\n```"
-            )
+                result_str = (
+                    f"✅ **Action Executed Successfully**\n"
+                    f"- **Action**: `{action_type}`\n"
+                    f"- **Return Code**: `{code}`\n"
+                    f"- **Standard Output**:\n```\n{stdout or 'None'}\n```\n"
+                    f"- **Standard Error**:\n```\n{stderr or 'None'}\n```"
+                )
+            return {
+                "result": result_str,
+                "confidence": 1.0,
+                "reasoning_summary": f"Executed system action '{action_type}' successfully."
+            }
         except Exception as e:
             logger.error(f"ExecutionAgent fail: {e}")
-            return f"❌ **Execution Error**: {e}"
+            return {
+                "result": f"❌ **Execution Error**: {e}",
+                "confidence": 0.0,
+                "reasoning_summary": f"System action execution encountered an error: {e}"
+            }
         finally:
             db.close()
+
+
+class VerificationAgent(BaseAgent):
+    name = "VerificationAgent"
+    description = "Validates file paths, repository references, claims, and patches to prevent hallucinations."
+    capabilities = ["verification", "validate_paths", "validate_references", "detect_unsupported_claims", "verify_patches"]
+
+    def __init__(self, executor: Any):
+        self.executor = executor
+
+    def confidence(self, query: str, context: Optional[str] = None) -> float:
+        q = query.lower()
+        if any(kw in q for kw in ["verify", "validate", "check path", "check claim", "check patch"]):
+            return 0.95
+        return 0.30
+
+    async def execute(
+        self,
+        query: str,
+        context: Optional[str] = None,
+        history: Optional[List[Dict[str, str]]] = None,
+        **kwargs: Any
+    ) -> Dict[str, Any]:
+        target_text = kwargs.get("target_text", query)
+        rag_context = kwargs.get("rag_context", context or "")
+        
+        issues = []
+        verified_paths = []
+        verified_patches = []
+        
+        # 1. Validate file paths (look for paths in workspace root)
+        potential_paths = re.findall(r'(?:[a-zA-Z0-9_\-\.]+/)*[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9]+', target_text)
+        workspace_root = getattr(self.executor.file_agent, "workspace_root", None)
+        if workspace_root:
+            for path_str in set(potential_paths):
+                # Simple check to avoid random words with dots (e.g. 'cortex.ts', 'v1', etc)
+                if path_str.split('.')[-1] in ['py', 'ts', 'tsx', 'js', 'json', 'toml', 'sh', 'md', 'yml', 'yaml']:
+                    try:
+                        p = Path(path_str)
+                        if not p.is_absolute():
+                            p = Path(workspace_root) / p
+                        if p.exists() and p.is_file():
+                            verified_paths.append(path_str)
+                        else:
+                            # Handle diff headers starting with a/ or b/
+                            if path_str.startswith("a/") or path_str.startswith("b/"):
+                                p_alt = Path(workspace_root) / path_str[2:]
+                                if p_alt.exists() and p_alt.is_file():
+                                    verified_paths.append(path_str)
+                                    continue
+                            issues.append(f"Invalid path referenced: `{path_str}` does not exist in workspace.")
+                    except Exception:
+                        pass
+
+        # 2. Validate patch diffs
+        if "```diff" in target_text or "--- a/" in target_text:
+            diff_pattern = re.compile(r'--- a/(.+)\n\+\+\+ b/(.+)\n@@ .+', re.MULTILINE)
+            matches = diff_pattern.findall(target_text)
+            if not matches:
+                issues.append("Malformed diff formatting: missing headers (--- a/ and +++ b/) or hunk headers (@@).")
+            else:
+                for src, dst in matches:
+                    verified_patches.append(f"{src} -> {dst}")
+
+        # 3. Detect unsupported claims
+        if rag_context and "=== Retrieval Context (RAG) ===" in rag_context:
+            system_prompt = (
+                "You are an expert verification agent.\n"
+                "Verify if the generated answer makes any claims or imports that are completely unsupported by the provided Retrieval Context.\n"
+                "List any unsupported assertions or state 'No issues found.'."
+            )
+            prompt = f"=== Retrieval Context ===\n{rag_context}\n\n=== Generated Answer ===\n{target_text}"
+            try:
+                res = await self.executor.router.route_and_generate(
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    model=kwargs.get("llm_model"),
+                    inference_engine=kwargs.get("inference_engine"),
+                    api_key=kwargs.get("api_key"),
+                    api_base_url=kwargs.get("api_base_url")
+                )
+                claim_result = res.get("response", "")
+                if "unsupported" in claim_result.lower() or "issue" in claim_result.lower():
+                    issues.append(f"Claim check alert: {claim_result[:300]}")
+            except Exception as e:
+                logger.warning(f"VerificationAgent claim check failed: {e}")
+
+        verified = len(issues) == 0
+        status_text = "PASSED" if verified else "FAILED"
+        
+        result_details = (
+            f"=== Verification Report ===\n"
+            f"Status: {status_text}\n"
+            f"Verified Paths: {verified_paths}\n"
+            f"Verified Patches: {verified_patches}\n"
+            f"Issues Detected:\n" + ("\n".join(f"- {i}" for i in issues) if issues else "None")
+        )
+        
+        return {
+            "result": result_details,
+            "confidence": 1.0,
+            "reasoning_summary": f"Verification completed with status: {status_text}.",
+            "verified": verified,
+            "issues": issues,
+            "verified_paths": verified_paths,
+            "verified_patches": verified_patches
+        }

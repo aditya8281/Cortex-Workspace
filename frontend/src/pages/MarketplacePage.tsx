@@ -19,12 +19,9 @@ import {
   Sparkles,
   AlertTriangle,
   CheckCircle2,
-  HardDrive,
   Clock,
   Database,
-  Activity,
   Info,
-  ArrowRight,
   Loader2
 } from "lucide-react";
 
