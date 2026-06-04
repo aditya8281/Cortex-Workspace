@@ -1,84 +1,176 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/api/client";
-import { useRepositoryProfiles } from "@/hooks/useIntelligence";
-import { Brain } from "lucide-react";
+import React, { useState, useMemo } from 'react';
+import styles from '@/styles/MemoryPage.module.css';
+import { Search, Brain, TrendingUp, Zap } from 'lucide-react';
 
-async function searchMemory(q: string) {
-  const res = await api.get("/intelligence/memory/search", { params: { q, limit: 20 } });
-  return res.data.results as { id: number; category: string; title: string; content: string; source_path?: string }[];
+interface MemoryItem {
+  id: string;
+  title: string;
+  preview: string;
+  category: string;
+  relevance: number;
+  timestamp: string;
+  tags: string[];
 }
 
-export function MemoryPage() {
-  const [query, setQuery] = useState("");
-  const { data: repos = [] } = useRepositoryProfiles();
-  const { data: results = [], isFetching } = useQuery({
-    queryKey: ["memory-search", query],
-    queryFn: () => searchMemory(query || "repository"),
-    enabled: query.length > 1,
-  });
+const MOCK_MEMORIES: MemoryItem[] = [
+  {
+    id: '1',
+    title: 'Model Performance Benchmarks',
+    preview: 'Comparison of different model sizes for coding tasks...',
+    category: 'Research',
+    relevance: 0.95,
+    timestamp: '2 days ago',
+    tags: ['models', 'performance', 'coding'],
+  },
+  {
+    id: '2',
+    title: 'LLM Fine-tuning Guide',
+    preview: 'Complete guide on fine-tuning language models with LoRA...',
+    category: 'Knowledge',
+    relevance: 0.88,
+    timestamp: '1 week ago',
+    tags: ['training', 'llm', 'guide'],
+  },
+  {
+    id: '3',
+    title: 'API Integration Notes',
+    preview: 'Notes on integrating multiple LLM providers...',
+    category: 'Notes',
+    relevance: 0.72,
+    timestamp: '3 weeks ago',
+    tags: ['api', 'integration', 'providers'],
+  },
+];
+
+export const MemoryPage: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const categories = ['Research', 'Knowledge', 'Notes', 'Code', 'Ideas'];
+
+  const filteredMemories = useMemo(() => {
+    return MOCK_MEMORIES.filter((memory) => {
+      const matchesSearch =
+        searchQuery === '' ||
+        memory.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        memory.preview.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        memory.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesCategory = selectedCategory === null || memory.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory]);
+
+  const totalMemories = MOCK_MEMORIES.length;
+  const avgRelevance = (
+    MOCK_MEMORIES.reduce((sum, m) => sum + m.relevance, 0) / MOCK_MEMORIES.length * 100
+  ).toFixed(0);
 
   return (
-    <div className="h-full overflow-y-auto p-6 md:p-8">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-start gap-3">
-          <div className="rounded-lg bg-cortex-accent-soft p-2 text-cortex-accent">
-            <Brain className="h-6 w-6" />
-          </div>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Memory</h1>
+        <p className={styles.subtitle}>Searchable knowledge graph with semantic search</p>
+      </div>
+
+      {/* Stats */}
+      <div className={styles.statsRow}>
+        <div className={styles.statSmall}>
+          <Brain size={16} style={{ color: '#3b82f6' }} />
           <div>
-            <h2 className="text-xl font-semibold">Memory</h2>
-            <p className="text-sm text-cortex-muted">Inspect what Cortex remembers across sessions.</p>
+            <div className={styles.statSmallLabel}>Total Memories</div>
+            <div className={styles.statSmallValue}>{totalMemories}</div>
           </div>
         </div>
+        <div className={styles.statSmall}>
+          <TrendingUp size={16} style={{ color: '#10b981' }} />
+          <div>
+            <div className={styles.statSmallLabel}>Avg Relevance</div>
+            <div className={styles.statSmallValue}>{avgRelevance}%</div>
+          </div>
+        </div>
+        <div className={styles.statSmall}>
+          <Zap size={16} style={{ color: '#f59e0b' }} />
+          <div>
+            <div className={styles.statSmallLabel}>Last Updated</div>
+            <div className={styles.statSmallValue}>2 days ago</div>
+          </div>
+        </div>
+      </div>
 
-        <Input
-          placeholder="Search memory…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+      {/* Search and Filters */}
+      <div className={styles.searchSection}>
+        <div className={styles.searchContainer}>
+          <Search size={16} className={styles.searchIcon} />
+          <input
+            type="text"
+            placeholder="Search memories, tags, notes..."
+            className={styles.searchInput}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[
-            ["Repository", repos.length],
-            ["Discoveries", results.length],
-            ["Categories", new Set(results.map((r) => r.category)).size],
-          ].map(([label, count]) => (
-            <Card key={label as string}>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-semibold">{count as number}</p>
-                <p className="text-xs text-cortex-muted">{label}</p>
-              </CardContent>
-            </Card>
+        <div className={styles.filterRow}>
+          <button
+            className={`${styles.filterButton} ${selectedCategory === null ? styles.filterButtonActive : ''}`}
+            onClick={() => setSelectedCategory(null)}
+          >
+            All
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              className={`${styles.filterButton} ${selectedCategory === cat ? styles.filterButtonActive : ''}`}
+              onClick={() => setSelectedCategory(cat)}
+            >
+              {cat}
+            </button>
           ))}
         </div>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Memory entries</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {isFetching && <p className="text-sm text-cortex-muted">Searching…</p>}
-            {results.map((entry) => (
-              <div key={entry.id} className="rounded-lg border border-cortex-border p-3 text-sm">
-                <div className="mb-1 flex items-center gap-2">
-                  <Badge>{entry.category}</Badge>
-                  <span className="font-medium">{entry.title}</span>
+      {/* Results */}
+      <div className={styles.content}>
+        {filteredMemories.length === 0 ? (
+          <div className={styles.emptyState}>
+            <Brain size={40} style={{ color: '#606060' }} />
+            <h3>No memories found</h3>
+            <p>Try adjusting your search or filters</p>
+          </div>
+        ) : (
+          <div className={styles.memoryList}>
+            {filteredMemories.map((memory) => (
+              <div key={memory.id} className={styles.memoryCard}>
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>{memory.title}</h3>
+                  <div className={styles.relevanceBadge}>
+                    {(memory.relevance * 100).toFixed(0)}% match
+                  </div>
                 </div>
-                <p className="text-cortex-muted line-clamp-4">{entry.content}</p>
-                {entry.source_path && (
-                  <p className="mt-2 font-mono text-xs text-cortex-muted">{entry.source_path}</p>
-                )}
+
+                <p className={styles.cardPreview}>{memory.preview}</p>
+
+                <div className={styles.cardFooter}>
+                  <div className={styles.categoryBadge}>{memory.category}</div>
+                  <span className={styles.timestamp}>{memory.timestamp}</span>
+                </div>
+
+                <div className={styles.tagsList}>
+                  {memory.tags.map((tag) => (
+                    <span key={tag} className={styles.tag}>
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
               </div>
             ))}
-            {!isFetching && results.length === 0 && (
-              <p className="text-sm text-cortex-muted">Search or run sync to populate memory.</p>
-            )}
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default MemoryPage;

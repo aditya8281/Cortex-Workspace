@@ -1,49 +1,21 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AppShell } from "@/components/layout/AppShell";
+import { MainLayout } from "@/components/layout/MainLayout";
 
-const DashboardPage = lazy(() =>
-  import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
-);
-const ChatPage = lazy(() => import("@/pages/ChatPage").then((m) => ({ default: m.ChatPage })));
-const SyncPage = lazy(() => import("@/pages/SyncPage").then((m) => ({ default: m.SyncPage })));
-const RepositoriesPage = lazy(() =>
-  import("@/pages/RepositoriesPage").then((m) => ({ default: m.RepositoriesPage })),
-);
-const RepositoryDetailPage = lazy(() =>
-  import("@/pages/RepositoryDetailPage").then((m) => ({ default: m.RepositoryDetailPage })),
-);
-const MemoryPage = lazy(() => import("@/pages/MemoryPage").then((m) => ({ default: m.MemoryPage })));
-const KnowledgeGraphPage = lazy(() =>
-  import("@/pages/KnowledgeGraphPage").then((m) => ({ default: m.KnowledgeGraphPage })),
-);
-const ActivityPage = lazy(() =>
-  import("@/pages/ActivityPage").then((m) => ({ default: m.ActivityPage })),
-);
-const SettingsPage = lazy(() =>
-  import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })),
-);
-const ProjectsPage = lazy(() =>
-  import("@/pages/ProjectsPage").then((m) => ({ default: m.ProjectsPage })),
-);
-const ProfilePage = lazy(() =>
-  import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
-);
-const ModelsPage = lazy(() =>
-  import("@/pages/ModelsPage").then((m) => ({ default: m.ModelsPage })),
+// Pages - lazy loaded
+const HomePage = lazy(() =>
+  import("@/pages/HomePage").then((m) => ({ default: m.HomePage })),
 );
 const MarketplacePage = lazy(() =>
   import("@/pages/MarketplacePage").then((m) => ({ default: m.MarketplacePage })),
 );
-const ModelDiscoveryPage = lazy(() =>
-  import("@/pages/ModelDiscoveryPage").then((m) => ({ default: m.ModelDiscoveryPage })),
+const ChatPage = lazy(() => import("@/pages/ChatPage").then((m) => ({ default: m.ChatPage })));
+const SyncPage = lazy(() => import("@/pages/SyncPage").then((m) => ({ default: m.SyncPage })));
+const MemoryPage = lazy(() => import("@/pages/MemoryPage").then((m) => ({ default: m.MemoryPage })));
+const SettingsPage = lazy(() =>
+  import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })),
 );
-const PerformancePage = lazy(() =>
-  import("@/pages/PerformancePage").then((m) => ({ default: m.PerformancePage })),
-);
-
-
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,134 +38,63 @@ function PageLoader() {
   );
 }
 
+type TabId = 'home' | 'marketplace' | 'workspaces' | 'memory' | 'settings';
+
+function AppContent() {
+  const [activeTab, setActiveTab] = useState<TabId>('home');
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'home':
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <HomePage />
+          </Suspense>
+        );
+      case 'marketplace':
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <MarketplacePage />
+          </Suspense>
+        );
+      case 'workspaces':
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <SyncPage />
+          </Suspense>
+        );
+      case 'memory':
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <MemoryPage />
+          </Suspense>
+        );
+      case 'settings':
+        return (
+          <Suspense fallback={<PageLoader />}>
+            <SettingsPage />
+          </Suspense>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <MainLayout activeTab={activeTab} onTabChange={setActiveTab}>
+      {renderTabContent()}
+    </MainLayout>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route element={<AppShell />}>
-            <Route
-              index
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <DashboardPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="chat"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <ChatPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="profile"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <ProfilePage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="sync"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <SyncPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="repositories"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <RepositoriesPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="repositories/*"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <RepositoryDetailPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="memory"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <MemoryPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="graph"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <KnowledgeGraphPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="activity"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <ActivityPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="settings"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <SettingsPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="models"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <ModelsPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="models/discover"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <ModelDiscoveryPage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="marketplace"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <MarketplacePage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="performance"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <PerformancePage />
-                </Suspense>
-              }
-            />
-            <Route
-              path="projects"
-              element={
-                <Suspense fallback={<PageLoader />}>
-                  <ProjectsPage />
-                </Suspense>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
+          <Route path="/" element={<AppContent />} />
+          <Route path="/chat" element={<Suspense fallback={<PageLoader />}><ChatPage /></Suspense>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

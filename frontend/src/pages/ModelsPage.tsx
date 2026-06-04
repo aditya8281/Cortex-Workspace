@@ -511,7 +511,7 @@ export function ModelsPage() {
                       <div key={model.name} className="rounded-lg border border-cortex-border/50 bg-cortex-elevated/30 p-2">
                         <div className="flex items-center justify-between">
                           <div className="font-mono text-xs font-semibold text-cortex-text">{model.name}</div>
-                          <Badge variant="secondary" className="text-[9px]">{model.provider}</Badge>
+                          <Badge variant="default" className="text-[9px]">{model.provider}</Badge>
                         </div>
                         {model.context_length && <div className="text-[10px] text-cortex-muted">Context: {model.context_length.toLocaleString()}</div>}
                       </div>

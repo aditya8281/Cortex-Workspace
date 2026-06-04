@@ -111,7 +111,7 @@ export const ModelDiscoveryPage: React.FC = () => {
   const handlePullModel = async (modelId: string) => {
     try {
       setDownloadingModel(modelId);
-      const result = await pullMutation.mutateAsync(modelId);
+      await pullMutation.mutateAsync(modelId);
       // TODO: Set up WebSocket/polling for progress updates
       setDownloadProgress((prev) => ({ ...prev, [modelId]: 0 }));
     } catch (error) {
