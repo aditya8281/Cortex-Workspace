@@ -22,7 +22,7 @@ import {
   useTriggerSync,
   useWorkspaceIntelligence,
 } from "@/hooks/useIntelligence";
-import { formatTimestamp } from "@/lib/utils";
+import { formatNumber, formatTimestamp } from "@/lib/utils";
 import { useChatStore } from "@/stores/chatStore";
 import { useAppStore } from "@/stores/appStore";
 import { useQuery } from "@tanstack/react-query";
@@ -62,9 +62,9 @@ export function DashboardPage() {
     },
     {
       label: "System latency",
-      value: metrics ? `${metrics.avg_response_time_ms.toFixed(0)} ms` : "—",
+      value: metrics ? `${formatNumber(metrics.avg_response_time_ms, 0, "0")} ms` : "—",
       icon: Gauge,
-      detail: metrics ? `${metrics.avg_tokens_per_second.toFixed(0)} tok/s avg` : "No telemetry yet",
+      detail: metrics ? `${formatNumber(metrics.avg_tokens_per_second, 0, "0")} tok/s avg` : "No telemetry yet",
     },
   ];
 
@@ -99,7 +99,7 @@ export function DashboardPage() {
   const isLoading = !status && !latest && workspace === undefined;
 
   return (
-    <div className="h-full overflow-y-auto bg-cortex-background p-4 md:p-6 lg:p-8">
+    <div className="h-full overflow-y-auto bg-cortex-bg p-4 md:p-6 lg:p-8">
       <div className="mx-auto max-w-5xl space-y-8">
         <motion.div
           initial={{ opacity: 0, y: 14 }}

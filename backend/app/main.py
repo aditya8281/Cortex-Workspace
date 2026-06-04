@@ -52,13 +52,16 @@ async def lifespan(app: FastAPI):
 
     from backend.app.intelligence.observer_service import BackgroundObserverService
     from backend.app.ai.ingestion.watcher import BackgroundFileWatcher
+    from backend.app.services.memory_manager import memory_manager
 
     observer = BackgroundObserverService(poll_interval_seconds=90)
     observer.start(loop=loop)
+    memory_manager.register_service("observer", observer)
     logger.info("Cortex background observer started")
 
     file_watcher = BackgroundFileWatcher(poll_interval_seconds=15)
     file_watcher.start()
+    memory_manager.register_service("file_watcher", file_watcher)
     logger.info("Cortex background file watcher started")
 
     yield

@@ -87,7 +87,11 @@ class ExclusionConfig:
 
     @classmethod
     def load(cls, config_path: Path | None = None) -> ExclusionConfig:
-        path = config_path or (PROJECT_ROOT / CONFIG_FILENAME)
+        if config_path is None:
+            from backend.app.services.memory_manager import memory_manager
+            path = memory_manager.get_path("sync_state", "exclusion_config.json")
+        else:
+            path = config_path
         if not path.exists():
             return cls()
         try:
@@ -102,7 +106,11 @@ class ExclusionConfig:
             return cls()
 
     def save(self, config_path: Path | None = None) -> None:
-        path = config_path or (PROJECT_ROOT / CONFIG_FILENAME)
+        if config_path is None:
+            from backend.app.services.memory_manager import memory_manager
+            path = memory_manager.get_path("sync_state", "exclusion_config.json")
+        else:
+            path = config_path
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "ignored_dir_names": sorted(self.ignored_dir_names),
@@ -143,4 +151,22 @@ class ExclusionConfig:
         return True
 
 
-default_exclusions = ExclusionConfig.load()
+class ExclusionsProxy:
+    @property
+    def _target(self) -> ExclusionConfig:
+        return ExclusionConfig.load()
+
+    def __getattr__(self, name):
+        return getattr(self._target, name)
+
+    def should_skip_path(self, path: Path) -> bool:
+        return self._target.should_skip_path(path)
+
+    def should_prune_dir(self, dirname: str, parent: Path) -> bool:
+        return self._target.should_prune_dir(dirname, parent)
+
+    def is_indexable_file(self, path: Path) -> bool:
+        return self._target.is_indexable_file(path)
+
+
+default_exclusions = ExclusionsProxy()

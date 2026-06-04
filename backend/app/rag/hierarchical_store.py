@@ -15,7 +15,8 @@ class HierarchicalVectorStore:
 
     def __init__(self, dim: int = 384):
         self.dim = dim
-        self.base_dir = PROJECT_ROOT / ".cortex" / "hierarchical"
+        from backend.app.services.memory_manager import memory_manager
+        self.base_dir = memory_manager.get_path("vector_db") / "hierarchical"
         self.indices = {}
         self._load_or_create_indices()
 

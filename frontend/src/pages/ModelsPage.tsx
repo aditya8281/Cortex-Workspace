@@ -387,7 +387,7 @@ export function ModelsPage() {
   }, [activeRoutes, activeProfileName, allModelNames]);
 
   return (
-    <div className="h-full overflow-y-auto bg-cortex-background px-4 py-6 md:px-8">
+    <div className="h-full overflow-y-auto bg-cortex-bg px-4 py-6 md:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="rounded-3xl border border-cortex-border bg-gradient-to-br from-cortex-surface/80 via-cortex-surface/40 to-cortex-elevated/20 p-6 shadow-2xl shadow-black/20">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">

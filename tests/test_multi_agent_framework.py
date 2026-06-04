@@ -341,26 +341,27 @@ async def test_context_builder_caching(db_session):
     # Mock search so we can track calls
     search_mock = MagicMock()
     
-    class TrackedExecutor(MockExecutor):
-        async def search(self, query, top_k=3):
-            search_mock(query)
-            return [{"data": {"chunk": "Tracked search content"}}]
+    async def mock_rag_search(self, query, db, top_k=5, mode="auto"):
+        search_mock(query)
+        return [{"score": 1.0, "id": 1, "node_type": "chunk", "text": "Tracked search content", "file_path": "main.py", "metadata": {}}]
 
-    executor = TrackedExecutor()
+    executor = MockExecutor()
     builder = ContextBuilder(executor)
     
-    # Build first time
-    ctx1 = await builder.build(query="caching test query", user_id=55)
-    assert search_mock.call_count == 1
-    
-    # Build second time with identical keys
-    ctx2 = await builder.build(query="caching test query", user_id=55)
-    assert search_mock.call_count == 1 # unchanged!
-    assert ctx1 == ctx2
-    
-    # Build third time with different user
-    ctx3 = await builder.build(query="caching test query", user_id=66)
-    assert search_mock.call_count == 2
+    from backend.app.services.hierarchical_rag import HierarchicalRAGService
+    with patch.object(HierarchicalRAGService, "search", mock_rag_search):
+        # Build first time
+        ctx1 = await builder.build(query="caching test query", user_id=55)
+        assert search_mock.call_count == 1
+        
+        # Build second time with identical keys
+        ctx2 = await builder.build(query="caching test query", user_id=55)
+        assert search_mock.call_count == 1 # unchanged!
+        assert ctx1 == ctx2
+        
+        # Build third time with different user
+        ctx3 = await builder.build(query="caching test query", user_id=66)
+        assert search_mock.call_count == 2
 
 
 @pytest.mark.asyncio

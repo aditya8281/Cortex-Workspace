@@ -47,6 +47,11 @@ export function AppShell() {
     return () => window.clearTimeout(t);
   }, [toast, setToast]);
 
+  useEffect(() => {
+    setMobileOpen(false);
+    setContextOpen(false);
+  }, [location.pathname, setContextOpen, setMobileOpen]);
+
   const title =
     TITLES[location.pathname] ??
     (location.pathname.startsWith("/repositories/") ? "Repository" : "Cortex");
@@ -100,7 +105,7 @@ export function AppShell() {
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 py-2">
             <h1 className="truncate text-sm font-semibold tracking-wide">{title}</h1>
             <p className="text-xs text-cortex-muted">Personal intelligence layer</p>
           </div>

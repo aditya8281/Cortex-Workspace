@@ -26,6 +26,8 @@ dependencies = [
     "structlog>=25.4.0",
     "redis>=5.0.1",
     "keyring>=25.0.0",
+    "watchdog>=4.0.0",
+    "python-multipart>=0.0.31",
 ]
 
 [dependency-groups]

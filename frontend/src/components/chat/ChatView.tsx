@@ -4,7 +4,7 @@ import { MarkdownMessage } from "./MarkdownMessage";
 import { StreamingText } from "./StreamingText";
 import { ChatComposer } from "./ChatComposer";
 import { useChatStore } from "@/stores/chatStore";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 const QUICK = [
@@ -122,15 +122,15 @@ export function ChatView() {
                       </Badge>
                       <span className="shrink-0 font-medium text-cortex-text">{msg.routingInfo.provider}</span>
                       <span className="shrink-0 opacity-40">|</span>
-                      <span className="shrink-0 font-medium text-cortex-accent">{msg.routingInfo.response_time.toFixed(2)}s</span>
+                      <span className="shrink-0 font-medium text-cortex-accent">{formatNumber(msg.routingInfo.response_time, 2, "0.00")}s</span>
 
                       {msg.routingInfo.agent_selected && (
                         <>
                           <span className="shrink-0 opacity-40">|</span>
                           <span className="shrink-0 font-semibold text-purple-400">🤖 {msg.routingInfo.agent_selected}</span>
-                          <span className="shrink-0 text-cortex-muted">({((msg.routingInfo.agent_confidence ?? 0) * 100).toFixed(0)}% conf)</span>
+                          <span className="shrink-0 text-cortex-muted">({formatNumber((msg.routingInfo.agent_confidence ?? 0) * 100, 0, "0")}% conf)</span>
                           {msg.routingInfo.agent_execution_time !== undefined && (
-                            <span className="shrink-0 font-medium text-purple-300">in {msg.routingInfo.agent_execution_time.toFixed(2)}s</span>
+                            <span className="shrink-0 font-medium text-purple-300">in {formatNumber(msg.routingInfo.agent_execution_time, 2, "0.00")}s</span>
                           )}
                         </>
                       )}
@@ -172,7 +172,7 @@ export function ChatView() {
                           </div>
                           <div>
                             <span className="block text-[10px] uppercase font-bold text-cortex-muted">Duration</span>
-                            <span className="font-semibold text-cortex-accent">{msg.routingInfo.agent_execution_time?.toFixed(2) || msg.routingInfo.response_time.toFixed(2)}s</span>
+                            <span className="font-semibold text-cortex-accent">{msg.routingInfo.agent_execution_time != null ? formatNumber(msg.routingInfo.agent_execution_time, 2, "0.00") : formatNumber(msg.routingInfo.response_time, 2, "0.00")}s</span>
                           </div>
                           <div>
                             <span className="block text-[10px] uppercase font-bold text-cortex-muted">Verification</span>
@@ -215,9 +215,9 @@ export function ChatView() {
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2 text-[10px] text-cortex-muted shrink-0">
-                                    <span>{node.execution_time.toFixed(3)}s</span>
+                                    <span>{formatNumber(node.execution_time, 3, "0.000")}s</span>
                                     <span>•</span>
-                                    <span>{(node.confidence * 100).toFixed(0)}% conf</span>
+                                    <span>{formatNumber(node.confidence * 100, 0, "0")}% conf</span>
                                   </div>
                                 </div>
                                   <p className="mt-1 text-[11px] italic text-cortex-muted">{node.reasoning_summary}</p>

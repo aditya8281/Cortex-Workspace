@@ -10,7 +10,7 @@ class IndexManager:
     def __init__(
         self,
         repo_path: str,
-        index_path: str = ".cortex",
+        index_path: str | None = None,
         embedding_model: str = None,
         vector_db: str = None,
         code_parsing: str = None
@@ -20,11 +20,17 @@ class IndexManager:
         self.vector_db = vector_db or "FAISS"
         self.code_parsing = code_parsing or "Tree-sitter"
 
+        if index_path is None or index_path == ".cortex":
+            from backend.app.services.memory_manager import memory_manager
+            index_dir = memory_manager.get_path("embeddings")
+        else:
+            index_dir = Path(index_path)
+
         # Build an isolated subfolder key per config so indices never collide
         def safe(s):
             return s.replace("/", "_").replace(" ", "-").replace("(", "").replace(")", "")
         index_key = f"index_{safe(self.embedding_model)}_{safe(self.vector_db)}_{safe(self.code_parsing)}"
-        self.index_path = str(Path(index_path) / index_key)
+        self.index_path = str(index_dir / index_key)
 
     def get_store(self):
         from backend.app.rag.retriever import RepoRetriever

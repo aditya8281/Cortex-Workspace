@@ -28,7 +28,9 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-STATE_FILE = PROJECT_ROOT / ".cortex" / "filesystem_index_state.json"
+def get_state_file():
+    from backend.app.services.memory_manager import memory_manager
+    return memory_manager.get_path("sync_state", "filesystem_index_state.json")
 
 
 class SyncProgressState:
@@ -220,9 +222,10 @@ class SyncService:
                 self.indexing_service.vector_store.indices["folder"].reset()
                 self.indexing_service.vector_store.indices["repo"].reset()
                 self.indexing_service.vector_store.save()
-                if STATE_FILE.exists():
+                state_path = get_state_file()
+                if state_path.exists():
                     try:
-                        os.remove(STATE_FILE)
+                        os.remove(state_path)
                     except Exception:
                         pass
 
@@ -561,17 +564,19 @@ class SyncService:
         return workspace_root
 
     def _load_filesystem_state(self) -> dict[str, Any]:
-        if not STATE_FILE.exists():
+        state_path = get_state_file()
+        if not state_path.exists():
             return {"files": {}, "file_count": 0, "repo_count": 0, "memory_count": 0}
         try:
-            return json.loads(STATE_FILE.read_text(encoding="utf-8"))
+            return json.loads(state_path.read_text(encoding="utf-8"))
         except Exception:
             return {"files": {}, "file_count": 0, "repo_count": 0, "memory_count": 0}
 
     def _save_filesystem_state(
         self, files: dict[str, float], repo_count: int, memory_count: int
     ) -> None:
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        state_path = get_state_file()
+        state_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "files": files,
             "file_count": len(files),
@@ -579,4 +584,4 @@ class SyncService:
             "memory_count": memory_count,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
-        STATE_FILE.write_text(json.dumps(payload), encoding="utf-8")
+        state_path.write_text(json.dumps(payload), encoding="utf-8")

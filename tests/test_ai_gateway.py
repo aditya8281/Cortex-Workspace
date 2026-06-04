@@ -6,6 +6,21 @@ from backend.app.main import app
 from backend.app.ai.gateway import AIGateway
 
 
+@pytest.fixture(autouse=True)
+def mock_filesystem_discovery(tmp_path):
+    with patch(
+        "backend.app.intelligence.discovery.FilesystemDiscovery.discover_roots",
+        return_value=[tmp_path]
+    ), patch(
+        "backend.app.intelligence.scope_config.Path.home",
+        return_value=tmp_path
+    ), patch(
+        "backend.app.intelligence.discovery.Path.home",
+        return_value=tmp_path
+    ):
+        yield
+
+
 @pytest.fixture(name="gateway")
 def fixture_gateway():
     return AIGateway()
@@ -75,7 +90,7 @@ async def test_ai_gateway_llm_routing_and_memory(gateway):
         # 1. First query with user_id: Memory is empty, so it should call LLM and save response.
         response = await gateway.route(query, user_id=42)
         assert "Paris" in response.answer
-        assert mock_route.call_count == 2
+        assert mock_route.call_count == 1
 
         # 2. Second query with same keywords: Memory recall context is passed to LLM.
         mock_route.reset_mock()

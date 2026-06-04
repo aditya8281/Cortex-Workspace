@@ -1,3 +1,4 @@
+import os
 import json
 import sqlite3
 from datetime import datetime, timezone
@@ -7,9 +8,48 @@ from .models import SystemState, SystemEvent
 
 
 class StateStore:
-    def __init__(self, db_path: str = "state.db"):
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
+    def __init__(self, db_path: Optional[str] = None):
+        self._conn = None
+        self._custom_path = db_path
+        self._current_db_path = None
+        # Trigger initialization of the connection and tables
+        _ = self.conn
+
+    @property
+    def conn(self):
+        from backend.app.services.memory_manager import memory_manager
+        if self._custom_path:
+            expected_path = self._custom_path
+        else:
+            expected_path = str(memory_manager.get_path("sync_state", "state.db"))
+            
+        if self._conn is None or self._current_db_path != expected_path:
+            self.reconnect(expected_path)
+        return self._conn
+
+    @conn.setter
+    def conn(self, value):
+        self._conn = value
+
+    def close(self):
+        if self._conn:
+            try:
+                self._conn.close()
+            except Exception:
+                pass
+            self._conn = None
+
+    def reconnect(self, db_path: Optional[str] = None):
+        self.close()
+        if db_path is None:
+            from backend.app.services.memory_manager import memory_manager
+            db_path = str(memory_manager.get_path("sync_state", "state.db"))
+        
+        self._current_db_path = db_path
+        # Ensure parent folder exists
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        self._conn.row_factory = sqlite3.Row
         self._init_tables()
 
     def _init_tables(self) -> None:

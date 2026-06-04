@@ -33,9 +33,30 @@ def fixture_db_session(tmp_path):
 
 @pytest.fixture(name="clean_hierarchical_store")
 def fixture_clean_hierarchical_store(tmp_path):
-    with patch("backend.app.rag.hierarchical_store.PROJECT_ROOT", tmp_path):
-        store = HierarchicalVectorStore(dim=4)
-        yield store
+    from backend.app.services.memory_manager import memory_manager
+    original_config_file = memory_manager._config_file
+    test_config_file = tmp_path / ".cortex_memory_path"
+    memory_manager._config_file = test_config_file
+    
+    try:
+        original_path = memory_manager.get_memory_path()
+    except Exception:
+        original_path = Path("~/cortex_memory").expanduser().resolve()
+        
+    test_vault_path = tmp_path / "cortex_memory"
+    memory_manager.set_memory_path(str(test_vault_path))
+    memory_manager.ensure_vault_structure()
+    
+    store = HierarchicalVectorStore(dim=4)
+    yield store
+    
+    if test_config_file.exists():
+        test_config_file.unlink()
+    memory_manager._config_file = original_config_file
+    try:
+        memory_manager.set_memory_path(str(original_path))
+    except Exception:
+        pass
 
 
 def test_hierarchical_vector_store_idmap2(clean_hierarchical_store):

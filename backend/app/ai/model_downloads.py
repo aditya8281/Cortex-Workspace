@@ -30,11 +30,13 @@ class ModelDownloadManager:
         return datetime.now(timezone.utc).isoformat()
 
     def _load_state(self) -> None:
-        if not DOWNLOAD_STATE_FILE.exists():
+        from backend.app.services.memory_manager import memory_manager
+        state_file = memory_manager.get_path("cache", "model_download_jobs.json")
+        if not state_file.exists():
             self._jobs = {}
             return
         try:
-            data = json.loads(DOWNLOAD_STATE_FILE.read_text(encoding="utf-8"))
+            data = json.loads(state_file.read_text(encoding="utf-8"))
             jobs = data.get("jobs", {})
             if isinstance(jobs, dict):
                 self._jobs = jobs
@@ -44,9 +46,11 @@ class ModelDownloadManager:
             self._jobs = {}
 
     def _save_state(self) -> None:
-        DOWNLOAD_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        from backend.app.services.memory_manager import memory_manager
+        state_file = memory_manager.get_path("cache", "model_download_jobs.json")
+        state_file.parent.mkdir(parents=True, exist_ok=True)
         payload = {"jobs": self._jobs, "updated_at": self._now()}
-        DOWNLOAD_STATE_FILE.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        state_file.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
     def _restore_incomplete_jobs(self) -> None:
         for job_id, job in list(self._jobs.items()):

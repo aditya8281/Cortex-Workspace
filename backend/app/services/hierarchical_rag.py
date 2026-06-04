@@ -51,36 +51,6 @@ class HierarchicalRAGService:
         """
         Hybrid search combining Fast Path and Deep Path based on classification.
         """
-        if self.executor and hasattr(self.executor, "search"):
-            raw_results = await self.executor.search(query, top_k=top_k)
-            results = []
-            for r in raw_results:
-                if not isinstance(r, dict):
-                    continue
-                text = ""
-                file_path = "N/A"
-                if "text" in r:
-                    text = r["text"]
-                elif "data" in r and isinstance(r["data"], dict) and "chunk" in r["data"]:
-                    text = r["data"]["chunk"]
-                else:
-                    text = str(r)
-                
-                if "file_path" in r:
-                    file_path = r["file_path"]
-                elif "path" in r:
-                    file_path = r["path"]
-                
-                results.append({
-                    "score": r.get("score", 1.0),
-                    "id": r.get("id", 0),
-                    "node_type": r.get("node_type", "chunk"),
-                    "text": text,
-                    "file_path": file_path,
-                    "metadata": r.get("metadata", {})
-                })
-            return results
-
         selected_mode = mode if mode in ["fast", "deep"] else self.classify_query(query)
         logger.info(f"Hierarchical RAG: routing query '{query}' to '{selected_mode}' path.")
 

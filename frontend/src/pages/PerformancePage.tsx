@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/stores/appStore";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import {
   getMetricsSummary,
   getModelHealth,
@@ -194,6 +194,18 @@ export function PerformancePage() {
       {/* OVERVIEW TAB */}
       {activeTab === "overview" && (
         <div className="space-y-6">
+          {(!summary || summary.total_requests === 0) && (
+            <div className="rounded-2xl border border-cortex-accent/25 bg-cortex-accent-soft/20 p-4 text-xs text-cortex-accent flex gap-3 items-center">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              <div>
+                <p className="font-semibold">No Metrics Available</p>
+                <p className="text-cortex-muted mt-0.5">
+                  Cortex has not accumulated any inference telemetry yet. Chat with any model to generate performance metrics.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* KPI Cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="border-cortex-border bg-cortex-surface/40 hover:bg-cortex-surface/60 transition duration-200">
@@ -203,7 +215,7 @@ export function PerformancePage() {
                   <Clock className="h-4 w-4 text-cortex-accent" />
                 </CardDescription>
                 <CardTitle className="text-2xl font-bold mt-1 text-cortex-text">
-                  {summary ? `${summary.avg_response_time_ms.toFixed(0)} ms` : "0 ms"}
+                  {summary && summary.total_requests > 0 ? `${formatNumber(summary.avg_response_time_ms, 0, "0")} ms` : "No data"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -213,7 +225,7 @@ export function PerformancePage() {
                 </span>
               </CardContent>
             </Card>
-
+ 
             <Card className="border-cortex-border bg-cortex-surface/40 hover:bg-cortex-surface/60 transition duration-200">
               <CardHeader className="pb-2">
                 <CardDescription className="text-xs uppercase tracking-wider text-cortex-muted font-bold flex items-center justify-between">
@@ -221,14 +233,14 @@ export function PerformancePage() {
                   <Zap className="h-4 w-4 text-cortex-success" />
                 </CardDescription>
                 <CardTitle className="text-2xl font-bold mt-1 text-cortex-text">
-                  {summary ? `${summary.avg_tokens_per_second.toFixed(1)} t/s` : "0.0 t/s"}
+                  {summary && summary.total_requests > 0 ? `${formatNumber(summary.avg_tokens_per_second, 1, "0.0")} t/s` : "No data"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <span className="text-[10px] text-cortex-muted">Average generated speed</span>
               </CardContent>
             </Card>
-
+ 
             <Card className="border-cortex-border bg-cortex-surface/40 hover:bg-cortex-surface/60 transition duration-200">
               <CardHeader className="pb-2">
                 <CardDescription className="text-xs uppercase tracking-wider text-cortex-muted font-bold flex items-center justify-between">
@@ -236,14 +248,14 @@ export function PerformancePage() {
                   <Layers className="h-4 w-4 text-cortex-accent" />
                 </CardDescription>
                 <CardTitle className="text-2xl font-bold mt-1 text-cortex-text">
-                  {summary ? `${summary.cache_hit_rate_percent.toFixed(1)}%` : "0.0%"}
+                  {summary && summary.total_requests > 0 ? `${formatNumber(summary.cache_hit_rate_percent, 1, "0.0")}%` : "No data"}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <span className="text-[10px] text-cortex-success">RAG Cache enabled</span>
               </CardContent>
             </Card>
-
+ 
             <Card className="border-cortex-border bg-cortex-surface/40 hover:bg-cortex-surface/60 transition duration-200">
               <CardHeader className="pb-2">
                 <CardDescription className="text-xs uppercase tracking-wider text-cortex-muted font-bold flex items-center justify-between">
@@ -277,7 +289,7 @@ export function PerformancePage() {
                   <div className="flex justify-between text-xs">
                     <span className="text-cortex-text font-semibold">System RAM Usage</span>
                     <span className="text-cortex-muted">
-                      {summary ? `${summary.memory_usage.used_gb.toFixed(1)} GB / ${summary.memory_usage.total_gb.toFixed(0)} GB (${summary.memory_usage.usage_percent}%)` : "0 GB / 0 GB (0%)"}
+                      {summary ? `${formatNumber(summary.memory_usage?.used_gb, 1, "0.0")} GB / ${formatNumber(summary.memory_usage?.total_gb, 0, "0")} GB (${formatNumber(summary.memory_usage?.usage_percent, 0, "0")}%)` : "0 GB / 0 GB (0%)"}
                     </span>
                   </div>
                   <div className="w-full bg-cortex-border rounded-full h-2">
@@ -293,7 +305,7 @@ export function PerformancePage() {
                   <div className="flex justify-between text-xs">
                     <span className="text-cortex-text font-semibold">GPU Processing Core Load</span>
                     <span className="text-cortex-muted">
-                      {summary ? `${summary.gpu_usage_percent.toFixed(0)}%` : "0%"}
+                      {summary ? `${formatNumber(summary.gpu_usage_percent, 0, "0")}%` : "0%"}
                     </span>
                   </div>
                   <div className="w-full bg-cortex-border rounded-full h-2">
@@ -309,7 +321,7 @@ export function PerformancePage() {
                   <div className="flex justify-between text-xs">
                     <span className="text-cortex-text font-semibold">GPU VRAM Memory Usage</span>
                     <span className="text-cortex-muted">
-                      {summary ? `${summary.vram_usage.used_gb.toFixed(1)} GB / ${summary.vram_usage.total_gb.toFixed(1)} GB (${summary.vram_usage.usage_percent}%)` : "0.0 GB / 0.0 GB (0%)"}
+                      {summary ? `${formatNumber(summary.vram_usage?.used_gb, 1, "0.0")} GB / ${formatNumber(summary.vram_usage?.total_gb, 1, "0.0")} GB (${formatNumber(summary.vram_usage?.usage_percent, 0, "0")}%)` : "0.0 GB / 0.0 GB (0%)"}
                     </span>
                   </div>
                   <div className="w-full bg-cortex-border rounded-full h-2">
@@ -408,12 +420,12 @@ export function PerformancePage() {
                         <td className="py-3.5 px-4 text-cortex-muted text-xs">{model.provider_name}</td>
                         <td className="py-3.5 px-4 text-center font-mono text-xs">{model.total_requests}</td>
                         <td className="py-3.5 px-4 text-center font-mono text-xs text-cortex-success">
-                          {model.success_rate.toFixed(1)}%
+                          {formatNumber(model.success_rate, 1, "0.0")}%
                         </td>
                         <td className="py-3.5 px-4 text-center font-mono text-xs text-cortex-warn">
-                          {model.failure_rate.toFixed(1)}%
+                          {formatNumber(model.failure_rate, 1, "0.0")}%
                         </td>
-                        <td className="py-3.5 px-4 text-right font-mono text-xs">{model.avg_latency_ms.toFixed(0)} ms</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-xs">{formatNumber(model.avg_latency_ms, 0, "0")} ms</td>
                         <td className="py-3.5 px-4 text-center">
                           {model.status === "healthy" && (
                             <Badge className="bg-cortex-success/15 hover:bg-cortex-success/15 border border-cortex-success/30 text-cortex-success text-[10px]">
@@ -570,8 +582,8 @@ export function PerformancePage() {
                           </div>
                           <div className="flex gap-4 text-[10px] text-cortex-muted">
                             <span>Requests: <strong className="text-cortex-text font-mono">{task.count}</strong></span>
-                            <span>Success Rate: <strong className="text-cortex-success font-mono">{task.success_rate_percent.toFixed(0)}%</strong></span>
-                            <span>Latency: <strong className="text-cortex-text font-mono">{task.avg_latency_ms.toFixed(0)}ms</strong></span>
+                            <span>Success Rate: <strong className="text-cortex-success font-mono">{formatNumber(task.success_rate_percent, 0, "0")}%</strong></span>
+                            <span>Latency: <strong className="text-cortex-text font-mono">{formatNumber(task.avg_latency_ms, 0, "0")}ms</strong></span>
                           </div>
                         </div>
 

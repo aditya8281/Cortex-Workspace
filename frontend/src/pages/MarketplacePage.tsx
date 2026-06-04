@@ -73,9 +73,10 @@ export function MarketplacePage() {
     refetchInterval: 2000,
   });
 
-  const { data: catalog = [], isLoading: loadingCatalog } = useQuery<MarketplaceModel[]>({
+  const { data: catalog = [], isLoading: loadingCatalog, error, isError } = useQuery<MarketplaceModel[], Error>({
     queryKey: ["marketplace", searchQuery],
     queryFn: () => getMarketplace(searchQuery.trim() || undefined),
+    retry: false,
   });
 
   const recommendations = useMemo(() => {
@@ -141,7 +142,7 @@ export function MarketplacePage() {
   ];
 
   return (
-    <div className="h-full overflow-y-auto bg-cortex-background px-4 py-6 md:px-8">
+    <div className="h-full overflow-y-auto bg-cortex-bg px-4 py-6 md:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="rounded-3xl border border-cortex-border bg-gradient-to-br from-cortex-surface/80 via-cortex-surface/50 to-cortex-elevated/20 p-6 shadow-2xl shadow-black/20">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -314,7 +315,20 @@ export function MarketplacePage() {
           </div>
         </div>
 
-        {loadingCatalog ? (
+        {isError ? (
+          <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-8 text-center space-y-4">
+            <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
+            <h3 className="text-lg font-bold text-cortex-text">Ollama Connection Unavailable</h3>
+            <p className="max-w-md mx-auto text-sm text-cortex-muted">
+              {error?.message || "Unable to connect to the local Ollama instance or scrape the public Ollama registry. Please verify that Ollama is running and your internet connection is active."}
+            </p>
+            <div className="pt-2">
+              <Button onClick={() => qc.invalidateQueries({ queryKey: ["marketplace"] })} variant="secondary">
+                Retry Connection
+              </Button>
+            </div>
+          </div>
+        ) : loadingCatalog ? (
           <div className="flex items-center justify-center rounded-3xl border border-dashed border-cortex-border py-20">
             <Loader2 className="h-8 w-8 animate-spin text-cortex-accent" />
           </div>

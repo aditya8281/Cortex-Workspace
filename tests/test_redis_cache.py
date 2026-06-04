@@ -114,6 +114,7 @@ async def test_llm_response_caching_hit(mock_redis):
 @pytest.mark.asyncio
 async def test_rag_search_caching_hit(mock_redis):
     service = RAGService(repo_path=".")
+    service._bypass_mock = True
     
     cached_payload = [{"data": {"chunk": "Cached code line"}, "score": 0.1}]
     

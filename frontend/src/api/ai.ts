@@ -74,6 +74,12 @@ export type InstalledModel = {
 export type UserSettings = {
   api_base_url: string | null;
   api_key_masked: string | null;
+  llm_model?: string | null;
+  embedding_model?: string | null;
+  vector_db?: string | null;
+  inference_engine?: string | null;
+  code_parsing?: string | null;
+  selected_model?: string | null;
 };
 
 export type WorkspaceIntelligenceEntryPoint = {
@@ -213,7 +219,16 @@ export async function getWorkspaceIntelligence(): Promise<WorkspaceIntelligenceR
   return res.data;
 }
 
-export async function updateUserSettings(settings: { api_base_url?: string; api_key?: string }): Promise<UserSettings> {
+export async function updateUserSettings(settings: {
+  api_base_url?: string;
+  api_key?: string;
+  llm_model?: string;
+  embedding_model?: string;
+  vector_db?: string;
+  inference_engine?: string;
+  code_parsing?: string;
+  selected_model?: string;
+}): Promise<UserSettings> {
   const res = await api.put("/users/me/settings", settings);
   return res.data;
 }
@@ -514,6 +529,50 @@ export async function setProviderDefaultModel(providerName: string, defaultModel
 }> {
   const res = await api.put(`/models/providers/${encodeURIComponent(providerName)}/default-model`, {
     default_model_name: defaultModelName,
+  });
+  return res.data;
+}
+
+// Vault Management API
+export type VaultCategoryStat = {
+  size_bytes: number;
+  file_count: number;
+};
+
+export type VaultSettings = {
+  active_path: string;
+  is_paused: boolean;
+  total_size_bytes: number;
+  categories: Record<string, VaultCategoryStat>;
+};
+
+export async function getVaultSettings(): Promise<VaultSettings> {
+  const res = await api.get("/vault/settings");
+  return res.data;
+}
+
+export async function changeVaultPath(path: string): Promise<{ status: string; message: string; active_path: string }> {
+  const res = await api.post("/vault/change-path", { path });
+  return res.data;
+}
+
+export async function resetVault(): Promise<{ status: string; message: string }> {
+  const res = await api.post("/vault/reset");
+  return res.data;
+}
+
+export async function exportVault(): Promise<Blob> {
+  const res = await api.get("/vault/export", { responseType: "blob" });
+  return res.data;
+}
+
+export async function importVault(file: File): Promise<{ status: string; message: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await api.post("/vault/import", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
   });
   return res.data;
 }

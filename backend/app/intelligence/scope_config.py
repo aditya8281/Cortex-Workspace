@@ -6,7 +6,14 @@ from typing import List, Set
 from backend.app.core.paths import PROJECT_ROOT
 from backend.app.core.config import settings
 
-CONFIG_FILE = PROJECT_ROOT / ".cortex" / "sync_scope_config.json"
+# Module-level variable exposed for unit test mock patching compatibility
+CONFIG_FILE = None
+
+def get_config_file() -> Path:
+    if CONFIG_FILE is not None:
+        return Path(str(CONFIG_FILE))
+    from backend.app.services.memory_manager import memory_manager
+    return memory_manager.get_path("sync_state", "sync_scope_config.json")
 
 
 class SyncScopeConfig:
@@ -69,11 +76,12 @@ class SyncScopeConfig:
             ]
 
     def load(self):
-        if not CONFIG_FILE.exists():
+        config_path = get_config_file()
+        if not config_path.exists():
             self.save()
             return
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 self.include_folders = data.get("include_folders", self.include_folders)
                 self.exclude_folders = data.get("exclude_folders", self.exclude_folders)
@@ -115,7 +123,8 @@ class SyncScopeConfig:
         self.include_folders = normalized
 
     def save(self):
-        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        config_path = get_config_file()
+        config_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "include_folders": sorted(list(set(self.include_folders))),
             "exclude_folders": sorted(list(set(self.exclude_folders))),
@@ -123,7 +132,7 @@ class SyncScopeConfig:
             "ignore_patterns": sorted(list(set(self.ignore_patterns))),
             "auto_sync_enabled": self.auto_sync_enabled
         }
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
     def is_excluded(self, path_str: str, bypass_prefixes: List[str] | None = None) -> bool:

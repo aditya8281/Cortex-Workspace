@@ -15,6 +15,11 @@ export function formatTimestamp(value?: string | null) {
   }).format(new Date(value));
 }
 
+export function formatNumber(value?: number | null, digits = 0, fallback = "0") {
+  if (value == null || !Number.isFinite(value)) return fallback;
+  return value.toFixed(digits);
+}
+
 export function formatRelativeGroup(iso: string): "today" | "yesterday" | "week" | "month" | "older" {
   const date = new Date(iso);
   const now = new Date();

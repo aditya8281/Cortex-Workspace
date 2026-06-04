@@ -301,6 +301,8 @@ def delete_provider(provider_name: str, db: Session = Depends(get_db)):
     return {"message": "Provider deleted successfully"}
 
 
+from backend.app.models.user_settings import UserSettings
+
 @router.post("/select")
 def select_model(
     payload: SelectModelPayload,
@@ -336,6 +338,20 @@ def select_model(
         "provider": model_match.get("provider"),
         "is_local": model_match.get("is_local"),
     }
+    
+    # Persist to database if authenticated
+    if current_user:
+        try:
+            user_settings = db.query(UserSettings).filter(UserSettings.user_id == current_user.id).first()
+            if not user_settings:
+                user_settings = UserSettings(user_id=current_user.id)
+                db.add(user_settings)
+            user_settings.selected_model = payload.model_name
+            db.commit()
+            logger.info("Durable model selection saved to database for user_id=%s", current_user.id)
+        except Exception as db_err:
+            logger.error("Failed to persist model selection to database: %s", db_err)
+
     if payload.session_id or current_user:
         try:
             if asyncio.run(redis_cache.ping()):
@@ -345,6 +361,7 @@ def select_model(
                     asyncio.run(redis_cache.set(f"model_selection:user:{current_user.id}", selection_state))
         except Exception:
             logger.warning("Model selection persistence skipped because Redis is unavailable")
+            
     return {
         "status": "success",
         "selected_model": payload.model_name,
@@ -676,6 +693,9 @@ async def get_marketplace(query: Optional[str] = None):
     except Exception as exc:
         logger.warning("Failed to fetch Ollama registry marketplace: %s", exc)
         registry_models = []
+
+    if not registry_models and not installed_models:
+        return []
 
     if not registry_models and installed_models:
         catalog = []

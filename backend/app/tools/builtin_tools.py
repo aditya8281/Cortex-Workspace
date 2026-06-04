@@ -445,7 +445,6 @@ class MemorySearchTool(RegisteredTool):
         if isinstance(matches, str):
             matches = [{"content": matches}]
 
-        context.state.setdefault("retrieved_context", {})["memory_search"] = matches
         return {
             "matches": matches,
             "count": len(matches),
