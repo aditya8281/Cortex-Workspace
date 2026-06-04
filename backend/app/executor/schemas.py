@@ -34,6 +34,11 @@ class ExecutionResult(BaseModel):
     # -------------------------------------------------
     execution_id: str | None = None
     routing_info: dict | None = None
+    workflow_summary: dict | None = None
+    executed_steps: list[dict] = Field(default_factory=list)
+    tools_used: list[str] = Field(default_factory=list)
+    retrieved_files: list[str] = Field(default_factory=list)
+    partial_results: bool = False
 
 
 class IntentDecision(BaseModel):

@@ -62,8 +62,7 @@ async def run_task(payload: RunTaskRequest, db: Session = Depends(get_db)):
             context_items=payload.context_items
         )
 
-        # Get orchestrator trace logs
-        trace = getattr(executor.orchestrator, "last_trace", None) or {}
+        workflow_trace = executor.tracer.get_session(result.execution_id) if result.execution_id else None
 
         return {
             "query": payload.query,
@@ -71,7 +70,12 @@ async def run_task(payload: RunTaskRequest, db: Session = Depends(get_db)):
             "user_id": payload.user_id,
             "execution_id": result.execution_id,
             "routing_info": result.routing_info,
-            "trace": trace
+            "workflow_summary": result.workflow_summary,
+            "executed_steps": result.executed_steps,
+            "tools_used": result.tools_used,
+            "retrieved_files": result.retrieved_files,
+            "partial_results": result.partial_results,
+            "trace": workflow_trace or {},
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -147,76 +151,29 @@ async def debug_execution_graph(query: Optional[str] = None):
     try:
         q = query or "Explain app architecture and codebase"
         executor = AIExecutor()
-        task_class = executor.orchestrator.classify_task(q)
-        best_agent, confidence_score = executor.orchestrator.registry.route_request(q)
-
-        # Map graph structure nodes manually based on orchestrator classification rules
-        nodes = []
-        if task_class in ["Coding", "Execution", "Repository Analysis"]:
-            nodes.append({
-                "id": "RepositoryAgent",
-                "agent_name": "RepositoryAgent",
-                "depends_on": []
-            })
-            nodes.append({
-                "id": "SearchAgent",
-                "agent_name": "SearchAgent",
-                "depends_on": []
-            })
-            primary_agent_name = "ExecutionAgent" if task_class == "Execution" else "CodingAgent"
-            nodes.append({
-                "id": primary_agent_name,
-                "agent_name": primary_agent_name,
-                "depends_on": ["RepositoryAgent", "SearchAgent"]
-            })
-            nodes.append({
-                "id": "VerificationAgent",
-                "agent_name": "VerificationAgent",
-                "depends_on": [primary_agent_name]
-            })
-        elif task_class in ["Search", "Research"]:
-            primary_agent_name = "SearchAgent" if task_class == "Search" else "ResearchAgent"
-            nodes.append({
-                "id": primary_agent_name,
-                "agent_name": primary_agent_name,
-                "depends_on": []
-            })
-            nodes.append({
-                "id": "VerificationAgent",
-                "agent_name": "VerificationAgent",
-                "depends_on": [primary_agent_name]
-            })
-        elif task_class == "Planning":
-            nodes.append({
-                "id": "PlanningAgent",
-                "agent_name": "PlanningAgent",
-                "depends_on": []
-            })
-            nodes.append({
-                "id": "VerificationAgent",
-                "agent_name": "VerificationAgent",
-                "depends_on": ["PlanningAgent"]
-            })
-        elif task_class == "Memory Retrieval":
-            nodes.append({
-                "id": "MemoryAgent",
-                "agent_name": "MemoryAgent",
-                "depends_on": []
-            })
-        else:  # Chat / Fallback
-            nodes.append({
-                "id": "ChatAgent",
-                "agent_name": "ChatAgent",
-                "depends_on": []
-            })
+        intent = executor.classifier.classify(q)
+        plan = executor.planner.build_plan(q, intent=intent, available_tools=executor.tool_registry.list_tools())
+        graph = executor.graph_builder.build(plan)
 
         return {
             "query": q,
-            "classified_task": task_class,
-            "agent_selected": best_agent.name,
-            "confidence": confidence_score,
+            "classified_task": intent.intent.value if hasattr(intent.intent, "value") else str(intent.intent),
+            "plan": plan.model_dump(),
             "graph_structure": {
-                "nodes": nodes
+                "nodes": [
+                    {
+                        "id": node.id,
+                        "step_id": node.step_id,
+                        "tool": node.tool,
+                        "depends_on": node.depends_on,
+                        "fallback_tools": node.fallback_tools,
+                        "critical": node.critical,
+                        "description": node.description,
+                    }
+                    for node in graph.nodes
+                ],
+                "layers": graph.layers,
+                "edges": graph.edges,
             }
         }
     except Exception as e:

@@ -5,12 +5,11 @@ from backend.app.agent.file_search import FileSearchAgent
 from backend.app.agent.system_scanner import SystemScanner
 
 from backend.app.executor.intent_classifier import IntentClassifier
-from backend.app.executor.planner import Planner
+from backend.app.executor.workflow import WorkflowGraphBuilder, WorkflowExecutionEngine, WorkflowPlanner
 from backend.app.executor.response_builder import ResponseBuilder
 from backend.app.executor.schemas import ExecutionResult
 
 from backend.app.executor.tracer import ExecutionTracer
-from backend.app.executor.graph_runner import GraphRunner
 
 from backend.app.rag.service import RAGService
 
@@ -33,7 +32,7 @@ class AIExecutor:
     def __init__(self):
         self.state = StateManager()
         self.classifier = IntentClassifier()
-        self.planner = Planner()
+        self.planner = WorkflowPlanner()
         self.builder = ResponseBuilder()
         self.llm = LLMRouter()
         self.router = IntelligentRouter()
@@ -43,7 +42,8 @@ class AIExecutor:
         self.rag = RAGService(str(PROJECT_ROOT))
         self.tool_registry = ToolRegistry(self)
         self.tracer = ExecutionTracer()
-        self.graph_runner = GraphRunner(self)
+        self.graph_builder = WorkflowGraphBuilder(self.tool_registry)
+        self.workflow_engine = WorkflowExecutionEngine(self)
         self.tool_feedback = ToolFeedbackStore()
         self.context_resolver = ContextResolver()
         from backend.app.agent.orchestrator import OrchestratorAgent
@@ -73,13 +73,13 @@ class AIExecutor:
                 logger.info(f"context_resolved items={len(context_items)}")
 
             intent = self.classifier.classify(query)
-            tool_bias = self.tool_feedback.get_tool_bias()
-            graph = self.planner.build_graph(intent, tool_bias=tool_bias)
+            workflow_plan = self.planner.build_plan(query, intent=intent, available_tools=self.tool_registry.list_tools())
+            graph = self.graph_builder.build(workflow_plan)
 
-            logger.info(f"execution_graph_built steps={len(graph.steps)}")
-            raw_state = await self.graph_runner.run(
-                graph=graph,
+            logger.info(f"execution_graph_built steps={len(graph.nodes)}")
+            raw_state = await self.workflow_engine.execute(
                 query=query,
+                graph=graph,
                 user_id=user_id,
                 intent=intent,
                 history=history,
@@ -150,9 +150,11 @@ class AIExecutor:
     ) -> ExecutionContext:
 
         memory = raw_state.get("memory")
-        tools = raw_state.get("tools", [])
-        llm = raw_state.get("llm")
+        tools = raw_state.get("tool_results", [])
+        llm = raw_state.get("final_response")
         routing_info = raw_state.get("routing_info")
+        workflow_summary = raw_state.get("workflow_summary")
+        workflow_state = raw_state.get("workflow_state") or {}
 
         return ExecutionContext(
             query=query,
@@ -161,7 +163,15 @@ class AIExecutor:
             memory=memory,
             tool_results=tools,
             llm_response=llm,
-            routing_info=routing_info
+            routing_info=routing_info,
+            meta={
+                "workflow_summary": workflow_summary,
+                "executed_steps": workflow_summary.get("steps", []) if isinstance(workflow_summary, dict) else [],
+                "tools_used": workflow_summary.get("tools_used", []) if isinstance(workflow_summary, dict) else [],
+                "retrieved_files": workflow_summary.get("retrieved_files", []) if isinstance(workflow_summary, dict) else [],
+                "partial_results": workflow_summary.get("partial_results", False) if isinstance(workflow_summary, dict) else False,
+                "workflow_state": workflow_state,
+            }
         )
 
     def _sync_runtime_state(self, state, query: str, execution_id: str | None, tools):

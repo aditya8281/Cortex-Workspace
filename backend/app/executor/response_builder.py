@@ -5,6 +5,12 @@ from backend.app.tools.base import ToolResult
 
 class ResponseBuilder:
     def build(self, ctx: ExecutionContext) -> ExecutionResult:
+        workflow_summary = ctx.meta.get("workflow_summary")
+        executed_steps = ctx.meta.get("executed_steps", [])
+        tools_used = ctx.meta.get("tools_used", [])
+        retrieved_files = ctx.meta.get("retrieved_files", [])
+        partial_results = bool(ctx.meta.get("partial_results", False))
+
         if ctx.llm_response:
             answer = str(ctx.llm_response)
             import re
@@ -17,7 +23,12 @@ class ResponseBuilder:
                 source="executor_v2",
                 memory_used=ctx.memory is not None,
                 execution_id=ctx.execution_id,
-                routing_info=ctx.routing_info
+                routing_info=ctx.routing_info,
+                workflow_summary=workflow_summary,
+                executed_steps=executed_steps,
+                tools_used=tools_used,
+                retrieved_files=retrieved_files,
+                partial_results=partial_results,
             )
 
         sections = []
@@ -36,7 +47,12 @@ class ResponseBuilder:
             source="executor_v2",
             memory_used=ctx.memory is not None,
             execution_id=ctx.execution_id,
-            routing_info=ctx.routing_info
+            routing_info=ctx.routing_info,
+            workflow_summary=workflow_summary,
+            executed_steps=executed_steps,
+            tools_used=tools_used,
+            retrieved_files=retrieved_files,
+            partial_results=partial_results,
         )
 
     def _format_tools(self, tools: list[ToolResult]) -> str:

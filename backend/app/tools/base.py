@@ -7,11 +7,13 @@ class ToolContext:
         self,
         user_id: Optional[int] = None,
         query: str = "",
-        state: Optional[Dict[str, Any]] = None
+        state: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None
     ):
         self.user_id = user_id
         self.query = query
         self.state = state or {}
+        self.params = params or {}
 
 
 class ToolResult:
@@ -64,6 +66,10 @@ class ToolResult:
 class BaseTool(ABC):
 
     name: str
+    aliases: list[str] = []
+    permission_level: str = "standard"
+    input_schema: Dict[str, Any] = {"type": "object", "additionalProperties": True}
+    output_schema: Dict[str, Any] = {"type": "object", "additionalProperties": True}
 
     @abstractmethod
     def decide(self, context: ToolContext) -> Dict[str, Any]:
@@ -74,7 +80,29 @@ class BaseTool(ABC):
         pass
 
     async def execute(self, context: ToolContext) -> ToolResult:
+        params = dict(getattr(context, "params", {}) or {})
+        force_run = bool(params.pop("__force__", False))
+
+        if force_run:
+            result = await self.run(context, params)
+            if isinstance(result, ToolResult):
+                return result
+
+            return ToolResult(
+                tool=self.name,
+                output=result,
+                confidence=1.0,
+                relevance=1.0,
+                status="success",
+                skipped=False,
+                meta={
+                    "params": params,
+                    "reflection": self.reflect(result),
+                }
+            )
+
         decision = self.decide(context)
+        merged_params = {**decision.get("params", {}), **params}
 
         if not decision.get("should_run", False):
             return ToolResult(
@@ -85,10 +113,10 @@ class BaseTool(ABC):
                 status="skipped",
                 skipped=True,
                 reason=decision.get("reason", "skipped"),
-                meta={"params": decision.get("params", {})}
+                meta={"params": merged_params}
             )
 
-        result = await self.run(context, decision.get("params", {}))
+        result = await self.run(context, merged_params)
 
         if isinstance(result, ToolResult):
             return result
@@ -101,10 +129,19 @@ class BaseTool(ABC):
             status="success",
             skipped=False,
             meta={
-                "params": decision.get("params", {}),
+                "params": merged_params,
                 "reflection": self.reflect(result),
             }
         )
+
+    def spec(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "aliases": list(getattr(self, "aliases", []) or []),
+            "input_schema": getattr(self, "input_schema", {"type": "object"}),
+            "output_schema": getattr(self, "output_schema", {"type": "object"}),
+            "permission_level": getattr(self, "permission_level", "standard"),
+        }
 
     def reflect(self, result: ToolResult) -> Dict[str, Any]:
         status = getattr(result, "status", None) if isinstance(result, ToolResult) else None
