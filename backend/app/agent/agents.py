@@ -622,7 +622,7 @@ class VerificationAgent(BaseAgent):
                     verified_patches.append(f"{src} -> {dst}")
 
         # 3. Detect unsupported claims
-        if rag_context and "=== Retrieval Context (RAG) ===" in rag_context:
+        if rag_context and any(h in rag_context for h in ["=== Retrieval Context (RAG) ===", "=== Retrieval Context (Hierarchical RAG) ===", "=== Retrieval Context (Compressed RAG) ==="]):
             system_prompt = (
                 "You are an expert verification agent.\n"
                 "Verify if the generated answer makes any claims or imports that are completely unsupported by the provided Retrieval Context.\n"

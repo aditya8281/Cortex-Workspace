@@ -202,78 +202,26 @@ class ContextBuilder:
             logger.info("ContextBuilder: context cache HIT")
             return self._cached_contexts[cache_key]
 
-        blocks = []
-
-        # 1. Attached Context (Highest priority)
-        if context_items:
-            from backend.app.executor.context_compiler import ContextCompiler
-            compiler = ContextCompiler()
-            attached_block = compiler._format_context_items(context_items)
-            if attached_block:
-                blocks.append(attached_block)
-
-        # 2. Workspace Context
+        from backend.app.services.hierarchical_rag import HierarchicalRAGService
         from backend.app.db.session import SessionLocal
-        from backend.app.intelligence.models import RepositoryProfile
+
         db = SessionLocal()
         try:
-            profile = db.query(RepositoryProfile).order_by(RepositoryProfile.updated_at.desc()).first()
-            if profile:
-                blocks.append(
-                    f"=== Workspace Context ===\n"
-                    f"Project: {profile.name}\n"
-                    f"Tech Stack: {profile.tech_stack}\n"
-                    f"Architecture Overview: {profile.architecture_summary}\n"
-                    f"=== End of Workspace Context ==="
-                )
+            rag_service = HierarchicalRAGService(executor=self.executor)
+            compiled_context = await rag_service.build_context(
+                query=query,
+                db=db,
+                context_items=context_items,
+                history=history,
+                user_id=user_id
+            )
+            self._cached_contexts[cache_key] = compiled_context
+            return compiled_context
         except Exception as e:
-            logger.warning(f"ContextBuilder failed to fetch workspace profile: {e}")
+            logger.error(f"ContextBuilder: Hierarchical RAG context builder failed: {e}")
+            return f"Query: {query}"
         finally:
             db.close()
-
-        # 3. Conversation Context
-        if history:
-            history_str = "=== Conversation History ===\n"
-            for turn in history:
-                role = turn.get("role", "user")
-                content = turn.get("content", "")
-                role_display = "User" if role == "user" else "Assistant"
-                history_str += f"{role_display}: {content}\n"
-            history_str += "=== End of Conversation History ==="
-            blocks.append(history_str)
-
-        # 4. Memory Context
-        from backend.app.intelligence.memory_service import PersistentMemoryService
-        db = SessionLocal()
-        try:
-            memories = PersistentMemoryService().search(db, query, limit=3, user_id=user_id)
-            if memories:
-                mem_str = "=== Memory Context ===\n"
-                for m in memories:
-                    mem_str += f"- {m['title']}: {m['content'][:300]}\n"
-                mem_str += "=== End of Memory Context ==="
-                blocks.append(mem_str)
-        except Exception as e:
-            logger.warning(f"ContextBuilder failed to search memory: {e}")
-        finally:
-            db.close()
-
-        # 5. Retrieval Context (RAG)
-        try:
-            rag_results = await self.executor.rag.search(query, top_k=3)
-            if rag_results:
-                rag_str = "=== Retrieval Context (RAG) ===\n"
-                for idx, r in enumerate(rag_results):
-                    chunk_text = r["data"]["chunk"] if isinstance(r, dict) and "data" in r else str(r)
-                    rag_str += f"Chunk {idx+1}:\n{chunk_text[:500]}\n---\n"
-                rag_str += "=== End of Retrieval Context ==="
-                blocks.append(rag_str)
-        except Exception as e:
-            logger.warning(f"ContextBuilder failed RAG search: {e}")
-
-        compiled_context = "\n\n".join(blocks)
-        self._cached_contexts[cache_key] = compiled_context
-        return compiled_context
 
 
 class OrchestratorAgent(BaseAgent):
