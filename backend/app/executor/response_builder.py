@@ -5,6 +5,18 @@ from backend.app.tools.base import ToolResult
 
 class ResponseBuilder:
     def build(self, ctx: ExecutionContext) -> ExecutionResult:
+        if ctx.llm_response:
+            answer = str(ctx.llm_response)
+            if "Final Response:\n" in answer:
+                answer = answer.split("Final Response:\n", 1)[1]
+            return ExecutionResult(
+                answer=answer.strip(),
+                source="executor_v2",
+                memory_used=ctx.memory is not None,
+                execution_id=ctx.execution_id,
+                routing_info=ctx.routing_info
+            )
+
         sections = []
 
         if ctx.memory:
@@ -13,11 +25,8 @@ class ResponseBuilder:
         if ctx.tool_results:
             sections.append(self._format_tools(ctx.tool_results))
 
-        if ctx.llm_response:
-            sections.append("Final Response:\n" + str(ctx.llm_response))
-
         if not sections:
-            sections.append("Final Response:\nNo usable context found.")
+            sections.append("No response or context found.")
 
         return ExecutionResult(
             answer="\n\n".join(sections),
