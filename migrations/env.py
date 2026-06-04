@@ -25,6 +25,7 @@ from backend.app.models.user_settings import UserSettings
 from backend.app.models.user_profile import UserProfile  # noqa: F401
 from backend.app.models.context_item import ContextItem  # noqa: F401
 from backend.app.models.llm_model import CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute  # noqa: F401
+from backend.app.models.hierarchical_memory import HierarchicalNode  # noqa: F401
 from backend.app.ai.memory.models import Memory
 from backend.app.intelligence.models import (  # noqa: F401
     CortexAutomationSettings,

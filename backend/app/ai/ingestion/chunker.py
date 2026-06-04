@@ -19,39 +19,133 @@ class TextChunker:
         if not text:
             return []
 
-        is_code = False
-        if metadata and "file" in metadata:
-            file_path = str(metadata["file"]).lower()
-            is_code = any(file_path.endswith(ext) for ext in [
-                ".py", ".js", ".ts", ".jsx", ".tsx", ".json", ".toml", ".yaml", ".yml",
-                ".html", ".css", ".md", ".sh", ".c", ".cpp", ".h", ".rs", ".go", ".java", ".kt"
-            ])
+        file_path = str(metadata.get("file", "")).lower() if metadata else ""
+        
+        is_code = any(file_path.endswith(ext) for ext in [
+            ".py", ".js", ".ts", ".jsx", ".tsx", ".json", ".toml", ".yaml", ".yml",
+            ".html", ".css", ".sh", ".c", ".cpp", ".h", ".rs", ".go", ".java", ".kt"
+        ])
+        
+        is_doc = any(file_path.endswith(ext) for ext in [
+            ".md", ".txt", ".pdf", ".rst", ".doc", ".docx"
+        ])
 
         if is_code and self.code_parsing == "Tree-sitter":
-            return self._structure_aware_chunk_text(text, metadata)
+            chunks = self._structure_aware_chunk_text(text, metadata)
+            if chunks:
+                return chunks
 
+        if is_doc:
+            return self._section_based_chunking(text, metadata)
+
+        return self._semantic_paragraph_chunking(text, metadata)
+
+    def _section_based_chunking(self, text: str, metadata: Dict = None) -> List[Dict]:
+        import re
+        lines = text.splitlines()
         chunks = []
-        start = 0
+        current_section = []
+        current_header = "Intro"
         chunk_id = 0
+        
+        header_regex = re.compile(r'^(#+\s+.*)$')
+        
+        for line in lines:
+            match = header_regex.match(line)
+            if match:
+                if current_section:
+                    section_text = "\n".join(current_section).strip()
+                    if section_text:
+                        chunks.append({
+                            "chunk_id": chunk_id,
+                            "text": f"Header: {current_header}\n\n{section_text}",
+                            "start": 0,
+                            "end": len(section_text),
+                            "metadata": {**(metadata or {}), "header": current_header}
+                        })
+                        chunk_id += 1
+                current_header = match.group(1).strip()
+                current_section = [line]
+            else:
+                current_section.append(line)
+                
+        if current_section:
+            section_text = "\n".join(current_section).strip()
+            if section_text:
+                chunks.append({
+                    "chunk_id": chunk_id,
+                    "text": f"Header: {current_header}\n\n{section_text}",
+                    "start": 0,
+                    "end": len(section_text),
+                    "metadata": {**(metadata or {}), "header": current_header}
+                })
+                
+        if not chunks:
+            return self._semantic_paragraph_chunking(text, metadata)
+            
+        return chunks
 
-        while start < len(text):
-            end = start + self.max_chunk_size
-            chunk = text[start:end]
-
-            # clean chunk (optional light cleanup)
-            chunk = self._clean_text(chunk, is_code=is_code)
-
+    def _semantic_paragraph_chunking(self, text: str, metadata: Dict = None) -> List[Dict]:
+        import re
+        paragraphs = text.split("\n\n")
+        chunks = []
+        current_chunk = []
+        current_len = 0
+        chunk_id = 0
+        
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                continue
+            
+            if len(para) > self.max_chunk_size:
+                sentences = re.split(r'(?<=[.!?])\s+', para)
+                for sentence in sentences:
+                    sentence = sentence.strip()
+                    if not sentence:
+                        continue
+                    if current_len + len(sentence) > self.max_chunk_size and current_chunk:
+                        chunk_text = " ".join(current_chunk)
+                        chunks.append({
+                            "chunk_id": chunk_id,
+                            "text": chunk_text,
+                            "start": 0,
+                            "end": len(chunk_text),
+                            "metadata": metadata or {}
+                        })
+                        chunk_id += 1
+                        current_chunk = [sentence]
+                        current_len = len(sentence)
+                    else:
+                        current_chunk.append(sentence)
+                        current_len += len(sentence) + 1
+            else:
+                if current_len + len(para) > self.max_chunk_size and current_chunk:
+                    chunk_text = "\n\n".join(current_chunk)
+                    chunks.append({
+                        "chunk_id": chunk_id,
+                        "text": chunk_text,
+                        "start": 0,
+                        "end": len(chunk_text),
+                        "metadata": metadata or {}
+                    })
+                    chunk_id += 1
+                    current_chunk = [para]
+                    current_len = len(para)
+                else:
+                    current_chunk.append(para)
+                    current_len += len(para) + 2
+                    
+        if current_chunk:
+            chunk_text = "\n\n".join(current_chunk)
             chunks.append({
                 "chunk_id": chunk_id,
-                "text": chunk,
-                "start": start,
-                "end": end,
+                "text": chunk_text,
+                "start": 0,
+                "end": len(chunk_text),
                 "metadata": metadata or {}
             })
-
-            chunk_id += 1
-            start = end - self.overlap  # overlap for context continuity
-
+            
         return chunks
 
     def _structure_aware_chunk_text(self, text: str, metadata: Dict = None) -> List[Dict]:

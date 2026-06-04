@@ -51,13 +51,19 @@ async def lifespan(app: FastAPI):
     loop.run_in_executor(None, warmup_executor)
 
     from backend.app.intelligence.observer_service import BackgroundObserverService
+    from backend.app.ai.ingestion.watcher import BackgroundFileWatcher
 
     observer = BackgroundObserverService(poll_interval_seconds=90)
     observer.start(loop=loop)
     logger.info("Cortex background observer started")
 
+    file_watcher = BackgroundFileWatcher(poll_interval_seconds=15)
+    file_watcher.start()
+    logger.info("Cortex background file watcher started")
+
     yield
 
+    file_watcher.stop()
     observer.stop()
     await redis_cache.close()
     logger.info("Redis cache connection closed")
