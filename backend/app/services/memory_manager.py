@@ -7,6 +7,11 @@ from typing import Any, Dict, List, Optional
 import threading
 
 from backend.app.core.paths import PROJECT_ROOT
+from backend.app.core.system_paths import (
+    LINUX_BLOCKED_SYSTEM_PATHS,
+    MACOS_BLOCKED_SYSTEM_PATHS,
+    WINDOWS_BLOCKED_SYSTEM_PATHS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +36,19 @@ class MemoryManager:
         "temp"
     ]
 
-    SYSTEM_PATHS = [
-        "/sys", "/etc", "/dev", "/proc", "/boot", "/root", "/usr", "/var", "/lib",
-        "/bin", "/sbin", "C:\\Windows", "C:\\System32", "C:\\Program Files", "C:\\Program Files (x86)"
-    ]
+    @staticmethod
+    def get_blocked_system_paths() -> set:
+        """Get blocked system paths for current OS."""
+        import platform
+        system = platform.system()
+        if system == "Linux":
+            return LINUX_BLOCKED_SYSTEM_PATHS
+        elif system == "Darwin":
+            return MACOS_BLOCKED_SYSTEM_PATHS
+        elif system == "Windows":
+            return WINDOWS_BLOCKED_SYSTEM_PATHS
+        else:
+            return LINUX_BLOCKED_SYSTEM_PATHS
 
     def __init__(self):
         self._config_file = PROJECT_ROOT / ".cortex_memory_path"
@@ -83,7 +97,7 @@ class MemoryManager:
         
         # 1. Block system level directories
         resolved_str = str(resolved)
-        for sys_path in self.SYSTEM_PATHS:
+        for sys_path in self.get_blocked_system_paths():
             if resolved_str.startswith(sys_path) or resolved_str == sys_path:
                 raise ValueError(f"Security exception: Cannot configure memory path inside system directory '{sys_path}'")
 
@@ -127,9 +141,10 @@ class MemoryManager:
 
         # Double check system paths
         target_str = str(target_path)
-        for sys_path in self.SYSTEM_PATHS:
+        for sys_path in self.get_blocked_system_paths():
             if target_str.startswith(sys_path) or target_str == sys_path:
                 raise PermissionError(f"Security Violation: Access block to system directory '{sys_path}'")
+
 
         return target_path
 

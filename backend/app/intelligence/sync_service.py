@@ -8,6 +8,8 @@ import time
 import math
 import logging
 import threading
+
+from backend.app.core.runtime import get_runtime
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, List, Dict, Optional
@@ -241,10 +243,11 @@ class SyncService:
             self.progress_state.update_metrics()
 
             current_files = {}
+            runtime = get_runtime()
             for path in current_files_list:
                 try:
-                    current_files[path] = os.path.getmtime(path)
-                except OSError:
+                    current_files[path] = runtime.get_file_modification_time(path)
+                except (OSError, ValueError):
                     continue
 
             added = [p for p in current_files if p not in previous_files]
@@ -527,8 +530,9 @@ class SyncService:
                 finally:
                     loop.close()
                 try:
-                    tracked[path] = os.path.getmtime(path)
-                except OSError:
+                    runtime = get_runtime()
+                    tracked[path] = runtime.get_file_modification_time(path)
+                except (OSError, ValueError):
                     tracked.pop(path, None)
                 indexed_count += 1
             except Exception as e:

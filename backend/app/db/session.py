@@ -49,8 +49,10 @@ def reset_db_engine():
 def run_migrations(db_path: str):
     """Programmatically runs Alembic migrations upgrade head on the target SQLite file."""
     try:
-        # Ensure parent directory exists
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        # Ensure parent directory exists using safe abstraction
+        from backend.app.core.runtime import get_runtime
+        runtime = get_runtime()
+        runtime.create_dir(db_path.rsplit('/', 1)[0] if '/' in db_path else '.')
         
         ini_path = str(PROJECT_ROOT / "alembic.ini")
         cfg = Config(ini_path)

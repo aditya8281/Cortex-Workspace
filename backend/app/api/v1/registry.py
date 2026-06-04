@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from backend.app.db.base import get_db
+from backend.app.api.deps import get_db
 from backend.app.services.ollama_registry import OllamaRegistryService, OllamaDownloadService
 from backend.app.core.security import get_current_user
 

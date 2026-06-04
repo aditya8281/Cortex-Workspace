@@ -5,6 +5,12 @@ from pathlib import Path
 from typing import List, Set
 from backend.app.core.paths import PROJECT_ROOT
 from backend.app.core.config import settings
+from backend.app.core.system_paths import (
+    LINUX_BLOCKED_SYSTEM_PATHS,
+    MACOS_BLOCKED_SYSTEM_PATHS,
+    WINDOWS_BLOCKED_SYSTEM_PATHS,
+    COMMON_IGNORED_DIRS,
+)
 
 # Module-level variable exposed for unit test mock patching compatibility
 CONFIG_FILE = None
@@ -57,23 +63,16 @@ class SyncScopeConfig:
             default_includes.append(workspace)
         self.include_folders = default_includes
 
-        # Set default excludes based on system-protected locations
+        # Set default excludes based on system-protected locations (using constants)
         if system == "Linux":
-            self.exclude_folders = [
-                "/sys", "/proc", "/dev", "/run", "/tmp", "/var",
-                "/boot", "/sbin", "/bin", "/lib", "/lib64", "/usr",
-                "/opt", "/snap", "/etc"
-            ]
+            self.exclude_folders = list(LINUX_BLOCKED_SYSTEM_PATHS)
         elif system == "Darwin":  # macOS
-            self.exclude_folders = [
-                "/System", "/Library", "/private", "/dev", "/cores",
-                "/bin", "/sbin", "/usr", "/tmp", "/var", "/Network", "/Volumes"
-            ]
+            self.exclude_folders = list(MACOS_BLOCKED_SYSTEM_PATHS)
         elif system == "Windows":
-            self.exclude_folders = [
-                "C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)",
-                "C:\\ProgramData", "C:\\$Recycle.Bin", "C:\\System Volume Information"
-            ]
+            self.exclude_folders = list(WINDOWS_BLOCKED_SYSTEM_PATHS)
+        else:
+            # Fallback to Linux paths for unknown systems
+            self.exclude_folders = list(LINUX_BLOCKED_SYSTEM_PATHS)
 
     def load(self):
         config_path = get_config_file()

@@ -9,6 +9,8 @@ from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+from backend.app.core.runtime import get_runtime
+
 from backend.app.db.session import SessionLocal
 from backend.app.models.hierarchical_memory import HierarchicalNode
 from backend.app.services.hierarchical_indexing import HierarchicalIndexingService
@@ -126,7 +128,8 @@ class BackgroundFileWatcher:
                     from backend.app.services.memory_manager import memory_manager
                     if not memory_manager.is_indexing_paused():
                         repos = db.query(HierarchicalNode).filter(HierarchicalNode.node_type == "repo").all()
-                        db_repos = {r.path for r in repos if os.path.exists(r.path)}
+                        runtime = get_runtime()
+                        db_repos = {r.path for r in repos if runtime.file_exists(r.path)}
 
                         # Add new watches
                         for repo_path in db_repos:
@@ -196,8 +199,9 @@ class BackgroundFileWatcher:
                 ).first()
 
                 try:
-                    mtime = os.path.getmtime(file_path_str)
-                except OSError:
+                    runtime = get_runtime()
+                    mtime = runtime.get_file_modification_time(file_path_str)
+                except (OSError, ValueError):
                     return
 
                 if node:

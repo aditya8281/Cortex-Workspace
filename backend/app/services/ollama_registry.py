@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -12,6 +13,64 @@ from backend.app.models.ollama_registry import OllamaRegistryModel, OllamaDownlo
 from backend.app.services.ollama_scraper import OllamaLibraryScraper, FALLBACK_MODELS
 
 logger = logging.getLogger(__name__)
+
+
+# Default context lengths for common model families
+FAMILY_CONTEXT_DEFAULTS = {
+    "llama": 4096,
+    "mistral": 32768,
+    "neural-chat": 8192,
+    "codellama": 16384,
+    "dolphin-mixtral": 32768,
+    "vicuna": 4096,
+    "wizardlm": 4096,
+    "openhermes": 4096,
+    "neural-chat": 8192,
+}
+
+
+def extract_context_length(description: str, family: str) -> int:
+    """
+    Extract context length from model description or use family default.
+    
+    Looks for patterns like "4k", "8k", "32k", "context: 4096", etc.
+    Falls back to family defaults, then 4096 as final default.
+    
+    Args:
+        description: Model description text
+        family: Model family name
+    
+    Returns:
+        Context length in tokens
+    """
+    if not description:
+        return FAMILY_CONTEXT_DEFAULTS.get(family.lower(), 4096)
+    
+    # Try to find context/window patterns
+    description_lower = description.lower()
+    
+    # Pattern: "4k context", "32k window", etc.
+    match = re.search(r'(\d+)([km])\s*(?:context|window|tokens?)', description_lower)
+    if match:
+        num = int(match.group(1))
+        unit = match.group(2)
+        if unit == 'k':
+            return num * 1024
+        elif unit == 'm':
+            return num * 1024 * 1024
+    
+    # Pattern: "context: 4096", "4096 tokens", etc.
+    match = re.search(r'(?:context|tokens?)[:\s]+(\d+)', description_lower)
+    if match:
+        return int(match.group(1))
+    
+    # Pattern: "4096" standalone (last resort)
+    matches = re.findall(r'\b(\d{4,})\b', description)
+    if matches:
+        return int(matches[0])
+    
+    # Use family default
+    return FAMILY_CONTEXT_DEFAULTS.get(family.lower(), 4096)
 
 
 class OllamaRegistryService:
@@ -79,7 +138,10 @@ class OllamaRegistryService:
                         tags=json.dumps(model_data.get("tags", [])),
                         capabilities=json.dumps(model_data.get("capabilities", [])),
                         parameters=model_data.get("parameters"),
-                        context_length=None,  # TODO: extract from description or use defaults
+                        context_length=extract_context_length(
+                            model_data.get("description", ""),
+                            model_data.get("family", "")
+                        ),
                         quantization=model_data.get("quantization", "unknown"),
                         source_url=model_data["source_url"],
                         pull_command=model_data["pull_command"],

@@ -46,8 +46,12 @@ class StateStore:
             db_path = str(memory_manager.get_path("sync_state", "state.db"))
         
         self._current_db_path = db_path
-        # Ensure parent folder exists
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        # Ensure parent folder exists using safe abstraction
+        from backend.app.core.runtime import get_runtime
+        runtime = get_runtime()
+        db_dir = db_path.rsplit('/', 1)[0] if '/' in db_path else '.'
+        runtime.create_dir(db_dir)
+        
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._init_tables()

@@ -774,35 +774,15 @@ def get_os_info() -> str:
 
 
 def get_cpu_info() -> str:
-    try:
-        if platform.system() == "Linux":
-            with open("/proc/cpuinfo", "r") as f:
-                for line in f:
-                    if "model name" in line:
-                        return line.split(":", 1)[1].strip()
-        return platform.processor() or "Unknown CPU"
-    except Exception:
-        return platform.processor() or "Unknown CPU"
+    """Get CPU info using cross-platform abstraction."""
+    from backend.app.core.system_info import get_cpu_info as safe_get_cpu_info
+    return safe_get_cpu_info()
 
 
 def get_ram_info() -> dict:
-    try:
-        if platform.system() == "Linux":
-            with open("/proc/meminfo", "r") as f:
-                meminfo = {}
-                for line in f:
-                    parts = line.split(":")
-                    if len(parts) == 2:
-                        meminfo[parts[0].strip()] = parts[1].strip()
-                total_kb = int(meminfo["MemTotal"].split()[0])
-                free_kb = int(meminfo.get("MemAvailable", meminfo.get("MemFree", "0")).split()[0])
-                return {
-                    "total_gb": round(total_kb / (1024 * 1024), 2),
-                    "available_gb": round(free_kb / (1024 * 1024), 2),
-                }
-    except Exception:
-        pass
-    return {"total_gb": 16.0, "available_gb": 8.0}
+    """Get RAM info using cross-platform abstraction."""
+    from backend.app.core.system_info import get_ram_info as safe_get_ram_info
+    return safe_get_ram_info()
 
 
 def get_gpu_info() -> dict:

@@ -6,19 +6,6 @@ from backend.app.api.router import api_router
 from backend.app.core.config import settings
 from backend.app.core.logging import setup_logging
 from backend.app.core.middleware import RequestLoggingMiddleware
-from backend.app.models.user import User  # noqa: F401
-from backend.app.models.user_profile import UserProfile  # noqa: F401
-from backend.app.models.llm_model import CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute, CortexModelMetric, CortexModelEvent  # noqa: F401
-from backend.app.models.ollama_registry import OllamaRegistryModel, OllamaDownloadProgress  # noqa: F401
-from backend.app.ai.memory.models import Memory  # noqa: F401
-from backend.app.intelligence.models import (  # noqa: F401
-    CortexAutomationSettings,
-    KnowledgeEntry,
-    PendingSystemAction,
-    ProactiveNotification,
-    RepositoryProfile,
-    SyncRun,
-)
 from backend.app.core.logging import get_logger
 
 

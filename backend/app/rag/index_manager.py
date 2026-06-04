@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from backend.app.rag.vector_store import VectorStore
+from backend.app.core.runtime import get_runtime
 
 
 class IndexManager:
@@ -45,11 +46,12 @@ class IndexManager:
         )
         files = retriever.scanner.scan(self.repo_path)
         
-        # Calculate current file modification times
+        # Calculate current file modification times using safe abstraction
+        runtime = get_runtime()
         current_states = {}
         for f in files:
             try:
-                current_states[f] = os.path.getmtime(f)
+                current_states[f] = runtime.get_file_modification_time(f)
             except Exception:
                 pass
 

@@ -8,6 +8,8 @@ import os
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
+
+from backend.app.core.runtime import get_runtime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -129,7 +131,8 @@ class BackgroundObserverService:
                         self.watches.clear()
                 else:
                     roots = self.discovery.discover_roots()[:24]
-                    discovered = {str(Path(r).resolve()) for r in roots if os.path.exists(r)}
+                    runtime = get_runtime()
+                    discovered = {str(Path(r).resolve()) for r in roots if runtime.file_exists(r)}
 
                     # Add new watches
                     for r_path in discovered:

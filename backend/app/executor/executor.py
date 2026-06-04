@@ -3,6 +3,7 @@ from backend.app.ai.intelligent_router import IntelligentRouter
 from backend.app.ai.memory.repository import MemoryRepository
 from backend.app.agent.file_search import FileSearchAgent
 from backend.app.agent.system_scanner import SystemScanner
+from backend.app.agent.orchestrator import OrchestratorAgent
 
 from backend.app.executor.intent_classifier import IntentClassifier
 from backend.app.executor.workflow import WorkflowGraphBuilder, WorkflowExecutionEngine, WorkflowPlanner
@@ -46,7 +47,6 @@ class AIExecutor:
         self.workflow_engine = WorkflowExecutionEngine(self)
         self.tool_feedback = ToolFeedbackStore()
         self.context_resolver = ContextResolver()
-        from backend.app.agent.orchestrator import OrchestratorAgent
         self.orchestrator = OrchestratorAgent(self)
 
     async def execute(
