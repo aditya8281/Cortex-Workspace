@@ -7,6 +7,15 @@ import {
   listRepositoryProfiles,
   triggerSyncNow,
   updateAutomationSettings,
+  pauseSync,
+  resumeSync,
+  cancelSync,
+  forceResync,
+  getScopeConfig,
+  addIncludeFolder,
+  addExcludeFolder,
+  removeIncludeFolder,
+  removeExcludeFolder,
 } from "@/api/intelligence";
 import { getWorkspaceIntelligence } from "@/api/ai";
 
@@ -69,5 +78,86 @@ export function useUpdateAutomation() {
   return useMutation({
     mutationFn: updateAutomationSettings,
     onSuccess: () => void qc.invalidateQueries({ queryKey: intelligenceKeys.automation }),
+  });
+}
+
+export const scopeKeys = {
+  config: ["sync", "config"] as const,
+};
+
+export function useScopeConfig() {
+  return useQuery({
+    queryKey: scopeKeys.config,
+    queryFn: getScopeConfig,
+  });
+}
+
+export function useAddIncludeFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: addIncludeFolder,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: scopeKeys.config }),
+  });
+}
+
+export function useAddExcludeFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: addExcludeFolder,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: scopeKeys.config }),
+  });
+}
+
+export function useRemoveIncludeFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: removeIncludeFolder,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: scopeKeys.config }),
+  });
+}
+
+export function useRemoveExcludeFolder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: removeExcludeFolder,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: scopeKeys.config }),
+  });
+}
+
+export function usePauseSync() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: pauseSync,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: intelligenceKeys.status }),
+  });
+}
+
+export function useResumeSync() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: resumeSync,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: intelligenceKeys.status }),
+  });
+}
+
+export function useCancelSync() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: cancelSync,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: intelligenceKeys.status });
+      void qc.invalidateQueries({ queryKey: intelligenceKeys.latestRun });
+    },
+  });
+}
+
+export function useForceResync() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: forceResync,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: intelligenceKeys.status });
+      void qc.invalidateQueries({ queryKey: intelligenceKeys.latestRun });
+    },
   });
 }

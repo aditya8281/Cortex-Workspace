@@ -52,26 +52,34 @@ class FilesystemDiscovery:
         self.workspace_root = workspace if workspace.exists() else Path.cwd().resolve()
 
     def discover_roots(self, max_roots: int = 48) -> list[Path]:
+        from backend.app.intelligence.scope_config import SyncScopeConfig
+        config = SyncScopeConfig()
+        
         roots: list[Path] = []
         seen: set[Path] = set()
 
-        def add(path: Path) -> None:
-            resolved = path.resolve()
-            if resolved in seen or not resolved.exists():
-                return
-            if self.exclusions.should_skip_path(resolved):
-                return
-            seen.add(resolved)
-            roots.append(resolved)
+        # Add user-configured INCLUDE folders first
+        for folder in config.include_folders:
+            p = Path(folder).resolve()
+            if p.exists() and p not in seen:
+                if not config.is_excluded(str(p), bypass_prefixes=[str(p)]):
+                    seen.add(p)
+                    roots.append(p)
 
-        # Always index the active workspace root
-        add(self.workspace_root)
-        
-        # NEVER add self.home directly to prevent scanning the entire home folder recursively.
-        # Instead, scan specific promoted directories under home.
+        # Fallback to defaults if include list is empty
+        if not roots:
+            def add(path: Path) -> None:
+                resolved = path.resolve()
+                if resolved in seen or not resolved.exists():
+                    return
+                if config.is_excluded(str(resolved), bypass_prefixes=[str(resolved)]):
+                    return
+                seen.add(resolved)
+                roots.append(resolved)
 
-        if self.home.exists():
-            self._scan_home_children(roots, seen, max_roots)
+            add(self.workspace_root)
+            if self.home.exists():
+                self._scan_home_children(roots, seen, max_roots)
 
         return roots[:max_roots]
 

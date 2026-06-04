@@ -11,6 +11,26 @@ export type SyncStatus = {
   progress_message: string | null;
   discovery_roots: string[];
   tracked_files: number;
+  
+  // New live progress state fields
+  sync_status?: string | null;
+  current_path?: string | null;
+  total_files?: number;
+  indexed?: number;
+  pending?: number;
+  errors?: number;
+  progress_percent?: number;
+  speed_files_per_sec?: number;
+  estimated_time_remaining?: number;
+  error_logs?: string[];
+};
+
+export type ScopeConfig = {
+  include_folders: string[];
+  exclude_folders: string[];
+  priority_folders: string[];
+  ignore_patterns: string[];
+  auto_sync_enabled: boolean;
 };
 
 export type SyncRun = {
@@ -74,6 +94,44 @@ export async function getLatestSyncRun(): Promise<SyncRun | null> {
 export async function getSyncRun(runId: number): Promise<SyncRun> {
   const res = await api.get(`/sync/runs/${runId}`);
   return res.data;
+}
+
+export async function pauseSync(): Promise<void> {
+  await api.post("/sync/pause");
+}
+
+export async function resumeSync(): Promise<void> {
+  await api.post("/sync/resume");
+}
+
+export async function cancelSync(): Promise<void> {
+  await api.post("/sync/cancel");
+}
+
+export async function forceResync(): Promise<SyncRun> {
+  const res = await api.post("/sync/force");
+  return res.data;
+}
+
+export async function getScopeConfig(): Promise<ScopeConfig> {
+  const res = await api.get("/sync/config");
+  return res.data;
+}
+
+export async function addIncludeFolder(path: string): Promise<void> {
+  await api.post("/sync/config/include", { path });
+}
+
+export async function addExcludeFolder(path: string): Promise<void> {
+  await api.post("/sync/config/exclude", { path });
+}
+
+export async function removeIncludeFolder(path: string): Promise<void> {
+  await api.post("/sync/config/include/remove", { path });
+}
+
+export async function removeExcludeFolder(path: string): Promise<void> {
+  await api.post("/sync/config/exclude/remove", { path });
 }
 
 export async function getAutomationSettings(): Promise<AutomationSettings> {

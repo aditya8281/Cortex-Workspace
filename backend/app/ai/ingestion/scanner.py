@@ -13,61 +13,88 @@ class RepoScanner:
     """
 
     def __init__(self):
-        workspace = Path(settings.WORKSPACE_ROOT).resolve()
         self.discovery = FilesystemDiscovery()
         self.exclusions = default_exclusions
-        self.search_paths = self.discovery.discover_roots()
 
-        if workspace.exists() and workspace not in self.search_paths:
-            self.search_paths.insert(0, workspace)
+    def scan(self, root: str | None = None) -> list[str]:
+        from backend.app.intelligence.scope_config import SyncScopeConfig
+        config = SyncScopeConfig()
+        from collections import deque
+        import time
 
-    def scan(self, root: str | None = None):
         files: list[str] = []
-        seen: set[str] = set()
+        seen_files: set[str] = set()
+        seen_dirs: set[str] = set()
 
-        scan_roots = self.search_paths
-        exclusions = self.exclusions
         if root is not None:
-            scan_roots = [Path(root).resolve()]
-            exclusions = ExclusionConfig(
-                ignored_dir_names=self.exclusions.ignored_dir_names,
-                ignored_path_prefixes=(),
-                index_extensions=self.exclusions.index_extensions,
-                max_file_bytes=self.exclusions.max_file_bytes,
-            )
+            roots = [Path(root).resolve()]
+        else:
+            # Load user defined inclusion root folders
+            roots = [Path(p).resolve() for p in config.include_folders]
+            if not roots:
+                workspace = Path(settings.WORKSPACE_ROOT).resolve()
+                if workspace.exists():
+                    roots.append(workspace)
 
-        for root_path in scan_roots:
-            if not root_path.exists():
+        bypass_prefixes = [str(r) for r in roots]
+
+        queue = deque()
+        for r in roots:
+            if r.exists() and r.is_dir() and not config.is_excluded(str(r), bypass_prefixes=bypass_prefixes):
+                queue.append((r, 0))  # (directory_path, depth)
+                seen_dirs.add(str(r))
+
+        max_depth = 15
+        batch_count = 0
+
+        while queue:
+            curr_dir, depth = queue.popleft()
+            batch_count += 1
+            if batch_count % 100 == 0:
+                time.sleep(0.005)  # minor yield to prevent CPU/Disk lockup
+
+            if depth > max_depth:
                 continue
-            if exclusions.should_skip_path(root_path):
+
+            try:
+                for entry in curr_dir.iterdir():
+                    if config.is_excluded(str(entry), bypass_prefixes=bypass_prefixes):
+                        continue
+
+                    if entry.is_dir():
+                        resolved_dir = str(entry.resolve())
+                        if resolved_dir not in seen_dirs:
+                            seen_dirs.add(resolved_dir)
+                            queue.append((entry, depth + 1))
+                    elif entry.is_file():
+                        suffix = entry.suffix.lower()
+                        if suffix in self.exclusions.index_extensions:
+                            try:
+                                if entry.stat().st_size <= self.exclusions.max_file_bytes:
+                                    resolved_file = str(entry.resolve())
+                                    if resolved_file not in seen_files:
+                                        seen_files.add(resolved_file)
+                                        files.append(resolved_file)
+                            except OSError:
+                                continue
+            except OSError:
                 continue
-
-            for r, dirs, filenames in os.walk(root_path):
-                parent = Path(r)
-                if exclusions.should_skip_path(parent):
-                    dirs.clear()
-                    continue
-
-                dirs[:] = [
-                    d
-                    for d in dirs
-                    if not exclusions.should_prune_dir(d, parent)
-                ]
-
-                for filename in filenames:
-                    path = parent / filename
-                    if not exclusions.is_indexable_file(path):
-                        continue
-                    path_str = str(path.resolve())
-                    if path_str in seen:
-                        continue
-                    seen.add(path_str)
-                    files.append(path_str)
 
         return files
 
     def scan_incremental(self, changed_paths: list[str]) -> list[str]:
         """Return indexable files from a set of changed paths (files or directories)."""
+        from backend.app.intelligence.scope_config import SyncScopeConfig
+        config = SyncScopeConfig()
+
+        inclusion_roots = [Path(p).resolve() for p in config.include_folders]
+        if not inclusion_roots:
+            workspace = Path(settings.WORKSPACE_ROOT).resolve()
+            if workspace.exists():
+                inclusion_roots.append(workspace)
+        
+        bypass_prefixes = [str(r) for r in inclusion_roots] + [str(Path(raw).resolve()) for raw in changed_paths]
+
         files: list[str] = []
         seen: set[str] = set()
 
@@ -76,14 +103,18 @@ class RepoScanner:
             if not path.exists():
                 continue
             if path.is_file():
-                if self.exclusions.is_indexable_file(path):
-                    path_str = str(path)
-                    if path_str not in seen:
-                        seen.add(path_str)
-                        files.append(path_str)
+                if path.suffix.lower() in self.exclusions.index_extensions and not config.is_excluded(str(path), bypass_prefixes=bypass_prefixes):
+                    try:
+                        if path.stat().st_size <= self.exclusions.max_file_bytes:
+                            path_str = str(path)
+                            if path_str not in seen:
+                                seen.add(path_str)
+                                files.append(path_str)
+                    except OSError:
+                        pass
                 continue
 
-            if self.exclusions.should_skip_path(path):
+            if config.is_excluded(str(path), bypass_prefixes=bypass_prefixes):
                 continue
 
             for r, dirs, filenames in os.walk(path):
@@ -91,11 +122,18 @@ class RepoScanner:
                 dirs[:] = [
                     d
                     for d in dirs
-                    if not self.exclusions.should_prune_dir(d, parent)
+                    if not config.is_excluded(str(parent / d), bypass_prefixes=bypass_prefixes)
                 ]
                 for filename in filenames:
                     file_path = parent / filename
-                    if not self.exclusions.is_indexable_file(file_path):
+                    if file_path.suffix.lower() not in self.exclusions.index_extensions:
+                        continue
+                    if config.is_excluded(str(file_path), bypass_prefixes=bypass_prefixes):
+                        continue
+                    try:
+                        if file_path.stat().st_size > self.exclusions.max_file_bytes:
+                            continue
+                    except OSError:
                         continue
                     path_str = str(file_path.resolve())
                     if path_str not in seen:

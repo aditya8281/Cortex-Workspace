@@ -1,0 +1,115 @@
+import os
+import json
+import platform
+from pathlib import Path
+from typing import List, Set
+from backend.app.core.paths import PROJECT_ROOT
+from backend.app.core.config import settings
+
+CONFIG_FILE = PROJECT_ROOT / ".cortex" / "sync_scope_config.json"
+
+
+class SyncScopeConfig:
+    def __init__(self):
+        self.include_folders: List[str] = []
+        self.exclude_folders: List[str] = []
+        self.priority_folders: List[str] = []
+        self.ignore_patterns: List[str] = [
+            "*.tmp", "*.log", "node_modules", ".git", "build", "dist",
+            "__pycache__", ".venv", "venv", ".cortex", ".pytest_cache"
+        ]
+        self.auto_sync_enabled: bool = True
+        self._initialize_defaults()
+        self.load()
+
+    def _initialize_defaults(self):
+        system = platform.system()
+        home = str(Path.home().resolve())
+        workspace = str(Path(settings.WORKSPACE_ROOT).resolve())
+
+        # Set default includes based on standard home directory children
+        default_includes = []
+        for child in ["Documents", "Desktop", "Projects", "Downloads"]:
+            p = Path(home) / child
+            if p.exists():
+                default_includes.append(str(p.resolve()))
+        if workspace not in default_includes:
+            default_includes.append(workspace)
+        self.include_folders = default_includes
+
+        # Set default excludes based on system-protected locations
+        if system == "Linux":
+            self.exclude_folders = [
+                "/sys", "/proc", "/dev", "/run", "/tmp", "/var",
+                "/boot", "/sbin", "/bin", "/lib", "/lib64", "/usr",
+                "/opt", "/snap", "/etc"
+            ]
+        elif system == "Darwin":  # macOS
+            self.exclude_folders = [
+                "/System", "/Library", "/private", "/dev", "/cores",
+                "/bin", "/sbin", "/usr", "/tmp", "/var", "/Network", "/Volumes"
+            ]
+        elif system == "Windows":
+            self.exclude_folders = [
+                "C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)",
+                "C:\\ProgramData", "C:\\$Recycle.Bin", "C:\\System Volume Information"
+            ]
+
+    def load(self):
+        if not CONFIG_FILE.exists():
+            self.save()
+            return
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                self.include_folders = data.get("include_folders", self.include_folders)
+                self.exclude_folders = data.get("exclude_folders", self.exclude_folders)
+                self.priority_folders = data.get("priority_folders", self.priority_folders)
+                self.ignore_patterns = data.get("ignore_patterns", self.ignore_patterns)
+                self.auto_sync_enabled = data.get("auto_sync_enabled", self.auto_sync_enabled)
+        except Exception:
+            self.save()
+
+    def save(self):
+        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "include_folders": sorted(list(set(self.include_folders))),
+            "exclude_folders": sorted(list(set(self.exclude_folders))),
+            "priority_folders": sorted(list(set(self.priority_folders))),
+            "ignore_patterns": sorted(list(set(self.ignore_patterns))),
+            "auto_sync_enabled": self.auto_sync_enabled
+        }
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    def is_excluded(self, path_str: str, bypass_prefixes: List[str] | None = None) -> bool:
+        resolved = Path(path_str).resolve()
+        resolved_str = str(resolved)
+
+        # 1. Check against explicit excludes
+        for ex in self.exclude_folders:
+            ex_resolved = Path(ex).resolve()
+            ex_resolved_str = str(ex_resolved)
+            if resolved_str == ex_resolved_str or resolved_str.startswith(ex_resolved_str + os.sep):
+                should_bypass = False
+                if bypass_prefixes:
+                    for bp in bypass_prefixes:
+                        bp_path = Path(bp).resolve()
+                        if ex_resolved == bp_path or ex_resolved in bp_path.parents:
+                            should_bypass = True
+                            break
+                if not should_bypass:
+                    return True
+
+        # 2. Check each part of the path for hidden or ignore patterns
+        for part in resolved.parts:
+            # Check hidden
+            if part.startswith(".") and part != "." and part != "..":
+                return True
+            # Check ignore patterns against each part
+            for pat in self.ignore_patterns:
+                import fnmatch
+                if fnmatch.fnmatch(part, pat):
+                    return True
+
+        return False
