@@ -11,6 +11,7 @@ from backend.app.main import app
 from backend.app.db.base import Base
 from backend.app.api.deps import get_db
 from backend.app.intelligence.scope_config import SyncScopeConfig
+from backend.app.intelligence.discovery import FilesystemDiscovery
 from backend.app.ai.ingestion.scanner import RepoScanner
 from backend.app.intelligence.sync_service import SyncService
 
@@ -118,6 +119,35 @@ def test_bfs_repo_scanner_prioritization(tmp_path):
         assert str(file_ignored.resolve()) not in files
 
 
+def test_discovery_includes_standard_home_roots(tmp_path):
+    home_dir = tmp_path / "home"
+    documents = home_dir / "Documents"
+    desktop = home_dir / "Desktop"
+    downloads = home_dir / "Downloads"
+    for folder in (documents, desktop, downloads):
+        folder.mkdir(parents=True)
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    test_config_path = tmp_path / "sync_scope_config.json"
+    with (
+        patch("backend.app.intelligence.scope_config.CONFIG_FILE", test_config_path),
+        patch("backend.app.intelligence.scope_config.Path.home", return_value=home_dir),
+        patch("backend.app.intelligence.discovery.Path.home", return_value=home_dir),
+        patch("backend.app.core.config.settings.WORKSPACE_ROOT", str(workspace)),
+        patch("backend.app.intelligence.discovery.settings.WORKSPACE_ROOT", str(workspace)),
+    ):
+        config = SyncScopeConfig()
+        discovery = FilesystemDiscovery()
+        roots = {str(path) for path in discovery.discover_roots()}
+
+    assert str(documents.resolve()) in roots
+    assert str(desktop.resolve()) in roots
+    assert str(downloads.resolve()) in roots
+    assert str(workspace.resolve()) in roots
+
+
 @pytest.mark.asyncio
 async def test_sync_pause_resume_cancel(tmp_path):
     sync_service = SyncService()
@@ -136,6 +166,40 @@ async def test_sync_pause_resume_cancel(tmp_path):
     sync_service.cancel_sync()
     assert sync_service.progress_state.status == "idle"
     assert sync_service.progress_state.cancel_event.is_set() is True
+
+
+def test_incremental_sync_updates_progress_state(db_session, tmp_path):
+    target = tmp_path / "notes.txt"
+    target.write_text("hello cortex", encoding="utf-8")
+
+    sync_service = SyncService()
+    sync_service.scanner.scan_incremental = MagicMock(return_value=[str(target.resolve())])
+    sync_service.indexing_service.incremental_update = AsyncMock(
+        return_value=MagicMock(hash="abc123", metadata_json="{}")
+    )
+    sync_service.memory.count_entries = MagicMock(return_value=0)
+
+    result = sync_service.run_incremental_sync(db_session, [str(target.resolve())])
+
+    assert result["updated_files"] == 1
+    assert sync_service.progress_state.status == "completed"
+    assert sync_service.progress_state.indexed == 1
+    assert sync_service.progress_state.total_files == 1
+    assert sync_service.progress_state.current_path == "Incremental sync complete"
+
+
+def test_incremental_sync_handles_deletions(db_session, tmp_path):
+    missing = tmp_path / "deleted.txt"
+
+    sync_service = SyncService()
+    sync_service.indexing_service.incremental_update = AsyncMock(return_value=None)
+    sync_service.scanner.scan_incremental = MagicMock(return_value=[])
+    sync_service.memory.count_entries = MagicMock(return_value=0)
+
+    result = sync_service.run_incremental_sync(db_session, [str(missing.resolve())])
+
+    assert result["removed_files"] == 1
+    assert sync_service.progress_state.indexed == 1
 
 
 def test_api_scope_configurations(client, tmp_path):

@@ -1,5 +1,6 @@
 import os
 import json
+import hashlib
 import time
 import logging
 import threading
@@ -25,6 +26,13 @@ class BackgroundFileWatcher:
         self.scanner = RepoScanner()
         self._stop_event = threading.Event()
         self._thread = None
+
+    @staticmethod
+    def _content_hash(path: Path) -> str | None:
+        try:
+            return hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError:
+            return None
 
     def start(self):
         if self._thread is not None:
@@ -121,8 +129,11 @@ class BackgroundFileWatcher:
                         # Cache mtime to prevent double indexing
                         try:
                             mtime = os.path.getmtime(path)
+                            content_hash = node.hash or self._content_hash(Path(path))
                             metadata = json.loads(node.metadata_json) if node.metadata_json else {}
                             metadata["last_mtime"] = mtime
+                            if content_hash:
+                                metadata["last_hash"] = content_hash
                             node.metadata_json = json.dumps(metadata)
                             db.flush()
                         except OSError:
@@ -131,10 +142,21 @@ class BackgroundFileWatcher:
                 # 3. Process modified files
                 for path, mtime in modified_files:
                     logger.info(f"Background File Watcher: Detected modified file {path}")
+                    current_hash = self._content_hash(Path(path))
+                    cached_hash = db_files_map[path].hash
+                    if current_hash is not None and cached_hash == current_hash:
+                        metadata = json.loads(db_files_map[path].metadata_json) if db_files_map[path].metadata_json else {}
+                        metadata["last_mtime"] = mtime
+                        metadata["last_hash"] = current_hash
+                        db_files_map[path].metadata_json = json.dumps(metadata)
+                        db.flush()
+                        continue
                     node = await self.indexing_service.incremental_update(path, repo_path_str, db)
                     if node:
                         metadata = json.loads(node.metadata_json) if node.metadata_json else {}
                         metadata["last_mtime"] = mtime
+                        if current_hash:
+                            metadata["last_hash"] = current_hash
                         node.metadata_json = json.dumps(metadata)
                         db.flush()
 

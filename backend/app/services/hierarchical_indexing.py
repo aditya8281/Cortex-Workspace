@@ -53,6 +53,105 @@ class HierarchicalIndexingService:
                 "structure_summary": "Directory structure summarized."
             }
 
+    async def _refresh_repo_profile(self, repo_path: str, db: Session) -> Optional[HierarchicalNode]:
+        """
+        Refresh the repository summary/vector without rescanning the filesystem.
+        """
+        p = Path(repo_path).resolve()
+        if not p.exists() or not p.is_dir():
+            return None
+
+        repo_path_str = str(p)
+        repo_node = db.query(HierarchicalNode).filter(
+            HierarchicalNode.path == repo_path_str,
+            HierarchicalNode.node_type == "repo"
+        ).first()
+        if not repo_node:
+            repo_node = HierarchicalNode(
+                node_type="repo",
+                path=repo_path_str,
+                content=f"Repository named {p.name}",
+                metadata_json="{}"
+            )
+            db.add(repo_node)
+            db.flush()
+
+        child_folders = db.query(HierarchicalNode).filter(
+            HierarchicalNode.parent_id == repo_node.id,
+            HierarchicalNode.node_type == "folder"
+        ).all()
+        child_files = db.query(HierarchicalNode).filter(
+            HierarchicalNode.parent_id == repo_node.id,
+            HierarchicalNode.node_type == "file"
+        ).all()
+        summary_lines = [
+            f"- File {Path(f.path).name}: {f.content}" for f in child_files
+        ]
+        summary_lines.extend(
+            f"- Folder {Path(f.path).name}: {f.content}" for f in child_folders
+        )
+        folder_summaries = "\n".join(summary_lines) if summary_lines else "None."
+
+        prompt = (
+            f"You are Cortex Workspace Analyzer. Analyze the repository '{p.name}' with the following main directories:\n"
+            f"{folder_summaries}\n\n"
+            f"Produce a JSON object containing:\n"
+            f'- "short_description": "High-level description of what this codebase project does"\n'
+            f'- "key_topics": ["topic1", "topic2", ...]\n'
+            f'- "important_files": ["README.md", "pyproject.toml", ...]\n'
+            f'- "structure_summary": "Overview of the primary entrypoints and service layers"'
+        )
+        try:
+            llm_res = await self.router.generate(prompt=prompt)
+            metadata = self._parse_llm_json(llm_res)
+        except Exception as e:
+            logger.warning(f"Failed to generate LLM summary for repo {repo_path_str}: {e}")
+            metadata = {
+                "short_description": f"Repository named {p.name}",
+                "key_topics": ["codebase"],
+                "important_files": ["README.md"],
+                "structure_summary": "Codebase components indexed."
+            }
+
+        repo_node.content = metadata.get("short_description", f"Repository named {p.name}")
+        repo_node.metadata_json = json.dumps(metadata)
+        repo_node.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        db.flush()
+
+        embedder = self._get_embedder()
+        vec = embedder.encode([repo_node.content])[0]
+        self.vector_store.remove_vectors("repo", np.array([repo_node.id]))
+        self.vector_store.add_vectors("repo", np.array([vec]), np.array([repo_node.id]))
+        self.vector_store.save()
+        db.commit()
+        return repo_node
+
+    async def refresh_branch(self, file_path: str, repo_path: str, db: Session) -> None:
+        """
+        Refresh folder and repository summaries that sit above a file or deleted path.
+        """
+        repo_resolved = Path(repo_path).resolve()
+        current = Path(file_path).resolve().parent
+        folder_paths: list[str] = []
+
+        while True:
+            if current == repo_resolved:
+                break
+            try:
+                current.relative_to(repo_resolved)
+            except ValueError:
+                break
+            folder_paths.append(str(current))
+            if current.parent == current:
+                break
+            current = current.parent
+
+        # Refresh deepest folder first so parent summaries consume up-to-date child summaries.
+        for folder_path in folder_paths:
+            await self.index_folder(folder_path, repo_path, db)
+
+        await self._refresh_repo_profile(repo_path, db)
+
     def _get_or_create_parent_folder_node(self, file_path: str, repo_path: str, db: Session) -> Optional[int]:
         """
         Recursively construct folder nodes up to the repository path.
@@ -224,8 +323,18 @@ class HierarchicalIndexingService:
             HierarchicalNode.parent_id == (folder_node.id if folder_node else -1),
             HierarchicalNode.node_type == "file"
         ).all()
+        child_folders = db.query(HierarchicalNode).filter(
+            HierarchicalNode.parent_id == (folder_node.id if folder_node else -1),
+            HierarchicalNode.node_type == "folder"
+        ).all()
 
-        child_summaries = "\n".join(f"- {Path(f.path).name}: {f.content}" for f in child_files) if child_files else "No files."
+        summary_lines = [
+            f"- File {Path(f.path).name}: {f.content}" for f in child_files
+        ]
+        summary_lines.extend(
+            f"- Folder {Path(f.path).name}: {f.content}" for f in child_folders
+        )
+        child_summaries = "\n".join(summary_lines) if summary_lines else "No files or subfolders."
 
         prompt = (
             f"You are Cortex Workspace Analyzer. Analyze the folder '{p.name}' containing the following files and descriptions:\n"
@@ -316,48 +425,7 @@ class HierarchicalIndexingService:
             if fold.path.startswith(repo_path_str):
                 await self.index_folder(fold.path, repo_path_str, db)
 
-        # Generate repository level profile summary
-        child_folders = db.query(HierarchicalNode).filter(
-            HierarchicalNode.parent_id == repo_node.id,
-            HierarchicalNode.node_type == "folder"
-        ).all()
-        folder_summaries = "\n".join(f"- {Path(f.path).name}: {f.content}" for f in child_folders) if child_folders else "None."
-
-        prompt = (
-            f"You are Cortex Workspace Analyzer. Analyze the repository '{p.name}' with the following main directories:\n"
-            f"{folder_summaries}\n\n"
-            f"Produce a JSON object containing:\n"
-            f'- "short_description": "High-level description of what this codebase project does"\n'
-            f'- "key_topics": ["topic1", "topic2", ...]\n'
-            f'- "important_files": ["README.md", "pyproject.toml", ...]\n'
-            f'- "structure_summary": "Overview of the primary entrypoints and service layers"'
-        )
-        try:
-            llm_res = await self.router.generate(prompt=prompt)
-            metadata = self._parse_llm_json(llm_res)
-        except Exception as e:
-            logger.warning(f"Failed to generate LLM summary for repo {repo_path_str}: {e}")
-            metadata = {
-                "short_description": f"Repository named {p.name}",
-                "key_topics": ["codebase"],
-                "important_files": ["README.md"],
-                "structure_summary": "Codebase components indexed."
-            }
-
-        repo_node.content = metadata.get("short_description", f"Repository named {p.name}")
-        repo_node.metadata_json = json.dumps(metadata)
-        repo_node.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        db.flush()
-
-        # Update embedding
-        embedder = self._get_embedder()
-        vec = embedder.encode([repo_node.content])[0]
-        self.vector_store.remove_vectors("repo", np.array([repo_node.id]))
-        self.vector_store.add_vectors("repo", np.array([vec]), np.array([repo_node.id]))
-
-        self.vector_store.save()
-        db.commit()
-        return repo_node
+        return await self._refresh_repo_profile(repo_path_str, db)
 
     async def incremental_update(self, file_path: str, repo_path: str, db: Session) -> Optional[HierarchicalNode]:
         """
@@ -383,17 +451,26 @@ class HierarchicalIndexingService:
                     self.vector_store.remove_vectors("chunk", np.array(chunk_ids))
                     for c in chunks:
                         db.delete(c)
-                
+
                 # 2. Clean file vector
                 self.vector_store.remove_vectors("file", np.array([file_node.id]))
                 db.delete(file_node)
                 db.commit()
                 self.vector_store.save()
                 logger.info(f"Successfully deleted hierarchical node and chunks for deleted file {file_path_str}")
+                try:
+                    await self.refresh_branch(file_path_str, repo_path, db)
+                except Exception as e:
+                    logger.warning(f"Failed to refresh branch after deleting {file_path_str}: {e}")
             return None
 
         # Re-index file (automatically does incremental check)
-        return await self.index_file(file_path_str, repo_path, db)
+        node = await self.index_file(file_path_str, repo_path, db)
+        try:
+            await self.refresh_branch(file_path_str, repo_path, db)
+        except Exception as e:
+            logger.warning(f"Failed to refresh branch after indexing {file_path_str}: {e}")
+        return node
 
     def _rank_nodes(self, query_vector: np.ndarray, nodes: List[HierarchicalNode], layer: str, top_n: int) -> List[HierarchicalNode]:
         if not nodes:

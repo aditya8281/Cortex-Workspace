@@ -393,10 +393,22 @@ class SyncService:
             # 5. Proactive notifications & evaluations
             pdf_count = sum(1 for p in current_files if p.lower().endswith(".pdf"))
             new_pdf_count = sum(1 for p in added if p.lower().endswith(".pdf"))
+            def _repo_root_for(path_str: str) -> Path | None:
+                path = Path(path_str).resolve()
+                for parent in [path] + list(path.parents):
+                    if (parent / ".git").is_dir():
+                        return parent
+                return None
+
+            new_repo_roots = {
+                str(root)
+                for root in (_repo_root_for(p) for p in added)
+                if root is not None
+            }
             self.proactive.evaluate_after_sync(
                 db,
                 user_id=user_id,
-                new_repos=len([p for p in added if (Path(p) / ".git").exists()]),
+                new_repos=len(new_repo_roots),
                 new_pdfs=new_pdf_count,
                 modified_project_files=len(modified),
                 repo_count=len(roots),
@@ -442,41 +454,100 @@ class SyncService:
         vector_db: str | None = None,
         code_parsing: str | None = None,
     ) -> dict[str, Any]:
-        files = self.scanner.scan_incremental(changed_paths)
-        if not files:
-            return {"updated_files": 0, "message": "No indexable changes"}
-
         state = self._load_filesystem_state()
         tracked: dict[str, float] = state.get("files", {})
-        for path in files:
-            try:
-                tracked[path] = os.path.getmtime(path)
-            except OSError:
-                pass
+        unique_changes: list[str] = []
+        seen_changes: set[str] = set()
+        for raw_path in changed_paths:
+            resolved = str(Path(raw_path).resolve())
+            if resolved not in seen_changes:
+                seen_changes.add(resolved)
+                unique_changes.append(resolved)
 
-        # Index incremental files bottom-up
+        if not unique_changes:
+            return {"updated_files": 0, "removed_files": 0, "message": "No indexable changes"}
+
         from backend.app.intelligence.scope_config import SyncScopeConfig
         config = SyncScopeConfig()
-        
+
+        self.progress_state.reset()
+        removed_count = 0
         indexed_count = 0
+        changed_file_paths: list[str] = []
+        deleted_paths: list[str] = []
+
+        for path in unique_changes:
+            if self.progress_state.check_paused_or_cancelled():
+                break
+
+            path_obj = Path(path)
+            if not path_obj.exists():
+                deleted_paths.append(path)
+                self.progress_state.current_path = f"Removing {path_obj.name}"
+                try:
+                    repo_path = self._resolve_repo_path(path, config.include_folders, settings.WORKSPACE_ROOT)
+                    import asyncio
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        loop.run_until_complete(self.indexing_service.incremental_update(path, repo_path, db))
+                    finally:
+                        loop.close()
+                    tracked.pop(path, None)
+                    removed_count += 1
+                except Exception as e:
+                    self.progress_state.errors += 1
+                    self.progress_state.error_logs.append(f"Failed to remove {path_obj.name}: {str(e)}")
+                    self.progress_state.error_logs = self.progress_state.error_logs[-20:]
+                finally:
+                    self.progress_state.indexed += 1
+                    self.progress_state.update_metrics()
+                continue
+
+            changed_file_paths.append(path)
+
+        files = self.scanner.scan_incremental(changed_file_paths)
+        self.progress_state.total_files = len(deleted_paths) + len(files)
+        self.progress_state.update_metrics()
         for path in files:
+            if self.progress_state.check_paused_or_cancelled():
+                break
+
+            self.progress_state.current_path = path
             try:
                 repo_path = self._resolve_repo_path(path, config.include_folders, settings.WORKSPACE_ROOT)
-                # Async-run wait using standard Threading execution or inline execution
                 import asyncio
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
-                    loop.run_until_complete(self.indexing_service.index_file(path, repo_path, db))
+                    loop.run_until_complete(self.indexing_service.incremental_update(path, repo_path, db))
                 finally:
                     loop.close()
+                try:
+                    tracked[path] = os.path.getmtime(path)
+                except OSError:
+                    tracked.pop(path, None)
                 indexed_count += 1
             except Exception as e:
-                logger.warning(f"Failed incremental index for {path}: {e}")
+                self.progress_state.errors += 1
+                self.progress_state.error_logs.append(f"Failed incremental index for {Path(path).name}: {str(e)}")
+                self.progress_state.error_logs = self.progress_state.error_logs[-20:]
+            finally:
+                self.progress_state.indexed += 1
+                self.progress_state.update_metrics()
 
-        self._save_filesystem_state(tracked, state.get("repo_count", 0), state.get("memory_count", 0))
+        memory_count = self.memory.count_entries(db, user_id)
+        self._save_filesystem_state(tracked, state.get("repo_count", 0), memory_count)
+        self.progress_state.status = "completed" if not self.progress_state.cancel_event.is_set() else "idle"
+        self.progress_state.current_path = "Incremental sync complete"
+        self.progress_state.update_metrics()
         db.commit()
-        return {"updated_files": indexed_count, "repository_updates": 0}
+        return {
+            "updated_files": indexed_count,
+            "removed_files": removed_count,
+            "tracked_files": len(tracked),
+            "message": "Incremental sync complete" if not self.progress_state.cancel_event.is_set() else "Incremental sync cancelled",
+        }
 
     def _resolve_repo_path(self, file_path: str, include_folders: List[str], workspace_root: str) -> str:
         path = Path(file_path).resolve()

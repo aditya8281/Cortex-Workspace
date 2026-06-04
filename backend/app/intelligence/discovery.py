@@ -101,9 +101,12 @@ class FilesystemDiscovery:
                 continue
 
             name_lower = entry.name.lower()
-            # For general high-volume storage folders, do NOT add the root folder itself to roots
-            # (which would trigger full recursive walks). Only scan one level deep for specific project folders.
+            # Standard user content folders should always be treated as roots so their direct files
+            # are indexed, while still allowing project-like subdirectories to be promoted.
             if name_lower in {"downloads", "documents", "desktop", "document", "download"}:
+                if resolved not in seen:
+                    seen.add(resolved)
+                    roots.append(resolved)
                 self._add_promoted_subdirs(entry, roots, seen, max_roots)
             # For dedicated developer folders (e.g. projects, workspace, code, dev, src, repos, github),
             # we add the root itself and also add project subdirectories.

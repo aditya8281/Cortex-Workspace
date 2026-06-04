@@ -176,3 +176,57 @@ async def test_hierarchical_indexing_service(db_session, tmp_path):
     assert len(search_results) == 1
     assert search_results[0]["file_path"] == str(file_path)
     assert "def run_app()" in search_results[0]["text"]
+
+
+@pytest.mark.asyncio
+async def test_incremental_refresh_updates_parent_summaries(db_session, tmp_path):
+    repo_dir = tmp_path / "workspace"
+    nested_dir = repo_dir / "backend" / "services"
+    nested_dir.mkdir(parents=True)
+
+    file_path = nested_dir / "main.py"
+    file_path.write_text("def run_app():\n    return 'version one'\n", encoding="utf-8")
+
+    service = HierarchicalIndexingService(dim=384)
+
+    async def fake_generate(prompt: str) -> str:
+        if "Produce a JSON object" in prompt:
+            label = "version two" if "version two" in prompt else "version one"
+            return json.dumps(
+                {
+                    "short_description": f"{label} folder summary",
+                    "key_topics": ["sync", "memory"],
+                    "important_files": ["main.py"],
+                    "structure_summary": f"{label} structure",
+                }
+            )
+        label = "version two" if "version two" in prompt else "version one"
+        return f"{label} file summary"
+
+    service.router = MagicMock()
+    service.router.generate = AsyncMock(side_effect=fake_generate)
+
+    mock_embedder = MagicMock()
+    mock_embedder.encode.side_effect = lambda texts: np.ones((len(texts), 384), dtype="float32")
+    service._embedder = mock_embedder
+    service.vector_store.base_dir = tmp_path / ".cortex" / "hierarchical"
+
+    await service.index_repo(str(repo_dir), db_session)
+
+    backend_folder = db_session.query(HierarchicalNode).filter(
+        HierarchicalNode.path == str(repo_dir / "backend"),
+        HierarchicalNode.node_type == "folder",
+    ).first()
+    assert backend_folder is not None
+    initial_backend_summary = backend_folder.content
+
+    file_path.write_text("def run_app():\n    return 'version two'\n", encoding="utf-8")
+    await service.incremental_update(str(file_path), str(repo_dir), db_session)
+
+    refreshed_backend_folder = db_session.query(HierarchicalNode).filter(
+        HierarchicalNode.path == str(repo_dir / "backend"),
+        HierarchicalNode.node_type == "folder",
+    ).first()
+    assert refreshed_backend_folder is not None
+    assert refreshed_backend_folder.content != initial_backend_summary
+    assert "version two" in refreshed_backend_folder.content
