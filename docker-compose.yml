@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ollama:
     image: ollama/ollama:latest
@@ -8,15 +6,6 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
-    # Uncomment the following block to enable NVIDIA GPU acceleration.
-    # Requires nvidia-container-toolkit on the host.
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
     restart: unless-stopped
 
   redis:
@@ -29,23 +18,34 @@ services:
   backend:
     build:
       context: .
-      dockerfile: infra/docker/Dockerfile.backend
+      dockerfile: Dockerfile
+      target: backend
     container_name: cortex-backend
+    env_file:
+      - .env
+    environment:
+      MEMORY_PATH: ${MEMORY_PATH:-/cortex_memory}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////cortex_memory/metadata_db/app.db}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-}
+      MODEL_API_KEYS: ${MODEL_API_KEYS:-{}}
+      CLOUD_PROVIDER_CONFIGS: ${CLOUD_PROVIDER_CONFIGS:-{}}
+      VITE_API_URL: ${VITE_API_URL:-/api/v1}
+    volumes:
+      - cortex_memory:/cortex_memory
     ports:
       - "8000:8000"
-    env_file:
-      - .env.docker
-    volumes:
-      - backend_data:/data
     depends_on:
-      - ollama
       - redis
+      - ollama
     restart: unless-stopped
 
   frontend:
     build:
       context: .
-      dockerfile: infra/docker/Dockerfile.frontend
+      dockerfile: Dockerfile
+      target: frontend
     container_name: cortex-frontend
     ports:
       - "80:80"
@@ -54,5 +54,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  cortex_memory:
   ollama_data:
-  backend_data:

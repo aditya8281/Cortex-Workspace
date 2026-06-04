@@ -1,21 +1,64 @@
-version: '3.8'
-
 services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: cortex-ollama-dev
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: cortex-redis-dev
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
   backend:
-    command: ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    container_name: cortex-backend-dev
+    command: ["sh", "-lc", "uv run alembic upgrade head && exec uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload"]
+    env_file:
+      - .env
+    environment:
+      MEMORY_PATH: ${MEMORY_PATH:-/cortex_memory}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:////cortex_memory/metadata_db/app.db}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-}
+      MODEL_API_KEYS: ${MODEL_API_KEYS:-{}}
+      CLOUD_PROVIDER_CONFIGS: ${CLOUD_PROVIDER_CONFIGS:-{}}
     volumes:
       - .:/app
-      - ./app.db:/data/app.db
-    environment:
-      - DATABASE_URL=sqlite:////data/app.db
-      - ENV=development
-      - OLLAMA_URL=http://ollama:11434
-      - REDIS_URL=redis://redis:6379/0
+      - cortex_memory:/cortex_memory
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - ollama
+    restart: unless-stopped
 
   frontend:
+    image: node:22-bookworm-slim
+    container_name: cortex-frontend-dev
+    working_dir: /app/frontend
+    command: ["sh", "-lc", "npm install && npm run dev -- --host 0.0.0.0"]
+    environment:
+      VITE_DEV_API_PROXY_TARGET: http://backend:8000
+    volumes:
+      - .:/app
+      - frontend_node_modules:/app/frontend/node_modules
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    entrypoint: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  cortex_memory:
+  frontend_node_modules:
+  ollama_data:

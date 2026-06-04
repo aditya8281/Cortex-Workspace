@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 import threading
 
 from backend.app.core.paths import PROJECT_ROOT
+from backend.app.core.config import settings
 from backend.app.core.system_paths import (
     LINUX_BLOCKED_SYSTEM_PATHS,
     MACOS_BLOCKED_SYSTEM_PATHS,
@@ -68,9 +69,12 @@ class MemoryManager:
     def get_memory_path(self) -> Path:
         """Get the current memory root path."""
         # 1. Environment variable override
-        env_path = os.environ.get("CORTEX_MEMORY_PATH")
+        env_path = (
+            settings.MEMORY_PATH
+            or os.environ.get("CORTEX_MEMORY_PATH")
+        )
         if env_path:
-            return Path(env_path).resolve()
+            return Path(env_path).expanduser().resolve()
 
         # 2. Config file override
         if self._config_file.exists():
@@ -81,19 +85,19 @@ class MemoryManager:
             except Exception as e:
                 logger.warning("Failed to read memory configuration file: %s", e)
 
-        # 3. Default path (~/cortex_memory/)
-        return Path("~/cortex_memory").expanduser().resolve()
+        # 3. Default project-local path for manual installs
+        return (PROJECT_ROOT / ".cortex_memory").resolve()
 
     def set_memory_path(self, path: str) -> None:
         """Persist the configured memory root path."""
-        target_path = Path(path).resolve()
+        target_path = Path(path).expanduser().resolve()
         self.validate_memory_path(target_path)
         self._config_file.write_text(str(target_path), encoding="utf-8")
         logger.info("Configured memory vault path set to %s", target_path)
 
     def validate_memory_path(self, path: Path) -> None:
         """Validate if a directory is safe to use as the memory vault."""
-        resolved = path.resolve()
+        resolved = path.expanduser().resolve()
         
         # 1. Block system level directories
         resolved_str = str(resolved)
@@ -261,7 +265,7 @@ class MemoryManager:
         Keeps existing data and rebinds connections with no data loss.
         """
         old_path = self.get_memory_path()
-        new_path = Path(new_path_str).resolve()
+        new_path = Path(new_path_str).expanduser().resolve()
         
         if old_path == new_path:
             return

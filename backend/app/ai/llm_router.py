@@ -7,6 +7,7 @@ from backend.app.ai.providers.http_clients import (
     normalize_provider_name,
     provider_default_base_url,
 )
+from backend.app.core.config import settings
 from backend.app.db.session import SessionLocal
 from backend.app.models.llm_model import CortexProvider, CortexModel
 from backend.app.ai.model_registry import retrieve_key_securely
@@ -56,8 +57,20 @@ class LLMRouter:
                         if provider:
                             if not provider.is_enabled:
                                 raise ValueError(f"Provider {provider.name} is disabled. Enable it in Models settings.")
-                            key = api_key or retrieve_key_securely(provider.name, provider.api_key_encrypted)
-                            base_url = api_base_url or provider.base_url or provider_default_base_url(provider.name)
+                            provider_config = settings.CLOUD_PROVIDER_CONFIGS.get(provider.name.lower()) or settings.CLOUD_PROVIDER_CONFIGS.get(provider.name) or {}
+                            key = (
+                                api_key
+                                or retrieve_key_securely(provider.name, provider.api_key_encrypted)
+                                or settings.MODEL_API_KEYS.get(provider.name.lower())
+                                or settings.MODEL_API_KEYS.get(provider.name)
+                            )
+                            base_url = (
+                                api_base_url
+                                or provider.base_url
+                                or provider_config.get("api_url")
+                                or provider_config.get("base_url")
+                                or provider_default_base_url(provider.name)
+                            )
                             
                             if not key:
                                 raise ValueError(f"API Key is missing for provider {provider.name}")
@@ -73,8 +86,20 @@ class LLMRouter:
                         mod_name = parts[1]
                         provider = db.query(CortexProvider).filter(CortexProvider.name.ilike(normalize_provider_name(prov_name))).first()
                         if provider and provider.is_enabled:
-                            key = api_key or retrieve_key_securely(provider.name, provider.api_key_encrypted)
-                            base_url = api_base_url or provider.base_url or provider_default_base_url(provider.name)
+                            provider_config = settings.CLOUD_PROVIDER_CONFIGS.get(provider.name.lower()) or settings.CLOUD_PROVIDER_CONFIGS.get(provider.name) or {}
+                            key = (
+                                api_key
+                                or retrieve_key_securely(provider.name, provider.api_key_encrypted)
+                                or settings.MODEL_API_KEYS.get(provider.name.lower())
+                                or settings.MODEL_API_KEYS.get(provider.name)
+                            )
+                            base_url = (
+                                api_base_url
+                                or provider.base_url
+                                or provider_config.get("api_url")
+                                or provider_config.get("base_url")
+                                or provider_default_base_url(provider.name)
+                            )
                             if key and base_url:
                                 llm = build_provider_llm(provider.name, api_key=key, base_url=base_url, model=mod_name)
         except Exception as e:
@@ -89,8 +114,11 @@ class LLMRouter:
                 llm = LocalLLM(model=model or "")
             elif "api" in engine_lower or "openai" in engine_lower:
                 from backend.app.ai.config import ai_settings
-                key = api_key or ai_settings.api_key
+                key = api_key or ai_settings.api_key or settings.MODEL_API_KEYS.get("openai")
                 base_url = api_base_url or ai_settings.api_url
+                if not base_url:
+                    openai_config = ai_settings.get_cloud_provider_config("openai") or {}
+                    base_url = openai_config.get("api_url") or openai_config.get("base_url")
                 if not key:
                     raise ValueError("API Key is required for External API engine")
                 if not base_url:

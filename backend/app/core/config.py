@@ -1,4 +1,7 @@
-from pydantic import field_validator
+import json
+from typing import Any
+
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,6 +18,13 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     LLM_CACHE_TTL_SECONDS: int = 1800
     ENV: str = "development"
+    MEMORY_PATH: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("MEMORY_PATH", "CORTEX_MEMORY_PATH"),
+    )
+    DEFAULT_MODEL: str | None = Field(default=None, validation_alias="DEFAULT_MODEL")
+    MODEL_API_KEYS: dict[str, str] = Field(default_factory=dict)
+    CLOUD_PROVIDER_CONFIGS: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -34,6 +44,26 @@ class Settings(BaseSettings):
 
     LOCAL_MODEL: str = "llama3"
     OLLAMA_URL: str = "http://localhost:11434"
+
+    @field_validator("MODEL_API_KEYS", "CLOUD_PROVIDER_CONFIGS", mode="before")
+    @classmethod
+    def parse_json_mapping(cls, value):
+        if value in (None, ""):
+            return {}
+
+        if isinstance(value, dict):
+            return value
+
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError as exc:
+                raise ValueError("Expected a JSON object") from exc
+
+            if isinstance(parsed, dict):
+                return parsed
+
+        raise ValueError("Expected a JSON object")
 
     @field_validator("DEBUG", mode="before")
     @classmethod

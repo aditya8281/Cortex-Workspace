@@ -1,267 +1,348 @@
-# Cortex Workspace: Hybrid Repo AI Agent
+# Cortex
 
-[![Python Version](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-19.0-61dafb.svg)](https://reactjs.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+Cortex is a portable, local-first AI workspace for chat, repository understanding, memory persistence, model routing, and safe system interaction.
 
-A prototype repository-aware AI orchestration system designed for codebase understanding, semantic retrieval, graph-based context expansion, repository-level reasoning, and multi-file code editing.
+It is designed to run the same way on Windows, Linux, and macOS, either:
 
----
+- with Docker as the primary deployment path
+- with a manual Python + Node setup as a secondary path
 
-## 🎯 The Core Problem & Architectural Shift
+## What Cortex Does
 
-As local coding models scale, handling repository-level tasks directly inside model context windows becomes extremely slow, resource-heavy, and prone to hallucinations or retrieval failures.
+- Chat with local or cloud models
+- Search and reason over repository files
+- Persist conversation and workspace memory
+- Route requests across model providers
+- Expose a safety layer for file and system actions
+- Keep the memory vault portable across machines
 
-Instead of solving this solely by scaling local parameter counts, the **Cortex Workspace** implements a hybrid, index-assisted orchestration layer:
+## Architecture
 
-```
-                  ┌───────────────────────────────┐
-                  │       User Chat Query         │
-                  └──────────────┬────────────────┘
-                                 │
-                      ┌──────────▼──────────┐
-                      │  Intent Classifier  │ (CHAT, TOOL, RAG, SYSTEM)
-                      └──────────┬──────────┘
-                                 │
-                       ┌─────────▼─────────┐
-                       │  Execution Graph  │ (Weighted Step Dependency)
-                       │      Planner      │
-                       └─────────┬─────────┘
-                                 │
-            ┌────────────────────┼────────────────────┐
-            │                    │                    │
- ┌──────────▼──────────┐ ┌───────▼───────┐ ┌──────────▼──────────┐
- │    Memory Recall    │ │  Repo Search  │ │   System Actions    │
- │ (SQLite Hist / KMS) │ │ (RAG/FAISS)   │ │  (Read/Write/Exec)  │
- └──────────┬──────────┘ └───────┬───────┘ └──────────┬──────────┘
-            │                    │                    │
-            └────────────────────┼────────────────────┘
-                                 │
-                      ┌──────────▼──────────┐
-                      │ Context Compiler /  │
-                      │  Keyword Reranker   │
-                      └──────────┬──────────┘
-                                 │
-                     ┌───────────▼───────────┐
-                     │      LLM Router       │ (Local Ollama / Cloud API)
-                     └───────────┬───────────┘
-                                 │
-                  ┌──────────────▼────────────────┐
-                  │ Structured Response / Patches │
-                  └───────────────────────────────┘
-```
+### Runtime Abstraction Layer
 
----
+Cortex avoids direct OS-specific assumptions by routing filesystem and system operations through the runtime and path layers in `backend/app/core/runtime.py`, `backend/app/core/paths.py`, and `backend/app/core/system_paths.py`.
 
-## ✨ Features
+That layer is responsible for:
 
-- **Hybrid Local + Cloud Orchestration**: Dynamic routing between offline local inference (via Ollama) and external hosted endpoints (OpenAI/Claude API).
-- **Semantic Codebase Retrieval**: Extracts logical components using structure-aware AST parsing, generates vector embeddings, and searches via FAISS.
-- **RAG Reranking**: Combines FAISS cosine similarity with substring and exact-word boundary keyword boosts to surface high-relevance code chunks.
-- **Weighted Graph Traversal**: Structures execution steps using a dependency graph (`ExecutionGraph`), logging performance to influence future step biases.
-- **DFS-Based Context Expansion**: Walks folder trees recursively using Depth-First-Search (DFS) to build logical context windows while respecting pruning limits.
-- **Persistent Repository Memory**: Retains architectural profiles, package dependencies, tech stack details, and user interaction histories in a local SQLite database.
-- **Incremental Indexing**: Uses file modification timestamps to update the vector database in milliseconds, bypassing unchanged files.
-- **Autonomy Gates**: Strict permissions engine enforcing Observation Mode (read-only), Approval Mode (mutation approvals), and Automated Mode (safe categories).
-- **Traces & Replay**: Detailed logging of step performance, context variables, and LLM payloads to allow easy step-by-step debugging.
+- normalizing paths
+- blocking protected system directories
+- keeping file access OS-agnostic
+- resolving workspace-relative storage locations
 
----
+### Memory System
 
-## 🛠️ Technology Stack
+Cortex stores durable state in a memory vault managed by `backend/app/services/memory_manager.py`.
 
-- **Backend**: Python 3.14, FastAPI, SQLAlchemy 2.0, Alembic, Uvicorn, Pytest
-- **AI/RAG**: FAISS (Vector store), SentenceTransformers (BAAI/bge-small-en-v1.5 embeddings), Ollama, httpx
-- **Frontend**: React 19, Vite, TypeScript, Tailwind CSS, Framer Motion, Axios, Zustand
-- **Environment**: Docker, Docker Compose, uv (Fast python package sync)
+The vault is split into categories such as:
 
----
+- `embeddings`
+- `vector_db`
+- `metadata_db`
+- `graph`
+- `sync_state`
+- `activity_logs`
+- `cache`
+- `user_profiles`
+- `repos`
+- `temp`
 
-## 📂 Directory Layout
+In Docker, the vault is mounted at `/cortex_memory` and persisted in a named Docker volume, so memory survives:
 
-```
-├── backend/                  # Python FastAPI codebase
-│   └── app/
-│       ├── agent/            # System scanning & file searching agents
-│       ├── ai/               # LLM wrappers, providers, exceptions, memory repositories
-│       ├── api/              # HTTP routers & controllers (V1 API surface)
-│       ├── core/             # Configuration settings, logging, security, middleware
-│       ├── db/               # Database connection and session lifecycle
-│       ├── executor/         # Execution graph definitions, planners, response builders
-│       ├── intelligence/     # Filesystem discovery, exclusions, sync services
-│       ├── models/           # SQLAlchemy database schemas
-│       ├── rag/              # Vector database layers, chunkers, retrievers
-│       └── services/         # Core business logic layer
-├── frontend/                 # React UI app
-│   ├── src/                  # React components, routing, states, and styles
-│   └── vite.config.ts        # Vite configuration (Proxying to backend:8000)
-├── scripts/                  # Maintenance and index rebuilding scripts
-├── tests/                    # Pytest suite
-├── Development guide/        # Detailed project context and developer references
-├── Makefile                  # Helper tasks shortcut
-└── start.sh                  # One-step startup pipeline script
-```
+- container restarts
+- image updates
+- host changes
+- machine migration when the volume is copied or exported
 
----
+### Model Routing System
 
-## 🚀 Setup & Startup Pipeline
+Cortex separates model selection from request execution through the routing stack in `backend/app/ai/llm_router.py`, `backend/app/ai/providers/registry.py`, and the model registry/database layer.
 
-The quickest way to boot up the entire development ecosystem is to use the automated `start.sh` script:
+Routing is driven by:
 
-### Quickstart (Linux / MacOS)
+- `DEFAULT_MODEL`
+- `MODEL_API_KEYS`
+- `CLOUD_PROVIDER_CONFIGS`
+- user-selected model settings
+- local vs cloud provider metadata
+
+This lets Cortex switch between local Ollama models and cloud providers without hardcoding provider credentials into the codebase.
+
+## Repository Layout
+
+- `backend/` FastAPI backend, memory, routing, sync, and tool orchestration
+- `frontend/` Vite + React UI
+- `scripts/` helper scripts for Docker and vault initialization
+- `infra/nginx/` production frontend reverse-proxy config
+- `docker-compose.yml` production stack
+- `docker-compose.dev.yml` development stack
+
+## Setup
+
+## Docker Setup, Primary Path
+
+### 1. Configure Environment
+
+Create your runtime file once:
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/aditya8281/Cortex-Workspace.git
-cd Cortex-Workspace
-
-# 2. Run the startup pipeline
-./start.sh
+cp .env.docker .env
 ```
 
-**What `start.sh` does automatically:**
-1. Verifies/copies `.env.example` to `.env` and generates a secure random `SECRET_KEY`.
-2. Checks python environments and synchronizes dependencies using `uv sync`.
-3. Runs database migrations (`uv run alembic upgrade head`).
-4. Rebuilds the semantic vector store and local repository memory (`.cortex`).
-5. Verifies frontend node packages and runs `npm install` if missing.
-6. Starts the backend FastAPI API (`localhost:8000`) and React dev server (`localhost:5173`) concurrently.
+If you want to customize the stack, edit:
 
----
+- `MEMORY_PATH`
+- `DEFAULT_MODEL`
+- `MODEL_API_KEYS`
+- `CLOUD_PROVIDER_CONFIGS`
+- `OLLAMA_URL`
+- `REDIS_URL`
 
-### Fallback Manual Setup
+### 2. Start Cortex
 
-If you prefer to set up the individual phases manually, execute:
+One command:
 
 ```bash
-# 1. Environment Config
+./scripts/docker-run.sh
+```
+
+Or equivalently:
+
+```bash
+docker compose up -d --build
+```
+
+### 3. Open the App
+
+- Frontend: `http://localhost`
+- Backend API: `http://localhost:8000`
+- Ollama: `http://localhost:11434`
+
+### Docker Lifecycle Commands
+
+- Build: `./scripts/docker-build.sh`
+- Run: `./scripts/docker-run.sh`
+- Restart: `./scripts/docker-restart.sh`
+- Clean reset: `./scripts/docker-clean-reset.sh`
+
+Clean reset removes the named volumes, including the persistent Cortex memory volume.
+
+### Production Docker Topology
+
+- `backend` container runs the FastAPI app and database migrations
+- `frontend` container serves the built React app through Nginx
+- `ollama` container provides local model inference
+- `redis` container provides cache support
+- `cortex_memory` volume stores the memory vault
+
+## Manual Setup, Secondary Path
+
+Manual installation is for local development or environments where you want to control each layer yourself.
+
+### Prerequisites
+
+- Python 3.14+
+- Node.js 22+
+- `uv`
+- npm
+- Optional: Ollama for local models
+- Optional: Redis for cache support
+
+### Backend
+
+#### 1. Create environment file
+
+```bash
 cp .env.example .env
-# Edit .env with your LLM configuration (AI_MODE, AI_API_KEY, OLLAMA_URL)
+```
 
-# 2. Install dependencies & run migrations
+Set these values at minimum:
+
+- `MEMORY_PATH`
+- `DEFAULT_MODEL`
+- `MODEL_API_KEYS`
+- `CLOUD_PROVIDER_CONFIGS`
+
+#### 2. Install dependencies
+
+```bash
 uv sync
+```
+
+#### 3. Initialize the Cortex brain vault
+
+```bash
+uv run python scripts/init_memory.py
+```
+
+This creates the persistent vault directory structure at the configured memory path.
+
+#### 4. Run database migrations
+
+```bash
 uv run alembic upgrade head
+```
 
-# 3. Build repository search index
-uv run python scripts/rebuild_index.py
+#### 5. Start the backend
 
-# 4. Start backend development server
-make dev
+```bash
+uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+```
 
-# 5. In another terminal shell: Install & Run Frontend
+### Frontend
+
+#### 1. Install dependencies
+
+```bash
 cd frontend
 npm install
+```
+
+#### 2. Development mode
+
+```bash
 npm run dev
 ```
 
-### Docker Setup
+The Vite dev server proxies `/api` requests to the backend.
 
-To run the application using Docker:
+#### 3. Production build
 
 ```bash
-# Start all containers in the background (Ollama, Backend API, Frontend Web server)
-docker compose up -d
-
-# Show real-time container log logs
-docker compose logs -f
+npm run build
 ```
 
----
+To verify the build locally, run:
 
-## 🛠️ Makefile Reference
-
-The workspace includes a `Makefile` in the root directory for standard operations:
-
-| Command | Action |
-|:---|:---|
-| `make install` | Performs python dependency synchronization |
-| `make dev` | Launches FastAPI server under hot reload (`port 8000`) |
-| `make migrate` | Applies database migrations using Alembic |
-| `make migration m="msg"` | Generates a new database migration file |
-| `make db-reset` | Wipes the dev SQLite DB and rebuilds schemas |
-| `make format` | Formats code layout using black & ruff |
-| `make lint` | Runs syntax checks and typing checks (mypy + ruff) |
-| `make test` | Executes pytest coverage suite |
-| `make docker-up` | Boots docker-compose containers |
-| `make docker-down` | Terminates docker-compose container services |
-
----
-
-## 🔗 Key API Endpoints
-
-### Health Check
-- `GET /` - Root status message
-- `GET /api/v1/health/live` - Backend status check
-- `GET /api/v1/health/ready` - Database/Ollama responsiveness check
-
-### Authentication & Users
-- `POST /api/v1/users` - Register a new account
-- `POST /api/v1/login` - Authenticate and fetch JWT token
-- `GET /api/v1/users/me` - Get current session details
-
-### AI & Reasoning
-- `POST /api/v1/ai/ask` - Execute immediate reasoning
-- `POST /api/v1/ai/chat` - Post query into conversation thread
-- `GET /api/v1/execution/{id}/replay` - View event execution trace metadata
-
-### Workspace Intelligence
-- `GET /api/v1/workspace/intelligence` - Retrieve repository profile summary, graphs, dependencies, and autonomy policy details
-- `POST /api/v1/workspace/sync` - Manually trigger index and repository profile sync runs
-
----
-
-## 🤝 Contribution & Governance Guidelines
-
-We welcome contributions to Cortex Workspace! To maintain codebase quality, low latency, and robustness, please follow these standardized processes.
-
-### 🐛 Issue Reporting Process
-
-If you encounter bugs, performance regressions, or security issues, please open an issue using the template below:
-
-1. **Check Existing Issues**: Search the issue tracker to ensure it hasn't been reported.
-2. **File a New Issue**: Use a clear, descriptive title prefixing with `[Bug]`, `[Feature]`, or `[Performance]`.
-3. **Provide Details**:
-   - **Environment**: OS (Linux/macOS/Windows), Python version, Node.js version.
-   - **Steps to Reproduce**: Detailed list of steps to trigger the bug.
-   - **Expected Behavior**: What the system should have done.
-   - **Actual Behavior**: Logs, screenshots, traceback, or performance metrics.
-   - **Context**: Workspace size, number of repositories indexed, whether local or cloud LLM mode was active.
-
----
-
-### 🔀 Pull Request (PR) Process
-
-All modifications to the codebase must go through the Pull Request pipeline:
-
-#### 1. Branching Strategy
-- Standard features: `feat/short-description`
-- Bug fixes: `fix/short-description`
-- Documentation: `docs/short-description`
-- Performance tuning: `perf/short-description`
-
-#### 2. Pre-Flight Checklist (Local Verification)
-Before submitting a PR, ensure the following commands run without failure:
 ```bash
-make format    # Auto-formats Python files via black/ruff
-make lint      # Verifies typing (mypy) and coding standards
-make test      # Executes the test suite and checks assertions
+npm run preview -- --host 0.0.0.0
 ```
-All tests must pass. No PR with failing tests will be merged.
 
-#### 3. PR Template Guidelines
-When submitting the PR, complete the standard template:
-- **Summary**: Concise description of the changes (the "why" and "what").
-- **Related Issue**: Reference issues resolved (e.g. `Closes #12`).
-- **Verification Details**: Specify how you tested the change. If you modified RAG crawling or observer polling, provide latency metrics before and after the change.
-- **Screenshots / Recordings**: If there are UI changes, embed visual diffs demonstrating the state progression.
+In a real production deployment, serve `frontend/dist` with Nginx or the provided Docker frontend image.
 
-#### 4. Review & Merge
-- At least one core maintainer must review and approve the PR.
-- Merges are handled using squash-and-merge to keep the main branch history clean.
+## Environment Variables
 
----
+### Core
 
-## 📝 License
+- `APP_NAME`
+- `DEBUG`
+- `API_V1_PREFIX`
+- `SECRET_KEY`
+- `DATABASE_URL`
+- `REDIS_URL`
+- `ENV`
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### AI and Routing
 
+- `DEFAULT_MODEL`
+- `MODEL_API_KEYS`
+- `CLOUD_PROVIDER_CONFIGS`
+- `AI_MODE`
+- `AI_MODEL`
+- `AI_API_KEY`
+- `AI_API_URL`
+- `LOCAL_MODEL`
+- `OLLAMA_URL`
+
+### Memory
+
+- `MEMORY_PATH`
+
+### Frontend
+
+- `VITE_API_URL`
+
+### Example JSON values
+
+```bash
+MODEL_API_KEYS={"openai":"sk-...","anthropic":"..."}
+CLOUD_PROVIDER_CONFIGS={"openai":{"api_url":"https://api.openai.com/v1"}}
+```
+
+## Usage Guide
+
+### Chat
+
+- Use the chat interface in the frontend.
+- Cortex routes the request through the intent and model routing stack.
+- Conversation memory is saved automatically when the authenticated chat path is used.
+
+### File System
+
+- Use the repository and workspace views to inspect files and context.
+- Cortex resolves file operations through its runtime abstraction layer instead of assuming host-specific paths.
+- Safe path checks prevent the memory system from escaping the vault or touching protected directories.
+
+### Switching Models
+
+- Set the default model with `DEFAULT_MODEL`.
+- Provide provider keys through `MODEL_API_KEYS`.
+- Provide provider endpoints through `CLOUD_PROVIDER_CONFIGS`.
+- Select a different model in the UI when the route supports it.
+
+### Memory Behavior
+
+- The brain vault is the durable storage layer for Cortex.
+- `MEMORY_PATH` controls where the vault lives.
+- In Docker, that path is `/cortex_memory`.
+- In manual installs, pick a stable host path and keep it consistent.
+
+## Safety Model
+
+- No root is required for normal operation
+- Docker containers run as a non-root user
+- Path access is restricted by the runtime abstraction and memory manager
+- Protected system directories are blocked
+- Cortex is designed to be OS-agnostic rather than shelling out to OS-specific paths
+- Dangerous file or vault operations are isolated behind explicit service layers
+
+## Portability
+
+Cortex is intended to behave consistently across Windows, Linux, and macOS by:
+
+- avoiding hardcoded host-specific paths
+- resolving storage through `MEMORY_PATH`
+- keeping the vault in a portable directory or Docker volume
+- using frontend API calls that work through the same relative `/api/v1` path in every environment
+
+## Troubleshooting
+
+### Docker does not start
+
+- Confirm Docker Desktop or the Docker Engine is running
+- Check that ports `80`, `8000`, `11434`, and `6379` are free
+- Run `docker compose logs -f` to inspect container output
+
+### Backend cannot reach the model provider
+
+- Verify `DEFAULT_MODEL`, `AI_MODE`, and `OLLAMA_URL`
+- If using cloud providers, confirm `MODEL_API_KEYS` and `CLOUD_PROVIDER_CONFIGS`
+- Make sure the provider is enabled in the database-backed model registry
+
+### Memory does not persist
+
+- Confirm the backend container mounts the `cortex_memory` volume
+- Confirm `MEMORY_PATH=/cortex_memory` in Docker
+- Use `docker compose down -v` only when you want to intentionally erase the vault
+
+### Frontend cannot reach the API
+
+- In Docker, the frontend is served through Nginx and proxies `/api` to the backend
+- In manual mode, make sure the backend is running on `http://localhost:8000`
+- In Vite dev mode, verify the proxy target is pointing to the backend service
+
+### Manual backend fails on startup
+
+- Re-run `uv sync`
+- Re-run `uv run python scripts/init_memory.py`
+- Re-run `uv run alembic upgrade head`
+
+## Suggested Workflow
+
+1. Copy `.env.docker` to `.env`
+2. Run `./scripts/docker-run.sh`
+3. Open `http://localhost`
+4. Use `./scripts/docker-clean-reset.sh` only when you want a full reset
+
+## License
+
+MIT

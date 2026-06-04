@@ -12,10 +12,19 @@ class ProviderRegistry:
         mode = ai_settings.mode.lower()
 
         if mode == "api":
+            api_key = ai_settings.api_key or ai_settings.get_model_api_key("openai")
+            base_url = ai_settings.api_url
+            if not base_url:
+                cloud_config = ai_settings.get_cloud_provider_config("openai") or {}
+                base_url = cloud_config.get("api_url") or cloud_config.get("base_url")
+            if not api_key:
+                raise ValueError("API key is required when AI mode is set to 'api'")
+            if not base_url:
+                raise ValueError("API base URL is required when AI mode is set to 'api'")
 
             return APILLM(
-                api_key=ai_settings.api_key,
-                base_url=ai_settings.api_url,
+                api_key=api_key,
+                base_url=base_url,
                 model=ai_settings.model,
             )
 

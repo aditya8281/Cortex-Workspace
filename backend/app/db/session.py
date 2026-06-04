@@ -1,5 +1,6 @@
-import os
 import logging
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
@@ -52,7 +53,7 @@ def run_migrations(db_path: str):
         # Ensure parent directory exists using safe abstraction
         from backend.app.core.runtime import get_runtime
         runtime = get_runtime()
-        runtime.create_dir(db_path.rsplit('/', 1)[0] if '/' in db_path else '.')
+        runtime.create_dir(str(Path(db_path).expanduser().resolve().parent))
         
         ini_path = str(PROJECT_ROOT / "alembic.ini")
         cfg = Config(ini_path)

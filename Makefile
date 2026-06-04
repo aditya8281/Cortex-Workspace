@@ -1,4 +1,4 @@
-.PHONY: help install dev dev-no-reload migrate migration shell test test-cov test-watch lint format check clean db-reset db-shell db-backup docker-build docker-up docker-down docker-logs docker-shell docs lock ci prod-check logs-app logs-error
+.PHONY: help install dev dev-no-reload migrate migration shell test test-cov test-watch lint format check clean db-reset db-shell db-backup docker-build docker-up docker-down docker-restart docker-reset docker-logs docker-shell docs lock ci prod-check logs-app logs-error
 
 # ============================================================================
 # HELP
@@ -118,10 +118,16 @@ clean:
 # ============================================================================
 
 docker-build:
-	docker compose build
+	./scripts/docker-build.sh
 
 docker-up:
-	docker compose up -d
+	./scripts/docker-run.sh
+
+docker-restart:
+	./scripts/docker-restart.sh
+
+docker-reset:
+	./scripts/docker-clean-reset.sh
 
 docker-dev:
 	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
