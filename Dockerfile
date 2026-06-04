@@ -7,8 +7,8 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ ./
-ARG VITE_API_URL=/api/v1
-ENV VITE_API_URL=${VITE_API_URL}
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 RUN npm run build
 
 FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS backend
@@ -37,9 +37,17 @@ EXPOSE 8000
 
 CMD ["sh", "-lc", "uv run alembic upgrade head && exec uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"]
 
-FROM nginx:1.27-alpine AS frontend
+FROM node:22-bookworm-slim AS frontend
+WORKDIR /app/frontend
 
-COPY infra/nginx/frontend.conf /etc/nginx/conf.d/default.conf
-COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
+COPY --from=frontend-build /app/frontend/package*.json ./
+COPY --from=frontend-build /app/frontend/next.config.js ./next.config.js
+COPY --from=frontend-build /app/frontend/.next ./.next
+COPY --from=frontend-build /app/frontend/public ./public
+COPY --from=frontend-build /app/frontend/node_modules ./node_modules
 
-EXPOSE 80
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+CMD ["npm", "run", "start"]

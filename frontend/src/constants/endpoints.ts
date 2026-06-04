@@ -1,8 +1,8 @@
 export const API_ENDPOINTS = {
   // Auth
-  AUTH_LOGIN: "/users/login",
+  AUTH_LOGIN: "/login",
   AUTH_REGISTER: "/users",
-  AUTH_ME: "/users/me",
+  AUTH_ME: "/me",
 
   // AI
   AI_ASK: "/ai/ask",
@@ -70,7 +70,7 @@ export const API_ENDPOINTS = {
 
   // User Settings
   USER_SETTINGS: "/users/me/settings",
-  USER_PROFILE: "/users/me/profile",
+  USER_PROFILE: "/me/profile",
 
   // Admin
   ADMIN_USERS: "/users",

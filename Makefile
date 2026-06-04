@@ -37,6 +37,7 @@ help:
 
 install:
 	uv sync
+	cd frontend && npm install
 
 # ============================================================================
 # DEVELOPMENT
@@ -47,6 +48,12 @@ dev:
 
 dev-no-reload:
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+
+dev-frontend:
+	cd frontend && npm run dev
+
+build-frontend:
+	cd frontend && npm run build
 
 shell:
 	uv run python -i -c "from backend.app.main import app; from backend.app.db.session import SessionLocal; db = SessionLocal()"

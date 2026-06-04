@@ -70,9 +70,9 @@ This lets Cortex switch between local Ollama models and cloud providers without 
 ## Repository Layout
 
 - `backend/` FastAPI backend, memory, routing, sync, and tool orchestration
-- `frontend/` Vite + React UI
+- `frontend/` Next.js + React UI
 - `scripts/` helper scripts for Docker and vault initialization
-- `infra/nginx/` production frontend reverse-proxy config
+- `infra/nginx/` legacy Nginx reverse-proxy config (deprecated)
 - `docker-compose.yml` production stack
 - `docker-compose.dev.yml` development stack
 
@@ -129,7 +129,7 @@ Clean reset removes the named volumes, including the persistent Cortex memory vo
 ### Production Docker Topology
 
 - `backend` container runs the FastAPI app and database migrations
-- `frontend` container serves the built React app through Nginx
+- `frontend` container serves the Next.js production server on Node.js
 - `ollama` container provides local model inference
 - `redis` container provides cache support
 - `cortex_memory` volume stores the memory vault
@@ -203,7 +203,7 @@ npm install
 npm run dev
 ```
 
-The Vite dev server proxies `/api` requests to the backend.
+The Next.js dev server runs on port 3000 and uses environment variables to communicate with the backend.
 
 #### 3. Production build
 
@@ -214,10 +214,10 @@ npm run build
 To verify the build locally, run:
 
 ```bash
-npm run preview -- --host 0.0.0.0
+npm run start
 ```
 
-In a real production deployment, serve `frontend/dist` with Nginx or the provided Docker frontend image.
+In a real production deployment, run the Next.js production server directly or use the provided Docker frontend image.
 
 ## Environment Variables
 
@@ -249,7 +249,7 @@ In a real production deployment, serve `frontend/dist` with Nginx or the provide
 
 ### Frontend
 
-- `VITE_API_URL`
+- `NEXT_PUBLIC_API_BASE_URL`
 
 ### Example JSON values
 
@@ -326,9 +326,9 @@ Cortex is intended to behave consistently across Windows, Linux, and macOS by:
 
 ### Frontend cannot reach the API
 
-- In Docker, the frontend is served through Nginx and proxies `/api` to the backend
+- In Docker, the frontend is served by Next.js and communicates with the backend at `NEXT_PUBLIC_API_BASE_URL`
 - In manual mode, make sure the backend is running on `http://localhost:8000`
-- In Vite dev mode, verify the proxy target is pointing to the backend service
+- In Next.js dev mode, verify the API URL is pointing to the backend service
 
 ### Manual backend fails on startup
 

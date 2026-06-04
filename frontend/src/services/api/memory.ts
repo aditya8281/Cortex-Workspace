@@ -3,11 +3,11 @@ import { API_ENDPOINTS } from "@/constants/endpoints";
 import type { MemoryItem, HierarchicalMemory } from "@/types/api";
 
 export const memoryService = {
-  async searchMemory(query: string): Promise<MemoryItem[]> {
-    const response = await apiClient.get<MemoryItem[]>(API_ENDPOINTS.MEMORY_SEARCH, {
-      params: { query },
+  async searchMemory(query: string): Promise<any[]> {
+    const response = await apiClient.get<any>(API_ENDPOINTS.MEMORY_SEARCH, {
+      params: { q: query },
     });
-    return response.data || [];
+    return response.data?.results || [];
   },
 
   async getKnowledge(): Promise<any> {
@@ -35,11 +35,11 @@ export const memoryService = {
     return response.data;
   },
 
-  async searchHierarchical(query: string): Promise<HierarchicalMemory[]> {
-    const response = await apiClient.get<HierarchicalMemory[]>(API_ENDPOINTS.HIERARCHICAL_SEARCH, {
+  async searchHierarchical(query: string): Promise<any[]> {
+    const response = await apiClient.get<any>(API_ENDPOINTS.HIERARCHICAL_SEARCH, {
       params: { query },
     });
-    return response.data || [];
+    return response.data?.results || [];
   },
 
   async expandGraph(nodeId: string): Promise<any> {
