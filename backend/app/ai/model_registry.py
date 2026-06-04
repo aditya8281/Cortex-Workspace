@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 import httpx
 import hashlib
 import base64
 import logging
 import re
 import asyncio
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 import keyring
@@ -19,8 +21,10 @@ from backend.app.ai.providers.http_clients import (
     normalize_provider_name,
     provider_default_base_url,
 )
+from backend.app.ai.model_entity import ModelEntity, ModelEntityBuilder, ProviderType, ModelSource
 
 logger = logging.getLogger(__name__)
+MODEL_REGISTRY_CACHE_FILENAME = "model_registry_cache.json"
 
 def get_fernet() -> Fernet:
     key_hash = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
@@ -59,6 +63,78 @@ def retrieve_key_securely(provider_name: str, encrypted_bytes: Optional[bytes]) 
 
 
 class ModelRegistry:
+    @staticmethod
+    def _cache_path():
+        from backend.app.services.memory_manager import memory_manager
+
+        return memory_manager.get_path("cache", MODEL_REGISTRY_CACHE_FILENAME)
+
+    @classmethod
+    def _load_cache(cls) -> dict[str, Any]:
+        cache_path = cls._cache_path()
+        if not cache_path.exists():
+            return {}
+        try:
+            return json.loads(cache_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning("Failed to load cached model registry snapshot: %s", exc)
+            return {}
+
+    @classmethod
+    def _save_cache(cls, **payload: Any) -> None:
+        cache_path = cls._cache_path()
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        snapshot = {
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            **payload,
+        }
+        try:
+            cache_path.write_text(json.dumps(snapshot, indent=2, sort_keys=True), encoding="utf-8")
+        except Exception as exc:
+            logger.warning("Failed to persist model registry snapshot: %s", exc)
+
+    @staticmethod
+    def _matches_marketplace_query(model: Dict[str, Any], query: str) -> bool:
+        if not query:
+            return True
+        needle = query.strip().lower()
+        if not needle:
+            return True
+
+        fields = [
+            model.get("name"),
+            model.get("display_name"),
+            model.get("best_use_case"),
+            model.get("source"),
+        ]
+        for field in fields:
+            if isinstance(field, str) and needle in field.lower():
+                return True
+
+        for tag in model.get("tags", []) or []:
+            if isinstance(tag, str) and needle in tag.lower():
+                return True
+
+        for capability in model.get("capabilities", []) or []:
+            if isinstance(capability, str) and needle in capability.lower():
+                return True
+
+        return False
+
+    @classmethod
+    async def prime_ollama_inventory_cache(cls) -> dict[str, Any]:
+        """
+        Warm the Ollama inventory so app start/reload has an immediate cached catalog.
+        """
+        local_models, marketplace_models = await asyncio.gather(
+            cls.get_local_models(),
+            cls.get_dynamic_ollama_marketplace(),
+        )
+        return {
+            "local_models": local_models,
+            "marketplace_models": marketplace_models,
+        }
+
     @classmethod
     def seed_if_empty(cls, db: Session):
         if db.query(CortexProvider).first() is None:
@@ -211,54 +287,43 @@ class ModelRegistry:
             db.commit()
 
     @classmethod
-    async def get_local_models(cls) -> List[Dict[str, Any]]:
-        models = []
+    async def get_local_models(cls) -> List[ModelEntity]:
+        """
+        Fetch local models from Ollama and LM Studio.
+        Returns ModelEntity objects with proper error handling.
+        Falls back to cache if services are unavailable.
+        """
+        models: List[ModelEntity] = []
+        errors: List[str] = []
 
-        # 1. Ollama
+        # 1. Ollama (Primary source)
         ollama_url = f"{settings.OLLAMA_URL.rstrip('/')}/api/tags"
         try:
-            async with httpx.AsyncClient(timeout=3) as client:
+            async with httpx.AsyncClient(timeout=5) as client:
                 resp = await client.get(ollama_url)
                 if resp.status_code == 200:
                     data = resp.json()
                     for m in data.get("models", []):
-                        name = m.get("name")
-                        details = m.get("details", {})
-                        param_size = details.get("parameter_size", "unknown")
-                        quant = details.get("quantization_level", "unknown")
-                        
-                        # VRAM Estimation
-                        vram = "unknown"
-                        if "B" in param_size:
-                            try:
-                                size_val = float(param_size.replace("B", ""))
-                                vram = f"{round(size_val * 0.7, 1)} GB"
-                            except Exception:
-                                pass
+                        try:
+                            entity = ModelEntityBuilder.from_ollama_model(m)
+                            models.append(entity)
+                        except Exception as e:
+                            logger.debug(f"Failed to parse Ollama model {m.get('name')}: {e}")
+                            continue
+                elif resp.status_code == 404:
+                    errors.append("Ollama service not found (404) - check OLLAMA_URL configuration")
+                elif resp.status_code == 500:
+                    errors.append("Ollama service returned 500 - service may be down")
+                else:
+                    errors.append(f"Ollama returned status {resp.status_code}")
+        except asyncio.TimeoutError:
+            errors.append("Ollama connection timeout - service may be offline")
+            logger.warning("Ollama timeout at %s", ollama_url)
+        except Exception as exc:
+            errors.append(f"Ollama connection failed: {str(exc)}")
+            logger.warning("Failed to fetch Ollama models: %s", exc)
 
-                        # Context Length Estimation
-                        context_len = 8192
-                        if "qwen" in name.lower():
-                            context_len = 32768
-                        elif "llama3" in name.lower():
-                            context_len = 8192
-                        elif "phi" in name.lower():
-                            context_len = 128000
-
-                        models.append({
-                            "name": name,
-                            "provider": "Ollama",
-                            "context_length": context_len,
-                            "parameters": param_size,
-                            "quantization": quant,
-                            "vram_estimate": vram,
-                            "status": "active",
-                            "is_local": True
-                        })
-        except Exception:
-            pass
-
-        # 2. LM Studio
+        # 2. LM Studio (Secondary source)
         lm_url = "http://localhost:1234/v1/models"
         try:
             async with httpx.AsyncClient(timeout=3) as client:
@@ -266,21 +331,186 @@ class ModelRegistry:
                 if resp.status_code == 200:
                     data = resp.json()
                     for m in data.get("data", []):
-                        name = m.get("id")
-                        models.append({
-                            "name": name,
-                            "provider": "LM Studio",
-                            "context_length": 4096,
-                            "parameters": "unknown",
-                            "quantization": "unknown",
-                            "vram_estimate": "unknown",
-                            "status": "active",
-                            "is_local": True
-                        })
-        except Exception:
-            pass
+                        try:
+                            entity = ModelEntity(
+                                id=m.get("id"),
+                                display_name=m.get("id"),
+                                provider_name="LM Studio",
+                                provider_type=ProviderType.LOCAL,
+                                source=ModelSource.LM_STUDIO,
+                                model_identifier=m.get("id"),
+                                context_window=4096,
+                                status="active",
+                                is_downloaded=True,
+                            )
+                            models.append(entity)
+                        except Exception as e:
+                            logger.debug(f"Failed to parse LM Studio model: {e}")
+                            continue
+        except asyncio.TimeoutError:
+            logger.debug("LM Studio timeout - service not available")
+        except Exception as exc:
+            logger.debug("LM Studio not available: %s", exc)
+
+        # Cache if we have models
+        if models:
+            local_data = [m.to_dict() for m in models]
+            cls._save_cache(local_models=local_data)
+            return models
+
+        # Fall back to cache
+        cached = cls._load_cache().get("local_models", [])
+        if cached:
+            logger.info("Using cached local model inventory")
+            return [ModelEntity.from_dict(m) for m in cached if isinstance(m, dict)]
+
+        # If still no models, log warnings and return empty (but don't fail)
+        if errors:
+            logger.warning("No local models available. Errors encountered: %s", "; ".join(errors))
 
         return models
+
+    @classmethod
+    def get_custom_models(cls, db: Session) -> List[ModelEntity]:
+        """
+        Fetch custom models from the database.
+        Custom models are user-defined entries.
+        """
+        models: List[ModelEntity] = []
+        
+        try:
+            rows = db.query(CortexModel).filter(
+                CortexModel.is_custom.is_(True),
+                CortexModel.is_local.is_(False),
+            ).all()
+            
+            for row in rows:
+                entity = ModelEntity(
+                    id=row.name,
+                    display_name=row.name,
+                    provider_name=row.provider_name or "Custom",
+                    provider_type=ProviderType.CUSTOM,
+                    source=ModelSource.CUSTOM_API,
+                    model_identifier=row.model_identifier or row.name,
+                    context_window=row.context_length or 8192,
+                    parameters=row.parameters,
+                    quantization=row.quantization,
+                    vram_estimate=row.vram_estimate,
+                    status=row.status,
+                    api_endpoint=row.api_endpoint,
+                    is_custom=True,
+                )
+                models.append(entity)
+        except Exception as exc:
+            logger.warning("Failed to fetch custom models: %s", exc)
+        
+        return models
+
+    @classmethod
+    async def get_cloud_models(cls, db: Session) -> List[ModelEntity]:
+        """
+        Fetch cloud models from enabled providers.
+        Only returns models from providers that:
+        1. Are enabled
+        2. Have valid API keys configured
+        """
+        models: List[ModelEntity] = []
+        providers = db.query(CortexProvider).filter(CortexProvider.is_enabled.is_(True)).all()
+        
+        for provider in providers:
+            # Skip local providers
+            if provider.provider_type == "local" or provider.name in {"Ollama", "LM Studio"}:
+                continue
+            
+            # Check if provider has API key
+            api_key = retrieve_key_securely(provider.name, provider.api_key_encrypted)
+            if not api_key:
+                logger.debug(f"Skipping {provider.name} - no API key configured")
+                continue
+            
+            try:
+                # Fetch models from provider
+                provider_models = await asyncio.wait_for(
+                    cls._refresh_provider_models(db, provider),
+                    timeout=10,
+                )
+                
+                # Convert to ModelEntity objects
+                for model_data in provider_models:
+                    try:
+                        # Map source name
+                        source = cls._get_model_source(provider.name)
+                        entity = ModelEntityBuilder.from_cloud_model(
+                            model_data,
+                            provider.name,
+                            source
+                        )
+                        models.append(entity)
+                    except Exception as e:
+                        logger.debug(f"Failed to parse model from {provider.name}: {e}")
+                        continue
+            except asyncio.TimeoutError:
+                logger.warning(f"Timeout fetching models from {provider.name}")
+                # Fall back to cached models
+                try:
+                    cached_models = db.query(CortexModel).filter(
+                        CortexModel.provider_name == provider.name,
+                        CortexModel.is_local.is_(False),
+                    ).all()
+                    for row in cached_models:
+                        entity = ModelEntity(
+                            id=row.name,
+                            display_name=row.name,
+                            provider_name=row.provider_name,
+                            provider_type=ProviderType.CLOUD,
+                            source=cls._get_model_source(provider.name),
+                            model_identifier=row.model_identifier or row.name,
+                            context_window=row.context_length or 8192,
+                            status=row.status,
+                            api_key_required=True,
+                        )
+                        models.append(entity)
+                except Exception as e:
+                    logger.debug(f"Failed to load cached models for {provider.name}: {e}")
+            except Exception as exc:
+                logger.warning(f"Failed to fetch models from {provider.name}: {exc}")
+                # Fall back to cached models
+                try:
+                    cached_models = db.query(CortexModel).filter(
+                        CortexModel.provider_name == provider.name,
+                        CortexModel.is_local.is_(False),
+                    ).all()
+                    for row in cached_models:
+                        entity = ModelEntity(
+                            id=row.name,
+                            display_name=row.name,
+                            provider_name=row.provider_name,
+                            provider_type=ProviderType.CLOUD,
+                            source=cls._get_model_source(provider.name),
+                            model_identifier=row.model_identifier or row.name,
+                            context_window=row.context_length or 8192,
+                            status=row.status,
+                            api_key_required=True,
+                        )
+                        models.append(entity)
+                except Exception as e:
+                    logger.debug(f"Failed to load cached models for {provider.name}: {e}")
+        
+        return models
+
+    @staticmethod
+    def _get_model_source(provider_name: str) -> ModelSource:
+        """Map provider name to ModelSource enum"""
+        mapping = {
+            "OpenAI": ModelSource.OPENAI,
+            "Anthropic": ModelSource.ANTHROPIC,
+            "Google Gemini": ModelSource.GOOGLE_GEMINI,
+            "Groq": ModelSource.GROQ,
+            "Together AI": ModelSource.TOGETHER_AI,
+            "OpenRouter": ModelSource.OPENROUTER,
+            "DeepSeek": ModelSource.DEEPSEEK,
+        }
+        return mapping.get(provider_name, ModelSource.CUSTOM_API)
 
     @classmethod
     async def get_dynamic_ollama_marketplace(cls, query: str | None = None, max_pages: int = 100) -> List[Dict[str, Any]]:
@@ -357,7 +587,30 @@ class ModelRegistry:
                         }
                     )
 
-        return collected
+        if collected:
+            if query:
+                cached = cls._load_cache().get("marketplace_models", [])
+                cached_by_name = {
+                    model.get("name"): model
+                    for model in cached
+                    if isinstance(model, dict) and model.get("name")
+                }
+                for model in collected:
+                    if isinstance(model, dict) and model.get("name"):
+                        cached_by_name[model["name"]] = model
+                cls._save_cache(marketplace_models=list(cached_by_name.values()))
+            else:
+                cls._save_cache(marketplace_models=collected)
+            return collected
+
+        cached = cls._load_cache().get("marketplace_models", [])
+        if query:
+            cached = [model for model in cached if cls._matches_marketplace_query(model, query)]
+        if cached:
+            logger.info("Using cached Ollama marketplace snapshot")
+            return cached
+
+        return []
 
     @staticmethod
     def _largest_size_value(sizes: List[str]) -> float:
@@ -499,56 +752,72 @@ class ModelRegistry:
 
     @classmethod
     async def list_models(cls, db: Session) -> List[Dict[str, Any]]:
+        """
+        List all available models (local, cloud, and custom) from all sources.
+        
+        Returns a unified list of models with proper source identification.
+        Each model includes information about its provider_type and source.
+        """
         cls.seed_if_empty(db)
+        
+        # Auto-enable OpenAI as default provider if no providers are enabled
+        cls._auto_enable_default_provider(db)
 
-        local_models = await cls.get_local_models()
-        for row in local_models:
-            row.setdefault("id", row.get("name"))
-            row.setdefault("display_name", row.get("name"))
-            row.setdefault("pull_command", f"ollama pull {row.get('name')}")
-            row.setdefault("tags", ["Chat"])
-            row.setdefault("best_use_case", "Local model")
-            row.setdefault("performance_tier", "balanced")
+        # Fetch models from each source separately
+        local_entities = await cls.get_local_models()
+        cloud_entities = await cls.get_cloud_models(db)
+        custom_entities = cls.get_custom_models(db)
 
-        cloud_models: list[dict[str, Any]] = []
-        providers = db.query(CortexProvider).all()
-        for provider in providers:
-            if not provider.is_enabled:
-                continue
+        # Combine all models
+        all_entities = local_entities + cloud_entities + custom_entities
 
-            try:
-                provider_models = await asyncio.wait_for(
-                    cls._refresh_provider_models(db, provider),
-                    timeout=10,
-                )
-            except Exception as exc:
-                logger.warning("Timed out refreshing provider models for %s: %s", provider.name, exc)
-                provider_models = []
-            if not provider_models:
-                provider_models = []
-                for model in db.query(CortexModel).filter(
-                    CortexModel.provider_name == provider.name,
-                    CortexModel.is_local.is_(False),
-                ).all():
-                    provider_models.append(
-                        {
-                            "id": model.name,
-                            "name": model.name,
-                            "display_name": model.name,
-                            "provider": provider.name,
-                            "context_length": model.context_length,
-                            "parameters": model.parameters,
-                            "quantization": model.quantization,
-                            "vram_estimate": model.vram_estimate,
-                            "status": model.status,
-                            "is_local": False,
-                            "default_for_provider": provider.default_model_name == model.name,
-                        }
-                    )
+        # Convert to dictionary format for backward compatibility
+        result = []
+        for entity in all_entities:
+            model_dict = entity.to_dict()
+            result.append(model_dict)
 
-            cloud_models.extend(provider_models)
+        return result
 
-        return local_models + cloud_models
+    @classmethod
+    def _auto_enable_default_provider(cls, db: Session) -> None:
+        """
+        Auto-enable at least one provider (OpenAI) if no providers are enabled.
+        This ensures users get cloud models by default without manual configuration.
+        """
+        try:
+            enabled_count = db.query(CortexProvider).filter(CortexProvider.is_enabled.is_(True)).count()
+            if enabled_count == 0:
+                # Enable OpenAI as default if no other provider is enabled
+                openai = db.query(CortexProvider).filter(CortexProvider.name == "OpenAI").first()
+                if openai and not openai.is_enabled:
+                    logger.info("Auto-enabling OpenAI as default provider")
+                    openai.is_enabled = True
+                    db.commit()
+        except Exception as e:
+            logger.debug(f"Auto-enable default provider failed: {e}")
+
+    @classmethod
+    async def list_models_by_type(cls, db: Session, provider_type: str) -> List[Dict[str, Any]]:
+        """
+        List models filtered by provider type.
+        
+        Args:
+            provider_type: "local", "cloud", or "custom"
+        
+        Returns:
+            List of model dictionaries for the specified type
+        """
+        if provider_type == "local":
+            entities = await cls.get_local_models()
+        elif provider_type == "cloud":
+            entities = await cls.get_cloud_models(db)
+        elif provider_type == "custom":
+            entities = cls.get_custom_models(db)
+        else:
+            return []
+
+        return [e.to_dict() for e in entities]
 
     @classmethod
     async def validate_provider(cls, name: str, base_url: str, api_key: str) -> Dict[str, Any]:

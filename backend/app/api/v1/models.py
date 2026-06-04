@@ -82,6 +82,25 @@ async def list_all_models(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/by-type/{model_type}")
+async def list_models_by_type(model_type: str, db: Session = Depends(get_db)):
+    """
+    Get models filtered by type: "local", "cloud", or "custom".
+    """
+    valid_types = ["local", "cloud", "custom"]
+    if model_type not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid model type. Must be one of: {', '.join(valid_types)}"
+        )
+    
+    try:
+        return await ModelRegistry.list_models_by_type(db, model_type)
+    except Exception as e:
+        logger.exception(f"Failed to list {model_type} models")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/providers")
 def list_providers(db: Session = Depends(get_db)):
     """
@@ -299,6 +318,180 @@ def delete_provider(provider_name: str, db: Session = Depends(get_db)):
     db.delete(provider)
     db.commit()
     return {"message": "Provider deleted successfully"}
+
+
+# ==========================================
+# Custom Model Management Endpoints
+# ==========================================
+
+class CustomModelPayload(BaseModel):
+    name: str
+    api_endpoint: str
+    model_identifier: str
+    context_window: Optional[int] = 8192
+    parameters: Optional[str] = None
+    api_key: Optional[str] = None
+    headers: Optional[dict] = None
+    description: Optional[str] = None
+
+
+@router.get("/custom")
+def list_custom_models(db: Session = Depends(get_db)):
+    """
+    List all custom models.
+    """
+    custom_models = db.query(CortexModel).filter(CortexModel.is_custom.is_(True)).all()
+    result = []
+    for m in custom_models:
+        result.append({
+            "id": m.name,
+            "name": m.name,
+            "provider_name": m.provider_name or "Custom",
+            "api_endpoint": m.api_endpoint,
+            "model_identifier": m.model_identifier or m.name,
+            "context_window": m.context_length,
+            "parameters": m.parameters,
+            "status": m.status,
+            "is_custom": True,
+        })
+    return result
+
+
+@router.post("/custom")
+def create_custom_model(payload: CustomModelPayload, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Add a custom model (user-defined API endpoint).
+    """
+    # Validate required fields
+    if not payload.name or not payload.api_endpoint or not payload.model_identifier:
+        raise HTTPException(status_code=400, detail="name, api_endpoint, and model_identifier are required")
+    
+    # Check for duplicate
+    existing = db.query(CortexModel).filter(CortexModel.name == payload.name, CortexModel.is_custom.is_(True)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Custom model with this name already exists")
+    
+    # Create custom provider if needed
+    provider_name = f"Custom_{payload.name}"
+    custom_provider = db.query(CortexProvider).filter(CortexProvider.name == provider_name).first()
+    if not custom_provider:
+        custom_provider = CortexProvider(
+            name=provider_name,
+            base_url=payload.api_endpoint,
+            is_enabled=True,
+            is_custom=True,
+        )
+        db.add(custom_provider)
+        db.flush()
+    
+    # Store API key if provided
+    if payload.api_key:
+        store_key_securely(provider_name, payload.api_key)
+    
+    # Create model entry
+    model = CortexModel(
+        name=payload.name,
+        provider_name=provider_name,
+        model_identifier=payload.model_identifier,
+        context_length=payload.context_window,
+        parameters=payload.parameters or "unknown",
+        status="active",
+        is_local=False,
+        is_custom=True,
+        api_endpoint=payload.api_endpoint,
+    )
+    db.add(model)
+    db.commit()
+    
+    logger.info(f"Custom model created: {payload.name} by user {current_user.id}")
+    return {
+        "message": "Custom model created successfully",
+        "model_name": payload.name,
+        "model_identifier": payload.model_identifier,
+    }
+
+
+@router.get("/custom/{model_name}")
+def get_custom_model(model_name: str, db: Session = Depends(get_db)):
+    """
+    Get details of a custom model.
+    """
+    model = db.query(CortexModel).filter(CortexModel.name == model_name, CortexModel.is_custom.is_(True)).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Custom model not found")
+    
+    return {
+        "id": model.name,
+        "name": model.name,
+        "provider_name": model.provider_name,
+        "api_endpoint": model.api_endpoint,
+        "model_identifier": model.model_identifier or model.name,
+        "context_window": model.context_length,
+        "parameters": model.parameters,
+        "status": model.status,
+        "is_custom": True,
+    }
+
+
+@router.put("/custom/{model_name}")
+def update_custom_model(model_name: str, payload: CustomModelPayload, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Update a custom model.
+    """
+    model = db.query(CortexModel).filter(CortexModel.name == model_name, CortexModel.is_custom.is_(True)).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Custom model not found")
+    
+    # Update fields
+    if payload.name and payload.name != model_name:
+        # Check for duplicate with new name
+        existing = db.query(CortexModel).filter(CortexModel.name == payload.name).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Model with this name already exists")
+        model.name = payload.name
+    
+    if payload.api_endpoint:
+        model.api_endpoint = payload.api_endpoint
+    if payload.model_identifier:
+        model.model_identifier = payload.model_identifier
+    if payload.context_window:
+        model.context_length = payload.context_window
+    if payload.parameters:
+        model.parameters = payload.parameters
+    
+    db.commit()
+    logger.info(f"Custom model updated: {model_name} by user {current_user.id}")
+    
+    return {
+        "message": "Custom model updated successfully",
+        "model_name": model.name,
+    }
+
+
+@router.delete("/custom/{model_name}")
+def delete_custom_model(model_name: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Delete a custom model.
+    """
+    model = db.query(CortexModel).filter(CortexModel.name == model_name, CortexModel.is_custom.is_(True)).first()
+    if not model:
+        raise HTTPException(status_code=404, detail="Custom model not found")
+    
+    # Delete associated provider if it exists
+    if model.provider_name:
+        provider = db.query(CortexProvider).filter(CortexProvider.name == model.provider_name).first()
+        if provider and provider.is_custom:
+            try:
+                keyring.delete_password("cortex-workspace", provider.name)
+            except Exception:
+                pass
+            db.delete(provider)
+    
+    db.delete(model)
+    db.commit()
+    logger.info(f"Custom model deleted: {model_name} by user {current_user.id}")
+    
+    return {"message": "Custom model deleted successfully"}
 
 
 from backend.app.models.user_settings import UserSettings

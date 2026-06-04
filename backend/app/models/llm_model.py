@@ -15,6 +15,9 @@ class CortexProvider(Base):
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_custom: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     default_model_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    provider_type: Mapped[str | None] = mapped_column(String(32), nullable=True)  # "local" | "cloud" | "custom"
+    headers_json: Mapped[str | None] = mapped_column(String(2048), nullable=True)  # Custom headers for API calls
+    model_fetch_endpoint: Mapped[str | None] = mapped_column(String(256), nullable=True)  # /v1/models endpoint
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
@@ -31,6 +34,11 @@ class CortexModel(Base):
     status: Mapped[str] = mapped_column(String(32), default="active", nullable=False)
     is_local: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_custom: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # New fields for better model management
+    provider_type: Mapped[str | None] = mapped_column(String(32), nullable=True)  # "local" | "cloud" | "custom"
+    source: Mapped[str | None] = mapped_column(String(64), nullable=True)  # "ollama" | "openai" | "anthropic" | "custom_api"
+    model_identifier: Mapped[str | None] = mapped_column(String(256), nullable=True)  # String used in API calls (can differ from display name)
+    api_endpoint: Mapped[str | None] = mapped_column(String(512), nullable=True)  # Custom API endpoint for this model
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
 

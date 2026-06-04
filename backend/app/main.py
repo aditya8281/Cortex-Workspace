@@ -52,6 +52,7 @@ async def lifespan(app: FastAPI):
 
     from backend.app.intelligence.observer_service import BackgroundObserverService
     from backend.app.ai.ingestion.watcher import BackgroundFileWatcher
+    from backend.app.ai.model_registry import ModelRegistry
     from backend.app.services.memory_manager import memory_manager
 
     observer = BackgroundObserverService(poll_interval_seconds=90)
@@ -63,6 +64,16 @@ async def lifespan(app: FastAPI):
     file_watcher.start()
     memory_manager.register_service("file_watcher", file_watcher)
     logger.info("Cortex background file watcher started")
+
+    async def warmup_ollama_inventory():
+        try:
+            logger.info("Starting background Ollama inventory warmup...")
+            await ModelRegistry.prime_ollama_inventory_cache()
+            logger.info("Background Ollama inventory warmup complete")
+        except Exception as ex:
+            logger.error("Error during Ollama inventory warmup: %s", ex)
+
+    loop.create_task(warmup_ollama_inventory())
 
     yield
 

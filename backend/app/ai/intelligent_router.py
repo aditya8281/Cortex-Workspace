@@ -203,22 +203,54 @@ class IntelligentRouter:
         """
         Resolves model name to an executable LLM class instance (LocalLLM or APILLM)
         and returns (llm_instance, model_name, provider_name).
+        
+        Handles all model types:
+        - Local models (Ollama, LM Studio)
+        - Cloud models (OpenAI, Anthropic, etc.)
+        - Custom models (user-defined API endpoints)
         """
         db = SessionLocal()
         try:
             # 1. Resolve from database
             db_model = db.query(CortexModel).filter(CortexModel.name == db_model_name).first()
             if db_model:
+                # Use model_identifier if available, otherwise fallback to name
+                model_identifier = db_model.model_identifier or db_model_name
+                
                 if db_model.is_local:
+                    # LOCAL MODELS (Ollama, LM Studio)
                     if db_model.provider_name.lower() in ("lm studio", "lm-studio"):
                         return APILLM(
                             api_key="lm-studio",
                             base_url="http://localhost:1234/v1",
-                            model=db_model_name
-                        ), db_model_name, "LM Studio"
+                            model=model_identifier
+                        ), model_identifier, "LM Studio"
                     else:
-                        return LocalLLM(model=db_model_name), db_model_name, "Ollama"
+                        # Ollama
+                        return LocalLLM(model=model_identifier), model_identifier, "Ollama"
+                elif db_model.is_custom:
+                    # CUSTOM MODELS (user-defined API endpoints)
+                    custom_provider_name = db_model.provider_name or "Custom"
+                    provider = db.query(CortexProvider).filter(CortexProvider.name == custom_provider_name).first()
+                    
+                    if provider:
+                        key = api_key or retrieve_key_securely(provider.name, provider.api_key_encrypted)
+                        base_url = api_base_url or db_model.api_endpoint or provider.base_url
+                        
+                        if not base_url:
+                            raise ValueError(f"API endpoint is missing for custom model {db_model_name}")
+                        
+                        # Custom models may or may not require keys
+                        return build_provider_llm(
+                            "Custom",
+                            api_key=key,
+                            base_url=base_url,
+                            model=model_identifier,
+                        ), model_identifier, f"Custom_{db_model_name}"
+                    else:
+                        raise ValueError(f"Provider not found for custom model {db_model_name}")
                 else:
+                    # CLOUD MODELS (OpenAI, Anthropic, etc.)
                     provider = db.query(CortexProvider).filter(CortexProvider.name == db_model.provider_name).first()
                     if provider:
                         if not provider.is_enabled:
@@ -236,8 +268,10 @@ class IntelligentRouter:
                             provider.name,
                             api_key=key,
                             base_url=base_url,
-                            model=db_model_name,
-                        ), db_model_name, provider.name
+                            model=model_identifier,
+                        ), model_identifier, provider.name
+                    else:
+                        raise ValueError(f"Provider {db_model.provider_name} not found for model {db_model_name}")
             
             # 2. Check fallback mapping if model name contains prefix (e.g. "openai/gpt-4o")
             if "/" in db_model_name:

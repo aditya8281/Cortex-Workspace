@@ -49,7 +49,7 @@ import {
   Wand2,
 } from "lucide-react";
 
-type TabKey = "providers" | "routing" | "status";
+type TabKey = "models" | "providers" | "routing" | "status";
 
 const TASKS = [
   { task_type: "chat", label: "Chat", helper: "General conversation and lightweight assist." },
@@ -102,11 +102,17 @@ export function ModelsPage() {
   const { data: models = [], isLoading: loadingModels, refetch: refetchModels } = useQuery<RegisteredModel[]>({
     queryKey: ["models"],
     queryFn: getAllModels,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+    refetchOnWindowFocus: true,
   });
 
   const { data: providers = [], isLoading: loadingProviders, refetch: refetchProviders } = useQuery<Provider[]>({
     queryKey: ["providers"],
     queryFn: getProviders,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+    refetchOnWindowFocus: true,
   });
 
   const { data: routingProfiles = [] } = useQuery<RoutingProfile[]>({
@@ -436,6 +442,7 @@ export function ModelsPage() {
 
         <div className="flex flex-wrap gap-2 border-b border-cortex-border pb-2">
           {[
+            { key: "models", label: "Available Models" },
             { key: "providers", label: "Provider Console" },
             { key: "routing", label: "Task Routing" },
             { key: "status", label: "System Status" },
@@ -455,6 +462,82 @@ export function ModelsPage() {
             </button>
           ))}
         </div>
+
+        {activeTab === "models" && (
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* Local Models */}
+            <Card className="border-cortex-border bg-cortex-surface/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-base">Local Models</CardTitle>
+                <CardDescription>Ollama and LM Studio models</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {loadingModels ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-4 w-4 animate-spin text-cortex-accent" />
+                  </div>
+                ) : localModels.length === 0 ? (
+                  <div className="text-xs text-cortex-muted">No local models available. Is Ollama running?</div>
+                ) : (
+                  <div className="space-y-2">
+                    {localModels.map((model) => (
+                      <div key={model.name} className="rounded-lg border border-cortex-border/50 bg-cortex-elevated/30 p-2">
+                        <div className="font-mono text-xs font-semibold text-cortex-text">{model.name}</div>
+                        {model.parameters && <div className="text-[10px] text-cortex-muted">{model.parameters}</div>}
+                        {model.context_length && <div className="text-[10px] text-cortex-muted">Context: {model.context_length.toLocaleString()}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Cloud Models */}
+            <Card className="border-cortex-border bg-cortex-surface/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-base">Cloud Models</CardTitle>
+                <CardDescription>OpenAI, Anthropic, and other APIs</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {loadingModels ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-4 w-4 animate-spin text-cortex-accent" />
+                  </div>
+                ) : cloudModels.length === 0 ? (
+                  <div className="text-xs text-cortex-muted">No cloud models available. Enable providers in the Provider Console tab.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {cloudModels.slice(0, 10).map((model) => (
+                      <div key={model.name} className="rounded-lg border border-cortex-border/50 bg-cortex-elevated/30 p-2">
+                        <div className="flex items-center justify-between">
+                          <div className="font-mono text-xs font-semibold text-cortex-text">{model.name}</div>
+                          <Badge variant="secondary" className="text-[9px]">{model.provider}</Badge>
+                        </div>
+                        {model.context_length && <div className="text-[10px] text-cortex-muted">Context: {model.context_length.toLocaleString()}</div>}
+                      </div>
+                    ))}
+                    {cloudModels.length > 10 && <div className="text-xs text-cortex-muted">+{cloudModels.length - 10} more models</div>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Custom Models */}
+            <Card className="border-cortex-border bg-cortex-surface/50 backdrop-blur">
+              <CardHeader>
+                <CardTitle className="text-base">Custom Models</CardTitle>
+                <CardDescription>User-defined API endpoints</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="text-xs text-cortex-muted">Custom models let you add any API-compatible endpoint to Cortex.</div>
+                <Button size="sm" className="w-full gap-2" onClick={() => setActiveTab("providers")}>
+                  <Plus className="h-3 w-3" />
+                  Add Custom Model
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {activeTab === "providers" && (
           <div className="grid gap-6 xl:grid-cols-[0.95fr_1.55fr]">
