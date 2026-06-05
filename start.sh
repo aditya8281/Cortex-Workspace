@@ -22,9 +22,9 @@ CYAN="\033[36m"
 RED="\033[31m"
 RESET="\033[0m"
 
-echo -e "${BOLD}${BLUE}====================================================${RESET}"
-echo -e "${BOLD}${CYAN}          CORTEX HYBRID REPO AI AGENT               ${RESET}"
-echo -e "${BOLD}${BLUE}====================================================${RESET}"
+echo -e "${BOLD}${BLUE}========================================${RESET}"
+echo -e "${BOLD}${CYAN}            CORTEX WORKSPACE            ${RESET}"
+echo -e "${BOLD}${BLUE}========================================${RESET}"
 echo -e "Starting local development services...\n"
 
 # 1. Check and copy environment variables
