@@ -20,6 +20,7 @@ state.db
 .cortex/
 .cortex_memory_path
 .cortex_memory/
+.cortex_bootstrap/
 
 # Node / frontend caches
 node_modules/
