@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field
 
 class UserProfileSchema(BaseModel):
     display_name: str | None = None
-    email: str | None = None
     job_title: str | None = None
     location: str | None = None
     bio: str | None = None

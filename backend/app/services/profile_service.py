@@ -44,7 +44,6 @@ def get_or_create(db: Session, user: User) -> UserProfile:
 def to_schema(user: User, profile: UserProfile) -> UserProfileSchema:
     return UserProfileSchema(
         display_name=profile.display_name or user.full_name,
-        email=user.email,
         job_title=profile.job_title,
         location=profile.location,
         bio=profile.bio,

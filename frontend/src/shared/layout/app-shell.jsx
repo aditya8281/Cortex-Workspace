@@ -3,19 +3,23 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getSessionToken } from "../auth/session";
+import { getSessionToken, getSessionUser } from "../auth/session";
 
-const navItems = [
+const userNavItems = [
   { label: "Dashboard", href: "/" },
   { label: "Chat", href: "/chat" },
   { label: "Memory", href: "/memory" },
   { label: "Knowledge Graph", href: "/knowledge-graph" },
-  { label: "Models", href: "/models" },
-  { label: "Marketplace", href: "/marketplace" },
-  { label: "Vitals", href: "/vitals" },
   { label: "Profile", href: "/profile" },
   { label: "Vault", href: "/vault" },
 ];
+
+const adminNavItems = [
+  { label: "Models", href: "/models" },
+  { label: "Vitals", href: "/vitals" },
+];
+
+const adminRoutes = ["/models", "/vitals"];
 
 function isActiveRoute(pathname, href) {
   if (href === "/") return pathname === "/";
@@ -26,13 +30,21 @@ export function AppShell({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [sessionUser, setSessionUser] = useState(null);
   const authRoute = pathname === "/auth";
   const bootRoute = pathname === "/boot";
+  const token = typeof window !== "undefined" ? getSessionToken() : null;
+  const isAdmin = sessionUser?.role === "admin";
+  const navItems = isAdmin ? [...userNavItems, ...adminNavItems] : userNavItems;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const token = getSessionToken();
+    const user = getSessionUser();
+    const admin = user?.role === "admin";
+    setSessionUser(user);
+
     if (!token && pathname === "/") {
       router.replace("/boot");
       return;
@@ -44,6 +56,11 @@ export function AppShell({ children }) {
     }
 
     if ((authRoute || bootRoute) && token) {
+      router.replace("/");
+      return;
+    }
+
+    if (token && !admin && adminRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
       router.replace("/");
       return;
     }
@@ -62,6 +79,11 @@ export function AppShell({ children }) {
   }
 
   if (authRoute || bootRoute) {
+    return children;
+  }
+
+  // After authentication we render only the child canvas (blank dashboard)
+  if (token && !authRoute && !bootRoute) {
     return children;
   }
 

@@ -54,3 +54,12 @@ def decode_access_token(token: str):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token expired or invalid"
         )
+
+
+def validate_password_strength(password: str) -> bool:
+    """Basic password strength validator: length >=8, contains letter and digit."""
+    if not password or len(password) < 8:
+        return False
+    has_alpha = any(c.isalpha() for c in password)
+    has_digit = any(c.isdigit() for c in password)
+    return has_alpha and has_digit

@@ -56,57 +56,59 @@ def fixture_client(tmp_path):
 def test_create_user(client):
     # Pre-populate a dummy first user so that the created user gets "user" role
     dummy_payload = {
-        "email": "dummyadmin@example.com",
+        "username": "dummyadmin",
         "full_name": "Dummy Admin",
         "password": "securepassword123"
     }
-    client.post("/api/v1/users", json=dummy_payload)
+    # first registration becomes admin
+    client.post("/api/auth/register", json=dummy_payload)
 
     payload = {
-        "email": "test@example.com",
+        "username": "testuser",
         "full_name": "Test User",
         "password": "securepassword123"
     }
-    response = client.post("/api/v1/users", json=payload)
+    response = client.post("/api/auth/register", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert data["email"] == "test@example.com"
-    assert data["full_name"] == "Test User"
-    assert "id" in data
-    assert data["role"] == "user"
+    # registration returns TokenResponse with nested user
+    assert "access_token" in data
+    assert data["user"]["username"] == "testuser"
+    assert data["user"]["full_name"] == "Test User"
+    assert data["user"]["role"] == "user"
 
 
 def test_create_duplicate_user(client):
     payload = {
-        "email": "duplicate@example.com",
+        "username": "duplicateuser",
         "full_name": "Test User 1",
         "password": "password123"
     }
     # First creation
-    response = client.post("/api/v1/users", json=payload)
+    response = client.post("/api/auth/register", json=payload)
     assert response.status_code == 200
 
     # Second creation (should fail cleanly with 400 instead of crashing with 500)
-    response = client.post("/api/v1/users", json=payload)
+    response = client.post("/api/auth/register", json=payload)
     assert response.status_code == 400
-    assert response.json()["detail"] == "Email already registered"
+    assert response.json()["detail"] in ("Username already registered", "Username already registered")
 
 
 def test_login_and_me(client):
     # 1. Register a user
     register_payload = {
-        "email": "me@example.com",
+        "username": "meuser",
         "full_name": "Me User",
         "password": "mypassword"
     }
-    client.post("/api/v1/users", json=register_payload)
+    client.post("/api/auth/register", json=register_payload)
 
     # 2. Login
     login_payload = {
-        "email": "me@example.com",
+        "username": "meuser",
         "password": "mypassword"
     }
-    response = client.post("/api/v1/login", json=login_payload)
+    response = client.post("/api/auth/login", json=login_payload)
     assert response.status_code == 200
     token_data = response.json()
     assert "access_token" in token_data
@@ -114,10 +116,10 @@ def test_login_and_me(client):
 
     # 3. Access protected profile /me with valid token
     headers = {"Authorization": f"Bearer {token_data['access_token']}"}
-    response = client.get("/api/v1/me", headers=headers)
+    response = client.get("/api/auth/me", headers=headers)
     assert response.status_code == 200
     profile_data = response.json()
-    assert profile_data["email"] == "me@example.com"
+    assert profile_data["username"] == "meuser"
     assert profile_data["full_name"] == "Me User"
 
     # 4. Access protected profile /me with invalid token
