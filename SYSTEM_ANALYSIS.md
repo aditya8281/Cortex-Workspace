@@ -27,16 +27,16 @@
 
 ```mermaid
 graph TD
-  User[User Browser / Client] -->|HTTP/WS| Frontend[Frontend (Next.js)]
-  Frontend -->|HTTP REST| APIGateway[API Gateway (FastAPI)]
-  APIGateway -->|Routes| Controllers[API Controllers]
-  Controllers -->|calls| Services[Business Services]
-  Services -->|queries| DB[(SQLite / Postgres via SQLAlchemy)]
-  Services -->|cache| Redis[(Redis Cache)]
-  Services -->|invoke| AIExecutor[AIExecutor & ModelAdapters]
-  AIExecutor -->|calls| ExternalModels[(Ollama / OpenAI / Cloud Providers)]
-  Services -->|read/write| MemoryVault[(Memory Vault on-disk)]
-  MemoryVault -->|contains| VectorStore[(FAISS / FAISS files)]
+  User["User Browser / Client"] -->|"HTTP/WS"| Frontend["Frontend (Next.js)"]
+  Frontend -->|"HTTP REST"| APIGateway["API Gateway (FastAPI)"]
+  APIGateway -->|"Routes"| Controllers["API Controllers"]
+  Controllers -->|"calls"| Services["Business Services"]
+  Services -->|"queries"| DB[("SQLite / Postgres via SQLAlchemy")]
+  Services -->|"cache"| Redis[("Redis Cache")]
+  Services -->|"invoke"| AIExecutor["AIExecutor & ModelAdapters"]
+  AIExecutor -->|"calls"| ExternalModels[("Ollama / OpenAI / Cloud Providers")]
+  Services -->|"read/write"| MemoryVault["Memory Vault (on-disk)"]
+  MemoryVault -->|"contains"| VectorStore[("FAISS / Vector Store")]
 ```
 
 Component details (precise file anchors):
