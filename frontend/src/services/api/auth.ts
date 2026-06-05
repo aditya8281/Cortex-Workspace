@@ -40,4 +40,19 @@ export const authService = {
     const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : null;
   },
+
+  async updateMe(data: { email?: string; full_name?: string; password?: string }): Promise<User> {
+    const response = await apiClient.put<User>("/users/me", data);
+    if (response.data) {
+      // update local storage if user is returned
+      const localUser = localStorage.getItem("user");
+      if (localUser) {
+        try {
+          const u = JSON.parse(localUser);
+          localStorage.setItem("user", JSON.stringify({ ...u, ...response.data }));
+        } catch {}
+      }
+    }
+    return response.data;
+  },
 };

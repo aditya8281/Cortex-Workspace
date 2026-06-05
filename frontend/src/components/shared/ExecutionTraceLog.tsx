@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { apiClient } from "@/services/api/client";
+import { API_ENDPOINTS } from "@/constants/endpoints";
 import { Play, Check, AlertCircle, Loader2, Code, Terminal, ChevronDown, ChevronUp } from "lucide-react";
 
 interface TraceEvent {
@@ -20,6 +21,8 @@ interface ExecutionTraceLogProps {
   queryText: string;
 }
 
+import { useIsMounted } from "@/hooks/useIsMounted";
+
 export function ExecutionTraceLog({
   active,
   executionId,
@@ -31,6 +34,8 @@ export function ExecutionTraceLog({
   const [isExpanded, setIsExpanded] = useState(true);
   const logEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollAbortRef = useRef<AbortController | null>(null);
+  const mountedRef = useIsMounted();
 
   // Auto-scroll to bottom of logs
   useEffect(() => {
@@ -59,11 +64,17 @@ export function ExecutionTraceLog({
 
     const poll = async () => {
       try {
+        // create/refresh abort controller for this poll invocation
+        if (pollAbortRef.current) {
+          try { pollAbortRef.current.abort(); } catch (e) {}
+        }
+        pollAbortRef.current = new AbortController();
         if (!executionId) {
           // 1. Poll the executions list to find the active running job
-          const res = await apiClient.get<any[]>("/execution?limit=5");
-          const runningJob = res.data.find(
-            (job) => job.status === "running" || job.summary?.goal?.toLowerCase().includes(queryText.toLowerCase().slice(0, 15))
+          const res = await apiClient.getSafe<any[]>(`${API_ENDPOINTS.EXECUTION_LIST}?limit=5`, { signal: pollAbortRef.current.signal });
+          const list = Array.isArray(res.data) ? res.data : [];
+          const runningJob = list.find(
+            (job) => job?.status === "running" || (job.summary?.goal || "").toLowerCase().includes(queryText.toLowerCase().slice(0, 15))
           );
 
           if (runningJob) {
@@ -71,7 +82,7 @@ export function ExecutionTraceLog({
           }
         } else {
           // 2. Poll details of the found execution
-          await fetchExecutionDetails(executionId);
+          await fetchExecutionDetails(executionId, pollAbortRef.current?.signal);
         }
       } catch (err) {
         console.error("Trace polling error:", err);
@@ -86,15 +97,21 @@ export function ExecutionTraceLog({
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
+      if (pollAbortRef.current) {
+        try { pollAbortRef.current.abort(); } catch (e) {}
+        pollAbortRef.current = null;
+      }
     };
   }, [active, executionId, queryText]);
 
-  const fetchExecutionDetails = async (id: string) => {
+  const fetchExecutionDetails = async (id: string, signal?: AbortSignal) => {
     try {
-      const res = await apiClient.get<any>(`/execution/${id}`);
-      if (res.data && res.data.timeline) {
-        setEvents(res.data.timeline);
-        setStatus(res.data.status);
+      const res = await apiClient.getSafe<any>(API_ENDPOINTS.EXECUTION_DETAIL.replace("{id}", id), { signal });
+      const data = res.data ?? null;
+      if (!mountedRef.current) return;
+      if (data && data.timeline) {
+        setEvents(Array.isArray(data.timeline) ? data.timeline : []);
+        setStatus(data.status || "idle");
       }
     } catch (err) {
       console.error("Failed to load execution details:", err);

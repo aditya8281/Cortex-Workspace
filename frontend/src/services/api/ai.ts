@@ -3,28 +3,28 @@ import { API_ENDPOINTS } from "@/constants/endpoints";
 import type { ChatRequest, ChatResponse, ChatMessage } from "@/types/api";
 
 export const aiService = {
-  async ask(request: ChatRequest): Promise<ChatResponse> {
-    const response = await apiClient.post<ChatResponse>(API_ENDPOINTS.AI_ASK, request);
-    return response.data;
+  async ask(request: ChatRequest, signal?: AbortSignal): Promise<ChatResponse> {
+    const resp = await apiClient.postSafe<ChatResponse>(API_ENDPOINTS.AI_ASK, request, { signal });
+    return resp.data ?? ({} as ChatResponse);
   },
 
   async chat(request: ChatRequest): Promise<ChatResponse> {
-    const response = await apiClient.post<ChatResponse>(API_ENDPOINTS.AI_CHAT, request);
-    return response.data;
+    const resp = await apiClient.postSafe<ChatResponse>(API_ENDPOINTS.AI_CHAT, request);
+    return resp.data ?? ({} as ChatResponse);
   },
 
   async getHistory(): Promise<ChatMessage[]> {
-    const response = await apiClient.get<ChatMessage[]>(API_ENDPOINTS.AI_HISTORY);
-    return response.data || [];
+    const resp = await apiClient.getSafe<ChatMessage[]>(API_ENDPOINTS.AI_HISTORY);
+    return Array.isArray(resp.data) ? resp.data : [];
   },
 
-  async getExecution(executionId: string) {
-    const response = await apiClient.get(`${API_ENDPOINTS.EXECUTION_DETAIL.replace("{id}", executionId)}`);
-    return response.data;
+  async getExecution(executionId: string, signal?: AbortSignal) {
+    const resp = await apiClient.getSafe(API_ENDPOINTS.EXECUTION_DETAIL.replace("{id}", executionId), { signal });
+    return resp.data ?? null;
   },
 
   async replayExecution(executionId: string) {
-    const response = await apiClient.get(`${API_ENDPOINTS.EXECUTION_REPLAY.replace("{id}", executionId)}`);
-    return response.data;
+    const resp = await apiClient.getSafe(API_ENDPOINTS.EXECUTION_REPLAY.replace("{id}", executionId));
+    return resp.data ?? null;
   },
 };

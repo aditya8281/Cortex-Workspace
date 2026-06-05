@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, Badge } from "@/components/ui/base";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { modelsService, routingService } from "@/services/api/models";
 import type { CortexModel, CortexProvider, CortexRoutingProfile } from "@/types/api";
 import { Cpu, Server, ToggleLeft, Layers, RefreshCw, AlertCircle, HelpCircle } from "lucide-react";
@@ -32,6 +33,18 @@ export default function ModelsPage() {
     }
   };
 
+  const handleSelectProfile = async (profileName: string) => {
+    try {
+      setLoading(true);
+      setError("");
+      await routingService.selectProfile(profileName);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.message || `Failed to activate profile ${profileName}`);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -48,7 +61,8 @@ export default function ModelsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 animate-fade-in">
+    <ErrorBoundary>
+      <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 animate-fade-in">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/60 pb-4 gap-4">
         <div>
@@ -93,7 +107,15 @@ export default function ModelsPage() {
               <p className="text-xs text-slate-500 italic">No routing profiles detected.</p>
             ) : (
               profiles.map((profile) => (
-                <div key={profile.id} className="flex items-center justify-between p-3 bg-slate-950/40 border border-slate-900 rounded-xl hover:border-slate-800 transition-all">
+                <div
+                  key={profile.id}
+                  onClick={() => !profile.is_active && handleSelectProfile(profile.name)}
+                  className={`flex items-center justify-between p-3 border rounded-xl transition-all ${
+                    profile.is_active
+                      ? "bg-slate-950/40 border-cyan-500/30"
+                      : "bg-slate-950/40 border-slate-900 hover:border-slate-800 hover:bg-slate-950/60 cursor-pointer active:translate-y-[1px]"
+                  }`}
+                >
                   <div className="min-w-0 pr-3">
                     <p className="text-xs font-semibold text-slate-200 font-mono">{profile.name}</p>
                     <p className="text-[10px] text-slate-400 truncate max-w-xs">{profile.description}</p>
@@ -103,8 +125,8 @@ export default function ModelsPage() {
                       Active
                     </span>
                   ) : (
-                    <span className="text-[9px] font-mono tracking-wide uppercase px-2 py-0.5 bg-slate-900 border border-slate-800/40 rounded-full text-slate-500">
-                      Standby
+                    <span className="text-[9px] font-mono tracking-wide uppercase px-2 py-0.5 bg-slate-900 border border-slate-800/40 rounded-full text-slate-500 group-hover:text-cyan-400">
+                      Activate
                     </span>
                   )}
                 </div>
@@ -179,6 +201,7 @@ export default function ModelsPage() {
           </div>
         )}
       </Card>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

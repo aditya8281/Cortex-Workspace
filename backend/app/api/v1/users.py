@@ -122,3 +122,44 @@ def get_me(current_user: User = Depends(get_current_user)):
         "full_name": current_user.full_name,
         "role": current_user.role
     }
+
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+
+class MeUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    password: Optional[str] = None
+
+@router.put("/me", response_model=UserResponse)
+def update_me(
+    payload: MeUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if payload.email is not None and payload.email != current_user.email:
+        # Check conflict
+        existing = db.query(User).filter(User.email == payload.email).first()
+        if existing:
+            raise HTTPException(
+                status_code=400,
+                detail="Email already registered"
+            )
+        current_user.email = payload.email
+
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+
+    if payload.password is not None:
+        if len(payload.password) < 8:
+            raise HTTPException(
+                status_code=400,
+                detail="Password must be at least 8 characters long"
+            )
+        from backend.app.core.security import hash_password
+        current_user.hashed_password = hash_password(payload.password)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+

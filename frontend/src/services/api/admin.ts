@@ -66,4 +66,14 @@ export const adminService = {
     const response = await apiClient.get<any[]>("/models/metrics/health");
     return response.data || [];
   },
+
+  async listServices(): Promise<any[]> {
+    const response = await apiClient.get<any[]>("/health/services");
+    return response.data || [];
+  },
+
+  async restartService(name: string): Promise<any> {
+    const response = await apiClient.post(`/health/services/${name}/restart`);
+    return response.data;
+  },
 };

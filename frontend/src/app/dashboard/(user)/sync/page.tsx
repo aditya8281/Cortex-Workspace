@@ -9,6 +9,9 @@ import {
   AlertTriangle, ArrowUpRight, ShieldCheck, Database, HardDrive, Terminal
 } from "lucide-react";
 import { apiClient } from "@/services/api/client";
+import { useIsMounted } from "@/hooks/useIsMounted";
+import { API_ENDPOINTS } from "@/constants/endpoints";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 export default function SyncPage() {
   const [intelligence, setIntelligence] = useState<WorkspaceIntelligence | null>(null);
@@ -17,14 +20,18 @@ export default function SyncPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const mountedRef = useIsMounted();
+
   const fetchData = async () => {
     try {
       const [intData, statusData] = await Promise.all([
         syncService.getIntelligence(),
         syncService.getStatus(),
       ]);
-      setIntelligence(intData);
-      setSyncStatus(statusData);
+      if (mountedRef.current) {
+        setIntelligence(intData);
+        setSyncStatus(statusData);
+      }
     } catch (error) {
       console.error("Failed to fetch sync data:", error);
     }
@@ -34,7 +41,7 @@ export default function SyncPage() {
     const initFetch = async () => {
       setLoading(true);
       await fetchData();
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     };
     initFetch();
   }, []);
@@ -68,54 +75,57 @@ export default function SyncPage() {
   const handleTriggerSync = async () => {
     try {
       setActionLoading(true);
-      await apiClient.post("/sync/now");
+      await apiClient.postSafe(API_ENDPOINTS.SYNC_NOW);
       await fetchData();
     } catch (error) {
       console.error("Sync failed:", error);
     } finally {
-      setActionLoading(false);
+      if (mountedRef.current) setActionLoading(false);
     }
   };
 
   const handleForceResync = async () => {
     try {
       setActionLoading(true);
-      await apiClient.post("/sync/force");
+      await apiClient.postSafe(API_ENDPOINTS.SYNC_FORCE);
       await fetchData();
     } catch (error) {
       console.error("Force resync failed:", error);
     } finally {
-      setActionLoading(false);
+      if (mountedRef.current) setActionLoading(false);
     }
   };
 
   const handleCancelSync = async () => {
     try {
       setActionLoading(true);
-      await apiClient.post("/sync/cancel");
+      await apiClient.postSafe(API_ENDPOINTS.SYNC_CANCEL);
       await fetchData();
     } catch (error) {
       console.error("Cancel sync failed:", error);
     } finally {
-      setActionLoading(false);
+      if (mountedRef.current) setActionLoading(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
-        <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
-          <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">Loading telemetry...</span>
+      <ErrorBoundary>
+        <div className="flex items-center justify-center min-h-[calc(100vh-6rem)]">
+          <div className="flex flex-col items-center gap-3">
+            <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
+            <span className="text-xs font-mono text-slate-500 uppercase tracking-widest">Loading telemetry...</span>
+          </div>
         </div>
-      </div>
+      </ErrorBoundary>
     );
   }
 
   const isSyncing = syncStatus?.sync_status === "syncing" || syncStatus?.active_sync_status === "syncing";
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 animate-fade-in">
+    <ErrorBoundary>
+      <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 animate-fade-in">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-800/60 pb-4 gap-4">
         <div>
@@ -229,7 +239,7 @@ export default function SyncPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
                   SYNCING: {syncStatus?.current_path ? `...${syncStatus.current_path.slice(-30)}` : "Analyzing files..."}
                 </span>
-                <span className="text-slate-300 font-bold">{syncStatus?.progress_percent?.toFixed(1) || 0.0}%</span>
+                <span className="text-slate-300 font-bold">{Number(syncStatus?.progress_percent ?? 0).toFixed(1)}%</span>
               </div>
               <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
                 <div 
@@ -238,8 +248,8 @@ export default function SyncPage() {
                 />
               </div>
               <div className="flex items-center justify-between text-[10px] font-mono text-slate-500">
-                <span>Speed: {syncStatus?.speed_files_per_sec?.toFixed(1) || 0} files/s</span>
-                <span>Est. time: {syncStatus?.estimated_time_remaining?.toFixed(0) || 0}s remaining</span>
+                <span>Speed: {Number(syncStatus?.speed_files_per_sec ?? 0).toFixed(1)} files/s</span>
+                <span>Est. time: {Number(syncStatus?.estimated_time_remaining ?? 0).toFixed(0)}s remaining</span>
               </div>
             </div>
           )}
@@ -305,6 +315,7 @@ export default function SyncPage() {
           </div>
         </Card>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/base";
 import { memoryService } from "@/services/api/memory";
 import { Search, Compass, AlertCircle, RefreshCw, FileText, ExternalLink } from "lucide-react";
+import { useIsMounted } from "@/hooks/useIsMounted";
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useIsMounted();
+  const abortRef = useRef<AbortController | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,16 +24,32 @@ export default function SearchPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await memoryService.searchMemory(searchQuery);
+      // cancel previous
+      if (abortRef.current) {
+        try { abortRef.current.abort(); } catch (e) {}
+      }
+      const ac = new AbortController();
+      abortRef.current = ac;
+      const data = await memoryService.searchMemory(searchQuery, ac.signal);
+      if (!mountedRef.current) return;
       setResults(data || []);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Search failed";
       setError(message);
       console.error("Search error:", err);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
+
+  // cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) {
+        try { abortRef.current.abort(); } catch (e) {}
+      }
+    };
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 animate-fade-in">
@@ -96,7 +115,7 @@ export default function SearchPage() {
             {results.map((result, idx) => {
               const titleText = result.title || result.name || "Unnamed Result";
               const summaryText = result.summary || result.content || result.description || "No description provided.";
-              const scorePercent = result.score ? (result.score * 100).toFixed(0) : null;
+              const scorePercent = result.score != null ? Number(result.score * 100).toFixed(0) : null;
 
               return (
                 <div 

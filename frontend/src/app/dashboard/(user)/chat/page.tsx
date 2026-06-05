@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Card, Spinner } from "@/components/ui/base";
 import { aiService } from "@/services/api/ai";
@@ -10,22 +11,29 @@ import type { RootState } from "@/state/store";
 import type { ChatMessage } from "@/types/api";
 import { Send, Sparkles, Terminal } from "lucide-react";
 import { ExecutionTraceLog } from "@/components/shared/ExecutionTraceLog";
+import { ErrorMessage } from "@/components/shared/ErrorDisplay";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 
 export default function ChatPage() {
   const dispatch = useDispatch();
   const { messages, loading, currentModel } = useSelector((state: RootState) => state.chat);
   const [query, setQuery] = useState("");
   const [models, setModels] = useState<any[]>([]);
+  const [pageError, setPageError] = useState<string | null>(null);
 
   // Execution Trace states
   const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
   const [activeQueryText, setActiveQueryText] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const mountedRef = useIsMounted();
+  const askAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    const mounted = mountedRef.current;
     const fetchModels = async () => {
       try {
         const data = await modelsService.listAllModels();
+        if (!mountedRef.current) return;
         setModels(data);
         // Set auto or first model as default if none set
         if (data.length > 0 && !currentModel) {
@@ -59,10 +67,18 @@ export default function ChatPage() {
     setIsProcessing(true);
 
     try {
-      const response = await aiService.ask({
-        query: currentQuery,
-        llm_model: currentModel,
-      });
+      if (askAbortRef.current) {
+        try { askAbortRef.current.abort(); } catch (e) {}
+      }
+      const ac = new AbortController();
+      askAbortRef.current = ac;
+      const response = await aiService.ask(
+        {
+          query: currentQuery,
+          llm_model: currentModel,
+        },
+        ac.signal
+      );
 
       if (!response || !response.response) {
         throw new Error("Invalid response from AI service");
@@ -76,10 +92,10 @@ export default function ChatPage() {
       };
       
       if (response.execution_id) {
-        setActiveExecutionId(response.execution_id);
+        if (mountedRef.current) setActiveExecutionId(response.execution_id);
       }
       
-      dispatch(addMessage(assistantMessage));
+      if (mountedRef.current) dispatch(addMessage(assistantMessage));
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Failed to get response";
       const errorMessage: ChatMessage = {
@@ -87,16 +103,28 @@ export default function ChatPage() {
         content: `Error: ${errorMsg}`,
         timestamp: new Date().toISOString(),
       };
-      dispatch(addMessage(errorMessage));
+      if (mountedRef.current) dispatch(addMessage(errorMessage));
       console.error("Query failed:", error);
+      if (mountedRef.current) setPageError(errorMsg);
     } finally {
-      dispatch(setLoading(false));
-      setIsProcessing(false);
+      if (mountedRef.current) dispatch(setLoading(false));
+      if (mountedRef.current) setIsProcessing(false);
+      // clear ask abort
+      try { askAbortRef.current = null; } catch (e) {}
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (askAbortRef.current) {
+        try { askAbortRef.current.abort(); } catch (e) {}
+      }
+    };
+  }, []);
+
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 flex flex-col h-[calc(100vh-2.75rem)] gap-4">
+    <ErrorBoundary>
+      <div className="max-w-4xl mx-auto p-4 md:p-6 flex flex-col h-[calc(100vh-2.75rem)] gap-4">
       {/* Top Header Controls */}
       <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
         <div className="flex items-center gap-2">
@@ -197,6 +225,7 @@ export default function ChatPage() {
           <Send size={16} />
         </Button>
       </form>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { apiClient } from "@/services/api/client";
+import { API_ENDPOINTS } from "@/constants/endpoints";
 import { Cpu, Database, RefreshCw, Terminal, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/state/store";
@@ -36,21 +37,21 @@ export function SystemStatusBar() {
   const fetchStats = async () => {
     try {
       // Fetch hardware
-      const hardwareRes = await apiClient.get<HardwareStats>("/models/hardware");
+      const hardwareRes = await apiClient.get<HardwareStats>(API_ENDPOINTS.MODELS_HARDWARE);
       setHardware(hardwareRes.data);
       
       // Fetch deep health
-      const healthRes = await apiClient.get<{ status: string }>("/health/deep");
+      const healthRes = await apiClient.get<{ status: string }>(API_ENDPOINTS.HEALTH_DEEP);
       setStatus(healthRes.data.status === "healthy" ? "healthy" : "degraded");
 
       // Fetch intelligence status if not loaded
       if (!intelligence) {
-        const intelRes = await apiClient.get("/workspace/intelligence");
+        const intelRes = await apiClient.get(API_ENDPOINTS.WORKSPACE_INTELLIGENCE);
         dispatch(setIntelligence(intelRes.data));
       }
 
       // Fetch active routing profile
-      const routeRes = await apiClient.get("/models/routing/routes");
+      const routeRes = await apiClient.get(API_ENDPOINTS.ROUTING_ROUTES);
       setRoutingProfile(routeRes.data.profile_name || "Balanced");
     } catch (err) {
       console.error("Telemetry failed to fetch:", err);

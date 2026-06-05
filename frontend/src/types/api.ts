@@ -32,15 +32,19 @@ export interface APIResponse<T = any> {
   status?: number;
 }
 
-// Models
 export interface CortexModel {
   id: string;
   name: string;
-  type: "local" | "cloud" | "custom";
+  type: "local" | "cloud" | "custom" | string;
   provider_id?: string;
   context_length?: number;
   capabilities?: string[];
   metadata?: Record<string, any>;
+  parameters?: string;
+  api_endpoint?: string;
+  status?: string;
+  provider_name?: string;
+  is_custom?: boolean;
 }
 
 export interface CortexProvider {
@@ -120,10 +124,15 @@ export interface WorkspaceIntelligence {
 
 // Health
 export interface HealthStatus {
-  status: "alive" | "ready" | "not_ready";
+  status: "alive" | "ready" | "not_ready" | "healthy" | "degraded";
   database?: boolean;
   memory?: boolean;
   rag?: boolean;
+  checks?: {
+    database?: boolean;
+    memory?: boolean;
+    rag?: boolean;
+  };
 }
 
 // Execution

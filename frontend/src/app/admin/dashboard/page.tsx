@@ -48,19 +48,19 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <p className="text-gray-400 text-sm">Availability</p>
-              <p className="text-2xl font-bold">{metrics.availability.toFixed(2)}%</p>
+              <p className="text-2xl font-bold">{Number(metrics.availability ?? 0).toFixed(2)}%</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">Avg Latency</p>
-              <p className="text-2xl font-bold">{metrics.avg_latency_ms.toFixed(0)}ms</p>
+              <p className="text-2xl font-bold">{Number(metrics.avg_latency_ms ?? 0).toFixed(0)}ms</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">Error Rate</p>
-              <p className="text-2xl font-bold">{metrics.error_rate.toFixed(2)}%</p>
+              <p className="text-2xl font-bold">{Number(metrics.error_rate ?? 0).toFixed(2)}%</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">CPU Usage</p>
-              <p className="text-2xl font-bold">{metrics.cpu_usage.toFixed(1)}%</p>
+              <p className="text-2xl font-bold">{Number(metrics.cpu_usage ?? 0).toFixed(1)}%</p>
             </div>
             <div>
               <p className="text-gray-400 text-sm">Memory</p>

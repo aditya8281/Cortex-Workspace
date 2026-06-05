@@ -27,7 +27,7 @@ export function formatBytes(bytes: number): string {
     value /= 1024;
     unitIndex++;
   }
-  return `${value.toFixed(2)} ${units[unitIndex]}`;
+  return `${Number(value ?? 0).toFixed(2)} ${units[unitIndex]}`;
 }
 
 export function truncate(str: string, length: number): string {

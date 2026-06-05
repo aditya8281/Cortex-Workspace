@@ -36,6 +36,9 @@ export const API_ENDPOINTS = {
   SYNC_STATUS: "/sync/status",
   SYNC_RUN_LATEST: "/sync/runs/latest",
   SYNC_RUN: "/sync/runs/{id}",
+  SYNC_NOW: "/sync/now",
+  SYNC_FORCE: "/sync/force",
+  SYNC_CANCEL: "/sync/cancel",
   SYNC_CONFIG: "/sync/config",
   SYNC_CONFIG_INCLUDE: "/sync/config/include",
   SYNC_CONFIG_EXCLUDE: "/sync/config/exclude",
@@ -44,8 +47,10 @@ export const API_ENDPOINTS = {
   MEMORY_SEARCH: "/intelligence/memory/search",
   MEMORY_KNOWLEDGE: "/intelligence/knowledge",
   VAULT_SETTINGS: "/vault/settings",
+  VAULT_CHANGE_PATH: "/vault/change-path",
   VAULT_EXPORT: "/vault/export",
   VAULT_IMPORT: "/vault/import",
+  VAULT_RESET: "/vault/reset",
 
   // Hierarchical
   HIERARCHICAL_SEARCH: "/sync/hierarchical/search",
@@ -57,11 +62,17 @@ export const API_ENDPOINTS = {
   INTELLIGENCE_ACTIONS_PENDING: "/intelligence/actions/pending",
   INTELLIGENCE_ACTIONS_APPROVE: "/intelligence/actions/{id}/approve",
   INTELLIGENCE_PROACTIVE: "/intelligence/proactive",
+  // Workspace
+  WORKSPACE_INTELLIGENCE: "/workspace/intelligence",
 
   // Execution
   EXECUTION_LIST: "/execution",
   EXECUTION_DETAIL: "/execution/{id}",
   EXECUTION_REPLAY: "/execution/{id}/replay",
+
+  // Context
+  CONTEXT_ATTACH: "/context/attach",
+  CONTEXT_LIST: "/context",
 
   // Health
   HEALTH_LIVE: "/health/live",

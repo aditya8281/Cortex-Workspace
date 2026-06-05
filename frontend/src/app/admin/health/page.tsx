@@ -43,34 +43,34 @@ export default function HealthPage() {
       {error && <p className="text-danger">{error}</p>}
 
       {health && (
-        <Card>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-lg">Overall Status</span>
+        <Card className="p-6 bg-slate-900/40 border-slate-800/80 rounded-2xl">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-900 pb-3">
+              <span className="text-sm font-mono uppercase font-bold text-slate-300">Overall System Health</span>
               <Badge
-                variant={health.status === "ready" ? "secondary" : "danger"}
+                variant={health.status === "ready" || health.status === "healthy" ? "secondary" : "danger"}
               >
-                {health.status}
+                {(health.status || "UNKNOWN").toUpperCase()}
               </Badge>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 p-4 bg-background rounded">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Database</span>
-                <Badge variant={health.database ? "secondary" : "danger"}>
-                  {health.database ? "OK" : "ERROR"}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-slate-900 rounded-xl">
+                <span className="text-xs font-mono uppercase text-slate-400">Database Pool</span>
+                <Badge variant={health.checks?.database ? "secondary" : "danger"}>
+                  {health.checks?.database ? "OK" : "ERROR"}
                 </Badge>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Memory</span>
-                <Badge variant={health.memory ? "secondary" : "danger"}>
-                  {health.memory ? "OK" : "ERROR"}
+              <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-slate-900 rounded-xl">
+                <span className="text-xs font-mono uppercase text-slate-400">Cognitive Memory</span>
+                <Badge variant={health.checks?.memory ? "secondary" : "danger"}>
+                  {health.checks?.memory ? "OK" : "ERROR"}
                 </Badge>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">RAG System</span>
-                <Badge variant={health.rag ? "secondary" : "danger"}>
-                  {health.rag ? "OK" : "ERROR"}
+              <div className="flex items-center justify-between p-3.5 bg-slate-950/40 border border-slate-900 rounded-xl">
+                <span className="text-xs font-mono uppercase text-slate-400">RAG Context Engine</span>
+                <Badge variant={health.checks?.rag ? "secondary" : "danger"}>
+                  {health.checks?.rag ? "OK" : "ERROR"}
                 </Badge>
               </div>
             </div>

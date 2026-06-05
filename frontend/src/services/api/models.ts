@@ -38,8 +38,8 @@ export interface DownloadProgress {
 export const modelsService = {
   // List
   async listAllModels(): Promise<CortexModel[]> {
-    const response = await apiClient.get<CortexModel[]>(API_ENDPOINTS.MODELS_LIST);
-    return response.data || [];
+    const resp = await apiClient.getSafe<CortexModel[]>(API_ENDPOINTS.MODELS_LIST);
+    return Array.isArray(resp.data) ? resp.data : [];
   },
 
   async listByType(type: string): Promise<CortexModel[]> {
@@ -54,7 +54,8 @@ export const modelsService = {
 
   // Selection
   async selectModel(modelName: string): Promise<{ selected_model: string }> {
-    const response = await apiClient.post<{ selected_model: string }>(API_ENDPOINTS.MODELS_SELECT, { model: modelName });
+    // Backend expects payload { model_name: string, session_id?: string }
+    const response = await apiClient.post<{ selected_model: string }>(API_ENDPOINTS.MODELS_SELECT, { model_name: modelName });
     return response.data || { selected_model: modelName };
   },
 
@@ -83,8 +84,8 @@ export const modelsService = {
 
   // Providers
   async listProviders(): Promise<CortexProvider[]> {
-    const response = await apiClient.get<CortexProvider[]>(API_ENDPOINTS.MODELS_PROVIDERS);
-    return response.data || [];
+    const resp = await apiClient.getSafe<CortexProvider[]>(API_ENDPOINTS.MODELS_PROVIDERS);
+    return Array.isArray(resp.data) ? resp.data : [];
   },
 
   async addProvider(data: UpdateProviderRequest): Promise<CortexProvider> {
@@ -124,14 +125,34 @@ export const modelsService = {
   },
 
   // Downloads
-  async startDownload(modelName: string): Promise<DownloadProgress> {
-    const response = await apiClient.post<DownloadProgress>(API_ENDPOINTS.MODELS_PULL, { model: modelName });
-    return response.data || { job_id: '', status: '', progress: 0 };
+  async startDownload(modelName: string, signal?: AbortSignal): Promise<DownloadProgress> {
+    const resp = await apiClient.postSafe<any>(API_ENDPOINTS.MODELS_PULL, { model: modelName }, { signal });
+    if (resp.data) {
+      return {
+        job_id: resp.data.id || resp.data.job_id || "",
+        status: resp.data.status || "",
+        progress: resp.data.percent ?? resp.data.progress ?? 0,
+        model: resp.data.model || "",
+        message: resp.data.message || "",
+        error: resp.data.error || null,
+      };
+    }
+    return { job_id: "", status: "", progress: 0 };
   },
 
-  async getDownloadProgress(jobId: string): Promise<DownloadProgress> {
-    const response = await apiClient.get<DownloadProgress>(API_ENDPOINTS.MODELS_DOWNLOAD_JOB.replace("{job_id}", jobId));
-    return response.data || { job_id: jobId, status: '', progress: 0 };
+  async getDownloadProgress(jobId: string, signal?: AbortSignal): Promise<DownloadProgress> {
+    const resp = await apiClient.getSafe<any>(API_ENDPOINTS.MODELS_DOWNLOAD_JOB.replace("{job_id}", jobId), { signal });
+    if (resp.data) {
+      return {
+        job_id: resp.data.id || resp.data.job_id || jobId,
+        status: resp.data.status || "",
+        progress: resp.data.percent ?? resp.data.progress ?? 0,
+        model: resp.data.model || "",
+        message: resp.data.message || "",
+        error: resp.data.error || null,
+      };
+    }
+    return { job_id: jobId, status: "", progress: 0 };
   },
 
   async cancelDownload(jobId: string): Promise<{ cancelled: boolean }> {
