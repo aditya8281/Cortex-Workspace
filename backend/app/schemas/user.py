@@ -1,19 +1,24 @@
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    username: str = Field(min_length=1, max_length=128)
     password: str
 
 
 class UserCreate(BaseModel):
-    email: EmailStr
-    full_name: str
+    username: str = Field(min_length=1, max_length=128)
     password: str = Field(min_length=8)
+    role: str = Field(min_length=1, max_length=32)
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
 
 
 class UserResponse(BaseModel):
     id: int
+    username: str | None = None
     email: str
     full_name: str
     role: str
@@ -22,9 +27,10 @@ class UserResponse(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    email: EmailStr
-    full_name: str
-    role: str
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    full_name: Optional[str] = None
+    role: Optional[str] = None
 
 
 class TokenResponse(BaseModel):

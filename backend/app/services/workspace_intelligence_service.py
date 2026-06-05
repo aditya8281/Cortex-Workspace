@@ -83,7 +83,7 @@ class WorkspaceIntelligenceService:
             "purpose": purpose,
             "architecture": [
                 "FastAPI backend with layered services, routers, AI gateway, executor, and replay store.",
-                "React + Vite frontend that surfaces chat, execution traces, models, and admin tooling.",
+                "Next.js + React frontend that surfaces chat, execution traces, models, and admin tooling.",
                 "RAG and memory subsystems support repo-aware and conversation-aware assistance.",
             ],
             "repositories": repositories,
@@ -118,10 +118,11 @@ class WorkspaceIntelligenceService:
             "backend/app/ai/**/*.py",
             "backend/app/agent/*.py",
             "backend/app/tools/*.py",
-            "frontend/src/*.tsx",
-            "frontend/src/*.ts",
+            "frontend/app/**/*.js",
+            "frontend/app/**/*.jsx",
+            "frontend/lib/**/*.js",
             "frontend/package.json",
-            "frontend/vite.config.ts",
+            "frontend/next.config.js",
             "pyproject.toml",
             "README.md",
             "Makefile",
@@ -197,6 +198,8 @@ class WorkspaceIntelligenceService:
 
         if any(dep.startswith("react") for dep in deps) or any(path.name.endswith(".tsx") for path in files):
             add("React")
+        if "next" in deps or (self.root / "frontend" / "next.config.js").exists() or (self.root / "frontend" / "app" / "page.js").exists():
+            add("Next.js")
         if "vite" in deps or (self.root / "frontend" / "vite.config.ts").exists():
             add("Vite")
         if any("fastapi" in dep.lower() for dep in deps) or (self.root / "backend" / "app" / "main.py").exists():
@@ -220,8 +223,9 @@ class WorkspaceIntelligenceService:
                 entrypoints.append(EntryPoint(path=str(path.relative_to(self.root)), role=role))
 
         add(self.root / "backend" / "app" / "main.py", "FastAPI application entrypoint")
-        add(self.root / "frontend" / "src" / "main.tsx", "React application bootstrap")
-        add(self.root / "frontend" / "vite.config.ts", "Vite build configuration")
+        add(self.root / "frontend" / "app" / "layout.js", "Next.js application layout")
+        add(self.root / "frontend" / "app" / "page.js", "Next.js application page")
+        add(self.root / "frontend" / "next.config.js", "Next.js build configuration")
         add(self.root / "scripts" / "rebuild_index.py", "RAG index rebuild utility")
         add(self.root / "Makefile", "Local development command surface")
 
@@ -261,14 +265,14 @@ class WorkspaceIntelligenceService:
         add("Local-first workspace", "local-first" in source_text)
         add("React UI", "react" in dependency_text or any(path.name.endswith(".tsx") for path in files))
         add("FastAPI services", "fastapi" in dependency_text or (self.root / "backend" / "app" / "main.py").exists())
-        add("Vite tooling", "vite" in dependency_text or (self.root / "frontend" / "vite.config.ts").exists())
+        add("Next.js tooling", "next" in dependency_text or (self.root / "frontend" / "next.config.js").exists())
         add("Repository awareness", "rag" in file_text or "repository" in source_text)
         add("Execution replay", "execution" in file_text or (self.root / "backend" / "app" / "executor" / "execution_replay.py").exists())
         add("Model routing", "gateway" in file_text or (self.root / "backend" / "app" / "ai" / "gateway.py").exists())
         add("Memory layer", "memory" in file_text or (self.root / "backend" / "app" / "ai" / "memory").exists())
         add("RAG retrieval", (self.root / "backend" / "app" / "rag" / "service.py").exists())
-        add("Authentication", "auth" in file_text or (self.root / "frontend" / "src" / "api" / "auth.ts").exists())
-        add("Admin tools", "admin" in file_text or (self.root / "frontend" / "src" / "App.tsx").exists())
+        add("Authentication", "auth" in file_text or (self.root / "frontend" / "app" / "page.js").exists())
+        add("Admin tools", "admin" in file_text or (self.root / "frontend" / "app" / "layout.js").exists())
         add("Workspace intelligence", (self.root / "backend" / "app" / "services" / "workspace_intelligence_service.py").exists())
 
         return concepts[:12]
@@ -346,7 +350,7 @@ class WorkspaceIntelligenceService:
         ]
 
         for path in files:
-            if path.suffix not in {".ts", ".tsx"}:
+            if path.suffix not in {".ts", ".tsx", ".js", ".jsx"}:
                 continue
             text = self._read_text(path, limit=20000)
             for pattern in patterns:
@@ -400,6 +404,8 @@ class WorkspaceIntelligenceService:
         ]
         if "React" in frameworks:
             edges.append({"source": "frontend", "target": "React", "relation": "uses"})
+        if "Next.js" in frameworks:
+            edges.append({"source": "frontend", "target": "Next.js", "relation": "builds_with"})
         if "Vite" in frameworks:
             edges.append({"source": "frontend", "target": "Vite", "relation": "builds_with"})
         if "FastAPI" in frameworks:
@@ -421,16 +427,17 @@ class WorkspaceIntelligenceService:
                 module = ".".join(Path(rel).with_suffix("").parts)
                 if module not in nodes:
                     nodes.append(module)
-            if rel.startswith("frontend/src"):
+            if rel.startswith("frontend/app") or rel.startswith("frontend/lib"):
                 module = ".".join(Path(rel).with_suffix("").parts)
                 if module not in nodes:
                     nodes.append(module)
 
         if "backend.app.main" in nodes:
             edges.append({"source": "backend.app.main", "target": "backend.app.api.router", "relation": "mounts"})
-        if "frontend.src.App" in nodes:
-            edges.append({"source": "frontend.src.App", "target": "frontend.src.api.ai", "relation": "imports"})
-            edges.append({"source": "frontend.src.App", "target": "frontend.src.api.auth", "relation": "imports"})
+        if "frontend.app.page" in nodes:
+            edges.append({"source": "frontend.app.page", "target": "frontend.lib.cortex-api", "relation": "imports"})
+        if "frontend.app.layout" in nodes:
+            edges.append({"source": "frontend.app.layout", "target": "frontend.app.globals", "relation": "imports"})
 
         return {"nodes": nodes[:24], "edges": edges[:20]}
 
@@ -760,7 +767,7 @@ class WorkspaceIntelligenceService:
         config: list[str] = []
         candidates = [
             self.root / "backend" / "app" / "core" / "config.py",
-            self.root / "frontend" / "vite.config.ts",
+            self.root / "frontend" / "next.config.js",
             self.root / "frontend" / "package.json",
             self.root / "pyproject.toml",
             self.root / ".env",
@@ -816,7 +823,7 @@ class WorkspaceIntelligenceService:
         warnings: list[str] = []
         if not (self.root / ".env").exists():
             warnings.append("No .env file found at the workspace root.")
-        if not (self.root / "frontend" / "src" / "App.tsx").exists():
+        if not (self.root / "frontend" / "app" / "page.js").exists():
             warnings.append("Frontend app entrypoint is missing or relocated.")
         if not any("main.py" in str(path) for path in files):
             warnings.append("FastAPI entrypoint was not detected in the scan.")
@@ -830,9 +837,9 @@ class WorkspaceIntelligenceService:
             "backend/app/executor/graph_runner.py",
             "backend/app/rag/service.py",
             "backend/app/ai/gateway.py",
-            "frontend/src/App.tsx",
-            "frontend/src/api/ai.ts",
-            "frontend/src/api/execution.ts",
+            "frontend/app/page.js",
+            "frontend/app/layout.js",
+            "frontend/lib/cortex-api.js",
         ]
         return [str(path.relative_to(self.root)) for path in files if str(path.relative_to(self.root)) in wanted]
 
@@ -843,7 +850,7 @@ class WorkspaceIntelligenceService:
             self.root / "backend" / "app" / "api" / "router.py",
             self.root / "backend" / "app" / "executor" / "executor.py",
             self.root / "backend" / "app" / "rag" / "service.py",
-            self.root / "frontend" / "src" / "App.tsx",
+            self.root / "frontend" / "app" / "page.js",
         ]:
             if not rel.exists():
                 continue

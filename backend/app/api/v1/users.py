@@ -28,7 +28,7 @@ def create_new_user(
     if not db_user:
         raise HTTPException(
             status_code=400,
-            detail="Email already registered"
+            detail="Username or email already registered"
         )
     return UserResponse.model_validate(db_user)
 
@@ -93,20 +93,23 @@ def login(
     payload: UserLogin,
     db: Session = Depends(get_db)
 ):
-    token_data = login_user(db, payload.email, payload.password)
+    token_data = login_user(db, payload.username, payload.password)
 
     if not token_data:
         raise HTTPException(
             status_code=401,
-            detail="Invalid email or password"
+            detail="Invalid username or password"
         )
 
     # Ensure user field is included
     if "user" not in token_data or token_data["user"] is None:
-        user = db.query(User).filter(User.email == payload.email).first()
+        user = db.query(User).filter(
+            (User.username == payload.username) | (User.email == payload.username)
+        ).first()
         if user:
             token_data["user"] = {
                 "id": user.id,
+                "username": user.username,
                 "email": user.email,
                 "full_name": user.full_name,
                 "role": user.role
@@ -118,6 +121,7 @@ def login(
 def get_me(current_user: User = Depends(get_current_user)):
     return {
         "id": current_user.id,
+        "username": current_user.username,
         "email": current_user.email,
         "full_name": current_user.full_name,
         "role": current_user.role
@@ -127,8 +131,10 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 
 class MeUpdate(BaseModel):
+    username: Optional[str] = None
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
+    role: Optional[str] = None
     password: Optional[str] = None
 
 @router.put("/me", response_model=UserResponse)
@@ -150,6 +156,18 @@ def update_me(
     if payload.full_name is not None:
         current_user.full_name = payload.full_name
 
+    if payload.username is not None:
+        existing_username = db.query(User).filter(User.username == payload.username, User.id != current_user.id).first()
+        if existing_username:
+            raise HTTPException(
+                status_code=400,
+                detail="Username already registered"
+            )
+        current_user.username = payload.username
+
+    if payload.role is not None:
+        current_user.role = payload.role
+
     if payload.password is not None:
         if len(payload.password) < 8:
             raise HTTPException(
@@ -162,4 +180,3 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return current_user
-

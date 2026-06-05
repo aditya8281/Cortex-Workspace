@@ -1,24 +1,34 @@
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
+
 from backend.app.models.user import User
 from backend.app.schemas.user import UserCreate, UserUpdate
 from backend.app.core.security import hash_password, verify_password, create_access_token
+
+
 def create_user(db: Session, user: UserCreate):
-    # Check if email is already registered
-    existing_user = db.query(User).filter(User.email == user.email).first()
-    if existing_user:
+    # Check if username is already registered
+    existing_username = db.query(User).filter(User.username == user.username).first()
+    if existing_username:
         return None
+
+    # Check if email is already registered when explicitly provided
+    if user.email:
+        existing_email = db.query(User).filter(User.email == user.email).first()
+        if existing_email:
+            return None
 
     hashed_pw = hash_password(user.password)
 
-    # First user is automatically created as an admin
-    is_first = db.query(User).count() == 0
-    role = "admin" if is_first else "user"
+    email_value = user.email or f"{user.username}@cortex.local"
+    full_name_value = user.full_name or user.username
 
     db_user = User(
-        email=user.email,
-        full_name=user.full_name,
+        username=user.username,
+        email=email_value,
+        full_name=full_name_value,
         hashed_password=hashed_pw,
-        role=role
+        role=user.role,
     )
 
     db.add(db_user)
@@ -38,8 +48,10 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(User).offset(skip).limit(limit).all()
 
 
-def authenticate_user(db: Session, email: str, password: str):
-    user = db.query(User).filter(User.email == email).first()
+def authenticate_user(db: Session, username: str, password: str):
+    user = db.query(User).filter(
+        or_(User.username == username, User.email == username)
+    ).first()
 
     if not user:
         return None
@@ -50,8 +62,8 @@ def authenticate_user(db: Session, email: str, password: str):
     return user
 
 
-def login_user(db: Session, email: str, password: str):
-    user = authenticate_user(db, email, password)
+def login_user(db: Session, username: str, password: str):
+    user = authenticate_user(db, username, password)
 
     if not user:
         return None
@@ -63,9 +75,10 @@ def login_user(db: Session, email: str, password: str):
         "token_type": "bearer",
         "user": {
             "id": user.id,
+            "username": user.username,
             "email": user.email,
             "full_name": user.full_name,
-            "role": user.role
+            "role": user.role,
         }
     }
 
@@ -83,9 +96,14 @@ def update_user(db: Session, user_id: int, user_update: UserUpdate) -> User | No
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         return None
-    db_user.email = user_update.email
-    db_user.full_name = user_update.full_name
-    db_user.role = user_update.role
+    if user_update.username is not None:
+        db_user.username = user_update.username
+    if user_update.email is not None:
+        db_user.email = user_update.email
+    if user_update.full_name is not None:
+        db_user.full_name = user_update.full_name
+    if user_update.role is not None:
+        db_user.role = user_update.role
     db.commit()
     db.refresh(db_user)
     return db_user

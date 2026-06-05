@@ -3,6 +3,12 @@ from fastapi import FastAPI
 
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.router import api_router
+from backend.app.api.chat import router as chat_router
+from backend.app.api.auth import router as auth_router
+from backend.app.api.memory import router as memory_router
+from backend.app.api.system import router as system_router
+from backend.app.api.models_control import router as models_control_router
+from backend.app.api.vault import router as vault_router
 from backend.app.core.config import settings
 from backend.app.core.logging import setup_logging
 from backend.app.core.middleware import RequestLoggingMiddleware
@@ -103,6 +109,12 @@ app.include_router(
     api_router,
     prefix=settings.API_V1_PREFIX,
 )
+app.include_router(chat_router)
+app.include_router(auth_router)
+app.include_router(memory_router)
+app.include_router(system_router)
+app.include_router(models_control_router)
+app.include_router(vault_router)
 
 @app.get("/")
 async def root():
