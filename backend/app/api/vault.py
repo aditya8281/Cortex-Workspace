@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from backend.app.api.deps import get_current_user, get_current_user_optional
 from backend.app.models.user import User
-from backend.app.services.memory_manager import memory_manager
+from backend.app.services.vault_manager import vault_manager
 from backend.app.core.security import verify_password
 
 router = APIRouter()
@@ -20,10 +20,10 @@ class VaultUnlockPayload(BaseModel):
 
 
 def _get_category_stats() -> dict[str, dict[str, int]]:
-    active_path = memory_manager.get_memory_path()
+    active_path = vault_manager.get_vault_path()
     categories: dict[str, dict[str, int]] = {}
 
-    for category in memory_manager.CATEGORIES:
+    for category in vault_manager.CATEGORIES:
         category_path = active_path / category
         if category_path.exists():
             file_count = len([entry for entry in category_path.iterdir() if entry.is_file()])
@@ -41,7 +41,7 @@ def _get_category_stats() -> dict[str, dict[str, int]]:
 
 
 def _vault_payload(*, locked: bool, unlocked_by: str | None = None) -> dict[str, object]:
-    active_path = memory_manager.get_memory_path()
+    active_path = vault_manager.get_vault_path()
     categories = _get_category_stats()
     total_size_bytes = sum(item["size_bytes"] for item in categories.values())
 
@@ -51,7 +51,7 @@ def _vault_payload(*, locked: bool, unlocked_by: str | None = None) -> dict[str,
         "encrypted": True,
         "unlocked_by": unlocked_by,
         "active_path": str(active_path),
-        "is_paused": memory_manager.is_indexing_paused(),
+        "is_paused": False,
         "total_size_bytes": total_size_bytes,
         "categories": categories,
         "vault_hint": "Vault remains locked until password verification completes.",

@@ -73,9 +73,10 @@ async def upload_profile_photo(
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
 
-    # store under users/<id>/profile with a deterministic filename
+    # store under users/<id>/profile with a deterministic user-prefixed filename
+    import time
     ext = os.path.splitext(file.filename)[1] or ".bin"
-    filename = f"avatar{ext}"
+    filename = f"user_{current_user.id}_{int(time.time())}{ext}"
     try:
         profile_dir = storage.get_user_profile_root(current_user.id)
         target = profile_dir / filename

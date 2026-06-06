@@ -1,91 +1,96 @@
 from pathlib import Path
-import os
-from backend.app.core.paths import PROJECT_ROOT
-from backend.app.core.config import settings
+from backend.app.core.storage_manager import storage_manager
 
 
 def get_data_root() -> Path:
-    """
-    Returns the top-level Cortex data root. Priority:
-    - If env var or settings.MEMORY_PATH points to an explicit CortexData root, use it.
-    - Otherwise default to PROJECT_ROOT / "CortexData".
-    """
-    env = settings.MEMORY_PATH or os.environ.get("CORTEX_MEMORY_PATH")
-    if env:
-        p = Path(env).expanduser().resolve()
-        # If user pointed at a subfolder (like .cortex_memory), normalize to parent CortexData
-        return p
-    return (PROJECT_ROOT / "CortexData").resolve()
+    """Return the Cortex storage root managed by StorageManager."""
+    return storage_manager.get_cortex_root()
 
 
 def get_system_root() -> Path:
-    root = get_data_root() / "system"
+    # The system root is the Cortex storage root itself
+    root = get_data_root()
     root.mkdir(parents=True, exist_ok=True)
     return root
 
 
 def get_database_path() -> Path:
-    db_dir = get_system_root() / "database"
-    db_dir.mkdir(parents=True, exist_ok=True)
-    return (db_dir / "app.db").resolve()
+    return storage_manager.get_database_path()
 
 
 def get_memory_root() -> Path:
-    root = get_system_root() / "memory"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    return storage_manager.get_memory_path()
 
 
 def get_embeddings_root() -> Path:
-    root = get_system_root() / "embeddings"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    return storage_manager.get_embeddings_path()
 
 
 def get_indexes_root() -> Path:
-    root = get_system_root() / "indexes"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    return storage_manager.get_indexes_path()
 
 
 def get_vector_db_root() -> Path:
-    root = get_system_root() / "vector_db"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    # vector_db is implemented under indexes for the canonical layout
+    return storage_manager.get_indexes_path()
 
 
 def get_sync_root() -> Path:
-    root = get_system_root() / "sync"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    return storage_manager.get_sync_path()
 
 
 def get_cache_root() -> Path:
-    root = get_system_root() / "cache"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    return storage_manager.get_cache_path()
 
 
 def get_rag_root() -> Path:
-    root = get_system_root() / "rag"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    # RAG artifacts belong to system memory/indexes; map to indexes root
+    return storage_manager.get_indexes_path()
 
 
 def get_users_root() -> Path:
+    # Legacy fallback: keep a system-managed users area within cortex_system for environments
+    # without a registered personal_storage_path. New deployments SHOULD rely on per-user
+    # storage roots registered in the storage registry.
     root = get_data_root() / "users"
     root.mkdir(parents=True, exist_ok=True)
     return root
 
 
 def get_user_profile_root(user_id: int | str) -> Path:
+    # Try registry first to allow user-provided storage roots
+    try:
+        # lazy import to avoid circular deps at module import time
+        from backend.app.db.session import SessionLocal
+        from backend.app.services.storage_registry import get_registry_for_user
+        db = SessionLocal()
+        reg = get_registry_for_user(db, int(user_id)) if db else None
+        if reg and reg.profile_path:
+            p = Path(reg.profile_path).expanduser().resolve()
+            p.mkdir(parents=True, exist_ok=True)
+            return p
+    except Exception:
+        pass
+
     user_dir = get_users_root() / f"user_{user_id}" / "profile"
     user_dir.mkdir(parents=True, exist_ok=True)
     return user_dir
 
 
 def get_user_vault_root(user_id: int | str) -> Path:
-    # Per new architecture, user vaults are under users/<id>/vault
+    # Prefer registry mapping for user vault location; vaults are user-private
+    try:
+        from backend.app.db.session import SessionLocal
+        from backend.app.services.storage_registry import get_registry_for_user
+        db = SessionLocal()
+        reg = get_registry_for_user(db, int(user_id)) if db else None
+        if reg and reg.vault_path:
+            p = Path(reg.vault_path).expanduser().resolve()
+            p.mkdir(parents=True, exist_ok=True)
+            return p
+    except Exception:
+        pass
+
     user_dir = get_users_root() / f"user_{user_id}" / "vault"
     user_dir.mkdir(parents=True, exist_ok=True)
     return user_dir

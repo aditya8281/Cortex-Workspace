@@ -17,10 +17,8 @@ _SessionLocal = None
 _engine_lock = threading.Lock()
 
 def get_database_url() -> str:
-    # Prefer explicit DATABASE_URL in production; fall back to memory-local sqlite
-    from backend.app.core.config import settings
-    if settings.DATABASE_URL:
-        return settings.DATABASE_URL
+    # Use the centralized StorageManager database path as the single source of truth.
+    # Do NOT derive DB locations from the memory vault or per-user storage.
     db_path = storage.get_database_path()
     return f"sqlite:///{db_path}"
 
@@ -52,6 +50,13 @@ def get_engine():
                     pass
 
             event.listen(_engine, "connect", _set_sqlite_pragma)
+            # Ensure any programmatic tables required by services are present
+            try:
+                from backend.app.db.base import Base
+                from backend.app.models.storage_registry import StorageRegistry
+                Base.metadata.create_all(bind=_engine, tables=[StorageRegistry.__table__])
+            except Exception:
+                pass
         return _engine
 
 def reset_db_engine():

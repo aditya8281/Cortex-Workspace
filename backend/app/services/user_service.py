@@ -23,7 +23,8 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
     # Handle both new multi-step registration and legacy UserCreate
     if hasattr(user, "vault_password"):
         vault_pw_hash = hash_password(user.vault_password)
-        personal_storage = user.personal_storage_path
+        # Accept new `data_path` or legacy `personal_storage_path`
+        personal_storage = getattr(user, "data_path", None) or getattr(user, "personal_storage_path", None)
         nickname_val = user.nickname
         bio_val = user.bio
         description_val = user.description
@@ -51,6 +52,8 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
         profile_photo=profile_photo_val,
         handles=handles_val,
         vault_password_hash=vault_pw_hash,
+        # store canonical `data_path` and keep legacy `personal_storage_path` in sync
+        data_path=personal_storage,
         personal_storage_path=personal_storage,
         preferences=preferences_val,
     )
@@ -62,10 +65,28 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
     # Initialize personal storage path for the new user if provided
     if personal_storage:
         try:
-            from backend.app.services.memory_manager import memory_manager
+            # Register storage entry and create folder structure for user
+            from backend.app.services.storage_registry import register_user_storage
             target_path = Path(personal_storage).expanduser().resolve()
             logger.info("Initializing personal storage path: %s", target_path)
-            memory_manager.change_memory_vault(str(target_path))
+            # create registry entry
+            try:
+                register_user_storage(db, db_user.id, str(target_path))
+            except Exception as e:
+                logger.error("Failed to register user storage: %s", e)
+
+            # create expected folders with safe permissions
+            try:
+                profile_dir = target_path / "profile"
+                vault_dir = target_path / "vault"
+                exports_dir = target_path / "exports"
+                activity_dir = target_path / "activity"
+                metadata_dir = target_path / "metadata"
+                for d in [profile_dir, vault_dir, exports_dir, activity_dir, metadata_dir]:
+                    d.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                logger.error("Failed to create user storage directories: %s", e)
+            # Memory relocation removed: do not change system memory location during registration
         except Exception as e:
             logger.error("Failed to configure personal storage path during registration: %s", e)
 
@@ -100,17 +121,7 @@ def login_user(db: Session, username: str, password: str):
     if not user:
         return None
 
-    # Load custom personal storage path if set and different from current path
-    if user.personal_storage_path:
-        try:
-            from backend.app.services.memory_manager import memory_manager
-            current_path = memory_manager.get_memory_path()
-            target_path = Path(user.personal_storage_path).expanduser().resolve()
-            if current_path != target_path:
-                logger.info("Switching memory vault storage to user path: %s", target_path)
-                memory_manager.change_memory_vault(str(target_path))
-        except Exception as e:
-            logger.error("Failed to load user personal storage path during login: %s", e)
+    # Per new storage model, do not switch system memory on user login.
 
     token = create_access_token(data={"sub": str(user.id)})
 
@@ -127,6 +138,7 @@ def login_user(db: Session, username: str, password: str):
             "description": user.description,
             "profile_photo": user.profile_photo,
             "handles": user.handles,
+            "data_path": user.data_path,
             "personal_storage_path": user.personal_storage_path,
             "preferences": user.preferences,
         }

@@ -148,8 +148,8 @@ async def import_vault(file: UploadFile = File(...), current_user: User | None =
         with open(zip_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # Restore from backup
-        memory_manager.import_memory(str(zip_file_path))
+        # Restore from backup into the user vault (do NOT import into system memory)
+        vault_manager.import_vault(str(zip_file_path))
         
         # Delete uploaded temp zip
         if zip_file_path.exists():

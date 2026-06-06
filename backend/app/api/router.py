@@ -10,6 +10,7 @@ from backend.app.api.v1.workspace import router as workspace_router
 from backend.app.api.v1.sync import router as sync_router
 from backend.app.api.v1.intelligence import router as intelligence_router
 from backend.app.api.v1.profile import router as profile_router
+from backend.app.api.v1.storage import router as storage_router
 from backend.app.api.v1.context import router as context_router
 from backend.app.api.v1.hierarchical import router as hierarchical_router
 from backend.app.api.v1.orchestration import router as orchestration_router
@@ -81,6 +82,12 @@ api_router.include_router(
     profile_router,
     prefix="/me/profile",
     tags=["Profile"]
+)
+
+api_router.include_router(
+    storage_router,
+    prefix="/users/me/storage",
+    tags=["Storage"]
 )
 
 api_router.include_router(

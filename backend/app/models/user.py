@@ -29,6 +29,9 @@ class User(Base):
     profile_photo: Mapped[str | None] = mapped_column(String, nullable=True)
     handles_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     vault_password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    # New canonical column for user-owned storage root (absolute path)
+    data_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Legacy column kept for backward compatibility; prefer `data_path` going forward
     personal_storage_path: Mapped[str | None] = mapped_column(String, nullable=True)
     preferences_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
 

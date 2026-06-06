@@ -7,20 +7,20 @@ from backend.app.services.memory_manager import memory_manager
 
 @pytest.fixture(autouse=True)
 def setup_test_vault(tmp_path):
-    # Setup temporary config file and redirect memory manager to use it
+    # Setup temporary test override path (no runtime reconfiguration of system memory)
     original_config_file = memory_manager._config_file
     test_config_file = tmp_path / ".cortex_memory_path"
     memory_manager._config_file = test_config_file
-    
+
     # Store original memory path
     try:
         original_path = memory_manager.get_memory_path()
     except Exception:
         original_path = Path("~/cortex_memory").expanduser().resolve()
-        
-    # Redirect to a temporary test memory vault directory
+
+    # Redirect to a temporary test memory vault directory using the test override
     test_vault_path = tmp_path / "cortex_memory"
-    memory_manager.set_memory_path(str(test_vault_path))
+    memory_manager._test_override_path = test_vault_path
     memory_manager.ensure_vault_structure()
     
     yield test_vault_path
@@ -29,13 +29,10 @@ def setup_test_vault(tmp_path):
     if test_config_file.exists():
         test_config_file.unlink()
         
-    # Restore original config file and path
+    # Restore original config file and remove test override
     memory_manager._config_file = original_config_file
-    if original_config_file.exists():
-        try:
-            memory_manager.set_memory_path(str(original_path))
-        except Exception:
-            pass
+    if hasattr(memory_manager, "_test_override_path"):
+        delattr(memory_manager, "_test_override_path")
 
 
 def test_default_structure(setup_test_vault):
@@ -94,19 +91,9 @@ def test_vault_migration(setup_test_vault, tmp_path):
     with patch("backend.app.db.session.reset_db_engine"), \
          patch("backend.app.db.session.run_migrations"):
         
-        # Change vault path
-        memory_manager.change_memory_vault(str(new_vault))
-        
-        # Verify new path is configured
-        assert memory_manager.get_memory_path() == new_vault
-        
-        # Verify folder structure is initialized in new path
-        for cat in memory_manager.CATEGORIES:
-            assert (new_vault / cat).exists()
-            
-        # Verify files were migrated/copied
-        assert (new_vault / "sync_state" / "profile.json").exists()
-        assert (new_vault / "sync_state" / "profile.json").read_text(encoding="utf-8") == "cortex-settings"
+        # Migration has been removed from the architecture — expect NotImplementedError
+        with pytest.raises(NotImplementedError):
+            memory_manager.change_memory_vault(str(new_vault))
 
 
 def test_vault_export_import(setup_test_vault, tmp_path):

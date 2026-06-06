@@ -25,8 +25,24 @@ class HierarchicalVectorStore:
             index_path = self.base_dir / f"{layer}_index.faiss"
             if index_path.exists():
                 try:
-                    self.indices[layer] = faiss.read_index(str(index_path))
-                    logger.info(f"Loaded existing hierarchical FAISS index for {layer} from {index_path}")
+                    loaded = faiss.read_index(str(index_path))
+                    # If the on-disk index dimension differs from requested dim, recreate it.
+                    def _index_dim(idx):
+                        d = getattr(idx, "d", None)
+                        if d is None and hasattr(idx, "index"):
+                            d = getattr(idx.index, "d", None)
+                        return d
+
+                    existing_dim = _index_dim(loaded)
+                    if existing_dim is not None and existing_dim != self.dim:
+                        logger.warning(
+                            f"Existing FAISS index for {layer} has dim={existing_dim}, requested dim={self.dim}; recreating index"
+                        )
+                        flat = faiss.IndexFlatL2(self.dim)
+                        self.indices[layer] = faiss.IndexIDMap2(flat)
+                    else:
+                        self.indices[layer] = loaded
+                        logger.info(f"Loaded existing hierarchical FAISS index for {layer} from {index_path}")
                 except Exception as e:
                     logger.warning(f"Failed to load hierarchical FAISS index for {layer}, creating new empty index: {e}")
                     flat = faiss.IndexFlatL2(self.dim)

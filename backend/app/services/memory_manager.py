@@ -51,7 +51,8 @@ class MemoryManager:
             return LINUX_BLOCKED_SYSTEM_PATHS
 
     def __init__(self):
-        self._config_file = PROJECT_ROOT / ".cortex_memory_path"
+        # Configuration file removed: system memory location is fixed under cortex_system
+        self._config_file = None
         self._services: Dict[str, Any] = {}
         self._lock = threading.RLock()
         self._indexing_paused = False
@@ -66,33 +67,25 @@ class MemoryManager:
             logger.info("Registered service %s under MemoryManager", name)
 
     def get_memory_path(self) -> Path:
-        """Get the current memory root path."""
-        # 1. Environment variable override
-        env_path = (
-            settings.MEMORY_PATH
-            or os.environ.get("CORTEX_MEMORY_PATH")
-        )
-        if env_path:
-            return Path(env_path).expanduser().resolve()
+        """Delegate memory path resolution to the centralized StorageManager.
 
-        # 2. Config file override
-        if self._config_file.exists():
-            try:
-                path_str = self._config_file.read_text(encoding="utf-8").strip()
-                if path_str:
-                    return Path(path_str).resolve()
-            except Exception as e:
-                logger.warning("Failed to read memory configuration file: %s", e)
+        A test override attribute `_test_override_path` on the singleton is honored
+        to allow unit tests to point the manager at a temporary directory.
+        """
+        # Honor test override if present (used only in tests)
+        override = getattr(self, "_test_override_path", None)
+        if override:
+            return Path(override)
 
-        # 3. Default project-local path for manual installs
-        return (PROJECT_ROOT / ".cortex_memory").resolve()
+        from backend.app.core.storage_manager import storage_manager
+        return storage_manager.get_memory_path()
 
     def set_memory_path(self, path: str) -> None:
-        """Persist the configured memory root path."""
-        target_path = Path(path).expanduser().resolve()
-        self.validate_memory_path(target_path)
-        self._config_file.write_text(str(target_path), encoding="utf-8")
-        logger.info("Configured memory vault path set to %s", target_path)
+        """DISABLED: Runtime memory path configuration has been removed.
+
+        This method remains for compatibility during tests but will raise in normal operation.
+        """
+        raise NotImplementedError("Dynamic memory path configuration has been removed in favor of a fixed system path")
 
     def validate_memory_path(self, path: Path) -> None:
         """Validate if a directory is safe to use as the memory vault."""
@@ -259,53 +252,7 @@ class MemoryManager:
     # ==========================================
 
     def change_memory_vault(self, new_path_str: str) -> None:
-        """
-        Dynamically moves the memory vault to a new directory.
-        Keeps existing data and rebinds connections with no data loss.
-        """
-        old_path = self.get_memory_path()
-        new_path = Path(new_path_str).expanduser().resolve()
-        
-        if old_path == new_path:
-            return
-
-        self.validate_memory_path(new_path)
-        logger.info("Starting memory vault migration from %s to %s", old_path, new_path)
-
-        # 1. Pause indexing and write processes
-        self.pause_indexing()
-
-        try:
-            # 2. Close active database connections
-            from backend.app.db import session
-            session.reset_db_engine()
-
-            # Close active state store connections
-            # We can re-bind the engine later when it gets called.
-
-            # 3. Safely copy existing vault contents to the new directory (migration)
-            new_path.mkdir(parents=True, exist_ok=True)
-            for category in self.CATEGORIES:
-                old_category_dir = old_path / category
-                new_category_dir = new_path / category
-                if old_category_dir.exists():
-                    shutil.copytree(old_category_dir, new_category_dir, dirs_exist_ok=True)
-
-            # 4. Rebuild path registry (persist new path in settings)
-            self.set_memory_path(str(new_path))
-            self.ensure_vault_structure()
-
-            # 5. NOTE: DB migrations are managed centrally and do not live inside the memory vault.
-            # The database path must remain under system/database; do not attempt to run DB migrations here.
-
-        except Exception as e:
-            logger.exception("Error during memory vault migration: %s", e)
-            # Revert config file to old path in case of failure
-            self.set_memory_path(str(old_path))
-            raise e
-        finally:
-            # 6. Resume system
-            self.resume_indexing()
+        raise NotImplementedError("Memory vault relocation has been removed. System memory is fixed under cortex_system/memory")
 
     def reset_vault(self) -> None:
         """

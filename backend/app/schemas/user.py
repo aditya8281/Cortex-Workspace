@@ -26,7 +26,11 @@ class UserRegisterPayload(BaseModel):
     profile_photo: Optional[str] = None
     handles: Optional[dict[str, Any]] = None
     vault_password: str = Field(min_length=8)
-    personal_storage_path: str = Field(min_length=1)
+    # New canonical field for user-owned storage root (absolute path)
+    # New canonical field for user-owned storage root (absolute path)
+    data_path: Optional[str] = None
+    # Legacy alias accepted for backward compatibility
+    personal_storage_path: Optional[str] = None
     preferences: Optional[dict[str, Any]] = None
 
 
@@ -40,6 +44,7 @@ class UserResponse(BaseModel):
     description: Optional[str] = None
     profile_photo: Optional[str] = None
     handles: Optional[dict[str, Any]] = None
+    data_path: Optional[str] = None
     personal_storage_path: Optional[str] = None
     preferences: Optional[dict[str, Any]] = None
 

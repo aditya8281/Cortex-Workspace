@@ -14,6 +14,7 @@ from backend.app.ai.ingestion.chunker import TextChunker
 from backend.app.ai.ingestion.scanner import RepoScanner
 from backend.app.ai.llm_router import LLMRouter
 from backend.app.core.redis import redis_cache
+from backend.app.intelligence.exclusions import default_exclusions
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,10 @@ class HierarchicalIndexingService:
         Refresh the repository summary/vector without rescanning the filesystem.
         """
         p = Path(repo_path).resolve()
+        # Prevent indexing of any repository that is inside a vault path
+        if default_exclusions.should_skip_path(p):
+            logger.warning("Skipping repository profile refresh: path %s is excluded (likely a vault)", repo_path)
+            return None
         if not p.exists() or not p.is_dir():
             return None
 
@@ -204,6 +209,10 @@ class HierarchicalIndexingService:
         Extract content, chunk, generate embeddings, and insert/update HierarchicalNodes.
         """
         p = Path(file_path).resolve()
+        # Guardrail: do not index files inside vaults or excluded paths
+        if default_exclusions.should_skip_path(p):
+            logger.warning("Attempted to index excluded path (vault?) %s — skipping.", str(p))
+            return None
         if not p.exists() or p.is_dir():
             return None
 
@@ -308,6 +317,10 @@ class HierarchicalIndexingService:
         Summarize a directory based on child files and generate a folder-level embedding.
         """
         p = Path(folder_path).resolve()
+        # Guardrail: do not index folders inside vaults or excluded paths
+        if default_exclusions.should_skip_path(p):
+            logger.warning("Attempted to index excluded folder (vault?) %s — skipping.", str(p))
+            return None
         if not p.exists() or not p.is_dir():
             return None
 
@@ -387,6 +400,10 @@ class HierarchicalIndexingService:
         Orchestrate full repository crawling, file/folder recursive sync, and repo-level LLM summarization.
         """
         p = Path(repo_path).resolve()
+        # Guardrail: do not index repositories under vault paths
+        if default_exclusions.should_skip_path(p):
+            logger.warning("Attempted to index excluded repository (vault?) %s — skipping.", str(p))
+            return None
         if not p.exists() or not p.is_dir():
             return None
 

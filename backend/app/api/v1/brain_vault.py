@@ -16,8 +16,8 @@ def change_brain_vault_path(payload: dict, admin_user=Depends(require_admin)):
     if not target:
         raise HTTPException(status_code=400, detail="Missing 'path' in payload")
     try:
-        memory_manager.change_memory_vault(str(Path(target).expanduser().resolve()))
-        return {"status": "success", "message": f"Brain vault migrated to {target}"}
+        # Disabled: memory relocation removed from Cortex architecture
+        raise HTTPException(status_code=405, detail="Memory relocation is disabled. System memory is fixed under cortex_system/memory")
     except Exception as e:
         logger.exception("Brain vault migration failed")
         raise HTTPException(status_code=500, detail=str(e))

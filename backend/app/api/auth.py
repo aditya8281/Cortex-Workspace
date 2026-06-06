@@ -16,6 +16,8 @@ from backend.app.schemas.user import (
 from backend.app.services.user_service import create_user, login_user, delete_user
 from backend.app.models.user import User
 from backend.app.core.security import hash_password, verify_password, validate_password_strength
+from backend.app.models.user import User
+from fastapi import Query
 
 router = APIRouter()
 
@@ -53,8 +55,24 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
     return token_data
 
 
+@router.get("/api/auth/username-available")
+def username_available(username: str = Query(..., min_length=1), db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.username == username).first()
+    return {"available": existing is None}
+
+
 @router.get("/api/auth/me", response_model=UserResponse)
-def get_me(current_user: User = Depends(get_current_user)):
+def get_me(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # On login, attempt to resolve any registered user storage and expose the storage root
+    try:
+        from backend.app.services.storage_registry import get_registry_for_user
+        reg = get_registry_for_user(db, current_user.id)
+        if reg:
+            # expose canonical data_path and keep legacy field in sync
+            current_user.data_path = reg.storage_root
+            current_user.personal_storage_path = reg.storage_root
+    except Exception:
+        pass
     return UserResponse.model_validate(current_user)
 
 

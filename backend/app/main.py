@@ -52,6 +52,13 @@ async def lifespan(app: FastAPI):
     # Background warmup for AIExecutor and RAG index loading to optimize first-query latency
     import asyncio
     from backend.app.executor import AIExecutor
+    # Ensure system database exists and is initialized (single app.db)
+    try:
+        from backend.app.db import session as db_session
+        db_session.get_engine()
+        logger.info("System database initialized at %s", db_session.get_database_url())
+    except Exception as e:
+        logger.error("Failed to initialize system database on startup: %s", e)
 
     def warmup_executor():
         try:
