@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.db.session import SessionLocal
 from backend.app.models.user import User
-from backend.app.core.security import decode_access_token
+from backend.app.auth.tokens import verify_access_token
 
 oauth2_scheme = HTTPBearer()
 oauth2_scheme_optional = HTTPBearer(auto_error=False)
@@ -18,11 +18,14 @@ def get_db():
         db.close()
 
 
-def get_current_user(
+async def get_current_user(
     token: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ):
-    user_id = decode_access_token(token.credentials)
+    try:
+        user_id = await verify_access_token(token.credentials)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired or invalid")
 
     user = db.query(User).filter(User.id == int(user_id)).first()
 
@@ -35,14 +38,14 @@ def get_current_user(
     return user
 
 
-def get_current_user_optional(
+async def get_current_user_optional(
     token: HTTPAuthorizationCredentials | None = Depends(oauth2_scheme_optional),
     db: Session = Depends(get_db),
 ) -> User | None:
     if token is None:
         return None
     try:
-        user_id = decode_access_token(token.credentials)
+        user_id = await verify_access_token(token.credentials)
     except Exception:
         return None
     return db.query(User).filter(User.id == int(user_id)).first()

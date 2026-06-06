@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.models.user import User
 from backend.app.schemas.user import UserCreate, UserUpdate, UserRegisterPayload
-from backend.app.core.security import hash_password, verify_password, create_access_token
+from backend.app.core.security import hash_password, verify_password
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +59,13 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
     )
 
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    try:
+        db.commit()
+        db.refresh(db_user)
+    except Exception as e:
+        db.rollback()
+        logger.exception("Failed to commit new user: %s", e)
+        return None
 
     # Initialize personal storage path for the new user if provided
     if personal_storage:
@@ -70,25 +75,25 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
             target_path = Path(personal_storage).expanduser().resolve()
             logger.info("Initializing personal storage path: %s", target_path)
             # create registry entry
-            try:
-                register_user_storage(db, db_user.id, str(target_path))
-            except Exception as e:
-                logger.error("Failed to register user storage: %s", e)
+            register_user_storage(db, db_user.id, str(target_path))
 
             # create expected folders with safe permissions
-            try:
-                profile_dir = target_path / "profile"
-                vault_dir = target_path / "vault"
-                exports_dir = target_path / "exports"
-                activity_dir = target_path / "activity"
-                metadata_dir = target_path / "metadata"
-                for d in [profile_dir, vault_dir, exports_dir, activity_dir, metadata_dir]:
-                    d.mkdir(parents=True, exist_ok=True)
-            except Exception as e:
-                logger.error("Failed to create user storage directories: %s", e)
-            # Memory relocation removed: do not change system memory location during registration
+            profile_dir = target_path / "profile"
+            vault_dir = target_path / "vault"
+            exports_dir = target_path / "exports"
+            activity_dir = target_path / "activity"
+            metadata_dir = target_path / "metadata"
+            for d in [profile_dir, vault_dir, exports_dir, activity_dir, metadata_dir]:
+                d.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            logger.error("Failed to configure personal storage path during registration: %s", e)
+            logger.exception("Failed to initialize personal storage; rolling back user: %s", e)
+            # Rollback user creation to keep DB and filesystem consistent
+            try:
+                db.delete(db_user)
+                db.commit()
+            except Exception:
+                db.rollback()
+            return None
 
     return db_user
 
