@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.ai.model_downloads import model_download_manager
 from backend.app.ai.model_registry import ModelRegistry
-from backend.app.api.deps import get_db
+from backend.app.core.db import get_db
 from backend.app.core.paths import PROJECT_ROOT
 from backend.app.models.user_settings import UserSettings
 

@@ -19,7 +19,7 @@ state.db
 .ruff_cache/
 .cortex/
 .cortex_memory_path
-cortex*
+CortexMemory
 .cortex_bootstrap/
 
 # Node / frontend caches

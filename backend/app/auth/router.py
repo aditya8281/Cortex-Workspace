@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_db
+from backend.app.core.db import get_db
+from backend.app.core.tokens import verify_access_token
+from backend.app.models.user import User
 from backend.app.schemas.user import UserRegisterPayload, UserLogin, TokenResponse, UserResponse
 from backend.app.auth import service as auth_service
-from backend.app.api.deps import get_current_user
+oauth2_scheme = HTTPBearer()
 
 router = APIRouter()
 
@@ -46,5 +49,12 @@ async def logout(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/api/auth/me", response_model=UserResponse)
-def get_me(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    return UserResponse.model_validate(current_user)
+async def get_me(token: HTTPAuthorizationCredentials = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        user_id = await verify_access_token(token.credentials)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return UserResponse.model_validate(user)

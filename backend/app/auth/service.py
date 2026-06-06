@@ -8,7 +8,8 @@ from backend.app.services.user_service import create_user, authenticate_user
 from backend.app.schemas.user import UserRegisterPayload
 from backend.app.models.user import User
 from backend.app.core.security import validate_password_strength
-from backend.app.auth.tokens import create_access_token, create_refresh_token, verify_refresh_token, rotate_refresh_token, revoke_refresh_token_by_jti
+from backend.app.core.tokens import create_access_token
+from backend.app.auth.tokens import create_refresh_token, verify_refresh_token, rotate_refresh_token, revoke_refresh_token_by_jti
 from backend.app.auth.rate_limit import record_login_failure, reset_login_failures, is_blocked
 from backend.app.auth.audit import log_event
 from backend.app.core.redis import redis_cache

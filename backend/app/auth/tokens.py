@@ -19,11 +19,7 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-async def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = _now() + timedelta(minutes=ACCESS_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET, algorithm=ALGORITHM)
+# Access token creation/verification handled in backend.app.core.tokens / core.security
 
 
 async def create_refresh_token(user_id: int) -> dict:
@@ -36,15 +32,7 @@ async def create_refresh_token(user_id: int) -> dict:
     return {"token": token, "jti": jti, "expires_at": expire.isoformat()}
 
 
-async def verify_access_token(token: str) -> str:
-    try:
-        payload = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise JWTError("Missing subject")
-        return str(user_id)
-    except JWTError as exc:
-        raise
+# Access token verification moved to core.tokens
 
 
 async def verify_refresh_token(token: str) -> Optional[dict]:

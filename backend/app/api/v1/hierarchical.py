@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from backend.app.api.deps import get_db
+from backend.app.core.db import get_db
 from backend.app.services.hierarchical_indexing import HierarchicalIndexingService
 from backend.app.services.hierarchical_rag import HierarchicalRAGService
 

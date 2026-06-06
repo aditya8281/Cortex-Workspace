@@ -4,7 +4,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_db, get_current_user
+from backend.app.core.db import get_db
+from backend.app.api.deps import get_current_user
 from backend.app.services.ollama_registry import OllamaRegistryService, OllamaDownloadService
 
 router = APIRouter(prefix="/api/v1/registry", tags=["model-registry"])

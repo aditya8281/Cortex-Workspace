@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.models.user import User
 from backend.app.schemas.user import UserCreate, UserUpdate, UserRegisterPayload
-from backend.app.core.security import hash_password, verify_password
+from backend.app.core.security import hash_password, verify_password, create_access_token
 
 logger = logging.getLogger(__name__)
 

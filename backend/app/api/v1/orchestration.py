@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_db
+from backend.app.core.db import get_db
 from backend.app.executor.executor import AIExecutor
 from backend.app.schemas.context_item import ContextItem
 
