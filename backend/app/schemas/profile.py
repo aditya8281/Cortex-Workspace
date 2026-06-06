@@ -1,26 +1,20 @@
-from pydantic import BaseModel, Field
+from typing import Optional, Any
+from pydantic import BaseModel
 
 
 class UserProfileSchema(BaseModel):
-    display_name: str | None = None
-    job_title: str | None = None
-    location: str | None = None
-    bio: str | None = None
-    interests: list[str] = Field(default_factory=list)
-    goals: list[str] = Field(default_factory=list)
-    focus_areas: list[str] = Field(default_factory=list)
-    primary_languages: list[str] = Field(default_factory=list)
-    onboarding_completed: bool = False
-    completion_percent: int = 0
+    full_name: str
+    nickname: str
+    bio: Optional[str] = None
+    description: Optional[str] = None
+    profile_photo: Optional[str] = None
+    handles: Optional[dict[str, Any]] = None
 
 
 class UserProfileUpdateSchema(BaseModel):
-    display_name: str | None = None
-    job_title: str | None = None
-    location: str | None = None
-    bio: str | None = None
-    interests: list[str] | None = None
-    goals: list[str] | None = None
-    focus_areas: list[str] | None = None
-    primary_languages: list[str] | None = None
-    onboarding_completed: bool | None = None
+    full_name: Optional[str] = None
+    nickname: Optional[str] = None
+    bio: Optional[str] = None
+    description: Optional[str] = None
+    profile_photo: Optional[str] = None
+    handles: Optional[dict[str, Any]] = None

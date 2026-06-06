@@ -122,10 +122,27 @@ class ExclusionConfig:
     def should_skip_path(self, path: Path) -> bool:
         resolved = path.resolve()
         path_str = str(resolved)
+        # Always skip user vault path if configured
+        try:
+            from backend.app.core.config import settings
+            vault = settings.VAULT_PATH or None
+            if vault:
+                vault_p = Path(vault).resolve()
+                vault_str = str(vault_p)
+                if path_str == vault_str or path_str.startswith(vault_str + os.sep):
+                    return True
+        except Exception:
+            pass
         for prefix in self.ignored_path_prefixes:
             if path_str == prefix or path_str.startswith(prefix + os.sep):
                 return True
         return False
+
+    # Compatibility wrapper used in some callers
+    def should_exclude(self, path_like) -> bool:
+        # Accept either str or Path
+        p = Path(path_like) if not isinstance(path_like, Path) else path_like
+        return self.should_skip_path(p)
 
     def should_prune_dir(self, dirname: str, parent: Path) -> bool:
         if dirname in self.ignored_dir_names:

@@ -65,7 +65,9 @@ def read_vault(current_user: User | None = Depends(get_current_user_optional)):
 
 @router.post("/api/vault")
 def unlock_vault(payload: VaultUnlockPayload, current_user: User = Depends(get_current_user)):
-    if not verify_password(payload.password, current_user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid password")
+    if not current_user.vault_password_hash:
+        raise HTTPException(status_code=400, detail="Vault password not set up")
+    if not verify_password(payload.password, current_user.vault_password_hash):
+        raise HTTPException(status_code=401, detail="Invalid vault password")
 
     return _vault_payload(locked=False, unlocked_by=current_user.username)

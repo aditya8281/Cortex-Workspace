@@ -22,6 +22,10 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("MEMORY_PATH", "CORTEX_MEMORY_PATH"),
     )
+    VAULT_PATH: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("VAULT_PATH", "CORTEX_VAULT_PATH"),
+    )
     DEFAULT_MODEL: str | None = Field(default=None, validation_alias="DEFAULT_MODEL")
     MODEL_API_KEYS: dict[str, str] = Field(default_factory=dict)
     CLOUD_PROVIDER_CONFIGS: dict[str, dict[str, Any]] = Field(default_factory=dict)

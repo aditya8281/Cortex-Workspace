@@ -16,6 +16,10 @@ _SessionLocal = None
 _engine_lock = threading.Lock()
 
 def get_database_url() -> str:
+    # Prefer explicit DATABASE_URL in production; fall back to memory-local sqlite
+    from backend.app.core.config import settings
+    if settings.DATABASE_URL:
+        return settings.DATABASE_URL
     from backend.app.services.memory_manager import memory_manager
     db_path = memory_manager.get_path("metadata_db", "app.db")
     return f"sqlite:///{db_path}"

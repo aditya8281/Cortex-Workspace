@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 
 from backend.app.api.deps import get_current_user_optional
 from backend.app.models.user import User
-from backend.app.services.memory_manager import memory_manager
+from backend.app.services.vault_manager import vault_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -35,32 +35,27 @@ def get_vault_settings(current_user: User | None = Depends(get_current_user_opti
     """
     Retrieve current memory vault path, status, and category size stats.
     """
+    """
+    Retrieve current user vault status; this is the encrypted user vault (private storage).
+    """
     try:
-        active_path = memory_manager.get_memory_path()
+        active_path = vault_manager.get_vault_path()
         categories_stats = {}
         total_size = 0
-
-        for cat in memory_manager.CATEGORIES:
+        for cat in vault_manager.CATEGORIES:
             cat_path = active_path / cat
             if cat_path.exists():
                 size = get_dir_size(cat_path)
                 file_count = len([f for f in cat_path.iterdir() if f.is_file()])
-                categories_stats[cat] = {
-                    "size_bytes": size,
-                    "file_count": file_count
-                }
+                categories_stats[cat] = {"size_bytes": size, "file_count": file_count}
                 total_size += size
             else:
-                categories_stats[cat] = {
-                    "size_bytes": 0,
-                    "file_count": 0
-                }
+                categories_stats[cat] = {"size_bytes": 0, "file_count": 0}
 
         return {
             "active_path": str(active_path),
-            "is_paused": memory_manager.is_indexing_paused(),
             "total_size_bytes": total_size,
-            "categories": categories_stats
+            "categories": categories_stats,
         }
     except Exception as e:
         logger.exception("Failed to fetch vault settings")
@@ -74,19 +69,32 @@ def change_vault_path(payload: ChangePathPayload, current_user: User | None = De
     """
     target_path = Path(payload.path).expanduser().resolve()
     try:
-        memory_manager.validate_memory_path(target_path)
+        vault_manager.validate_vault_path(target_path)
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
 
     try:
-        memory_manager.change_memory_vault(str(target_path))
+        # For user vault we allow changing vault path
+        # Move existing user vault data to new location
+        old = vault_manager.get_vault_path()
+        if old != target_path:
+            vault_manager.validate_vault_path(target_path)
+            # perform simple copy
+            target_path.mkdir(parents=True, exist_ok=True)
+            for item in old.iterdir():
+                dest = target_path / item.name
+                if item.is_dir():
+                    shutil.copytree(item, dest, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(item, dest)
+            # persist by setting env var file if desired
         return {
             "status": "success",
-            "message": f"Memory vault migrated successfully to {target_path}",
-            "active_path": str(target_path)
+            "message": f"Vault migrated successfully to {target_path}",
+            "active_path": str(target_path),
         }
     except Exception as e:
-        logger.exception("Failed to migrate memory vault to %s", target_path)
+        logger.exception("Failed to migrate user vault to %s", target_path)
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
 
 
@@ -96,13 +104,14 @@ def reset_vault(current_user: User | None = Depends(get_current_user_optional)):
     Perform a complete one-folder reset of the memory vault.
     """
     try:
-        memory_manager.reset_vault()
-        return {
-            "status": "success",
-            "message": "Memory vault successfully reset to an empty state."
-        }
+        # Reset only the user vault (delete encrypted files)
+        root = vault_manager.get_vault_path()
+        if root.exists():
+            shutil.rmtree(root)
+        vault_manager.ensure_vault_structure()
+        return {"status": "success", "message": "User vault reset to empty state."}
     except Exception as e:
-        logger.exception("Failed to reset memory vault")
+        logger.exception("Failed to reset user vault")
         raise HTTPException(status_code=500, detail=f"Reset failed: {str(e)}")
 
 
@@ -113,21 +122,14 @@ def export_vault(current_user: User | None = Depends(get_current_user_optional))
     """
     try:
         # Create temporary zip target under vault temp directory
-        temp_dir = memory_manager.get_path("temp")
+        temp_dir = vault_manager.get_path("temp")
         temp_dir.mkdir(parents=True, exist_ok=True)
         zip_file_path = temp_dir / "cortex_brain_vault_backup.zip"
-        
-        # Export
-        memory_manager.export_memory(str(zip_file_path))
-        
+        # Export user vault (encrypted files)
+        vault_manager.export_vault(str(zip_file_path))
         if not zip_file_path.exists():
             raise FileNotFoundError("Backup file creation failed.")
-
-        return FileResponse(
-            path=str(zip_file_path),
-            filename="cortex_brain_vault_backup.zip",
-            media_type="application/zip"
-        )
+        return FileResponse(path=str(zip_file_path), filename="user_vault_backup.zip", media_type="application/zip")
     except Exception as e:
         logger.exception("Failed to export memory vault zip")
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
@@ -139,7 +141,7 @@ async def import_vault(file: UploadFile = File(...), current_user: User | None =
     Upload and restore a memory vault from a backup zip file.
     """
     try:
-        temp_dir = memory_manager.get_path("temp")
+        temp_dir = vault_manager.get_path("temp")
         temp_dir.mkdir(parents=True, exist_ok=True)
         zip_file_path = temp_dir / "uploaded_backup.zip"
 

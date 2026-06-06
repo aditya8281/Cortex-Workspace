@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.user import User
 from backend.app.schemas.profile import UserProfileSchema, UserProfileUpdateSchema
-from backend.app.services.profile_service import get_or_create, to_schema, update_profile
+from backend.app.services.profile_service import to_schema, update_profile
 
 router = APIRouter()
 
@@ -14,8 +14,7 @@ def get_my_profile(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    row = get_or_create(db, current_user)
-    return to_schema(current_user, row)
+    return to_schema(current_user)
 
 
 @router.put("", response_model=UserProfileSchema)

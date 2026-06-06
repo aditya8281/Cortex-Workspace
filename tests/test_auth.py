@@ -54,11 +54,15 @@ def fixture_client(tmp_path):
 
 
 def test_create_user(client):
-    # Pre-populate a dummy first user so that the created user gets "user" role
+    # Pre-populate a dummy first user so that the created user gets "admin" role
     dummy_payload = {
         "username": "dummyadmin",
         "full_name": "Dummy Admin",
-        "password": "securepassword123"
+        "nickname": "dummy",
+        "password": "securepassword123",
+        "confirm_password": "securepassword123",
+        "vault_password": "vaultpassword123",
+        "personal_storage_path": "~/CortexVaultTest"
     }
     # first registration becomes admin
     client.post("/api/auth/register", json=dummy_payload)
@@ -66,12 +70,15 @@ def test_create_user(client):
     payload = {
         "username": "testuser",
         "full_name": "Test User",
-        "password": "securepassword123"
+        "nickname": "tester",
+        "password": "securepassword123",
+        "confirm_password": "securepassword123",
+        "vault_password": "vaultpassword123",
+        "personal_storage_path": "~/CortexVaultTest2"
     }
     response = client.post("/api/auth/register", json=payload)
     assert response.status_code == 200
     data = response.json()
-    # registration returns TokenResponse with nested user
     assert "access_token" in data
     assert data["user"]["username"] == "testuser"
     assert data["user"]["full_name"] == "Test User"
@@ -82,7 +89,11 @@ def test_create_duplicate_user(client):
     payload = {
         "username": "duplicateuser",
         "full_name": "Test User 1",
-        "password": "password123"
+        "nickname": "dupuser",
+        "password": "password123",
+        "confirm_password": "password123",
+        "vault_password": "vaultpassword123",
+        "personal_storage_path": "~/CortexVaultTest3"
     }
     # First creation
     response = client.post("/api/auth/register", json=payload)
@@ -91,7 +102,7 @@ def test_create_duplicate_user(client):
     # Second creation (should fail cleanly with 400 instead of crashing with 500)
     response = client.post("/api/auth/register", json=payload)
     assert response.status_code == 400
-    assert response.json()["detail"] in ("Username already registered", "Username already registered")
+    assert response.json()["detail"] == "Username already registered"
 
 
 def test_login_and_me(client):
@@ -99,14 +110,19 @@ def test_login_and_me(client):
     register_payload = {
         "username": "meuser",
         "full_name": "Me User",
-        "password": "mypassword"
+        "nickname": "me",
+        "password": "mypassword123",
+        "confirm_password": "mypassword123",
+        "vault_password": "vaultpassword123",
+        "personal_storage_path": "~/CortexVaultTest4"
     }
-    client.post("/api/auth/register", json=register_payload)
+    reg_response = client.post("/api/auth/register", json=register_payload)
+    assert reg_response.status_code == 200
 
     # 2. Login
     login_payload = {
         "username": "meuser",
-        "password": "mypassword"
+        "password": "mypassword123"
     }
     response = client.post("/api/auth/login", json=login_payload)
     assert response.status_code == 200
@@ -124,5 +140,5 @@ def test_login_and_me(client):
 
     # 4. Access protected profile /me with invalid token
     bad_headers = {"Authorization": "Bearer badtoken"}
-    response = client.get("/api/v1/me", headers=bad_headers)
+    response = client.get("/api/auth/me", headers=bad_headers)
     assert response.status_code == 401

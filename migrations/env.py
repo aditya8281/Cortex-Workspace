@@ -22,7 +22,6 @@ if config.config_file_name is not None:
 from backend.app.db.base import Base
 from backend.app.models.user import User
 from backend.app.models.user_settings import UserSettings
-from backend.app.models.user_profile import UserProfile  # noqa: F401
 from backend.app.models.context_item import ContextItem  # noqa: F401
 from backend.app.models.llm_model import CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute  # noqa: F401
 from backend.app.models.hierarchical_memory import HierarchicalNode  # noqa: F401
