@@ -4,11 +4,13 @@ from pydantic import BaseModel
 
 class UserProfileSchema(BaseModel):
     full_name: str
-    nickname: str
+    nickname: Optional[str] = None
     bio: Optional[str] = None
     description: Optional[str] = None
     profile_photo: Optional[str] = None
     handles: Optional[dict[str, Any]] = None
+    visibility: Optional[str] = "public"
+    preferences: Optional[dict[str, Any]] = None
 
 
 class UserProfileUpdateSchema(BaseModel):
@@ -18,3 +20,5 @@ class UserProfileUpdateSchema(BaseModel):
     description: Optional[str] = None
     profile_photo: Optional[str] = None
     handles: Optional[dict[str, Any]] = None
+    visibility: Optional[str] = None
+    preferences: Optional[dict[str, Any]] = None

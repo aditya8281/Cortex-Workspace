@@ -1,29 +1,47 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
+from fastapi.responses import FileResponse
 
 from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.user import User
 from backend.app.schemas.profile import UserProfileSchema, UserProfileUpdateSchema
-from backend.app.services.profile_service import to_schema, update_profile
+from backend.app.services import profile_service
+from backend.app.core import storage
+from backend.app.core.security import validate_password_strength
+import os
+from io import BytesIO
+from PIL import Image
 
 router = APIRouter()
 
 
 @router.get("", response_model=UserProfileSchema)
-def get_my_profile(
+async def get_my_profile(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return to_schema(current_user)
+    # attempt cache first
+    cached = profile_service.get_cached_profile(current_user.id)
+    if cached:
+        return UserProfileSchema.model_validate(cached)
+    schema = profile_service.to_schema(current_user)
+    try:
+        profile_service.set_cached_profile(current_user.id, schema.model_dump())
+    except Exception:
+        pass
+    return schema
 
 
 @router.put("", response_model=UserProfileSchema)
-def update_my_profile(
+async def update_my_profile(
+    request: Request,
     payload: UserProfileUpdateSchema,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return update_profile(db, current_user, payload)
+    ip = request.client.host if request.client else None
+    return profile_service.update_profile(db, current_user, payload, ip)
 
 
 # --- Preferences endpoints -------------------------------------------------
@@ -56,80 +74,130 @@ def update_preferences(
 
 
 # --- Profile photo upload / remove ---------------------------------------
-from fastapi import UploadFile, File, HTTPException
-from backend.app.core import storage
-import os
-from fastapi.responses import FileResponse
-
-
 @router.post("/photo")
 async def upload_profile_photo(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # Basic validation
+    # Validate content length (2MB max)
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
+    if len(content) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large")
 
-    # store under users/<id>/profile with a deterministic user-prefixed filename
-    import time
-    ext = os.path.splitext(file.filename)[1] or ".bin"
-    filename = f"user_{current_user.id}_{int(time.time())}{ext}"
+    # Validate image type and process
     try:
-        profile_dir = storage.get_user_profile_root(current_user.id)
-        target = profile_dir / filename
-        target.write_bytes(content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save profile photo: {e}")
+        img = Image.open(BytesIO(content))
+        img_format = img.format.lower()
+        if img_format not in {"jpeg", "png", "webp", "jpg"}:
+            raise HTTPException(status_code=400, detail="Unsupported image format")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid image file")
 
-    # Save a relative path reference in the user model (filename only)
-    current_user.profile_photo = str(filename)
-    db.commit()
-    db.refresh(current_user)
+    # normalize and resize
+    profile_dir = storage.get_user_profile_root(current_user.id)
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    avatar_path = profile_dir / "avatar.webp"
+    thumb_path = profile_dir / "avatar_thumb.webp"
+
+    # create profile sized image (256x256) and thumbnail (64x64)
+    try:
+        img = img.convert("RGBA")
+        profile_img = img.copy()
+        profile_img.thumbnail((256, 256))
+        profile_img.save(avatar_path, format="WEBP")
+
+        thumb = img.copy()
+        thumb.thumbnail((64, 64))
+        thumb.save(thumb_path, format="WEBP")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process image: {e}")
+
+    # update profile record and mirror to user.profile_photo for compatibility
+    try:
+        from backend.app.models.user_profile import UserProfile
+        profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+        if not profile:
+            from backend.app.models.user_profile import UserProfile as UPModel
+            profile = UPModel(user_id=current_user.id, full_name=current_user.full_name)
+            db.add(profile)
+        profile.profile_photo = "avatar.webp"
+        db.add(profile)
+        current_user.profile_photo = "avatar.webp"
+        db.add(current_user)
+        db.commit()
+        db.refresh(current_user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save profile meta: {e}")
+
+    # invalidate cache
+    try:
+        profile_service.invalidate_cached_profile(current_user.id)
+    except Exception:
+        pass
+
     return {"profile_photo": current_user.profile_photo}
 
 
 @router.delete("/photo")
-def remove_profile_photo(
+async def remove_profile_photo(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not current_user.profile_photo:
-        raise HTTPException(status_code=404, detail="No profile photo set")
-
     try:
         profile_dir = storage.get_user_profile_root(current_user.id)
-        target = profile_dir / current_user.profile_photo
-        if target.exists():
-            target.unlink()
+        for p in [profile_dir / "avatar.webp", profile_dir / "avatar_thumb.webp"]:
+            try:
+                if p.exists():
+                    p.unlink()
+            except Exception:
+                pass
     except Exception:
         pass
 
-    current_user.profile_photo = None
-    db.commit()
-    db.refresh(current_user)
+    try:
+        from backend.app.models.user_profile import UserProfile
+        profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+        if profile:
+            profile.profile_photo = None
+            db.add(profile)
+        current_user.profile_photo = None
+        db.add(current_user)
+        db.commit()
+        db.refresh(current_user)
+    except Exception:
+        db.rollback()
+
+    profile_service.invalidate_cached_profile(current_user.id)
     return {"profile_photo": None}
 
 
 @router.get("/photo")
-def get_profile_photo(
+@router.get("/photo")
+async def get_profile_photo(
     current_user: User = Depends(get_current_user),
 ):
-    if not current_user.profile_photo:
-        raise HTTPException(status_code=404, detail="No profile photo set")
-
+    # prefer profile avatar path
     try:
         profile_dir = storage.get_user_profile_root(current_user.id)
-        path = profile_dir / current_user.profile_photo
+        path = profile_dir / "avatar.webp"
+        if not path.exists():
+            # fallback to legacy stored filename
+            if not current_user.profile_photo:
+                raise HTTPException(status_code=404, detail="No profile photo set")
+            path = profile_dir / current_user.profile_photo
     except Exception:
         raise HTTPException(status_code=403, detail="Access denied to profile photo")
 
     if not path.exists():
         raise HTTPException(status_code=404, detail="Profile photo not found")
 
-    return FileResponse(str(path), media_type="image/*", filename=current_user.profile_photo)
+    return FileResponse(str(path), media_type="image/webp", filename=path.name)
 
 
 # --- Password management endpoints ---------------------------------------
