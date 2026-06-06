@@ -1,22 +1,25 @@
 "use client";
-
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import TopBar from "../../src/shared/ui/TopBar";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
-import {
-  apiGetMe,
-  apiUpdateMe,
-  apiUpdateProfile,
-  apiUpdatePreferences,
-  apiUploadProfilePhoto,
-  apiDeleteProfilePhoto,
-  apiChangePassword,
-  apiChangeVaultPassword,
-} from "../../src/shared/auth/cortexApi";
-import { cn, useField, Field, TextInput, Textarea, PasswordInput, Btn, ErrorBanner, SuccessBanner, SectionDivider } from "../../src/shared/ui/form";
-import { consumeAvatarRect, getElementRect } from "../../src/shared/ui/avatarTransition";
+import { apiGetMe, apiUpdateProfile, apiUploadProfilePhoto, apiChangePassword } from "../../src/shared/auth/cortexApi";
+import { Field, TextInput, PasswordInput, Btn, ErrorBanner, SuccessBanner } from "../../src/shared/ui/Primitives";
+import Modal from "../../src/shared/ui/Modal";
 
-// ─── avatar initials ───────────────────────────────────────────────────────────
+export default function Profile(){
+  const { user, login, token } = useAuth();
+  const [profile, setProfile] = useState(user || null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showChangePw, setShowChangePw] = useState(false);
+
+  useEffect(()=>{ async function load(){ try{ const me = await apiGetMe(); setProfile(me); }catch(e){} } load(); },[]);
+
+  async function handleSave(up){
+    setLoading(true); setError("");
+    try{ const updated = await apiUpdateProfile(up); setProfile(updated); login(token, updated); }catch(e){ setError(e.message || 'Failed'); }finally{ setLoading(false); }
+  }
+
 
 function Avatar({ name, size = "lg" }) {
   const initials = (name || "?")

@@ -1,0 +1,30 @@
+:root{
+  --bg-1: #080812;
+  --bg-2: #0b0f1a;
+  --neon-cyan: #00f5ff;
+  --muted: #9aa4b2;
+}
+body{
+  background: radial-gradient(1200px 600px at 10% 10%, rgba(10,12,20,0.6), transparent), linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  color: #dbe7ee;
+  font-family: Inter,-ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+}
+.cortex-fade-in{animation:cortexFadeIn .36s ease both}
+@keyframes cortexFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.glass-card{
+  background: rgba(10,12,20,0.55);
+  backdrop-filter: blur(8px) saturate(120%);
+  border: 1px solid rgba(0,245,255,0.06);
+  box-shadow: 0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+  border-radius: 12px;
+}
+.neon-glow{box-shadow:0 0 14px rgba(0,245,255,0.06)}
+.avatar-circle{width:40px;height:40px;border-radius:9999px;display:inline-flex;align-items:center;justify-content:center;font-weight:600;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.0));border:1px solid rgba(255,255,255,0.03)}
+.avatar-glow{box-shadow:0 0 12px rgba(0,245,255,0.18)}
+.dropdown-panel{background:rgba(6,8,12,0.7);border:1px solid rgba(0,245,255,0.06);border-radius:8px;padding:8px;min-width:200px}
+.btn-ghost{background:transparent;border:0;color:var(--neon-cyan);padding:8px 10px;border-radius:8px}
+.danger{color:#ff6b6b}
+.subtle{color:var(--muted)}
+.progress-dots{display:flex;gap:6px;align-items:center}
+.progress-dots .dot{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,0.06)}
+.progress-dots .dot.active{background:var(--neon-cyan);box-shadow:0 0 8px rgba(0,245,255,0.12)}
