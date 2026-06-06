@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSessionUser, setSession, clearSession } from "../../src/shared/auth/session";
+import { useAuth } from "../../src/shared/auth/AuthProvider";
 import {
   apiGetMe,
   apiUpdateMe,
@@ -373,6 +373,7 @@ function ProfileCard({ user, onPhotoUpdated }) {
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const { login, logout, token } = useAuth();
   const [tab, setTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
@@ -438,7 +439,7 @@ export default function ProfilePage() {
   }, [router]);
 
   function handleLogout() {
-    clearSession();
+    logout();
     router.replace("/auth");
   }
 
@@ -485,7 +486,7 @@ export default function ProfilePage() {
       </div>
 
       {/* profile card */}
-      <ProfileCard user={user} onPhotoUpdated={(updated) => setUser(prev => ({ ...prev, ...updated }))} />
+      <ProfileCard user={user} onPhotoUpdated={(updated) => { setUser(prev => ({ ...prev, ...updated })); login(token, { ...user, ...updated }); }} />
 
       {/* tab editor */}
       <div className="rounded-[10px] border border-cortex-border bg-cortex-surface/60 backdrop-blur-xl p-6 grid gap-5">
@@ -493,7 +494,7 @@ export default function ProfilePage() {
 
         <div className="animate-cortex-fade-in">
           {tab === "profile" && (
-            <EditProfileSection user={user} onSaved={(updated) => setUser(prev => ({ ...prev, ...updated }))} />
+            <EditProfileSection user={user} onSaved={(updated) => { setUser(prev => ({ ...prev, ...updated })); login(token, { ...user, ...updated }); }} />
           )}
           {tab === "password" && <ChangePasswordSection />}
           {tab === "vault" && <ChangeVaultPasswordSection />}

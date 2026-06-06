@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getSessionToken, getSessionUser, setSession, clearSession } from "../auth/session";
-import { apiLogin } from "../auth/cortexApi";
+import { useAuth } from "../auth/AuthProvider";
 
 const userNavItems = [
   { label: "Dashboard", href: "/" },
@@ -83,43 +82,39 @@ export function AppShell({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [sessionUser, setSessionUser] = useState(null);
+  const { user: sessionUser, loading } = useAuth();
   const authRoute = pathname === "/auth";
   const bootRoute = pathname === "/boot";
-  const token = typeof window !== "undefined" ? getSessionToken() : null;
   const isAdmin = sessionUser?.role === "admin";
   const navItems = isAdmin ? [...userNavItems, ...adminNavItems] : userNavItems;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const token = getSessionToken();
-    const user = getSessionUser();
-    const admin = user?.role === "admin";
-    setSessionUser(user);
+    const admin = sessionUser?.role === "admin";
 
-    if (!token && pathname === "/") {
+    if (!sessionUser && pathname === "/") {
       router.replace("/boot");
       return;
     }
 
-    if (!authRoute && !bootRoute && !token) {
+    if (!authRoute && !bootRoute && !sessionUser && !loading) {
       router.replace("/auth");
       return;
     }
 
-    if ((authRoute || bootRoute) && token) {
+    if ((authRoute || bootRoute) && sessionUser) {
       router.replace("/");
       return;
     }
 
-    if (token && !admin && adminRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+    if (sessionUser && !admin && adminRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
       router.replace("/");
       return;
     }
 
     setReady(true);
-  }, [authRoute, bootRoute, pathname, router]);
+  }, [authRoute, bootRoute, pathname, router, sessionUser, loading]);
 
   if (!ready && !authRoute && !bootRoute) {
     return (

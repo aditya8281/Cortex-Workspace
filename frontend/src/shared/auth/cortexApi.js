@@ -3,12 +3,27 @@
  * Communicates through the Next.js proxy routes and directly to /api/v1 endpoints.
  */
 
-import { getSessionToken } from "./session";
 import { PUBLIC_BASE } from "../apiClient";
 
+// token provider and auth error handler can be set by AuthProvider
+let _tokenProvider = null;
+let _authErrorHandler = null;
+
+export function setTokenProvider(fn) {
+  _tokenProvider = fn;
+}
+
+export function setAuthErrorHandler(fn) {
+  _authErrorHandler = fn;
+}
+
 function authHeader() {
-  const token = getSessionToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  try {
+    const token = _tokenProvider ? _tokenProvider() : null;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch (e) {
+    return {};
+  }
 }
 
 async function handleResponse(res) {
@@ -23,6 +38,10 @@ async function handleResponse(res) {
     const err = new Error(message);
     err.status = res.status;
     err.body = data;
+    // global 401 handling
+    if (res.status === 401 && typeof _authErrorHandler === "function") {
+      try { _authErrorHandler(); } catch (e) {}
+    }
     throw err;
   }
   return data;
@@ -92,7 +111,7 @@ export async function apiUploadProfilePhoto(file) {
   fd.append("file", file);
   const res = await fetch(makeUrl("/api/v1/me/profile/photo"), {
     method: "POST",
-    headers: { ...authHeader() },
+    headers: { ...(authHeader() || {}) },
     body: fd,
   });
   return handleResponse(res);

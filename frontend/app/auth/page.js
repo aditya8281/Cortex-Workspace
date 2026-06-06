@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { setSession, getSessionToken } from "../../src/shared/auth/session";
+import { useAuth } from "../../src/shared/auth/AuthProvider";
 import { apiLogin, apiRegister } from "../../src/shared/auth/cortexApi";
 import {
   cn,
@@ -25,6 +25,7 @@ function LoginForm({ onSwitch }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const usernameRef = useRef(null);
+  const { login } = useAuth();
 
   useEffect(() => { usernameRef.current?.focus(); }, []);
 
@@ -38,7 +39,7 @@ function LoginForm({ onSwitch }) {
     setError("");
     try {
       const data = await apiLogin({ username: username.trim(), password });
-      setSession(data.access_token, data.user);
+      await login(data.access_token, data.user);
       router.replace("/");
     } catch (err) {
       setError(err.message || "Authentication failed.");
@@ -514,7 +515,7 @@ function RegisterWizard({ onSwitch }) {
         preferences: {},
       };
       const result = await apiRegister(payload);
-      setSession(result.access_token, result.user);
+      await login(result.access_token, result.user);
       router.replace("/");
     } catch (err) {
       setError(err.message || "Registration failed. Please try again.");

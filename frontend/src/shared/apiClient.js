@@ -1,4 +1,9 @@
-import { getSessionToken } from "./auth/session";
+// apiClient now supports dynamic token provider and global auth error handler
+
+let _tokenProvider = null;
+let _authErrorHandler = null;
+export function setTokenProvider(fn) { _tokenProvider = fn; }
+export function setAuthErrorHandler(fn) { _authErrorHandler = fn; }
 
 export const PUBLIC_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1";
 
@@ -8,11 +13,8 @@ function normalizeBase(base) {
 }
 
 function buildHeaders(headers = {}) {
-  const token = getSessionToken();
-  const h = {
-    "Content-Type": "application/json",
-    ...headers,
-  };
+  const token = _tokenProvider ? _tokenProvider() : null;
+  const h = { "Content-Type": "application/json", ...headers };
   if (token) h.Authorization = `Bearer ${token}`;
   return h;
 }
@@ -36,8 +38,10 @@ async function request(method, path, { body, headers, query } = {}) {
   } catch (e) {
     data = null;
   }
-
   if (!res.ok) {
+    if (res.status === 401 && typeof _authErrorHandler === "function") {
+      try { _authErrorHandler(); } catch (e) {}
+    }
     const err = new Error(data?.detail || data?.error || `Request failed: ${res.status}`);
     err.status = res.status;
     err.body = data;

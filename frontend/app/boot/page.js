@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Loader, Badge } from "../../src/shared/ui";
-import { getSessionToken } from "../../src/shared/auth/session";
+import { useAuth } from "../../src/shared/auth/AuthProvider";
 
 const subtitles = [
   "I am the mind of the machine.",
@@ -14,20 +14,19 @@ const subtitles = [
 export default function BootPage() {
   const router = useRouter();
 
+  const { user, loading } = useAuth();
   useEffect(() => {
-    if (getSessionToken()) {
+    if (user) {
       router.replace("/");
       return;
     }
-
+    if (loading) return;
     const redirectTimer = window.setTimeout(() => {
       router.replace("/landing");
     }, 800);
 
-    return () => {
-      window.clearTimeout(redirectTimer);
-    };
-  }, [router]);
+    return () => window.clearTimeout(redirectTimer);
+  }, [router, user, loading]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-cortex-bg px-cortex-16">
