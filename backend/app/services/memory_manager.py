@@ -27,7 +27,6 @@ class MemoryManager:
     CATEGORIES = [
         "embeddings",
         "vector_db",
-        "metadata_db",
         "graph",
         "sync_state",
         "activity_logs",
@@ -296,9 +295,8 @@ class MemoryManager:
             self.set_memory_path(str(new_path))
             self.ensure_vault_structure()
 
-            # 5. Run migrations at the new path to verify / update schema
-            db_path = str(self.get_path("metadata_db", "app.db"))
-            session.run_migrations(db_path)
+            # 5. NOTE: DB migrations are managed centrally and do not live inside the memory vault.
+            # The database path must remain under system/database; do not attempt to run DB migrations here.
 
         except Exception as e:
             logger.exception("Error during memory vault migration: %s", e)
@@ -342,9 +340,8 @@ class MemoryManager:
             # 5. Recreate folder structure
             self.ensure_vault_structure()
 
-            # 6. Initialize database schema with migrations
-            db_path = str(self.get_path("metadata_db", "app.db"))
-            session.run_migrations(db_path)
+            # 6. NOTE: Database migrations are handled centrally by system storage.
+            # Do not initialize or migrate the system database from the memory vault.
 
         finally:
             # 7. Resume background processes
@@ -405,10 +402,7 @@ class MemoryManager:
             # 5. Initialize/Verify directory layout
             self.ensure_vault_structure()
 
-            # 6. Re-run migrations programmatically
-            db_path = str(self.get_path("metadata_db", "app.db"))
-            session.run_migrations(db_path)
-            
+            # 6. NOTE: Database migrations are handled centrally by system storage.
             logger.info("Successfully imported memory vault from %s", zip_path)
         finally:
             self.resume_indexing()

@@ -87,8 +87,8 @@ class ExclusionConfig:
     @classmethod
     def load(cls, config_path: Path | None = None) -> ExclusionConfig:
         if config_path is None:
-            from backend.app.services.memory_manager import memory_manager
-            path = memory_manager.get_path("sync_state", "exclusion_config.json")
+            from backend.app.core import storage
+            path = storage.get_sync_root() / "exclusion_config.json"
         else:
             path = config_path
         if not path.exists():
@@ -106,8 +106,8 @@ class ExclusionConfig:
 
     def save(self, config_path: Path | None = None) -> None:
         if config_path is None:
-            from backend.app.services.memory_manager import memory_manager
-            path = memory_manager.get_path("sync_state", "exclusion_config.json")
+            from backend.app.core import storage
+            path = storage.get_sync_root() / "exclusion_config.json"
         else:
             path = config_path
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -131,6 +131,19 @@ class ExclusionConfig:
                 vault_str = str(vault_p)
                 if path_str == vault_str or path_str.startswith(vault_str + os.sep):
                     return True
+            # Also skip any per-user vault roots under the system users directory
+            from backend.app.core import storage
+            try:
+                users_root = storage.get_users_root()
+                users_root_str = str(users_root.resolve())
+                if path_str == users_root_str or path_str.startswith(users_root_str + os.sep):
+                    # If the path is inside users root, further check for '/vault' segment
+                    # to avoid skipping profile or exports unintentionally.
+                    # Example path: .../users/user_1/vault/...
+                    if "/vault" in path_str:
+                        return True
+            except Exception:
+                pass
         except Exception:
             pass
         for prefix in self.ignored_path_prefixes:

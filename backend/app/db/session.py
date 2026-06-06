@@ -1,13 +1,14 @@
 import logging
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
 import threading
 
 from backend.app.core.paths import PROJECT_ROOT
+from backend.app.core import storage
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +21,7 @@ def get_database_url() -> str:
     from backend.app.core.config import settings
     if settings.DATABASE_URL:
         return settings.DATABASE_URL
-    from backend.app.services.memory_manager import memory_manager
-    db_path = memory_manager.get_path("metadata_db", "app.db")
+    db_path = storage.get_database_path()
     return f"sqlite:///{db_path}"
 
 def get_engine():
@@ -32,14 +32,26 @@ def get_engine():
             logger.info("Initializing SQLite database engine at %s", url)
             
             # Check and run migrations on first connect
-            from backend.app.services.memory_manager import memory_manager
-            db_file_path = memory_manager.get_path("metadata_db", "app.db")
+            db_file_path = storage.get_database_path()
             run_migrations(str(db_file_path))
             
             _engine = create_engine(
                 url,
-                connect_args={"check_same_thread": False}
+                connect_args={"check_same_thread": False, "timeout": 30}
             )
+
+            # Ensure SQLite uses WAL mode and sane pragmas to reduce locking contention
+            def _set_sqlite_pragma(dbapi_conn, connection_record):
+                try:
+                    cur = dbapi_conn.cursor()
+                    cur.execute("PRAGMA journal_mode=WAL;")
+                    cur.execute("PRAGMA synchronous=NORMAL;")
+                    cur.execute("PRAGMA foreign_keys=ON;")
+                    cur.close()
+                except Exception:
+                    pass
+
+            event.listen(_engine, "connect", _set_sqlite_pragma)
         return _engine
 
 def reset_db_engine():

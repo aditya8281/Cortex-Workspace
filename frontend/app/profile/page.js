@@ -3,8 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSessionUser, setSession, clearSession } from "../../src/shared/auth/session";
-import { apiGetMe, apiUpdateMe } from "../../src/shared/auth/cortexApi";
+import {
+  apiGetMe,
+  apiUpdateMe,
+  apiUpdateProfile,
+  apiUpdatePreferences,
+  apiUploadProfilePhoto,
+  apiDeleteProfilePhoto,
+  apiChangePassword,
+  apiChangeVaultPassword,
+} from "../../src/shared/auth/cortexApi";
 import { cn, useField, Field, TextInput, Textarea, PasswordInput, Btn, ErrorBanner, SuccessBanner, SectionDivider } from "../../src/shared/ui/form";
+import { consumeAvatarRect, getElementRect } from "../../src/shared/ui/avatarTransition";
 
 // ─── avatar initials ───────────────────────────────────────────────────────────
 
@@ -68,7 +78,7 @@ function EditProfileSection({ user, onSaved }) {
       const cleanHandles = Object.fromEntries(
         Object.entries(handles).filter(([, v]) => v?.trim())
       );
-      const updated = await apiUpdateMe({
+      const updated = await apiUpdateProfile({
         full_name: fullName.trim(),
         nickname: nickname.trim(),
         bio: bio.trim() || null,
@@ -137,7 +147,7 @@ function ChangePasswordSection() {
     if (next !== confirm) { setError("Passwords do not match."); return; }
     setLoading(true); setError(""); setSuccess("");
     try {
-      await apiUpdateMe({ current_password: current, password: next });
+      await apiChangePassword({ current_password: current, new_password: next, confirm_password: next });
       setSuccess("Account password changed.");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
@@ -188,7 +198,7 @@ function ChangeVaultPasswordSection() {
     if (vaultNext !== vaultConfirm) { setError("Vault passwords do not match."); return; }
     setLoading(true); setError(""); setSuccess("");
     try {
-      await apiUpdateMe({ current_password: accountPw, vault_password: vaultNext });
+      await apiChangeVaultPassword({ account_password: accountPw, new_vault_password: vaultNext, confirm_vault_password: vaultNext });
       setSuccess("Vault password updated.");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
@@ -270,12 +280,34 @@ function HandlesList({ handles }) {
 
 // ─── profile card ──────────────────────────────────────────────────────────────
 
-function ProfileCard({ user }) {
+function ProfileCard({ user, onPhotoUpdated }) {
   return (
     <div className="rounded-[10px] border border-cortex-border bg-cortex-surface/60 backdrop-blur-xl p-6 grid gap-5">
       {/* identity row */}
       <div className="flex items-start gap-4">
-        <Avatar name={user?.full_name || user?.username} size="lg" />
+        <div className="relative">
+          <Avatar name={user?.full_name || user?.username} size="lg" />
+          <label className="absolute right-0 bottom-0 -translate-y-1/2 translate-x-1/4">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                try {
+                  await apiUploadProfilePhoto(f);
+                  // refresh identity
+                  const refreshed = await apiGetMe();
+                  onPhotoUpdated?.(refreshed);
+                } catch (err) {
+                  window.alert(err?.message || 'Failed to upload photo');
+                }
+              }}
+            />
+            <button type="button" className="rounded-full border bg-cortex-bg p-1 text-xs">📷</button>
+          </label>
+        </div>
         <div className="grid gap-0.5 min-w-0">
           <h1 className="text-lg font-semibold text-cortex-text truncate">
             {user?.full_name || user?.username}
@@ -361,6 +393,47 @@ export default function ProfilePage() {
       }
     }
     load();
+    // run entry shared transition if present
+    (async () => {
+      try {
+        const rect = consumeAvatarRect();
+        if (!rect) return;
+        // create overlay element
+        const overlay = document.createElement('div');
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.style.position = 'fixed';
+        overlay.style.left = rect.x + 'px';
+        overlay.style.top = rect.y + 'px';
+        overlay.style.width = rect.width + 'px';
+        overlay.style.height = rect.height + 'px';
+        overlay.style.borderRadius = '9999px';
+        overlay.style.zIndex = '9999';
+        overlay.style.background = getComputedStyle(document.documentElement).getPropertyValue('--cortex-accent') || '#26C6D6';
+        overlay.style.transition = 'all 320ms cubic-bezier(0.2, 0, 0.2, 1)';
+        document.body.appendChild(overlay);
+
+        // compute destination avatar position in profile header
+        const headerAvatar = document.querySelector('.profile-header-avatar');
+        const dest = headerAvatar ? getElementRect(headerAvatar) : null;
+        // force paint
+        overlay.getBoundingClientRect();
+        if (dest) {
+          overlay.style.left = dest.x + 'px';
+          overlay.style.top = dest.y + 'px';
+          overlay.style.width = dest.width + 'px';
+          overlay.style.height = dest.height + 'px';
+        } else {
+          overlay.style.transform = 'scale(8)';
+          overlay.style.opacity = '0.9';
+        }
+
+        setTimeout(() => {
+          overlay.style.opacity = '0';
+          overlay.style.transform = 'scale(0.98)';
+        }, 360);
+        setTimeout(() => { try { overlay.remove(); } catch (e) {} }, 700);
+      } catch (e) {}
+    })();
     return () => { alive = false; };
   }, [router]);
 
@@ -412,7 +485,7 @@ export default function ProfilePage() {
       </div>
 
       {/* profile card */}
-      <ProfileCard user={user} />
+      <ProfileCard user={user} onPhotoUpdated={(updated) => setUser(prev => ({ ...prev, ...updated }))} />
 
       {/* tab editor */}
       <div className="rounded-[10px] border border-cortex-border bg-cortex-surface/60 backdrop-blur-xl p-6 grid gap-5">

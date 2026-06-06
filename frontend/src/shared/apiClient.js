@@ -1,6 +1,6 @@
 import { getSessionToken } from "./auth/session";
 
-const PUBLIC_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1";
+export const PUBLIC_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api/v1";
 
 function normalizeBase(base) {
   // if base is absolute URL, keep; otherwise keep relative

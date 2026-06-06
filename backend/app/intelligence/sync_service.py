@@ -30,8 +30,8 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 def get_state_file():
-    from backend.app.services.memory_manager import memory_manager
-    return memory_manager.get_path("sync_state", "filesystem_index_state.json")
+    from backend.app.core import storage
+    return storage.get_sync_root() / "filesystem_index_state.json"
 
 
 class SyncProgressState:

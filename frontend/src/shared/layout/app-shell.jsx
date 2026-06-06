@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getSessionToken, getSessionUser } from "../auth/session";
+import { getSessionToken, getSessionUser, setSession, clearSession } from "../auth/session";
+import { apiLogin } from "../auth/cortexApi";
 
 const userNavItems = [
   { label: "Dashboard", href: "/" },
@@ -20,6 +21,58 @@ const adminNavItems = [
 ];
 
 const adminRoutes = ["/models", "/vitals"];
+
+  import { apiGetProfilePhotoUrl } from "../auth/cortexApi";
+
+  function HeaderAvatarMenu({ sessionUser }) {
+    const router = useRouter();
+
+    function handleOpenProfile(e) {
+      try {
+        const btn = e.currentTarget.querySelector('.cortex-header-avatar');
+        if (btn) {
+          import('../ui/avatarTransition').then(({ getElementRect, saveAvatarRect }) => {
+            try {
+              const r = getElementRect(btn);
+              saveAvatarRect(r);
+            } catch (e) {}
+            router.push('/profile');
+          });
+          return;
+        }
+      } catch (e) {}
+      router.push('/profile');
+    }
+
+    // compute visible avatar: image when profile photo exists, otherwise single capital initial
+    const AvatarInner = () => {
+      const photo = sessionUser?.profile_photo;
+      if (photo) {
+        const src = apiGetProfilePhotoUrl();
+        return (
+          // image will be fetched with auth token via same-origin request
+          <img src={src} alt={`${sessionUser?.full_name || sessionUser?.username}'s avatar`} className="h-9 w-9 rounded-full object-cover" />
+        );
+      }
+      const name = sessionUser?.full_name || sessionUser?.username || "?";
+      const first = (name || "").toString().trim().split(' ')[0].charAt(0).toUpperCase() || '?';
+      return <span className="font-medium">{first}</span>;
+    };
+
+    return (
+      <div className="relative">
+        <button
+          aria-label="Open profile"
+          onClick={handleOpenProfile}
+          className="flex items-center gap-2 rounded-full p-1 hover:bg-cortex-bg focus:outline-none"
+        >
+          <div className="cortex-header-avatar h-9 w-9 flex items-center justify-center rounded-full border border-cortex-border bg-cortex-bg-secondary text-cortex-text">
+            <AvatarInner />
+          </div>
+        </button>
+      </div>
+    );
+  }
 
 function isActiveRoute(pathname, href) {
   if (href === "/") return pathname === "/";
@@ -82,93 +135,26 @@ export function AppShell({ children }) {
     return children;
   }
 
-  // After authentication we render only the child canvas (blank dashboard)
-  if (token && !authRoute && !bootRoute) {
-    return children;
-  }
-
   return (
     <div className="min-h-screen bg-cortex-bg text-cortex-text">
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="sticky top-0 hidden h-screen border-r border-cortex-border bg-cortex-bg-secondary/90 backdrop-blur-xl lg:flex lg:flex-col">
-          <div className="flex h-[56px] items-center border-b border-cortex-border px-cortex-16">
-            <div className="flex items-center gap-cortex-12">
-              <div className="h-2.5 w-2.5 rounded-full bg-cortex-cyan shadow-cortex-cyan" />
-              <div className="flex flex-col">
-                <span className="font-mono text-xs tracking-[0.18em] text-cortex-cyan">CORTEX</span>
-                <span className="text-xs text-cortex-text-muted">developer shell</span>
-              </div>
-            </div>
-          </div>
-
-          <nav className="flex flex-1 flex-col gap-cortex-8 p-cortex-16" aria-label="Primary">
-            {navItems.map((item) => {
-              const active = isActiveRoute(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={[
-                    "cortex-nav-motion group flex h-10 items-center rounded-cortex border px-cortex-12 text-sm transition duration-cortex ease-cortex",
-                    active
-                      ? "border-cortex-cyan/30 bg-cortex-surface text-cortex-text shadow-cortex-cyan cortex-active-glow"
-                      : "border-transparent text-cortex-text-muted hover:border-cortex-border hover:bg-cortex-surface hover:text-cortex-text",
-                  ].join(" ")}
-                >
-                  <span
-                    className={[
-                      "mr-cortex-12 h-2 w-2 rounded-full transition duration-cortex ease-cortex",
-                      active ? "bg-cortex-cyan shadow-cortex-cyan" : "bg-cortex-border group-hover:bg-cortex-cyan/60",
-                    ].join(" ")}
-                  />
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="border-t border-cortex-border p-cortex-16">
-            <div className="rounded-cortex-lg border border-cortex-border bg-cortex-surface p-cortex-12 backdrop-blur-xl">
-              <div className="mb-cortex-8 flex items-center justify-between">
-                <span className="text-xs uppercase tracking-[0.12em] text-cortex-text-muted">System</span>
-                <span className="rounded-cortex-pill border border-cortex-green/30 px-cortex-12 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-cortex-green shadow-cortex-green">
-                  online
-                </span>
-              </div>
-              <p className="text-xs leading-5 text-cortex-text-muted">
-                Fixed rail for developer workflows, chat, models, and vault operations.
-              </p>
-            </div>
-          </div>
-        </aside>
-
-        <div className="min-w-0">
+      <div className="min-h-screen">
           <header className="sticky top-0 z-20 h-[56px] border-b border-cortex-border bg-cortex-bg-secondary/80 backdrop-blur-xl">
             <div className="flex h-full items-center justify-between gap-cortex-16 px-cortex-16 lg:px-cortex-24">
-              <div className="flex items-center gap-cortex-12">
-                <span className="hidden rounded-cortex-pill border border-cortex-border px-cortex-12 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-cortex-text-muted sm:inline-flex">
-                  system header
-                </span>
-                <span className="text-sm text-cortex-text-muted">VSCode shell with Linear-style density</span>
-              </div>
 
               <div className="flex items-center gap-cortex-12">
-                <span className="rounded-cortex-pill border border-cortex-cyan/30 bg-cortex-surface px-cortex-12 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-cortex-cyan shadow-cortex-cyan">
-                  active
-                </span>
-                <span className="rounded-cortex-pill border border-cortex-border bg-cortex-surface px-cortex-12 py-1 font-mono text-[11px] uppercase tracking-[0.12em] text-cortex-text-muted">
-                  {pathname}
-                </span>
+                {/* Top-right avatar only (header intentionally empty) */}
+                <div className="relative">
+                  <HeaderAvatarMenu sessionUser={sessionUser} />
+                </div>
               </div>
             </div>
           </header>
 
           <main className="px-cortex-16 py-cortex-16 lg:px-cortex-24 lg:py-cortex-24">
-            <div className="cortex-panel-motion mx-auto flex w-full max-w-cortex flex-col gap-cortex-16">{children}</div>
+            <div className="mx-auto w-full max-w-cortex">{children}</div>
           </main>
         </div>
       </div>
-    </div>
+    // </div>
   );
 }

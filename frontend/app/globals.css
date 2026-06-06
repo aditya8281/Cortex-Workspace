@@ -21,7 +21,8 @@
   *,
   ::before,
   ::after {
-    @apply border-cortex-border;
+    /* Removed global border application to avoid thin hairline artifacts across UI.
+       Borders should be applied explicitly to components that require them. */
   }
 
   code,

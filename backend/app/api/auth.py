@@ -60,8 +60,8 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 @router.put("/api/auth/me", response_model=UserResponse)
 def update_me(payload: MeUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Check current password first if client is updating password
-    if payload.password is not None or payload.username is not None:
+    # Check current password first if client is updating sensitive credentials
+    if payload.password is not None or payload.username is not None or payload.vault_password is not None:
         if not payload.current_password:
             raise HTTPException(status_code=400, detail="Current password is required to change credentials")
         if not verify_password(payload.current_password, current_user.hashed_password):

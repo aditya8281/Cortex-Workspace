@@ -21,8 +21,8 @@ class IndexManager:
         self.code_parsing = code_parsing or "Tree-sitter"
 
         if index_path is None or index_path == ".cortex":
-            from backend.app.services.memory_manager import memory_manager
-            index_dir = memory_manager.get_path("embeddings")
+            from backend.app.core import storage
+            index_dir = storage.get_embeddings_root()
         else:
             index_dir = Path(index_path)
 

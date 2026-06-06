@@ -142,3 +142,80 @@ def test_login_and_me(client):
     bad_headers = {"Authorization": "Bearer badtoken"}
     response = client.get("/api/auth/me", headers=bad_headers)
     assert response.status_code == 401
+
+
+def test_profile_preferences_photo_and_password_flows(client):
+    # Setup admin + user
+    dummy_payload = {
+        "username": "dummyadmin2",
+        "full_name": "Dummy Admin",
+        "nickname": "dummy",
+        "password": "securepassword123",
+        "confirm_password": "securepassword123",
+        "vault_password": "vaultpassword123",
+        "personal_storage_path": "~/CortexVaultTest"
+    }
+    client.post("/api/auth/register", json=dummy_payload)
+
+    payload = {
+        "username": "profileuser",
+        "full_name": "Profile User",
+        "nickname": "prof",
+        "password": "initialPass123",
+        "confirm_password": "initialPass123",
+        "vault_password": "vaultPass123",
+        "personal_storage_path": "~/CortexVaultTestP"
+    }
+    reg_response = client.post("/api/auth/register", json=payload)
+    assert reg_response.status_code == 200
+
+    # login
+    login_payload = {"username": "profileuser", "password": "initialPass123"}
+    login_resp = client.post("/api/auth/login", json=login_payload)
+    assert login_resp.status_code == 200
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # update preferences
+    pref_payload = {"interaction_style": "casual", "response_style": "concise"}
+    r = client.put("/api/v1/me/profile/preferences", json=pref_payload, headers=headers)
+    assert r.status_code == 200
+    assert r.json()["preferences"]["interaction_style"] == "casual"
+
+    # upload profile photo
+    files = {"file": ("avatar.png", b"PNGDATA", "image/png")}
+    r = client.post("/api/v1/me/profile/photo", files=files, headers=headers)
+    assert r.status_code == 200
+    photo_name = r.json().get("profile_photo")
+    assert photo_name and photo_name.startswith("user_")
+
+    # ensure profile shows photo
+    r = client.get("/api/v1/me/profile", headers=headers)
+    assert r.status_code == 200
+    assert r.json().get("profile_photo") == photo_name
+
+    # remove photo
+    r = client.delete("/api/v1/me/profile/photo", headers=headers)
+    assert r.status_code == 200
+    assert r.json().get("profile_photo") is None
+
+    # change account password
+    pwd_payload = {"current_password": "initialPass123", "new_password": "NewPass1234", "confirm_password": "NewPass1234"}
+    r = client.post("/api/v1/me/profile/change-password", json=pwd_payload, headers=headers)
+    assert r.status_code == 200
+
+    # login with new password
+    r = client.post("/api/auth/login", json={"username": "profileuser", "password": "NewPass1234"})
+    assert r.status_code == 200
+
+    new_token = r.json()["access_token"]
+    new_headers = {"Authorization": f"Bearer {new_token}"}
+
+    # change vault password (requires account password)
+    vault_payload = {"account_password": "NewPass1234", "new_vault_password": "NewVault1234", "confirm_vault_password": "NewVault1234"}
+    r = client.post("/api/v1/me/profile/change-vault-password", json=vault_payload, headers=new_headers)
+    assert r.status_code == 200
+
+    # verify that updating /api/auth/me with vault_password without current_password fails
+    r = client.put("/api/auth/me", json={"vault_password": "oops"}, headers=new_headers)
+    assert r.status_code == 400

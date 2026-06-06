@@ -3,14 +3,18 @@ export const cortexTokens = {
     cortex: {
       bg: "#070B14",
       "bg-secondary": "#0B1220",
-      surface: "rgba(255,255,255,0.04)",
-      border: "rgba(255,255,255,0.08)",
-      cyan: "#00F5FF",
-      green: "#39FF88",
-      warning: "#FBBF24",
-      error: "#FF4D4D",
+      surface: "rgba(0, 10, 44, 0.74)",
+      "surface-elevated": "rgba(143, 83, 192, 0.64)",
+      "modal-surface": "rgba(143, 83, 192, 0.64)",
+      border: "rgba(143, 83, 192, 0.64)",
+      cyan: "#26C6D6",
+      "cyan-strong": "#13B1C0",
+      green: "#2ECC7A",
+      warning: "#F6C85F",
+      error: "#FF6B6B",
       text: "#E6EDF3",
-      "text-muted": "#8B9BB3",
+      // slightly lighter muted text for improved contrast on dark surfaces
+      "text-muted": "#97A9BF",
     },
   },
   spacing: {
@@ -46,8 +50,14 @@ export const cortexTokens = {
   },
   boxShadow: {
     cortex: "0 0 0 1px rgba(255,255,255,0.08)",
-    "cortex-cyan": "0 0 0 1px rgba(0,245,255,0.08), 0 0 18px rgba(0,245,255,0.12)",
-    "cortex-green": "0 0 0 1px rgba(57,255,136,0.08), 0 0 18px rgba(57,255,136,0.1)",
+    "cortex-cyan": "0 0 0 1px rgba(38,198,214,0.08), 0 0 18px rgba(38,198,214,0.12)",
+    "cortex-green": "0 0 0 1px rgba(46,204,122,0.08), 0 0 18px rgba(46,204,122,0.1)",
+  },
+  zIndex: {
+    modal: 900,
+    toast: 850,
+    dropdown: 800,
+    header: 700,
   },
   maxWidth: {
     cortex: "1400px",

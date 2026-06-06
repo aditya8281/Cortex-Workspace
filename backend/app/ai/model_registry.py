@@ -67,7 +67,8 @@ class ModelRegistry:
     def _cache_path():
         from backend.app.services.memory_manager import memory_manager
 
-        return memory_manager.get_path("cache", MODEL_REGISTRY_CACHE_FILENAME)
+        from backend.app.core import storage
+        return storage.get_cache_root() / MODEL_REGISTRY_CACHE_FILENAME
 
     @classmethod
     def _load_cache(cls) -> dict[str, Any]:

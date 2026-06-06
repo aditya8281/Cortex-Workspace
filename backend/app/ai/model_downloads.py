@@ -30,7 +30,8 @@ class ModelDownloadManager:
 
     def _load_state(self) -> None:
         from backend.app.services.memory_manager import memory_manager
-        state_file = memory_manager.get_path("cache", "model_download_jobs.json")
+        from backend.app.core import storage
+        state_file = storage.get_cache_root() / "model_download_jobs.json"
         if not state_file.exists():
             self._jobs = {}
             return
@@ -45,8 +46,8 @@ class ModelDownloadManager:
             self._jobs = {}
 
     def _save_state(self) -> None:
-        from backend.app.services.memory_manager import memory_manager
-        state_file = memory_manager.get_path("cache", "model_download_jobs.json")
+        from backend.app.core import storage
+        state_file = storage.get_cache_root() / "model_download_jobs.json"
         state_file.parent.mkdir(parents=True, exist_ok=True)
         payload = {"jobs": self._jobs, "updated_at": self._now()}
         state_file.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")

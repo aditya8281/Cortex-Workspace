@@ -16,11 +16,11 @@ class StateStore:
 
     @property
     def conn(self):
-        from backend.app.services.memory_manager import memory_manager
+        from backend.app.core import storage
         if self._custom_path:
             expected_path = self._custom_path
         else:
-            expected_path = str(memory_manager.get_path("sync_state", "state.db"))
+            expected_path = str(storage.get_sync_root() / "state.db")
             
         if self._conn is None or self._current_db_path != expected_path:
             self.reconnect(expected_path)
@@ -41,8 +41,8 @@ class StateStore:
     def reconnect(self, db_path: Optional[str] = None):
         self.close()
         if db_path is None:
-            from backend.app.services.memory_manager import memory_manager
-            db_path = str(memory_manager.get_path("sync_state", "state.db"))
+            from backend.app.core import storage
+            db_path = str(storage.get_sync_root() / "state.db")
         
         self._current_db_path = db_path
         # Ensure parent folder exists using safe abstraction

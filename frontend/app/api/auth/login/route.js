@@ -14,6 +14,8 @@ function getBackendBases() {
 export async function POST(request) {
   const payload = await request.json();
   let lastError = null;
+  let lastStatus = null;
+  let lastBody = null;
 
   for (const base of getBackendBases()) {
     try {
@@ -28,7 +30,9 @@ export async function POST(request) {
       const data = await response.json();
 
       if (!response.ok) {
-        lastError = data?.detail || "Login failed";
+        lastStatus = response.status;
+        lastBody = data;
+        lastError = data?.detail || data?.error || "Login failed";
         continue;
       }
 
@@ -36,6 +40,11 @@ export async function POST(request) {
     } catch (error) {
       lastError = error instanceof Error ? error.message : "Login failed";
     }
+  }
+
+  // If we received a non-OK response from the backend, forward its body and status
+  if (lastStatus && lastBody) {
+    return NextResponse.json(lastBody, { status: lastStatus });
   }
 
   return NextResponse.json({ error: lastError || "Login failed" }, { status: 502 });

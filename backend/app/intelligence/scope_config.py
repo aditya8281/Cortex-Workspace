@@ -16,8 +16,8 @@ CONFIG_FILE = None
 def get_config_file() -> Path:
     if CONFIG_FILE is not None:
         return Path(str(CONFIG_FILE))
-    from backend.app.services.memory_manager import memory_manager
-    return memory_manager.get_path("sync_state", "sync_scope_config.json")
+    from backend.app.core import storage
+    return storage.get_sync_root() / "sync_scope_config.json"
 
 
 class SyncScopeConfig:

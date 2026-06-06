@@ -14,6 +14,8 @@ function getBackendBases() {
 export async function POST(request) {
   const payload = await request.json();
   let lastError = null;
+  let lastStatus = null;
+  let lastBody = null;
 
   for (const base of getBackendBases()) {
     try {
@@ -28,7 +30,9 @@ export async function POST(request) {
       const data = await response.json();
 
       if (!response.ok) {
-        lastError = data?.detail || "Registration failed";
+        lastStatus = response.status;
+        lastBody = data;
+        lastError = data?.detail || data?.error || "Registration failed";
         continue;
       }
 
@@ -36,6 +40,10 @@ export async function POST(request) {
     } catch (error) {
       lastError = error instanceof Error ? error.message : "Registration failed";
     }
+  }
+
+  if (lastStatus && lastBody) {
+    return NextResponse.json(lastBody, { status: lastStatus });
   }
 
   return NextResponse.json({ error: lastError || "Registration failed" }, { status: 502 });

@@ -1,3 +1,24 @@
+"""
+Entrypoint for the FastAPI app.
+
+This module is safe to execute directly (``python3 backend/app/main.py``).
+When executed as a script, Python's import path doesn't include the project
+root, which causes imports like `backend.app...` to fail. We ensure the
+project root is on `sys.path` early so imports work regardless of how the
+module is executed.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+# Ensure project root is on sys.path when running this file directly.
+# backend/app/main.py -> parents[2] == project root
+_ROOT = Path(__file__).resolve().parents[2]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
