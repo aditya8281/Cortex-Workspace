@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from backend.app.services.user_service import create_user, authenticate_user
@@ -12,25 +11,10 @@ from backend.app.core.tokens import create_access_token
 from backend.app.auth.tokens import create_refresh_token, verify_refresh_token, rotate_refresh_token, revoke_refresh_token_by_jti
 from backend.app.auth.rate_limit import record_login_failure, reset_login_failures, is_blocked
 from backend.app.auth.audit import log_event
-from backend.app.core.redis import redis_cache
-from backend.app.db.session import SessionLocal
-import asyncio
+from backend.app.services.storage_registry import register_user_storage, get_registry_for_user
+from backend.app.core.storage_abstraction import validate_storage_path
 
 logger = logging.getLogger(__name__)
-
-
-def _safe_expand_and_validate_path(path_str: str, workspace_root: str | None = None) -> Path:
-    p = Path(path_str).expanduser()
-    # Prevent path traversal outside workspace if workspace_root provided
-    if workspace_root:
-        try:
-            root = Path(workspace_root).resolve()
-            target = p.resolve()
-            if root not in target.parents and root != target:
-                raise ValueError("Invalid storage path")
-        except Exception:
-            raise ValueError("Invalid storage path")
-    return p
 
 
 async def register_user(db: Session, payload: UserRegisterPayload, ip: str | None = None):
@@ -43,14 +27,22 @@ async def register_user(db: Session, payload: UserRegisterPayload, ip: str | Non
         raise HTTPException(status_code=400, detail="Vault password does not meet strength requirements")
 
     try:
-        # Validate storage path if provided
-        if payload.data_path:
-            _safe_expand_and_validate_path(payload.data_path, workspace_root=None)
-
         db_user = create_user(db, payload)
         if not db_user:
             log_event("registration_failed", None, ip, {"reason": "username_taken"})
-            raise HTTPException(status_code=400, detail="Registration failed")
+            raise HTTPException(status_code=400, detail="Username already registered")
+
+        # Resolve canonical storage_root from payload, accepting deprecated aliases.
+        storage_root = (
+            payload.storage_root
+            or payload.data_path
+            or payload.personal_storage_path
+        )
+        if not storage_root:
+            raise HTTPException(status_code=400, detail="Storage root is required for registration")
+
+        validated_root = validate_storage_path(storage_root)
+        register_user_storage(db, db_user.id, str(validated_root))
 
         # on success, log and create tokens
         log_event("registration_success", db_user.id, ip, {})
@@ -69,6 +61,9 @@ async def register_user(db: Session, payload: UserRegisterPayload, ip: str | Non
         # try to find and remove user
         try:
             if 'db_user' in locals() and db_user:
+                registry = get_registry_for_user(db, db_user.id)
+                if registry:
+                    db.delete(registry)
                 db.delete(db_user)
                 db.commit()
         except Exception:

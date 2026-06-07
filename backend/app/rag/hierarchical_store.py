@@ -1,4 +1,5 @@
 import logging
+
 import faiss
 import numpy as np
 
@@ -6,9 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 class HierarchicalVectorStore:
-    """
-    Manages 4 distinct FAISS IndexIDMap2 vector indices for Chunk, File, Folder, and Repo layers,
-    mapping custom database 64-bit integer keys to embeddings.
+    """Manages 4 distinct FAISS IndexIDMap2 vector indices for Chunk, File,
+    Folder, and Repo layers, mapping custom database 64-bit integer keys
+    to embeddings.
+
+    All indices are stored under ``SystemPaths["vector_db"] / "hierarchical"``.
     """
 
     def __init__(self, dim: int = 384):
@@ -26,7 +29,7 @@ class HierarchicalVectorStore:
             if index_path.exists():
                 try:
                     loaded = faiss.read_index(str(index_path))
-                    # If the on-disk index dimension differs from requested dim, recreate it.
+
                     def _index_dim(idx):
                         d = getattr(idx, "d", None)
                         if d is None and hasattr(idx, "index"):
@@ -36,15 +39,22 @@ class HierarchicalVectorStore:
                     existing_dim = _index_dim(loaded)
                     if existing_dim is not None and existing_dim != self.dim:
                         logger.warning(
-                            f"Existing FAISS index for {layer} has dim={existing_dim}, requested dim={self.dim}; recreating index"
+                            "Existing FAISS index for %s has dim=%s, requested dim=%s; recreating",
+                            layer, existing_dim, self.dim,
                         )
                         flat = faiss.IndexFlatL2(self.dim)
                         self.indices[layer] = faiss.IndexIDMap2(flat)
                     else:
                         self.indices[layer] = loaded
-                        logger.info(f"Loaded existing hierarchical FAISS index for {layer} from {index_path}")
+                        logger.info(
+                            "Loaded existing hierarchical FAISS index for %s from %s",
+                            layer, index_path,
+                        )
                 except Exception as e:
-                    logger.warning(f"Failed to load hierarchical FAISS index for {layer}, creating new empty index: {e}")
+                    logger.warning(
+                        "Failed to load hierarchical FAISS index for %s, creating new: %s",
+                        layer, e,
+                    )
                     flat = faiss.IndexFlatL2(self.dim)
                     self.indices[layer] = faiss.IndexIDMap2(flat)
             else:
@@ -52,11 +62,7 @@ class HierarchicalVectorStore:
                 self.indices[layer] = faiss.IndexIDMap2(flat)
 
     def add_vectors(self, layer: str, vectors: np.ndarray, ids: np.ndarray):
-        """
-        Add vectors with custom 64-bit IDs.
-        vectors: shape (N, dim) np.ndarray (float32)
-        ids: shape (N,) np.ndarray (int64)
-        """
+        """Add vectors with custom 64-bit IDs."""
         if layer not in self.indices:
             raise ValueError(f"Invalid layer: {layer}")
         if vectors.size == 0 or len(ids) == 0:
@@ -70,11 +76,7 @@ class HierarchicalVectorStore:
         self.indices[layer].add_with_ids(vectors, ids)
 
     def search_vectors(self, layer: str, query_vector: np.ndarray, top_k: int = 5):
-        """
-        Search the specified layer.
-        query_vector: shape (1, dim) or (dim,)
-        returns: list of dicts {"id": int, "score": float}
-        """
+        """Search the specified layer."""
         if layer not in self.indices:
             raise ValueError(f"Invalid layer: {layer}")
         if self.indices[layer].ntotal == 0:
@@ -93,10 +95,7 @@ class HierarchicalVectorStore:
         return results
 
     def remove_vectors(self, layer: str, ids: np.ndarray):
-        """
-        Remove vectors by their custom IDs.
-        ids: shape (N,) np.ndarray (int64) or list of ints
-        """
+        """Remove vectors by their custom IDs."""
         if layer not in self.indices:
             raise ValueError(f"Invalid layer: {layer}")
         if len(ids) == 0 or self.indices[layer].ntotal == 0:
@@ -107,22 +106,18 @@ class HierarchicalVectorStore:
         self.indices[layer].remove_ids(ids_arr)
 
     def reconstruct(self, layer: str, node_id: int) -> np.ndarray:
-        """
-        Reconstruct the embedding vector for a node ID.
-        """
+        """Reconstruct the embedding vector for a node ID."""
         if layer not in self.indices:
             raise ValueError(f"Invalid layer: {layer}")
         return self.indices[layer].reconstruct(node_id)
 
     def save(self):
-        """
-        Save the current state of all indices to disk.
-        """
+        """Save the current state of all indices to disk."""
         self.base_dir.mkdir(parents=True, exist_ok=True)
         for layer, index in self.indices.items():
             index_path = self.base_dir / f"{layer}_index.faiss"
             try:
                 faiss.write_index(index, str(index_path))
-                logger.info(f"Saved FAISS index for {layer} to {index_path}")
+                logger.info("Saved FAISS index for %s to %s", layer, index_path)
             except Exception as e:
-                logger.error(f"Failed to save hierarchical index {layer}: {e}")
+                logger.error("Failed to save hierarchical index %s: %s", layer, e)

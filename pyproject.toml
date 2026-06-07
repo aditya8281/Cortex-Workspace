@@ -29,6 +29,7 @@ dependencies = [
     "watchdog>=4.0.0",
     "python-multipart>=0.0.31",
     "psutil>=7.2.2",
+    "Pillow>=10.0.0",
 ]
 
 [dependency-groups]

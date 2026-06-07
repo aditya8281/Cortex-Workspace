@@ -3,6 +3,7 @@ from pathlib import Path
 
 from backend.app.rag.vector_store import VectorStore
 from backend.app.core.runtime import get_runtime
+from backend.app.core.storage_abstraction import should_exclude_from_rag
 
 
 class IndexManager:
@@ -22,9 +23,9 @@ class IndexManager:
 
         if index_path is None or index_path == ".cortex":
             from backend.app.core import storage
-            index_dir = storage.get_embeddings_root()
+            index_dir = storage.get_indexes_root()
         else:
-            index_dir = Path(index_path)
+            index_dir = Path(index_path).expanduser().resolve()
 
         # Build an isolated subfolder key per config so indices never collide
         def safe(s):
@@ -37,13 +38,23 @@ class IndexManager:
 
         base = Path(self.index_path)
         state_file = base / "file_states.json"
+
+        if should_exclude_from_rag(self.repo_path):
+            base.mkdir(parents=True, exist_ok=True)
+            empty_store = VectorStore(dim=384)
+            empty_store.save(self.index_path)
+            return empty_store
         
         retriever = RepoRetriever(
             embedding_model=self.embedding_model,
             vector_db=self.vector_db,
             code_parsing=self.code_parsing
         )
-        files = retriever.scanner.scan(self.repo_path)
+        files = [
+            file_path
+            for file_path in retriever.scanner.scan(self.repo_path)
+            if not should_exclude_from_rag(file_path)
+        ]
         
         # Calculate current file modification times using safe abstraction
         runtime = get_runtime()

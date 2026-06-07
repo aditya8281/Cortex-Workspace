@@ -1,18 +1,28 @@
-"""
-System paths constants and configurations.
+"""Canonical system path definitions for Cortex.
 
-Centralized definitions for:
-- Blocked system paths
-- Protected directories
-- VFS safety rules
-- Cross-platform path handling
-
-NO hardcoded paths should exist in business logic.
-All path references must use constants from this module.
+All system-owned files must live under:
+  CORTEX_ROOT/system/{db,embeddings,vector_db,indexes,logs,cache,runtime}
 """
+
+from __future__ import annotations
+
+import os
+from functools import lru_cache
+from pathlib import Path
+from typing import Final
+
+from backend.app.core.config import settings
+from backend.app.core.paths import PROJECT_ROOT
+
+# ── Exceptions ────────────────────────────────────────────────────────
+
+
+class SecurityError(PermissionError):
+    """Raised when a path violates system/user isolation boundaries."""
+
 
 # ========== LINUX BLOCKED PATHS ==========
-LINUX_BLOCKED_SYSTEM_PATHS = {
+LINUX_BLOCKED_SYSTEM_PATHS: Final[set[str]] = {
     "/sys",
     "/proc",
     "/dev",
@@ -32,7 +42,7 @@ LINUX_BLOCKED_SYSTEM_PATHS = {
     "/mnt",
 }
 
-LINUX_IGNORED_DIRS = {
+LINUX_IGNORED_DIRS: Final[set[str]] = {
     "__pycache__",
     ".venv",
     "venv",
@@ -44,7 +54,7 @@ LINUX_IGNORED_DIRS = {
 }
 
 # ========== MACOS BLOCKED PATHS ==========
-MACOS_BLOCKED_SYSTEM_PATHS = {
+MACOS_BLOCKED_SYSTEM_PATHS: Final[set[str]] = {
     "/System",
     "/Library",
     "/private",
@@ -57,7 +67,7 @@ MACOS_BLOCKED_SYSTEM_PATHS = {
     "/var",
 }
 
-MACOS_IGNORED_DIRS = {
+MACOS_IGNORED_DIRS: Final[set[str]] = {
     "__pycache__",
     ".venv",
     "venv",
@@ -70,7 +80,7 @@ MACOS_IGNORED_DIRS = {
 }
 
 # ========== WINDOWS BLOCKED PATHS ==========
-WINDOWS_BLOCKED_SYSTEM_PATHS = {
+WINDOWS_BLOCKED_SYSTEM_PATHS: Final[set[str]] = {
     "C:\\Windows",
     "C:\\System32",
     "C:\\Program Files",
@@ -80,7 +90,7 @@ WINDOWS_BLOCKED_SYSTEM_PATHS = {
     "C:\\System Volume Information",
 }
 
-WINDOWS_IGNORED_DIRS = {
+WINDOWS_IGNORED_DIRS: Final[set[str]] = {
     "__pycache__",
     ".venv",
     "venv",
@@ -91,10 +101,7 @@ WINDOWS_IGNORED_DIRS = {
     ".env",
 }
 
-# ========== CROSS-PLATFORM SETTINGS ==========
-
-# Directory names that should be excluded during scanning
-COMMON_IGNORED_DIRS = {
+COMMON_IGNORED_DIRS: Final[set[str]] = {
     "__pycache__",
     ".venv",
     "venv",
@@ -117,8 +124,7 @@ COMMON_IGNORED_DIRS = {
     ".vscode",
 }
 
-# File extensions to exclude
-IGNORED_EXTENSIONS = {
+IGNORED_EXTENSIONS: Final[set[str]] = {
     ".pyc",
     ".pyo",
     ".pyd",
@@ -143,32 +149,74 @@ IGNORED_EXTENSIONS = {
     ".cache",
 }
 
-# Maximum file size to scan (1 GB)
-MAX_FILE_SIZE_BYTES = 1024 * 1024 * 1024
+MAX_FILE_SIZE_BYTES: Final[int] = 1024 * 1024 * 1024
+MAX_TOTAL_SCAN_SIZE_BYTES: Final[int] = 100 * 1024 * 1024 * 1024
 
-# Maximum total size for scanning (100 GB)
-MAX_TOTAL_SCAN_SIZE_BYTES = 100 * 1024 * 1024 * 1024
+SYSTEM_SUBDIRS: Final[dict[str, str]] = {
+    "db": "db",
+    "embeddings": "embeddings",
+    "vector_db": "vector_db",
+    "indexes": "indexes",
+    "logs": "logs",
+    "cache": "cache",
+    "runtime": "runtime",
+}
+
+_SYSTEM_PATH_CACHE: dict[str, Path] | None = None
 
 
-def should_ignore_path(path_name: str) -> bool:
-    """
-    Check if a path should be ignored during scanning.
-    
-    Args:
-        path_name: Path name to check
-    
-    Returns:
-        True if path should be ignored
-    """
-    path_lower = path_name.lower()
-    
-    # Check if matches ignored directory names
-    if path_name in COMMON_IGNORED_DIRS:
-        return True
-    
-    # Check if matches ignored extensions
-    for ext in IGNORED_EXTENSIONS:
-        if path_lower.endswith(ext):
-            return True
-    
-    return False
+def get_cortex_root() -> Path:
+    root_value = settings.CORTEX_ROOT or os.environ.get("CORTEX_ROOT")
+    if root_value:
+        return Path(root_value).expanduser().resolve()
+    return (PROJECT_ROOT / ".cortex").resolve()
+
+
+def get_system_root() -> Path:
+    root = get_cortex_root() / "system"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+@lru_cache(maxsize=1)
+def _blocked_system_paths() -> set[str]:
+    import platform
+
+    system = platform.system()
+    if system == "Darwin":
+        return set(MACOS_BLOCKED_SYSTEM_PATHS)
+    if system == "Windows":
+        return set(WINDOWS_BLOCKED_SYSTEM_PATHS)
+    return set(LINUX_BLOCKED_SYSTEM_PATHS)
+
+
+def get_blocked_system_paths() -> set[str]:
+    return _blocked_system_paths()
+
+
+def _build_system_paths() -> dict[str, Path]:
+    root = get_system_root()
+    mapping = {key: (root / relative).resolve() for key, relative in SYSTEM_SUBDIRS.items()}
+    for path in mapping.values():
+        path.mkdir(parents=True, exist_ok=True)
+    return mapping
+
+
+def ensure_system_dirs() -> dict[str, Path]:
+    global _SYSTEM_PATH_CACHE
+    _SYSTEM_PATH_CACHE = _build_system_paths()
+    return dict(_SYSTEM_PATH_CACHE)
+
+
+def get_system_paths() -> dict[str, Path]:
+    global _SYSTEM_PATH_CACHE
+    if _SYSTEM_PATH_CACHE is None:
+        _SYSTEM_PATH_CACHE = _build_system_paths()
+    return dict(_SYSTEM_PATH_CACHE)
+
+
+def get_system_path(name: str) -> Path:
+    paths = get_system_paths()
+    if name not in paths:
+        raise KeyError(f"Unknown system path: {name}")
+    return paths[name]

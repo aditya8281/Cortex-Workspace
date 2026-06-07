@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
-import { apiLogin, apiRegister } from "../../src/shared/auth/cortexApi";
+import { apiLogin, apiRegister, getSessionToken } from "../../src/shared/auth/cortexApi";
 import {
   cn,
   useField,
@@ -91,10 +91,10 @@ function LoginForm({ onSwitch }) {
       </form>
 
       <div className="grid gap-2 border-t border-cortex-border/50 pt-4">
-        <Btn variant="ghost" className="w-full text-xs" onClick={onSwitch}>
+        <Btn type="button" variant="ghost" className="w-full text-xs" onClick={onSwitch}>
           Create a new account →
         </Btn>
-        <Btn variant="ghost" className="w-full text-xs" disabled>
+        <Btn type="button" variant="ghost" className="w-full text-xs" disabled>
           Import .crtx file (coming soon)
         </Btn>
       </div>
@@ -227,7 +227,7 @@ function Step2Profile({ data, setData, onNext, onBack, error }) {
 
       <ErrorBanner message={error} />
       <div className="flex gap-3">
-        <Btn variant="ghost" className="flex-1" onClick={onBack}>← Back</Btn>
+        <Btn type="button" variant="ghost" className="flex-1" onClick={onBack}>← Back</Btn>
         <Btn type="submit" className="flex-1">Continue →</Btn>
       </div>
     </form>
@@ -279,7 +279,7 @@ function Step3Vault({ data, setData, onNext, onBack, error }) {
 
       <ErrorBanner message={error} />
       <div className="flex gap-3">
-        <Btn variant="ghost" className="flex-1" onClick={onBack}>← Back</Btn>
+        <Btn type="button" variant="ghost" className="flex-1" onClick={onBack}>← Back</Btn>
         <Btn type="submit" className="flex-1">Continue →</Btn>
       </div>
     </form>
@@ -300,7 +300,7 @@ function Step4Storage({ data, setData, onNext, onBack, error }) {
 
   useEffect(() => {
     if (!isCustom) setData("personal_storage_path", preset);
-  }, [preset]);
+  }, [isCustom, preset, setData]);
 
   function handleNext(e) {
     e.preventDefault();
@@ -370,7 +370,7 @@ function Step4Storage({ data, setData, onNext, onBack, error }) {
 
       <ErrorBanner message={error} />
       <div className="flex gap-3">
-        <Btn variant="ghost" className="flex-1" onClick={onBack}>← Back</Btn>
+        <Btn type="button" variant="ghost" className="flex-1" onClick={onBack}>← Back</Btn>
         <Btn type="submit" className="flex-1">Continue →</Btn>
       </div>
     </form>
@@ -421,7 +421,7 @@ function Step5Review({ data, onBack, onSubmit, loading, error }) {
       <ErrorBanner message={error} />
 
       <div className="flex gap-3">
-        <Btn variant="ghost" className="flex-1" onClick={onBack} disabled={loading}>← Back</Btn>
+        <Btn type="button" variant="ghost" className="flex-1" onClick={onBack} disabled={loading}>← Back</Btn>
         <Btn className="flex-1" loading={loading} onClick={onSubmit}>
           Initialize Cortex →
         </Btn>
@@ -465,6 +465,7 @@ function validate(step, data) {
 
 function RegisterWizard({ onSwitch }) {
   const router = useRouter();
+  const { login } = useAuth();
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -477,9 +478,9 @@ function RegisterWizard({ onSwitch }) {
     preferences: {},
   });
 
-  function setField(key, val) {
+  const setField = useCallback((key, val) => {
     setAllData((prev) => ({ ...prev, [key]: val }));
-  }
+  }, []);
 
   function goNext() {
     const err = validate(step, data);
@@ -552,7 +553,7 @@ function RegisterWizard({ onSwitch }) {
       )}
 
       <div className="border-t border-cortex-border/50 pt-3">
-        <Btn variant="ghost" className="w-full text-xs" onClick={onSwitch} disabled={loading}>
+        <Btn type="button" variant="ghost" className="w-full text-xs" onClick={onSwitch} disabled={loading}>
           ← Already have an account? Sign in
         </Btn>
       </div>

@@ -1,26 +1,25 @@
+from __future__ import annotations
+
+import logging
 from pathlib import Path
 from typing import Optional
-import logging
+
+from backend.app.core.storage_abstraction import UserStorage, get_user_storage, validate_storage_path
 
 logger = logging.getLogger(__name__)
 
 
 class UserStorageManager:
-    """Manage per-user storage tree under a user-selected root.
-
-    Usage:
-      mgr = UserStorageManager(Path('/home/user/CortexData'))
-      mgr.get_profile_path()
-    """
+    """Compatibility wrapper for a registry-backed user storage root."""
 
     def __init__(self, root: str | Path):
-        self.root = Path(root).expanduser().resolve()
-        self._ensure_structure()
+        self.root = validate_storage_path(root)
+        self._storage = UserStorage(user_id=-1, root=self.root)
+        self._storage.ensure_dirs()
 
     def _ensure_structure(self):
         try:
-            for d in [self.root, self.get_profile_path(), self.get_vault_path(), self.get_chat_path(), self.get_workspace_path(), self.get_exports_path()]:
-                Path(d).mkdir(parents=True, exist_ok=True)
+            self._storage.ensure_dirs()
         except Exception as e:
             logger.error("Failed to ensure user storage structure for %s: %s", self.root, e)
 
@@ -28,23 +27,22 @@ class UserStorageManager:
         return self.root
 
     def get_profile_path(self) -> Path:
-        return (self.root / "profile").resolve()
+        return self._storage.profile
 
     def get_avatar_path(self) -> Path:
-        # avatar directory/file inside profile
-        return (self.get_profile_path() / "avatar").resolve()
+        return self.get_profile_path() / "avatar"
 
     def get_vault_path(self) -> Path:
-        return (self.root / "vault").resolve()
-
-    def get_chat_path(self) -> Path:
-        return (self.root / "chats").resolve()
+        return self._storage.vault
 
     def get_workspace_path(self) -> Path:
-        return (self.root / "workspace").resolve()
+        return self._storage.workspace
 
     def get_exports_path(self) -> Path:
-        return (self.root / "exports").resolve()
+        return self._storage.exports
+
+    def get_memory_snapshots_path(self) -> Path:
+        return self._storage.memory_snapshots
 
     @classmethod
     def from_registry_entry(cls, registry_entry) -> Optional["UserStorageManager"]:
@@ -52,3 +50,8 @@ class UserStorageManager:
             return cls(registry_entry.storage_root)
         except Exception:
             return None
+
+    @classmethod
+    def for_user(cls, user_id: int) -> UserStorage:
+        return get_user_storage(user_id)
+

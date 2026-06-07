@@ -3,12 +3,20 @@ import React from "react";
 import TopBar from "../src/shared/ui/TopBar";
 import { useAuth } from "../src/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function RootCanvas(){
   const { user, loading } = useAuth();
   const router = useRouter();
-  if (loading) return null;
-  if (!user) { router.push('/auth/login'); return null; }
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      router.replace("/auth");
+    }
+  }, [loading, router, user]);
+
+  if (loading || !user) return null;
 
   return (
     <div style={{minHeight:'100vh',display:'flex',flexDirection:'column'}}>
@@ -20,15 +28,5 @@ export default function RootCanvas(){
         </div>
       </main>
     </div>
-  );
-}
-"use client";
-
-// Minimal blank dashboard canvas (post-auth). Intentionally small — placeholder for future modules.
-export default function Page() {
-  return (
-    <main className="min-h-[60vh] w-full bg-transparent">
-      {/* Intentionally empty authenticated canvas. Avatar is in header (top-right). */}
-    </main>
   );
 }

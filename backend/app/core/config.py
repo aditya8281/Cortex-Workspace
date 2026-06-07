@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     LLM_CACHE_TTL_SECONDS: int = 1800
     ENV: str = "development"
+    CORTEX_ROOT: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("CORTEX_ROOT", "CORTEX_STORAGE_ROOT"),
+    )
     MEMORY_PATH: str | None = Field(
         default=None,
         validation_alias=AliasChoices("MEMORY_PATH", "CORTEX_MEMORY_PATH"),

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import * as cortexApi from "./cortexApi";
+import { clearSession, getSessionToken, getSessionUser, setSession } from "./session";
 
 const AuthContext = createContext(null);
 
@@ -16,11 +17,9 @@ export function AuthProvider({ children }) {
   const getToken = useCallback(() => token, [token]);
 
   const onAuthError = useCallback(() => {
-    // clear locally and across tabs
     setUser(null);
     setToken(null);
-    try { window.sessionStorage.removeItem("cortex_session_token"); window.sessionStorage.removeItem("cortex_session_user"); } catch (e) {}
-    // navigate to auth
+    clearSession();
     router.replace("/auth");
   }, [router]);
 
@@ -34,22 +33,19 @@ export function AuthProvider({ children }) {
   const bootstrapAuth = useCallback(async () => {
     setLoading(true);
     try {
-      const storedToken = typeof window !== "undefined" ? window.sessionStorage.getItem("cortex_session_token") : null;
-      const storedUser = typeof window !== "undefined" ? JSON.parse(window.sessionStorage.getItem("cortex_session_user") || "null") : null;
-      if (storedToken && storedUser) {
+      const storedToken = getSessionToken();
+      const storedUser = getSessionUser();
+      if (storedToken) {
         setToken(storedToken);
-        setUser(storedUser);
-        // verify token with backend
+        if (storedUser) setUser(storedUser);
         try {
           const me = await cortexApi.apiGetMe();
           setUser(me);
-          window.sessionStorage.setItem("cortex_session_user", JSON.stringify(me));
+          setSession(storedToken, me);
         } catch (e) {
-          // invalid token
           setToken(null);
           setUser(null);
-          window.sessionStorage.removeItem("cortex_session_token");
-          window.sessionStorage.removeItem("cortex_session_user");
+          clearSession();
         }
       }
     } catch (e) {
@@ -62,42 +58,49 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     bootstrapAuth();
-    // cross-tab sync
+
     function onStorage(e) {
-      if (e.key === "cortex_session_token") {
-        if (!e.newValue) {
-          // logged out elsewhere
-          setUser(null); setToken(null);
-          router.replace("/auth");
-        } else {
-          // token changed elsewhere, bootstrap
-          bootstrapAuth();
-        }
+      if (e.key !== "cortex_session_token" && e.key !== "cortex_session_user") {
+        return;
       }
+
+      if (!e.newValue && e.key === "cortex_session_token") {
+        setUser(null);
+        setToken(null);
+        router.replace("/auth");
+        return;
+      }
+
+      bootstrapAuth();
     }
+
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, [bootstrapAuth, router]);
 
   const login = useCallback(async (tokenValue, userValue) => {
-    // tokenValue and userValue can be obtained from server response
     setToken(tokenValue);
     setUser(userValue);
-    try { window.sessionStorage.setItem("cortex_session_token", tokenValue); window.sessionStorage.setItem("cortex_session_user", JSON.stringify(userValue)); } catch (e) {}
+    setSession(tokenValue, userValue);
     return true;
   }, []);
 
+  const updateUser = useCallback((nextUser) => {
+    setUser((current) => {
+      const resolved = typeof nextUser === "function" ? nextUser(current) : { ...(current || {}), ...(nextUser || {}) };
+      setSession(token, resolved);
+      return resolved;
+    });
+  }, [token]);
+
   const logout = useCallback(() => {
-    setUser(null); setToken(null);
-    try { window.sessionStorage.removeItem("cortex_session_token"); window.sessionStorage.removeItem("cortex_session_user"); } catch (e) {}
+    setUser(null);
+    setToken(null);
+    clearSession();
     router.replace("/auth");
   }, [router]);
 
-  return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, bootstrapAuth }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, token, loading, login, logout, bootstrapAuth, updateUser }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

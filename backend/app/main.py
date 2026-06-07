@@ -34,6 +34,8 @@ from backend.app.core.config import settings
 from backend.app.core.logging import setup_logging
 from backend.app.core.middleware import RequestLoggingMiddleware
 from backend.app.core.logging import get_logger
+from backend.app.core.system_paths import ensure_system_dirs
+from backend.app.db.bootstrap import bootstrap_database
 
 
 setup_logging()
@@ -44,7 +46,10 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"{settings.APP_NAME} started")
-    
+
+    ensure_system_dirs()
+    bootstrap_database()
+
     # Test Redis connectivity
     from backend.app.core.redis import redis_cache
     await redis_cache.ping()
@@ -52,7 +57,6 @@ async def lifespan(app: FastAPI):
     # Background warmup for AIExecutor and RAG index loading to optimize first-query latency
     import asyncio
     from backend.app.executor import AIExecutor
-    # Ensure system database exists and is initialized (single app.db)
     try:
         from backend.app.db import session as db_session
         db_session.get_engine()

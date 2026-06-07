@@ -4,6 +4,7 @@
  */
 
 import { PUBLIC_BASE } from "../apiClient";
+import { getSessionToken as readSessionToken } from "./session";
 
 // token provider and auth error handler can be set by AuthProvider
 let _tokenProvider = null;
@@ -15,6 +16,10 @@ export function setTokenProvider(fn) {
 
 export function setAuthErrorHandler(fn) {
   _authErrorHandler = fn;
+}
+
+export function getSessionToken() {
+  return readSessionToken();
 }
 
 function authHeader() {

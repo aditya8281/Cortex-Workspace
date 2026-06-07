@@ -42,8 +42,6 @@ DEFAULT_IGNORED_PATH_PREFIXES = (
     "/sys",
     "/dev",
     "/run",
-    "/tmp",
-    "/var/tmp",
     "/var/cache",
     "/var/log",
     "/boot",
@@ -122,28 +120,10 @@ class ExclusionConfig:
     def should_skip_path(self, path: Path) -> bool:
         resolved = path.resolve()
         path_str = str(resolved)
-        # Always skip user vault path if configured
         try:
-            from backend.app.core.config import settings
-            vault = settings.VAULT_PATH or None
-            if vault:
-                vault_p = Path(vault).resolve()
-                vault_str = str(vault_p)
-                if path_str == vault_str or path_str.startswith(vault_str + os.sep):
-                    return True
-            # Also skip any per-user vault roots under the system users directory
-            from backend.app.core import storage
-            try:
-                users_root = storage.get_users_root()
-                users_root_str = str(users_root.resolve())
-                if path_str == users_root_str or path_str.startswith(users_root_str + os.sep):
-                    # If the path is inside users root, further check for '/vault' segment
-                    # to avoid skipping profile or exports unintentionally.
-                    # Example path: .../users/user_1/vault/...
-                    if "/vault" in path_str:
-                        return True
-            except Exception:
-                pass
+            from backend.app.core.storage_abstraction import should_exclude_from_rag, is_vault_path
+            if should_exclude_from_rag(resolved) or is_vault_path(resolved):
+                return True
         except Exception:
             pass
         for prefix in self.ignored_path_prefixes:

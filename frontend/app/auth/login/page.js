@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../src/shared/auth/AuthProvider";
 import { apiLogin } from "../../../src/shared/auth/cortexApi";
@@ -12,8 +12,6 @@ export default function LoginPage(){
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const ref = useRef();
-
   async function submit(e){
     e?.preventDefault();
     if (!username.trim() || !password) { setError('Username and password required'); return; }

@@ -1,81 +1,55 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../auth/AuthProvider";
-
-const userNavItems = [
-  { label: "Dashboard", href: "/" },
-  { label: "Chat", href: "/chat" },
-  { label: "Memory", href: "/memory" },
-  { label: "Knowledge Graph", href: "/knowledge-graph" },
-  { label: "Profile", href: "/profile" },
-  { label: "Vault", href: "/vault" },
-];
-
-const adminNavItems = [
-  { label: "Models", href: "/models" },
-  { label: "Vitals", href: "/vitals" },
-];
+import { apiGetProfilePhotoUrl } from "../auth/cortexApi";
 
 const adminRoutes = ["/models", "/vitals"];
 
-  import { apiGetProfilePhotoUrl } from "../auth/cortexApi";
+function HeaderAvatarMenu({ sessionUser }) {
+  const router = useRouter();
 
-  function HeaderAvatarMenu({ sessionUser }) {
-    const router = useRouter();
-
-    function handleOpenProfile(e) {
-      try {
-        const btn = e.currentTarget.querySelector('.cortex-header-avatar');
-        if (btn) {
-          import('../ui/avatarTransition').then(({ getElementRect, saveAvatarRect }) => {
-            try {
-              const r = getElementRect(btn);
-              saveAvatarRect(r);
-            } catch (e) {}
-            router.push('/profile');
-          });
-          return;
-        }
-      } catch (e) {}
-      router.push('/profile');
-    }
-
-    // compute visible avatar: image when profile photo exists, otherwise single capital initial
-    const AvatarInner = () => {
-      const photo = sessionUser?.profile_photo;
-      if (photo) {
-        const src = apiGetProfilePhotoUrl();
-        return (
-          // image will be fetched with auth token via same-origin request
-          <img src={src} alt={`${sessionUser?.full_name || sessionUser?.username}'s avatar`} className="h-9 w-9 rounded-full object-cover" />
-        );
+  function handleOpenProfile(e) {
+    try {
+      const btn = e.currentTarget.querySelector(".cortex-header-avatar");
+      if (btn) {
+        import("../ui/avatarTransition").then(({ getElementRect, saveAvatarRect }) => {
+          try {
+            saveAvatarRect(getElementRect(btn));
+          } catch (error) {}
+          router.push("/profile");
+        });
+        return;
       }
-      const name = sessionUser?.full_name || sessionUser?.username || "?";
-      const first = (name || "").toString().trim().split(' ')[0].charAt(0).toUpperCase() || '?';
-      return <span className="font-medium">{first}</span>;
-    };
+    } catch (error) {}
 
-    return (
-      <div className="relative">
-        <button
-          aria-label="Open profile"
-          onClick={handleOpenProfile}
-          className="flex items-center gap-2 rounded-full p-1 hover:bg-cortex-bg focus:outline-none"
-        >
-          <div className="cortex-header-avatar h-9 w-9 flex items-center justify-center rounded-full border border-cortex-border bg-cortex-bg-secondary text-cortex-text">
-            <AvatarInner />
-          </div>
-        </button>
-      </div>
-    );
+    router.push("/profile");
   }
 
-function isActiveRoute(pathname, href) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const name = sessionUser?.full_name || sessionUser?.username || "?";
+  const initial = (name || "").toString().trim().split(" ")[0].charAt(0).toUpperCase() || "?";
+
+  return (
+    <button
+      type="button"
+      aria-label="Open profile"
+      onClick={handleOpenProfile}
+      className="flex items-center gap-2 rounded-full p-1 hover:bg-cortex-bg focus:outline-none"
+    >
+      <div className="cortex-header-avatar flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-cortex-border bg-cortex-bg-secondary text-cortex-text">
+        {sessionUser?.profile_photo ? (
+          <img
+            src={apiGetProfilePhotoUrl()}
+            alt={`${name}'s avatar`}
+            className="h-full w-full rounded-full object-cover"
+          />
+        ) : (
+          <span className="font-medium">{initial}</span>
+        )}
+      </div>
+    </button>
+  );
 }
 
 export function AppShell({ children }) {
@@ -85,36 +59,36 @@ export function AppShell({ children }) {
   const { user: sessionUser, loading } = useAuth();
   const authRoute = pathname === "/auth";
   const bootRoute = pathname === "/boot";
-  const isAdmin = sessionUser?.role === "admin";
-  const navItems = isAdmin ? [...userNavItems, ...adminNavItems] : userNavItems;
+  const admin = sessionUser?.role === "admin";
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (authRoute || bootRoute) {
+      setReady(true);
+      return;
+    }
 
-    const admin = sessionUser?.role === "admin";
+    if (loading) {
+      setReady(false);
+      return;
+    }
 
     if (!sessionUser && pathname === "/") {
       router.replace("/boot");
       return;
     }
 
-    if (!authRoute && !bootRoute && !sessionUser && !loading) {
+    if (!sessionUser) {
       router.replace("/auth");
       return;
     }
 
-    if ((authRoute || bootRoute) && sessionUser) {
-      router.replace("/");
-      return;
-    }
-
-    if (sessionUser && !admin && adminRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+    if (!admin && adminRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
       router.replace("/");
       return;
     }
 
     setReady(true);
-  }, [authRoute, bootRoute, pathname, router, sessionUser, loading]);
+  }, [admin, authRoute, bootRoute, loading, pathname, router, sessionUser]);
 
   if (!ready && !authRoute && !bootRoute) {
     return (
@@ -133,23 +107,18 @@ export function AppShell({ children }) {
   return (
     <div className="min-h-screen bg-cortex-bg text-cortex-text">
       <div className="min-h-screen">
-          <header className="sticky top-0 z-20 h-[56px] border-b border-cortex-border bg-cortex-bg-secondary/80 backdrop-blur-xl">
-            <div className="flex h-full items-center justify-between gap-cortex-16 px-cortex-16 lg:px-cortex-24">
+        <header className="sticky top-0 z-20 h-[56px] border-b border-cortex-border bg-cortex-bg-secondary/80 backdrop-blur-xl">
+          <div className="flex h-full items-center justify-end gap-cortex-16 px-cortex-16 lg:px-cortex-24">
+            <HeaderAvatarMenu sessionUser={sessionUser} />
+          </div>
+        </header>
 
-              <div className="flex items-center gap-cortex-12">
-                {/* Top-right avatar only (header intentionally empty) */}
-                <div className="relative">
-                  <HeaderAvatarMenu sessionUser={sessionUser} />
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <main className="px-cortex-16 py-cortex-16 lg:px-cortex-24 lg:py-cortex-24">
-            <div className="mx-auto w-full max-w-cortex">{children}</div>
-          </main>
-        </div>
+        <main className="px-cortex-16 py-cortex-16 lg:px-cortex-24 lg:py-cortex-24">
+          <div className="mx-auto w-full max-w-cortex">{children}</div>
+        </main>
       </div>
-    // </div>
+    </div>
   );
 }
+
+export default AppShell;

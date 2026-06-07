@@ -1,48 +1,69 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import TopBar from "../../src/shared/ui/TopBar";
+
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
-import { apiGetMe, apiUpdateProfile, apiUploadProfilePhoto, apiChangePassword } from "../../src/shared/auth/cortexApi";
-import { Field, TextInput, PasswordInput, Btn, ErrorBanner, SuccessBanner } from "../../src/shared/ui/Primitives";
-import Modal from "../../src/shared/ui/Modal";
+import {
+  apiChangePassword,
+  apiChangeVaultPassword,
+  apiGetMe,
+  apiGetProfilePhotoUrl,
+  apiUpdateProfile,
+  apiUploadProfilePhoto,
+} from "../../src/shared/auth/cortexApi";
+import {
+  cn,
+  useField,
+  Field,
+  TextInput,
+  PasswordInput,
+  Textarea,
+  Btn,
+  ErrorBanner,
+  SuccessBanner,
+  SectionDivider,
+  Panel,
+} from "../../src/shared/ui/form";
 
-export default function Profile(){
-  const { user, login, token } = useAuth();
-  const [profile, setProfile] = useState(user || null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [showChangePw, setShowChangePw] = useState(false);
+const HANDLE_KEYS = ["github", "twitter", "linkedin", "website"];
+const TABS = [
+  { id: "profile", label: "Edit Profile" },
+  { id: "password", label: "Account Password" },
+  { id: "vault", label: "Vault Password" },
+];
 
-  useEffect(()=>{ async function load(){ try{ const me = await apiGetMe(); setProfile(me); }catch(e){} } load(); },[]);
-
-  async function handleSave(up){
-    setLoading(true); setError("");
-    try{ const updated = await apiUpdateProfile(up); setProfile(updated); login(token, updated); }catch(e){ setError(e.message || 'Failed'); }finally{ setLoading(false); }
-  }
-
-
-function Avatar({ name, size = "lg" }) {
+function Avatar({ name, photo, size = "lg" }) {
   const initials = (name || "?")
     .split(" ")
     .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() || "")
+    .map((word) => word[0]?.toUpperCase() || "")
     .join("");
   const sizes = { sm: "h-9 w-9 text-sm", md: "h-12 w-12 text-base", lg: "h-16 w-16 text-xl" };
+
+  if (photo) {
+    return (
+      <div className={cn("overflow-hidden rounded-full border border-cortex-cyan/25", sizes[size])}>
+        <img
+          src={apiGetProfilePhotoUrl()}
+          alt={`${name || "User"} avatar`}
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={cn(
-      "flex shrink-0 items-center justify-center rounded-full font-semibold",
-      "border border-cortex-cyan/25 bg-cortex-cyan/10 text-cortex-cyan",
-      "shadow-[0_0_20px_rgba(0,245,255,0.12)]",
-      sizes[size]
-    )}>
+    <div
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full font-semibold",
+        "border border-cortex-cyan/25 bg-cortex-cyan/10 text-cortex-cyan",
+        "shadow-[0_0_20px_rgba(0,245,255,0.12)]",
+        sizes[size]
+      )}
+    >
       {initials}
     </div>
   );
 }
-
-// ─── handle row ────────────────────────────────────────────────────────────────
-
-const HANDLE_KEYS = ["github", "twitter", "linkedin", "website"];
 
 function HandleRow({ handleKey, value, onChange }) {
   return (
@@ -60,7 +81,61 @@ function HandleRow({ handleKey, value, onChange }) {
   );
 }
 
-// ─── section: edit profile ─────────────────────────────────────────────────────
+function ProfileSummary({ profile, onPhotoPick, uploading }) {
+  const inputRef = useRef(null);
+  const name = profile?.full_name || profile?.username || "Unknown";
+
+  return (
+    <Panel className="p-5">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Avatar name={name} photo={profile?.profile_photo} size="lg" />
+          <div className="grid gap-1">
+            <div className="flex items-center gap-2">
+              <div className="h-[5px] w-[5px] rounded-full bg-cortex-cyan" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-cortex-cyan">Identity</span>
+            </div>
+            <h1 className="text-xl font-semibold text-cortex-text">{name}</h1>
+            <p className="text-[13px] text-cortex-text-muted">@{profile?.nickname || profile?.username || "user"}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Btn
+            type="button"
+            variant="outline"
+            onClick={() => inputRef.current?.click()}
+            loading={uploading}
+          >
+            Change Photo
+          </Btn>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onPhotoPick}
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 text-[12px] text-cortex-text-muted sm:grid-cols-3">
+        <div className="rounded-[6px] border border-cortex-border/50 bg-cortex-bg-secondary/30 px-3 py-2">
+          <div className="font-mono text-[10px] uppercase tracking-[0.12em]">Username</div>
+          <div className="mt-1 text-cortex-text">{profile?.username || "—"}</div>
+        </div>
+        <div className="rounded-[6px] border border-cortex-border/50 bg-cortex-bg-secondary/30 px-3 py-2">
+          <div className="font-mono text-[10px] uppercase tracking-[0.12em]">Role</div>
+          <div className="mt-1 text-cortex-text">{profile?.role || "user"}</div>
+        </div>
+        <div className="rounded-[6px] border border-cortex-border/50 bg-cortex-bg-secondary/30 px-3 py-2">
+          <div className="font-mono text-[10px] uppercase tracking-[0.12em]">Bio</div>
+          <div className="mt-1 line-clamp-2 text-cortex-text">{profile?.bio || "—"}</div>
+        </div>
+      </div>
+    </Panel>
+  );
+}
 
 function EditProfileSection({ user, onSaved }) {
   const [fullName, onFullName, setFullName] = useField(user?.full_name || "");
@@ -72,15 +147,30 @@ function EditProfileSection({ user, onSaved }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  useEffect(() => {
+    setFullName(user?.full_name || "");
+    setNickname(user?.nickname || "");
+    setBio(user?.bio || "");
+    setDescription(user?.description || "");
+    setHandles(user?.handles || {});
+  }, [user, setBio, setDescription, setFullName, setNickname]);
+
   async function handleSave(e) {
     e.preventDefault();
-    if (!fullName.trim()) { setError("Full name is required."); return; }
-    if (!nickname.trim()) { setError("Nickname is required."); return; }
-    setLoading(true); setError(""); setSuccess("");
+    if (!fullName.trim()) {
+      setError("Full name is required.");
+      return;
+    }
+    if (!nickname.trim()) {
+      setError("Nickname is required.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
     try {
-      const cleanHandles = Object.fromEntries(
-        Object.entries(handles).filter(([, v]) => v?.trim())
-      );
+      const cleanHandles = Object.fromEntries(Object.entries(handles).filter(([, value]) => value?.trim()));
       const updated = await apiUpdateProfile({
         full_name: fullName.trim(),
         nickname: nickname.trim(),
@@ -90,7 +180,7 @@ function EditProfileSection({ user, onSaved }) {
       });
       setSuccess("Profile updated.");
       onSaved?.(updated);
-      setTimeout(() => setSuccess(""), 3000);
+      window.setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setError(err.message || "Failed to update profile.");
     } finally {
@@ -100,7 +190,7 @@ function EditProfileSection({ user, onSaved }) {
 
   return (
     <form className="grid gap-4" onSubmit={handleSave} noValidate>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Full Name *" id="pf-fullname">
           <TextInput id="pf-fullname" value={fullName} onChange={onFullName} placeholder="Ada Lovelace" autoComplete="name" disabled={loading} />
         </Field>
@@ -108,31 +198,35 @@ function EditProfileSection({ user, onSaved }) {
           <TextInput id="pf-nickname" value={nickname} onChange={onNickname} placeholder="ada" disabled={loading} />
         </Field>
       </div>
-      <Field label="Bio" id="pf-bio" hint="Short summary — visible across Cortex.">
+
+      <Field label="Bio" id="pf-bio" hint="Short summary - visible across Cortex.">
         <Textarea id="pf-bio" value={bio} onChange={onBio} placeholder="Engineer building AI-native systems." rows={2} disabled={loading} />
       </Field>
+
       <Field label="About" id="pf-description" hint="Extended context. Cortex uses this to personalise responses.">
-        <Textarea id="pf-description" value={description} onChange={onDescription} placeholder="I focus on distributed systems, Rust, and LLM tooling…" rows={3} disabled={loading} />
+        <Textarea id="pf-description" value={description} onChange={onDescription} placeholder="I focus on distributed systems, Rust, and LLM tooling..." rows={3} disabled={loading} />
       </Field>
 
       <SectionDivider label="Handles" />
       <div className="grid gap-2">
-        {HANDLE_KEYS.map(k => (
-          <HandleRow key={k} handleKey={k}
-            value={handles?.[k] || ""}
-            onChange={e => setHandles(h => ({ ...h, [k]: e.target.value }))}
+        {HANDLE_KEYS.map((key) => (
+          <HandleRow
+            key={key}
+            handleKey={key}
+            value={handles?.[key] || ""}
+            onChange={(e) => setHandles((current) => ({ ...(current || {}), [key]: e.target.value }))}
           />
         ))}
       </div>
 
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
-      <Btn type="submit" loading={loading} className="w-full sm:w-auto">Save Profile</Btn>
+      <Btn type="submit" loading={loading} className="w-full sm:w-auto">
+        Save Profile
+      </Btn>
     </form>
   );
 }
-
-// ─── section: change account password ─────────────────────────────────────────
 
 function ChangePasswordSection() {
   const [current, onCurrent] = useField();
@@ -144,15 +238,34 @@ function ChangePasswordSection() {
 
   async function handleSave(e) {
     e.preventDefault();
-    if (!current) { setError("Current password is required."); return; }
-    if (next.length < 8) { setError("New password must be at least 8 characters."); return; }
-    if (!/[a-zA-Z]/.test(next) || !/[0-9]/.test(next)) { setError("New password must contain a letter and a number."); return; }
-    if (next !== confirm) { setError("Passwords do not match."); return; }
-    setLoading(true); setError(""); setSuccess("");
+    if (!current) {
+      setError("Current password is required.");
+      return;
+    }
+    if (next.length < 8) {
+      setError("New password must be at least 8 characters.");
+      return;
+    }
+    if (!/[a-zA-Z]/.test(next) || !/[0-9]/.test(next)) {
+      setError("New password must contain a letter and a number.");
+      return;
+    }
+    if (next !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
     try {
-      await apiChangePassword({ current_password: current, new_password: next, confirm_password: next });
+      await apiChangePassword({
+        current_password: current,
+        new_password: next,
+        confirm_password: confirm,
+      });
       setSuccess("Account password changed.");
-      setTimeout(() => setSuccess(""), 3000);
+      window.setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setError(err.message || "Failed to change password.");
     } finally {
@@ -178,12 +291,12 @@ function ChangePasswordSection() {
       </Field>
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
-      <Btn type="submit" loading={loading}>Update Password</Btn>
+      <Btn type="submit" loading={loading}>
+        Update Password
+      </Btn>
     </form>
   );
 }
-
-// ─── section: change vault password ───────────────────────────────────────────
 
 function ChangeVaultPasswordSection() {
   const [accountPw, onAccountPw] = useField();
@@ -195,15 +308,34 @@ function ChangeVaultPasswordSection() {
 
   async function handleSave(e) {
     e.preventDefault();
-    if (!accountPw) { setError("Account password is required to change vault password."); return; }
-    if (vaultNext.length < 8) { setError("Vault password must be at least 8 characters."); return; }
-    if (!/[a-zA-Z]/.test(vaultNext) || !/[0-9]/.test(vaultNext)) { setError("Vault password must contain a letter and a number."); return; }
-    if (vaultNext !== vaultConfirm) { setError("Vault passwords do not match."); return; }
-    setLoading(true); setError(""); setSuccess("");
+    if (!accountPw) {
+      setError("Account password is required to change vault password.");
+      return;
+    }
+    if (vaultNext.length < 8) {
+      setError("Vault password must be at least 8 characters.");
+      return;
+    }
+    if (!/[a-zA-Z]/.test(vaultNext) || !/[0-9]/.test(vaultNext)) {
+      setError("Vault password must contain a letter and a number.");
+      return;
+    }
+    if (vaultNext !== vaultConfirm) {
+      setError("Vault passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
     try {
-      await apiChangeVaultPassword({ account_password: accountPw, new_vault_password: vaultNext, confirm_vault_password: vaultNext });
+      await apiChangeVaultPassword({
+        account_password: accountPw,
+        new_vault_password: vaultNext,
+        confirm_vault_password: vaultConfirm,
+      });
       setSuccess("Vault password updated.");
-      setTimeout(() => setSuccess(""), 3000);
+      window.setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setError(err.message || "Failed to update vault password.");
     } finally {
@@ -229,224 +361,102 @@ function ChangeVaultPasswordSection() {
       </Field>
       <ErrorBanner message={error} />
       <SuccessBanner message={success} />
-      <Btn type="submit" loading={loading}>Update Vault Password</Btn>
+      <Btn type="submit" loading={loading}>
+        Update Vault Password
+      </Btn>
     </form>
   );
 }
 
-// ─── tab nav ───────────────────────────────────────────────────────────────────
-
-const TABS = [
-  { id: "profile", label: "Edit Profile" },
-  { id: "password", label: "Account Password" },
-  { id: "vault", label: "Vault Password" },
-];
-
 function TabNav({ active, onChange }) {
   return (
     <div className="flex gap-1 rounded-[8px] border border-cortex-border bg-cortex-bg-secondary/60 p-1">
-      {TABS.map(t => (
+      {TABS.map((tab) => (
         <button
-          key={t.id}
+          key={tab.id}
           type="button"
-          onClick={() => onChange(t.id)}
+          onClick={() => onChange(tab.id)}
           className={cn(
             "flex-1 rounded-[6px] px-3 py-2 text-xs font-medium tracking-wide transition-all duration-150 focus:outline-none",
-            active === t.id
-              ? "bg-cortex-surface border border-cortex-border text-cortex-text shadow-sm"
+            active === tab.id
+              ? "border border-cortex-border bg-cortex-surface text-cortex-text shadow-sm"
               : "border border-transparent text-cortex-text-muted hover:text-cortex-text"
           )}
         >
-          {t.label}
+          {tab.label}
         </button>
       ))}
     </div>
   );
 }
 
-// ─── handle display ────────────────────────────────────────────────────────────
-
-function HandlesList({ handles }) {
-  const entries = Object.entries(handles || {}).filter(([, v]) => v?.trim());
-  if (!entries.length) return <span className="text-[12px] text-cortex-text-muted italic">No handles set</span>;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {entries.map(([key, val]) => (
-        <div key={key} className="flex items-center gap-1.5 rounded-full border border-cortex-border bg-cortex-bg-secondary px-3 py-1">
-          <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-cortex-text-muted">{key}</span>
-          <span className="text-[11px] text-cortex-text">{val}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── profile card ──────────────────────────────────────────────────────────────
-
-function ProfileCard({ user, onPhotoUpdated }) {
-  return (
-    <div className="rounded-[10px] border border-cortex-border bg-cortex-surface/60 backdrop-blur-xl p-6 grid gap-5">
-      {/* identity row */}
-      <div className="flex items-start gap-4">
-        <div className="relative">
-          <Avatar name={user?.full_name || user?.username} size="lg" />
-          <label className="absolute right-0 bottom-0 -translate-y-1/2 translate-x-1/4">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                try {
-                  await apiUploadProfilePhoto(f);
-                  // refresh identity
-                  const refreshed = await apiGetMe();
-                  onPhotoUpdated?.(refreshed);
-                } catch (err) {
-                  window.alert(err?.message || 'Failed to upload photo');
-                }
-              }}
-            />
-            <button type="button" className="rounded-full border bg-cortex-bg p-1 text-xs">📷</button>
-          </label>
-        </div>
-        <div className="grid gap-0.5 min-w-0">
-          <h1 className="text-lg font-semibold text-cortex-text truncate">
-            {user?.full_name || user?.username}
-          </h1>
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] text-cortex-text-muted">
-              @{user?.username}
-            </span>
-            {user?.nickname && user.nickname !== user.full_name && (
-              <>
-                <span className="text-cortex-border">·</span>
-                <span className="text-[13px] text-cortex-cyan/80">{user.nickname}</span>
-              </>
-            )}
-          </div>
-          <div className="mt-1">
-            <span className={cn(
-              "inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em]",
-              user?.role === "admin"
-                ? "border-[rgba(255,180,0,0.3)] text-[rgba(255,200,50,0.9)]"
-                : "border-cortex-border text-cortex-text-muted"
-            )}>
-              {user?.role || "user"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* bio */}
-      {user?.bio && (
-        <p className="text-[13px] leading-6 text-cortex-text-muted border-l-2 border-cortex-cyan/25 pl-4">
-          {user.bio}
-        </p>
-      )}
-
-      {/* about */}
-      {user?.description && (
-        <div className="grid gap-1.5">
-          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-cortex-text-muted">About</span>
-          <p className="text-[13px] leading-6 text-cortex-text-muted">{user.description}</p>
-        </div>
-      )}
-
-      {/* handles */}
-      <div className="grid gap-2">
-        <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-cortex-text-muted">Handles</span>
-        <HandlesList handles={user?.handles} />
-      </div>
-
-      {/* storage */}
-      {user?.personal_storage_path && (
-        <div className="flex items-center gap-3 rounded-[6px] border border-cortex-border/50 bg-cortex-bg-secondary/50 px-3 py-2">
-          <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-cortex-text-muted shrink-0">Vault path</span>
-          <span className="font-mono text-[11px] text-cortex-text truncate">{user.personal_storage_path}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── root page ─────────────────────────────────────────────────────────────────
-
 export default function ProfilePage() {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
-  const { login, logout, token } = useAuth();
-  const [tab, setTab] = useState("profile");
+  const { user, token, login, updateUser, logout } = useAuth();
+  const [profile, setProfile] = useState(user || null);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("profile");
 
   useEffect(() => {
     let alive = true;
+
     async function load() {
+      setLoading(true);
       try {
-        const data = await apiGetMe();
-        if (alive) setUser(data);
+        const me = await apiGetMe();
+        if (!alive) return;
+        setProfile((current) => ({ ...(current || {}), ...me }));
+        updateUser((current) => ({ ...(current || {}), ...me }));
       } catch (err) {
-        if (alive) {
-          if (err.status === 401) { router.replace("/auth"); return; }
-          setFetchError(err.message || "Failed to load profile.");
-        }
+        if (!alive) return;
+        setError(err.message || "Failed to load profile.");
       } finally {
         if (alive) setLoading(false);
       }
     }
+
     load();
-    // run entry shared transition if present
-    (async () => {
-      try {
-        const rect = consumeAvatarRect();
-        if (!rect) return;
-        // create overlay element
-        const overlay = document.createElement('div');
-        overlay.setAttribute('aria-hidden', 'true');
-        overlay.style.position = 'fixed';
-        overlay.style.left = rect.x + 'px';
-        overlay.style.top = rect.y + 'px';
-        overlay.style.width = rect.width + 'px';
-        overlay.style.height = rect.height + 'px';
-        overlay.style.borderRadius = '9999px';
-        overlay.style.zIndex = '9999';
-        overlay.style.background = getComputedStyle(document.documentElement).getPropertyValue('--cortex-accent') || '#26C6D6';
-        overlay.style.transition = 'all 320ms cubic-bezier(0.2, 0, 0.2, 1)';
-        document.body.appendChild(overlay);
+    return () => {
+      alive = false;
+    };
+  }, [updateUser]);
 
-        // compute destination avatar position in profile header
-        const headerAvatar = document.querySelector('.profile-header-avatar');
-        const dest = headerAvatar ? getElementRect(headerAvatar) : null;
-        // force paint
-        overlay.getBoundingClientRect();
-        if (dest) {
-          overlay.style.left = dest.x + 'px';
-          overlay.style.top = dest.y + 'px';
-          overlay.style.width = dest.width + 'px';
-          overlay.style.height = dest.height + 'px';
-        } else {
-          overlay.style.transform = 'scale(8)';
-          overlay.style.opacity = '0.9';
-        }
+  async function handlePhotoPick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
 
-        setTimeout(() => {
-          overlay.style.opacity = '0';
-          overlay.style.transform = 'scale(0.98)';
-        }, 360);
-        setTimeout(() => { try { overlay.remove(); } catch (e) {} }, 700);
-      } catch (e) {}
-    })();
-    return () => { alive = false; };
-  }, [router]);
-
-  function handleLogout() {
-    logout();
-    router.replace("/auth");
+    setUploading(true);
+    setError("");
+    try {
+      await apiUploadProfilePhoto(file);
+      const refreshed = await apiGetMe();
+      setProfile(refreshed);
+      updateUser((current) => ({ ...(current || {}), ...refreshed }));
+    } catch (err) {
+      setError(err.message || "Failed to upload profile photo.");
+    } finally {
+      setUploading(false);
+    }
   }
 
-  if (loading) {
+  async function handleProfileSaved(updated) {
+    const merged = { ...(profile || {}), ...(updated || {}) };
+    setProfile(merged);
+    updateUser(merged);
+    if (token) {
+      await login(token, merged);
+    }
+  }
+
+  async function handleLogout() {
+    logout();
+  }
+
+  const displayProfile = profile || user;
+
+  if (loading && !displayProfile) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="flex items-center gap-3 text-cortex-text-muted">
@@ -457,11 +467,11 @@ export default function ProfilePage() {
     );
   }
 
-  if (fetchError) {
+  if (error && !displayProfile) {
     return (
       <div className="mx-auto max-w-2xl py-12">
         <div className="rounded-[8px] border border-cortex-error/35 bg-cortex-error/8 px-5 py-4 font-mono text-sm text-cortex-error">
-          {fetchError}
+          {error}
         </div>
       </div>
     );
@@ -469,7 +479,6 @@ export default function ProfilePage() {
 
   return (
     <div className="animate-cortex-fade-in mx-auto grid w-full max-w-3xl gap-6 py-2">
-      {/* page header */}
       <div className="flex items-start justify-between gap-4">
         <div className="grid gap-0.5">
           <div className="flex items-center gap-2 mb-1">
@@ -488,19 +497,16 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      {/* profile card */}
-      <ProfileCard user={user} onPhotoUpdated={(updated) => { setUser(prev => ({ ...prev, ...updated })); login(token, { ...user, ...updated }); }} />
+      <ProfileSummary profile={displayProfile} onPhotoPick={handlePhotoPick} uploading={uploading} />
+      {error ? <ErrorBanner message={error} /> : null}
 
-      {/* tab editor */}
       <div className="rounded-[10px] border border-cortex-border bg-cortex-surface/60 backdrop-blur-xl p-6 grid gap-5">
-        <TabNav active={tab} onChange={setTab} />
+        <TabNav active={activeTab} onChange={setActiveTab} />
 
         <div className="animate-cortex-fade-in">
-          {tab === "profile" && (
-            <EditProfileSection user={user} onSaved={(updated) => { setUser(prev => ({ ...prev, ...updated })); login(token, { ...user, ...updated }); }} />
-          )}
-          {tab === "password" && <ChangePasswordSection />}
-          {tab === "vault" && <ChangeVaultPasswordSection />}
+          {activeTab === "profile" && <EditProfileSection user={displayProfile} onSaved={handleProfileSaved} />}
+          {activeTab === "password" && <ChangePasswordSection />}
+          {activeTab === "vault" && <ChangeVaultPasswordSection />}
         </div>
       </div>
     </div>

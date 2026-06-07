@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Any
 
@@ -15,7 +16,7 @@ def log_event(event_type: str, user_id: int | None, ip: str | None, metadata: di
             ip_address=ip,
             timestamp=datetime.utcnow(),
             event_type=event_type,
-            metadata_json=metadata or {},
+            metadata_json=json.dumps(metadata or {}),
         )
         db.add(ev)
         db.commit()

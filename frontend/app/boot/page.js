@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Loader, Badge } from "../../src/shared/ui";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
 
 const subtitles = [

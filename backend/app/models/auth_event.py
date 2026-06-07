@@ -19,12 +19,12 @@ class AuthEvent(Base):
     metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
 
     @property
-    def metadata(self) -> dict:
+    def parsed_metadata(self) -> dict:
         try:
             return json.loads(self.metadata_json)
         except Exception:
             return {}
 
-    @metadata.setter
-    def metadata(self, val: dict) -> None:
+    @parsed_metadata.setter
+    def parsed_metadata(self, val: dict) -> None:
         self.metadata_json = json.dumps(val or {})

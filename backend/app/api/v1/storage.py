@@ -1,13 +1,16 @@
+from __future__ import annotations
+
+import os
+import shutil
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.user import User
-from backend.app.services.storage_registry import register_user_storage, get_registry_for_user
-import os
-import shutil
-from pydantic import BaseModel
+from backend.app.services.storage_registry import get_registry_for_user, register_user_storage
+from backend.app.core.storage_abstraction import validate_storage_path
 
 router = APIRouter()
 
@@ -26,32 +29,27 @@ class PathCheckResponse(BaseModel):
 
 
 @router.post("/check", response_model=PathCheckResponse)
-def check_storage_path(payload: RegisterPayload, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    path = os.path.expanduser(payload.storage_root)
-    exists = os.path.exists(path)
+def check_storage_path(
+    payload: RegisterPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    path = validate_storage_path(payload.storage_root)
+    exists = path.exists()
     writable = False
     free_space = 0
-    details = {}
+    details: dict[str, object] = {}
+
     try:
-        if exists:
-            writable = os.access(path, os.W_OK)
-            du = shutil.disk_usage(path)
-            free_space = du.free
-            details["fstype"] = shutil.disk_usage(path)
-        else:
-            # for non-existent path, check parent
-            parent = os.path.dirname(path) or "."
-            writable = os.access(parent, os.W_OK)
-            du = shutil.disk_usage(parent)
-            free_space = du.free
-    except Exception as e:
-        details["error"] = str(e)
+        candidate = path if exists else path.parent
+        writable = os.access(candidate, os.W_OK)
+        du = shutil.disk_usage(candidate)
+        free_space = du.free
+    except Exception as exc:
+        details["error"] = str(exc)
 
-    # simple estimate: small skeleton ~16KB but allow 1MB buffer
     estimated_setup = 1024 * 1024
-
-    # permission_ok: exists and writable or creatable by user
-    permission_ok = writable and (exists or os.access(os.path.dirname(path) or ".", os.W_OK))
+    permission_ok = writable and (exists or os.access(path.parent, os.W_OK))
 
     return PathCheckResponse(
         exists=exists,
@@ -59,37 +57,28 @@ def check_storage_path(payload: RegisterPayload, db: Session = Depends(get_db), 
         free_space_bytes=free_space,
         estimated_setup_bytes=estimated_setup,
         permission_ok=permission_ok,
-        details=details
+        details=details or None,
     )
-
-router = APIRouter()
-
-
-class RegisterPayload(BaseModel):
-    storage_root: str
 
 
 @router.post("")
-def register_storage(payload: RegisterPayload, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def register_storage(
+    payload: RegisterPayload,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     try:
         entry = register_user_storage(db, current_user.id, payload.storage_root)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    # store pointer on user for convenience
-    try:
-        # store canonical pointer and keep legacy pointer in sync
-        current_user.data_path = entry.storage_root
-        current_user.personal_storage_path = entry.storage_root
-        db.commit()
-        db.refresh(current_user)
-    except Exception:
-        pass
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
     return {
         "storage_root": entry.storage_root,
         "profile_path": entry.profile_path,
         "vault_path": entry.vault_path,
         "exports_path": entry.exports_path,
-        "activity_path": entry.activity_path,
+        "workspace_path": entry.workspace_path,
+        "memory_snapshots_path": entry.memory_snapshots_path,
     }
 
 
@@ -103,5 +92,7 @@ def get_my_storage(current_user: User = Depends(get_current_user), db: Session =
         "profile_path": reg.profile_path,
         "vault_path": reg.vault_path,
         "exports_path": reg.exports_path,
-        "activity_path": reg.activity_path,
+        "workspace_path": reg.workspace_path,
+        "memory_snapshots_path": reg.memory_snapshots_path,
     }
+

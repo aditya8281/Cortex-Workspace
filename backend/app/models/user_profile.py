@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from sqlalchemy import Integer, String, Text, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, backref
 
 from backend.app.db.base import Base
 
@@ -22,7 +22,7 @@ class UserProfile(Base):
     visibility: Mapped[str] = mapped_column(String(32), nullable=False, default="public")
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
-    user = relationship("User", backref="profile", uselist=False)
+    user = relationship("User", backref=backref("profile", uselist=False), uselist=False)
 
     @property
     def handles(self) -> dict:

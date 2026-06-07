@@ -27,6 +27,12 @@ class RequestLoggingMiddleware:
                 headers = list(message.get("headers", []))
                 headers.append((b"x-request-id", request_id.encode("ascii")))
                 message["headers"] = headers
+                try:
+                    method = scope.get('method')
+                    path = scope.get('path')
+                    print(f"[MIDDLEWARE] response start: method={method} path={path} status={status_code}")
+                except Exception:
+                    pass
 
             await send(message)
 

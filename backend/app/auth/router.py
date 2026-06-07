@@ -58,3 +58,31 @@ async def get_me(token: HTTPAuthorizationCredentials = Depends(oauth2_scheme), d
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return UserResponse.model_validate(user)
+
+
+@router.put("/api/auth/me")
+async def update_me(request: Request, token: HTTPAuthorizationCredentials = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        user_id = await verify_access_token(token.credentials)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    body = await request.json()
+    # support vault password update which requires current_password
+    if "vault_password" in body:
+        if not body.get("current_password"):
+            raise HTTPException(status_code=400, detail="Current password required")
+        # verify current password
+        from backend.app.core.security import verify_password, hash_password
+        if not verify_password(body.get("current_password"), user.hashed_password):
+            raise HTTPException(status_code=401, detail="Invalid current password")
+        user.vault_password_hash = hash_password(body.get("vault_password"))
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return {"message": "Vault password updated"}
+
+    return {"message": "No changes"}

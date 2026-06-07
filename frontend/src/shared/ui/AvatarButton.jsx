@@ -1,11 +1,12 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
+import { apiGetProfilePhotoUrl } from "../auth/cortexApi";
 import Dropdown from "./Dropdown";
 
 function Avatar({ user }){
   if (!user) return (<div className="avatar-circle avatar-glow">?</div>);
-  if (user.profile_photo_url) return <img src={user.profile_photo_url} alt="avatar" className="avatar-circle" />;
+  if (user.profile_photo) return <img src={apiGetProfilePhotoUrl()} alt="avatar" className="avatar-circle" />;
   const initial = (user.full_name || user.username || "?")[0]?.toUpperCase();
   return <div className="avatar-circle avatar-glow">{initial}</div>;
 }

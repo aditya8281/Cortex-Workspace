@@ -1,13 +1,40 @@
 import logging
-from pathlib import Path
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from backend.app.models.user import User
 from backend.app.schemas.user import UserCreate, UserUpdate, UserRegisterPayload
 from backend.app.core.security import hash_password, verify_password, create_access_token
+from backend.app.services.storage_registry import get_registry_for_user
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_user(db: Session, user: User) -> dict:
+    storage_root = None
+    try:
+        registry = get_registry_for_user(db, user.id)
+        if registry:
+            storage_root = registry.storage_root
+    except Exception:
+        storage_root = None
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "full_name": user.full_name,
+        "role": user.role,
+        "nickname": user.nickname,
+        "bio": user.bio,
+        "description": user.description,
+        "profile_photo": user.profile_photo,
+        "handles": user.handles,
+        "storage_root": storage_root,
+        # DEPRECATED: legacy aliases kept for backward-compatible responses.
+        "data_path": storage_root,
+        "personal_storage_path": storage_root,
+        "preferences": user.preferences,
+    }
 
 
 def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | None:
@@ -23,8 +50,6 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
     # Handle both new multi-step registration and legacy UserCreate
     if hasattr(user, "vault_password"):
         vault_pw_hash = hash_password(user.vault_password)
-        # Accept new `data_path` or legacy `personal_storage_path`
-        personal_storage = getattr(user, "data_path", None) or getattr(user, "personal_storage_path", None)
         nickname_val = user.nickname
         bio_val = user.bio
         description_val = user.description
@@ -33,7 +58,6 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
         preferences_val = user.preferences or {}
     else:
         vault_pw_hash = None
-        personal_storage = None
         nickname_val = user.full_name or user.username
         bio_val = None
         description_val = None
@@ -52,9 +76,6 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
         profile_photo=profile_photo_val,
         handles=handles_val,
         vault_password_hash=vault_pw_hash,
-        # store canonical `data_path` and keep legacy `personal_storage_path` in sync
-        data_path=personal_storage,
-        personal_storage_path=personal_storage,
         preferences=preferences_val,
     )
 
@@ -66,34 +87,6 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
         db.rollback()
         logger.exception("Failed to commit new user: %s", e)
         return None
-
-    # Initialize personal storage path for the new user if provided
-    if personal_storage:
-        try:
-            # Register storage entry and create folder structure for user
-            from backend.app.services.storage_registry import register_user_storage
-            target_path = Path(personal_storage).expanduser().resolve()
-            logger.info("Initializing personal storage path: %s", target_path)
-            # create registry entry
-            register_user_storage(db, db_user.id, str(target_path))
-
-            # create expected folders with safe permissions
-            profile_dir = target_path / "profile"
-            vault_dir = target_path / "vault"
-            exports_dir = target_path / "exports"
-            activity_dir = target_path / "activity"
-            metadata_dir = target_path / "metadata"
-            for d in [profile_dir, vault_dir, exports_dir, activity_dir, metadata_dir]:
-                d.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            logger.exception("Failed to initialize personal storage; rolling back user: %s", e)
-            # Rollback user creation to keep DB and filesystem consistent
-            try:
-                db.delete(db_user)
-                db.commit()
-            except Exception:
-                db.rollback()
-            return None
 
     return db_user
 
@@ -133,20 +126,7 @@ def login_user(db: Session, username: str, password: str):
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "full_name": user.full_name,
-            "role": user.role,
-            "nickname": user.nickname,
-            "bio": user.bio,
-            "description": user.description,
-            "profile_photo": user.profile_photo,
-            "handles": user.handles,
-            "data_path": user.data_path,
-            "personal_storage_path": user.personal_storage_path,
-            "preferences": user.preferences,
-        }
+        "user": serialize_user(db, user),
     }
 
 

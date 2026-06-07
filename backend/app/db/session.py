@@ -1,119 +1,34 @@
-import logging
-from pathlib import Path
+from __future__ import annotations
 
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from alembic.config import Config
-from alembic import command
-import threading
+from backend.app.db.bootstrap import (
+    bootstrap_database,
+    get_database_url as _get_database_url,
+    get_engine as _get_engine,
+    get_session_factory,
+    reset_engine as _reset_engine,
+)
 
-from backend.app.core.paths import PROJECT_ROOT
-from backend.app.core import storage
-
-logger = logging.getLogger(__name__)
-
-_engine = None
-_SessionLocal = None
-_engine_lock = threading.Lock()
-
-def get_database_url() -> str:
-    # Use the centralized StorageManager database path as the single source of truth.
-    # Do NOT derive DB locations from the memory vault or per-user storage.
-    db_path = storage.get_database_path()
-    return f"sqlite:///{db_path}"
 
 def get_engine():
-    global _engine
-    with _engine_lock:
-        if _engine is None:
-            url = get_database_url()
-            logger.info("Initializing SQLite database engine at %s", url)
-            
-            # Check and run migrations on first connect
-            db_file_path = storage.get_database_path()
-            run_migrations(str(db_file_path))
-            
-            _engine = create_engine(
-                url,
-                connect_args={"check_same_thread": False, "timeout": 30}
-            )
+    return _get_engine()
 
-            # Ensure SQLite uses WAL mode and sane pragmas to reduce locking contention
-            def _set_sqlite_pragma(dbapi_conn, connection_record):
-                try:
-                    cur = dbapi_conn.cursor()
-                    cur.execute("PRAGMA journal_mode=WAL;")
-                    cur.execute("PRAGMA synchronous=NORMAL;")
-                    cur.execute("PRAGMA foreign_keys=ON;")
-                    cur.close()
-                except Exception:
-                    pass
 
-            event.listen(_engine, "connect", _set_sqlite_pragma)
-            # Ensure any programmatic tables required by services are present
-            try:
-                from backend.app.db.base import Base
-                from backend.app.models.storage_registry import StorageRegistry
-                Base.metadata.create_all(bind=_engine, tables=[StorageRegistry.__table__])
-            except Exception:
-                pass
-        return _engine
+def get_database_url():
+    return _get_database_url()
+
 
 def reset_db_engine():
-    global _engine, _SessionLocal
-    with _engine_lock:
-        if _engine is not None:
-            logger.info("Disposing active database connection engine pool.")
-            _engine.dispose()
-            _engine = None
-        _SessionLocal = None
+    _reset_engine()
 
-def run_migrations(db_path: str):
-    """Programmatically runs Alembic migrations upgrade head on the target SQLite file."""
-    try:
-        # Ensure parent directory exists using safe abstraction
-        from backend.app.core.runtime import get_runtime
-        runtime = get_runtime()
-        runtime.create_dir(str(Path(db_path).expanduser().resolve().parent))
-        
-        ini_path = str(PROJECT_ROOT / "alembic.ini")
-        cfg = Config(ini_path)
-        
-        db_url = f"sqlite:///{db_path}"
-        cfg.set_main_option("sqlalchemy.url", db_url)
-        
-        logger.info("Running Alembic migrations programmatically on %s", db_url)
-        command.upgrade(cfg, "head")
-        logger.info("Alembic migrations completed successfully.")
-    except Exception as e:
-        logger.error("Failed to run programmatic migrations: %s", e)
 
 class DynamicSessionLocal:
     def __call__(self, *args, **kwargs):
-        global _SessionLocal
-        if _SessionLocal is None:
-            engine = get_engine()
-            with _engine_lock:
-                if _SessionLocal is None:
-                    _SessionLocal = sessionmaker(
-                        autocommit=False,
-                        autoflush=False,
-                        bind=engine
-                    )
-        return _SessionLocal(*args, **kwargs)
+        session_factory = get_session_factory()
+        return session_factory(*args, **kwargs)
 
     def configure(self, **kwargs):
-        global _SessionLocal
-        if _SessionLocal is None:
-            engine = get_engine()
-            with _engine_lock:
-                if _SessionLocal is None:
-                    _SessionLocal = sessionmaker(
-                        autocommit=False,
-                        autoflush=False,
-                        bind=engine
-                    )
-        _SessionLocal.configure(**kwargs)
+        session_factory = get_session_factory()
+        session_factory.configure(**kwargs)
 
-# SessionLocal is a proxy object callable
+
 SessionLocal = DynamicSessionLocal()

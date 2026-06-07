@@ -15,7 +15,7 @@ export default function RegisterPage(){
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ username:'', password:'', full_name:'', nickname:'', vault_password:'' });
+  const [form, setForm] = useState({ username:'', password:'', confirm_password:'', full_name:'', nickname:'', vault_password:'', vault_password_confirm:'' });
 
   function setField(k,v){ setForm(f => ({...f,[k]:v})); }
 
@@ -23,14 +23,27 @@ export default function RegisterPage(){
     setError("");
     if (step === 0) {
       if (!form.username.trim() || form.password.length < 8) { setError('Provide username and a password (min 8 chars)'); return; }
+      if (form.password !== form.confirm_password) { setError('Passwords do not match'); return; }
       setStep(1); return;
     }
-    if (step === 1) { setStep(2); return; }
+    if (step === 1) {
+      if (!form.full_name.trim() || !form.nickname.trim()) { setError('Full name and nickname are required'); return; }
+      setStep(2);
+      return;
+    }
     if (step === 2) {
       if (form.vault_password.length < 8) { setError('Vault password min 8 chars'); return; }
+      if (form.vault_password !== form.vault_password_confirm) { setError('Vault passwords do not match'); return; }
       setLoading(true);
       try {
-        const res = await apiRegister(form);
+        const res = await apiRegister({
+          username: form.username.trim(),
+          password: form.password,
+          confirm_password: form.confirm_password,
+          full_name: form.full_name.trim(),
+          nickname: form.nickname.trim(),
+          vault_password: form.vault_password,
+        });
         await login(res.access_token, res.user);
         router.push('/');
       } catch (err) { setError(err.message || 'Registration failed'); }
@@ -52,6 +65,7 @@ export default function RegisterPage(){
             <>
               <Field><TextInput placeholder="username" value={form.username} onChange={e=>setField('username',e.target.value)} /></Field>
               <Field><PasswordInput placeholder="password" value={form.password} onChange={e=>setField('password',e.target.value)} /></Field>
+              <Field><PasswordInput placeholder="confirm password" value={form.confirm_password} onChange={e=>setField('confirm_password',e.target.value)} /></Field>
             </>
           )}
           {step===1 && (
@@ -63,6 +77,7 @@ export default function RegisterPage(){
           {step===2 && (
             <>
               <Field><PasswordInput placeholder="Vault password" value={form.vault_password} onChange={e=>setField('vault_password',e.target.value)} /></Field>
+              <Field><PasswordInput placeholder="Confirm vault password" value={form.vault_password_confirm} onChange={e=>setField('vault_password_confirm',e.target.value)} /></Field>
             </>
           )}
           <ErrorBanner message={error} />

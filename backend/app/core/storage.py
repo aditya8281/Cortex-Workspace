@@ -1,96 +1,93 @@
-from pathlib import Path
-from backend.app.core.storage_manager import storage_manager
+"""Thin convenience wrappers that delegate to :mod:`storage_abstraction`.
 
+All canonical path resolution lives in ``storage_abstraction`` and
+``system_paths``.  This module exists only so that legacy callers that
+``from backend.app.core.storage import get_*`` keep working.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from backend.app.core.storage_abstraction import (
+    get_system_storage,
+    get_user_storage,
+)
+
+
+# ── System paths ──────────────────────────────────────────────────────
 
 def get_data_root() -> Path:
-    """Return the Cortex storage root managed by StorageManager."""
-    return storage_manager.get_cortex_root()
+    """Alias kept for backward compatibility."""
+    return get_system_storage().root
 
 
 def get_system_root() -> Path:
-    # The system root is the Cortex storage root itself
-    root = get_data_root()
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+    """Alias kept for backward compatibility."""
+    return get_system_storage().root
 
 
 def get_database_path() -> Path:
-    return storage_manager.get_database_path()
+    return get_system_storage().database_path
 
 
 def get_memory_root() -> Path:
-    return storage_manager.get_memory_path()
+    return (get_system_storage().runtime_root / "memory").resolve()
 
 
 def get_embeddings_root() -> Path:
-    return storage_manager.get_embeddings_path()
+    return get_system_storage().embeddings_root
 
 
 def get_indexes_root() -> Path:
-    return storage_manager.get_indexes_path()
+    return get_system_storage().indexes_root
 
 
 def get_vector_db_root() -> Path:
-    # vector_db is implemented under indexes for the canonical layout
-    return storage_manager.get_indexes_path()
+    return get_system_storage().vector_db_root
 
 
 def get_sync_root() -> Path:
-    return storage_manager.get_sync_path()
+    return (get_system_storage().runtime_root / "sync").resolve()
 
 
 def get_cache_root() -> Path:
-    return storage_manager.get_cache_path()
+    return get_system_storage().cache_root
 
 
 def get_rag_root() -> Path:
-    # RAG artifacts belong to system memory/indexes; map to indexes root
-    return storage_manager.get_indexes_path()
+    return get_system_storage().indexes_root
 
 
-def get_users_root() -> Path:
-    # Legacy fallback: keep a system-managed users area within cortex_system for environments
-    # without a registered personal_storage_path. New deployments SHOULD rely on per-user
-    # storage roots registered in the storage registry.
-    root = get_data_root() / "users"
-    root.mkdir(parents=True, exist_ok=True)
-    return root
+def get_logs_root() -> Path:
+    return get_system_storage().logs_root
+
+
+def get_runtime_root() -> Path:
+    return get_system_storage().runtime_root
+
+
+# ── User paths ────────────────────────────────────────────────────────
+
+def get_user_storage_root(user_id: int | str) -> Path:
+    return get_user_storage(int(user_id)).root
 
 
 def get_user_profile_root(user_id: int | str) -> Path:
-    # Try registry first to allow user-provided storage roots
-    try:
-        # lazy import to avoid circular deps at module import time
-        from backend.app.db.session import SessionLocal
-        from backend.app.services.storage_registry import get_registry_for_user
-        db = SessionLocal()
-        reg = get_registry_for_user(db, int(user_id)) if db else None
-        if reg and reg.profile_path:
-            p = Path(reg.profile_path).expanduser().resolve()
-            p.mkdir(parents=True, exist_ok=True)
-            return p
-    except Exception:
-        pass
-
-    user_dir = get_users_root() / f"user_{user_id}" / "profile"
-    user_dir.mkdir(parents=True, exist_ok=True)
-    return user_dir
+    return get_user_storage(int(user_id)).profile
 
 
 def get_user_vault_root(user_id: int | str) -> Path:
-    # Prefer registry mapping for user vault location; vaults are user-private
-    try:
-        from backend.app.db.session import SessionLocal
-        from backend.app.services.storage_registry import get_registry_for_user
-        db = SessionLocal()
-        reg = get_registry_for_user(db, int(user_id)) if db else None
-        if reg and reg.vault_path:
-            p = Path(reg.vault_path).expanduser().resolve()
-            p.mkdir(parents=True, exist_ok=True)
-            return p
-    except Exception:
-        pass
+    return get_user_storage(int(user_id)).vault
 
-    user_dir = get_users_root() / f"user_{user_id}" / "vault"
-    user_dir.mkdir(parents=True, exist_ok=True)
-    return user_dir
+
+def get_user_workspace_root(user_id: int | str) -> Path:
+    return get_user_storage(int(user_id)).workspace
+
+
+def get_user_exports_root(user_id: int | str) -> Path:
+    return get_user_storage(int(user_id)).exports
+
+
+def get_user_memory_snapshots_root(user_id: int | str) -> Path:
+    return get_user_storage(int(user_id)).memory_snapshots
