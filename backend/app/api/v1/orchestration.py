@@ -16,10 +16,7 @@ class RunTaskRequest(BaseModel):
     context_items: Optional[List[ContextItem]] = None
     user_id: Optional[int] = None
     llm_model: Optional[str] = None
-    embedding_model: Optional[str] = None
-    vector_db: Optional[str] = None
     inference_engine: Optional[str] = None
-    code_parsing: Optional[str] = None
     api_key: Optional[str] = None
     api_base_url: Optional[str] = None
 
@@ -58,10 +55,7 @@ async def run_task(payload: RunTaskRequest, db: Session = Depends(get_db)):
             history=payload.history,
             user_id=payload.user_id,
             llm_model=payload.llm_model,
-            embedding_model=payload.embedding_model,
-            vector_db=payload.vector_db,
             inference_engine=payload.inference_engine,
-            code_parsing=payload.code_parsing,
             api_key=payload.api_key,
             api_base_url=payload.api_base_url,
             context_items=payload.context_items,

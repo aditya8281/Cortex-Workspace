@@ -12,7 +12,6 @@ from backend.app.api.v1.intelligence import router as intelligence_router
 from backend.app.api.v1.profile import router as profile_router
 from backend.app.api.v1.storage import router as storage_router
 from backend.app.api.v1.context import router as context_router
-from backend.app.api.v1.hierarchical import router as hierarchical_router
 from backend.app.api.v1.orchestration import router as orchestration_router
 from backend.app.api.v1.vault import router as vault_router
 from backend.app.api.v1.brain_vault import router as brain_vault_router
@@ -64,12 +63,6 @@ api_router.include_router(
     sync_router,
     prefix="/sync",
     tags=["Sync"]
-)
-
-api_router.include_router(
-    hierarchical_router,
-    prefix="/sync/hierarchical",
-    tags=["Hierarchical Memory"]
 )
 
 api_router.include_router(

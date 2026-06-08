@@ -26,10 +26,7 @@ class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=10000)
     history: Optional[List[ChatTurn]] = None
     llm_model: Optional[str] = None
-    embedding_model: Optional[str] = None
-    vector_db: Optional[str] = None
     inference_engine: Optional[str] = None
-    code_parsing: Optional[str] = None
     api_key: Optional[str] = None
     api_base_url: Optional[str] = None
     context_items: Optional[List[ContextItem]] = None
@@ -59,10 +56,7 @@ async def ask_public(payload: QueryRequest):
             query=payload.query,
             history=payload.history,
             llm_model=payload.llm_model,
-            embedding_model=payload.embedding_model,
-            vector_db=payload.vector_db,
             inference_engine=payload.inference_engine,
-            code_parsing=payload.code_parsing,
             api_key=payload.api_key,
             api_base_url=payload.api_base_url,
             context_items=payload.context_items
@@ -107,10 +101,7 @@ async def chat_private(
             user_id=current_user.id,
             history=payload.history,
             llm_model=payload.llm_model,
-            embedding_model=payload.embedding_model,
-            vector_db=payload.vector_db,
             inference_engine=payload.inference_engine,
-            code_parsing=payload.code_parsing,
             api_key=api_key,
             api_base_url=api_base_url,
             context_items=payload.context_items

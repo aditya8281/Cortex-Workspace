@@ -35,28 +35,12 @@ def get_memory_root() -> Path:
     return (get_system_storage().runtime_root / "memory").resolve()
 
 
-def get_embeddings_root() -> Path:
-    return get_system_storage().embeddings_root
-
-
-def get_indexes_root() -> Path:
-    return get_system_storage().indexes_root
-
-
-def get_vector_db_root() -> Path:
-    return get_system_storage().vector_db_root
-
-
 def get_sync_root() -> Path:
     return (get_system_storage().runtime_root / "sync").resolve()
 
 
 def get_cache_root() -> Path:
     return get_system_storage().cache_root
-
-
-def get_rag_root() -> Path:
-    return get_system_storage().indexes_root
 
 
 def get_logs_root() -> Path:

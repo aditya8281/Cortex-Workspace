@@ -1,5 +1,13 @@
+"""Orchestrator agent that classifies intent, selects sub-agents, and builds
+execution graphs.
+
+Context building relies on attached context items, conversation history,
+and memory search — no RAG pipeline dependency.
+"""
+
 import time
 import asyncio
+import hashlib
 from typing import List, Dict, Any, Optional
 from enum import Enum
 
@@ -94,10 +102,10 @@ class OrchestrationGraph:
 
         final_node_id = self.execution_order[-1] if self.execution_order else None
         final_node = self.nodes.get(final_node_id) if final_node_id else None
-        
+
         answer_text = ""
         verification_results = {}
-        
+
         if final_node and final_node.agent_name == "VerificationAgent":
             verification_results = {
                 "verified": final_node.result.get("verified", True),
@@ -173,14 +181,14 @@ class OrchestrationGraph:
 
 
 class ContextBuilder:
-    """
-    Context assembly pipeline with priority:
+    """Context assembly pipeline — no RAG dependency.
+
+    Priority:
     1. Attached Context (explicitly attached files, folders, URLs, etc.)
-    2. Workspace Context (repository profile overview)
-    3. Conversation Context (recent message history)
-    4. Memory Context (persistent memories matching keywords)
-    5. Retrieval Context (RAG search chunks)
+    2. Conversation Context (recent message history)
+    3. Memory Context (persistent memories matching keywords)
     """
+
     def __init__(self, executor: Any):
         self.executor = executor
         self._cached_contexts: Dict[str, str] = {}
@@ -192,8 +200,6 @@ class ContextBuilder:
         context_items: Optional[List[Any]] = None,
         user_id: Optional[int] = None
     ) -> str:
-        import hashlib
-        # Build stable cache key
         history_key = str(history) if history else ""
         items_key = ",".join(str(getattr(item, "id", item)) for item in context_items) if context_items else ""
         cache_key = hashlib.md5(f"{query}||{history_key}||{items_key}||{user_id}".encode("utf-8")).hexdigest()
@@ -202,26 +208,52 @@ class ContextBuilder:
             logger.info("ContextBuilder: context cache HIT")
             return self._cached_contexts[cache_key]
 
-        from backend.app.services.hierarchical_rag import HierarchicalRAGService
-        from backend.app.db.session import SessionLocal
+        blocks = []
 
-        db = SessionLocal()
+        # 1. Attached Context (Highest priority)
+        if context_items:
+            try:
+                from backend.app.executor.context_compiler import ContextCompiler
+                compiler = ContextCompiler()
+                attached_block = compiler._format_context_items(context_items)
+                if attached_block:
+                    blocks.append(attached_block)
+            except Exception as e:
+                logger.warning("ContextBuilder: failed to format context items: %s", e)
+
+        # 2. Conversation Context
+        if history:
+            history_str = "=== Conversation History ===\n"
+            for turn in history:
+                role = turn.get("role", "user")
+                content = turn.get("content", "")
+                role_display = "User" if role == "user" else "Assistant"
+                history_str += f"{role_display}: {content}\n"
+            history_str += "=== End of Conversation History ==="
+            blocks.append(history_str)
+
+        # 3. Memory Context
         try:
-            rag_service = HierarchicalRAGService(executor=self.executor)
-            compiled_context = await rag_service.build_context(
-                query=query,
-                db=db,
-                context_items=context_items,
-                history=history,
-                user_id=user_id
-            )
-            self._cached_contexts[cache_key] = compiled_context
-            return compiled_context
+            from backend.app.db.session import SessionLocal
+            from backend.app.intelligence.memory_service import PersistentMemoryService
+            db = SessionLocal()
+            try:
+                mem_service = PersistentMemoryService()
+                mems = mem_service.search(db, query, limit=3, user_id=user_id)
+                if mems:
+                    mem_str = "=== Memory Context ===\n"
+                    for m in mems:
+                        mem_str += f"- {m['title']}: {m['content'][:300]}\n"
+                    mem_str += "=== End of Memory Context ==="
+                    blocks.append(mem_str)
+            finally:
+                db.close()
         except Exception as e:
-            logger.error(f"ContextBuilder: Hierarchical RAG context builder failed: {e}")
-            return f"Query: {query}"
-        finally:
-            db.close()
+            logger.debug("ContextBuilder: memory context unavailable: %s", e)
+
+        compiled_context = "\n\n".join(blocks) if blocks else f"Query: {query}"
+        self._cached_contexts[cache_key] = compiled_context
+        return compiled_context
 
 
 class OrchestratorAgent(BaseAgent):
@@ -235,7 +267,6 @@ class OrchestratorAgent(BaseAgent):
         self.context_builder = ContextBuilder(executor)
         self.last_trace: Dict[str, Any] = {}
 
-        # Register default subagents
         self.registry.register(ChatAgent(executor))
         self.registry.register(SearchAgent(executor))
         self.registry.register(RepositoryAgent(executor))
@@ -265,16 +296,11 @@ class OrchestratorAgent(BaseAgent):
         return mapping.get(agent.name, "Chat")
 
     def build_execution_graph(self, task_class: str) -> OrchestrationGraph:
-        """
-        Build the orchestration graph without executing it.
-        Useful for debug/introspection endpoints and tests.
-        """
         graph = OrchestrationGraph(self)
 
         if task_class in ["Coding", "Execution", "Repository Analysis"]:
             graph.add_node(OrchestrationNode("RepositoryAgent", "RepositoryAgent"))
             graph.add_node(OrchestrationNode("SearchAgent", "SearchAgent"))
-
             primary_agent_name = "ExecutionAgent" if task_class == "Execution" else "CodingAgent"
             graph.add_node(OrchestrationNode(primary_agent_name, primary_agent_name, ["RepositoryAgent", "SearchAgent"]))
             graph.add_node(OrchestrationNode("VerificationAgent", "VerificationAgent", [primary_agent_name]))
@@ -320,15 +346,13 @@ class OrchestratorAgent(BaseAgent):
         **kwargs: Any
     ) -> str:
         start_time = time.time()
-        
-        # 1. Classify task and select base agent
+
         best_agent, confidence_score = self.registry.route_request(query, context)
         task_class = self.classify_task(query, context)
-        
+
         reason = f"Routed to {best_agent.name} ({task_class}) with confidence score of {confidence_score:.2f}"
         logger.info(f"orchestrator_selected_agent={best_agent.name} confidence={confidence_score:.2f} reason={reason}")
 
-        # 2. Build base context using ContextBuilder
         user_id = kwargs.get("user_id")
         context_items = kwargs.get("context_items")
         assembled_context = await self.context_builder.build(
@@ -338,33 +362,30 @@ class OrchestratorAgent(BaseAgent):
             user_id=user_id
         )
 
-        # 3. Construct OrchestrationGraph
         graph = OrchestrationGraph(self)
-        
+
         if task_class in ["Coding", "Execution", "Repository Analysis"]:
             graph.add_node(OrchestrationNode("RepositoryAgent", "RepositoryAgent"))
             graph.add_node(OrchestrationNode("SearchAgent", "SearchAgent"))
-            
             primary_agent_name = "ExecutionAgent" if task_class == "Execution" else "CodingAgent"
             graph.add_node(OrchestrationNode(primary_agent_name, primary_agent_name, ["RepositoryAgent", "SearchAgent"]))
             graph.add_node(OrchestrationNode("VerificationAgent", "VerificationAgent", [primary_agent_name]))
-            
+
         elif task_class in ["Search", "Research"]:
             primary_agent_name = "SearchAgent" if task_class == "Search" else "ResearchAgent"
             graph.add_node(OrchestrationNode(primary_agent_name, primary_agent_name))
             graph.add_node(OrchestrationNode("VerificationAgent", "VerificationAgent", [primary_agent_name]))
-            
+
         elif task_class == "Planning":
             graph.add_node(OrchestrationNode("PlanningAgent", "PlanningAgent"))
             graph.add_node(OrchestrationNode("VerificationAgent", "VerificationAgent", ["PlanningAgent"]))
-            
+
         elif task_class == "Memory Retrieval":
             graph.add_node(OrchestrationNode("MemoryAgent", "MemoryAgent"))
-            
-        else:  # Chat / Fallback
+
+        else:
             graph.add_node(OrchestrationNode("ChatAgent", "ChatAgent"))
 
-        # 4. Execute orchestration graph
         graph_result = await graph.execute(
             query=query,
             base_context=assembled_context,
@@ -374,7 +395,6 @@ class OrchestratorAgent(BaseAgent):
 
         duration = time.time() - start_time
 
-        # Save trace metadata
         self.last_trace = {
             "agent_selected": best_agent.name,
             "agent_confidence": confidence_score,

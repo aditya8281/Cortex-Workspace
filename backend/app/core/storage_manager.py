@@ -35,12 +35,6 @@ class StorageManager:
     def get_memory_path(self) -> Path:
         return (self._storage.runtime_root / "memory").resolve()
 
-    def get_embeddings_path(self) -> Path:
-        return self._storage.embeddings_root
-
-    def get_indexes_path(self) -> Path:
-        return self._storage.indexes_root
-
     def get_logs_path(self) -> Path:
         return self._storage.logs_root
 

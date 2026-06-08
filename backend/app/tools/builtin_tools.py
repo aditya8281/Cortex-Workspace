@@ -97,65 +97,6 @@ class SystemScannerTool(RegisteredTool):
         }
 
 
-class RagTool(RegisteredTool):
-    name = "rag"
-    aliases = ["rag_retrieve"]
-    input_schema = {
-        "type": "object",
-        "properties": {
-            "query": {"type": "string"},
-        },
-        "required": ["query"],
-        "additionalProperties": True,
-    }
-    output_schema = {
-        "type": "object",
-        "properties": {
-            "chunks": {"type": "array"},
-            "count": {"type": "integer"},
-        },
-        "required": ["chunks", "count"],
-        "additionalProperties": True,
-    }
-
-    def __init__(self, executor):
-        self.executor = executor
-
-    def decide(self, context: ToolContext):
-        return {"should_run": True, "reason": "rag", "params": {}}
-
-    async def run(self, context: ToolContext, params):
-        state = context.state or {}
-        embedding_model = state.get("embedding_model")
-        vector_db = state.get("vector_db")
-        code_parsing = state.get("code_parsing")
-
-        results = await self.executor.rag.search(
-            context.query,
-            embedding_model=embedding_model,
-            vector_db=vector_db,
-            code_parsing=code_parsing
-        )
-
-        if not results:
-            return {"chunks": [], "count": 0}
-
-        chunks = [
-            item["data"]["chunk"][:500]
-            for item in results
-        ]
-
-        return {
-            "chunks": chunks,
-            "count": len(chunks)
-        }
-
-
-class RagRetrieveTool(RagTool):
-    name = "rag_retrieve"
-    aliases = ["rag"]
-
-
 class SystemActionsTool(RegisteredTool):
     name = "system_actions"
     permission_level = "restricted"
@@ -188,64 +129,33 @@ class SystemActionsTool(RegisteredTool):
         try:
             if "open folder" in query:
                 return await self._plan(
-                    service,
-                    db,
-                    context,
-                    "open_folder",
-                    "Open folder requested from chat",
-                    [],
+                    service, db, context, "open_folder", "Open folder requested from chat", [],
                 )
             if "read file" in query:
                 return await self._plan(
-                    service,
-                    db,
-                    context,
-                    "read_file",
-                    "Read file requested from chat",
-                    [],
+                    service, db, context, "read_file", "Read file requested from chat", [],
                 )
             if "run command" in query or "execute" in query:
                 return await self._plan(
-                    service,
-                    db,
-                    context,
-                    "run_command",
-                    "Terminal command requested from chat",
-                    [],
-                    {"command": context.query, "category": "terminal"},
+                    service, db, context, "run_command", "Terminal command requested from chat",
+                    [], {"command": context.query, "category": "terminal"},
                 )
             return {
                 "available_actions": [
-                    "open_file",
-                    "open_folder",
-                    "read_file",
-                    "list_directory",
-                    "run_command",
-                    "search_files",
+                    "open_file", "open_folder", "read_file",
+                    "list_directory", "run_command", "search_files",
                 ],
                 "note": "Use the intelligence API to plan actions with affected paths.",
             }
         finally:
             db.close()
 
-    async def _plan(
-        self,
-        service,
-        db,
-        context: ToolContext,
-        action_type: str,
-        description: str,
-        paths: list,
-        payload: dict | None = None,
-    ):
+    async def _plan(self, service, db, context: ToolContext, action_type: str,
+                    description: str, paths: list, payload: dict | None = None):
         result = service.plan_action(
-            db,
-            user_id=context.user_id,
-            action_type=action_type,
-            description=description,
-            affected_paths=paths,
-            payload=payload or {},
-            category=(payload or {}).get("category"),
+            db, user_id=context.user_id, action_type=action_type,
+            description=description, affected_paths=paths,
+            payload=payload or {}, category=(payload or {}).get("category"),
         )
         return result
 
@@ -285,31 +195,17 @@ class ReadFileTool(RegisteredTool):
     async def run(self, context: ToolContext, params):
         path_value = params.get("path")
         if not path_value:
-            return ToolResult(
-                tool=self.name,
-                output=None,
-                status="error",
-                meta={"error": "missing_path"},
-            )
+            return ToolResult(tool=self.name, output=None, status="error", meta={"error": "missing_path"})
 
         path = Path(path_value).expanduser().resolve()
         workspace_root = Path(settings.WORKSPACE_ROOT).resolve()
         if workspace_root not in path.parents and path != workspace_root:
-            return ToolResult(
-                tool=self.name,
-                output=None,
-                status="error",
-                meta={"error": "path_outside_workspace"},
-            )
+            return ToolResult(tool=self.name, output=None, status="error", meta={"error": "path_outside_workspace"})
 
         file_cache = context.state.setdefault("file_cache", {})
         cache_key = str(path)
         if cache_key in file_cache:
-            return {
-                "path": cache_key,
-                "content": file_cache[cache_key],
-                "cached": True,
-            }
+            return {"path": cache_key, "content": file_cache[cache_key], "cached": True}
 
         max_bytes = int(params.get("max_bytes") or 200_000)
         content = path.read_text(encoding="utf-8", errors="ignore")[:max_bytes]
@@ -318,11 +214,7 @@ class ReadFileTool(RegisteredTool):
         context.state.setdefault("intermediate_outputs", {})[context.query or cache_key] = content[:1000]
         context.state.setdefault("retrieved_files", []).append(cache_key)
 
-        return {
-            "path": cache_key,
-            "content": content,
-            "cached": False,
-        }
+        return {"path": cache_key, "content": content, "cached": False}
 
 
 class WriteFileTool(RegisteredTool):
@@ -361,39 +253,21 @@ class WriteFileTool(RegisteredTool):
     async def run(self, context: ToolContext, params):
         permissions = (context.state or {}).get("permissions", {})
         if not permissions.get("write_file"):
-            return ToolResult(
-                tool=self.name,
-                output=None,
-                status="error",
-                meta={"error": "permission_denied"},
-            )
+            return ToolResult(tool=self.name, output=None, status="error", meta={"error": "permission_denied"})
 
         path = Path(params["path"]).expanduser().resolve()
         workspace_root = Path(settings.WORKSPACE_ROOT).resolve()
         if workspace_root not in path.parents and path != workspace_root:
-            return ToolResult(
-                tool=self.name,
-                output=None,
-                status="error",
-                meta={"error": "path_outside_workspace"},
-            )
+            return ToolResult(tool=self.name, output=None, status="error", meta={"error": "path_outside_workspace"})
 
         overwrite = bool(params.get("overwrite", True))
         if path.exists() and not overwrite:
-            return ToolResult(
-                tool=self.name,
-                output=None,
-                status="error",
-                meta={"error": "file_exists"},
-            )
+            return ToolResult(tool=self.name, output=None, status="error", meta={"error": "file_exists"})
 
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(params["content"], encoding="utf-8")
         context.state.setdefault("intermediate_outputs", {})[str(path)] = params["content"][:1000]
-        return {
-            "path": str(path),
-            "written": True,
-        }
+        return {"path": str(path), "written": True}
 
 
 class MemorySearchTool(RegisteredTool):
@@ -435,20 +309,12 @@ class MemorySearchTool(RegisteredTool):
             try:
                 matches = self.executor.memory.search(user_id=user_id, query=query) or []
             except Exception as exc:
-                return ToolResult(
-                    tool=self.name,
-                    output=None,
-                    status="error",
-                    meta={"error": str(exc)},
-                )
+                return ToolResult(tool=self.name, output=None, status="error", meta={"error": str(exc)})
 
         if isinstance(matches, str):
             matches = [{"content": matches}]
 
-        return {
-            "matches": matches,
-            "count": len(matches),
-        }
+        return {"matches": matches, "count": len(matches)}
 
 
 class TerminalExecuteTool(RegisteredTool):
@@ -487,23 +353,13 @@ class TerminalExecuteTool(RegisteredTool):
     async def run(self, context: ToolContext, params):
         permissions = (context.state or {}).get("permissions", {})
         if not permissions.get("terminal_execute"):
-            return ToolResult(
-                tool=self.name,
-                output=None,
-                status="error",
-                meta={"error": "permission_denied"},
-            )
+            return ToolResult(tool=self.name, output=None, status="error", meta={"error": "permission_denied"})
 
         command = params["command"]
         cwd = Path(params.get("cwd") or settings.WORKSPACE_ROOT).expanduser().resolve()
         workspace_root = Path(settings.WORKSPACE_ROOT).resolve()
         if workspace_root not in cwd.parents and cwd != workspace_root:
-            return ToolResult(
-                tool=self.name,
-                output=None,
-                status="error",
-                meta={"error": "cwd_outside_workspace"},
-            )
+            return ToolResult(tool=self.name, output=None, status="error", meta={"error": "cwd_outside_workspace"})
 
         timeout = int(params.get("timeout") or 30)
         proc = await asyncio.create_subprocess_exec(
@@ -517,12 +373,7 @@ class TerminalExecuteTool(RegisteredTool):
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
         except asyncio.TimeoutError:
             proc.kill()
-            return ToolResult(
-                tool=self.name,
-                output=None,
-                status="error",
-                meta={"error": "timeout"},
-            )
+            return ToolResult(tool=self.name, output=None, status="error", meta={"error": "timeout"})
 
         return {
             "returncode": proc.returncode,

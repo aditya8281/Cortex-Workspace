@@ -1,9 +1,12 @@
-"""Persistent knowledge memory — search and store discovered intelligence."""
+"""Persistent knowledge memory — search and store discovered intelligence.
+
+Uses keyword-based search over KnowledgeEntry records. No embedding or
+vector dependencies required.
+"""
 
 from __future__ import annotations
 
 from datetime import datetime
-from math import sqrt
 
 from sqlalchemy.orm import Session
 
@@ -11,26 +14,7 @@ from backend.app.intelligence.models import KnowledgeEntry
 
 
 class PersistentMemoryService:
-    def __init__(self):
-        self._embedder = None
-
-    def _get_embedder(self):
-        if self._embedder is None:
-            from backend.app.rag.embeddings import EmbeddingModel
-
-            self._embedder = EmbeddingModel()
-        return self._embedder
-
-    @staticmethod
-    def _cosine_similarity(left, right) -> float:
-        if left is None or right is None:
-            return 0.0
-        numerator = float((left * right).sum())
-        left_norm = sqrt(float((left * left).sum()))
-        right_norm = sqrt(float((right * right).sum()))
-        if left_norm == 0.0 or right_norm == 0.0:
-            return 0.0
-        return numerator / (left_norm * right_norm)
+    """Search and store knowledge entries using keyword matching."""
 
     def search(self, db: Session, query: str, limit: int = 8, user_id: int | None = None) -> list[dict]:
         words = [w.lower() for w in query.split() if len(w) > 2]
@@ -47,21 +31,15 @@ class PersistentMemoryService:
         if not entries:
             return []
 
-        embedder = self._get_embedder()
-        query_vector = embedder.encode([query])[0]
         scored: list[tuple[float, KnowledgeEntry]] = []
-        haystacks = [f"{entry.title} {entry.content} {entry.category}".lower() for entry in entries]
-        entry_vectors = embedder.encode(haystacks)
-
-        for entry, haystack, entry_vector in zip(entries, haystacks, entry_vectors):
+        for entry in entries:
+            haystack = f"{entry.title} {entry.content} {entry.category}".lower()
             keyword_score = sum(1 for w in words if w in haystack)
-            semantic_score = self._cosine_similarity(query_vector, entry_vector)
             recency_boost = 0.0
             if entry.updated_at is not None:
                 age_days = max(0.0, (datetime.utcnow() - entry.updated_at).total_seconds() / 86400.0)
-                # Slightly prefer newer content while keeping semantic relevance dominant.
                 recency_boost = max(0.0, 0.08 - min(age_days, 30.0) * 0.002)
-            score = (semantic_score * 0.8) + (min(keyword_score, 3) * 0.12) + recency_boost
+            score = (min(keyword_score, 5) * 0.18) + recency_boost
             if score > 0:
                 scored.append((score, entry))
 

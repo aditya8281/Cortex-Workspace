@@ -75,10 +75,7 @@ class WorkflowState:
     user_id: int | None = None
     intent: Any = None
     llm_model: str | None = None
-    embedding_model: str | None = None
-    vector_db: str | None = None
     inference_engine: str | None = None
-    code_parsing: str | None = None
     api_key: str | None = None
     api_base_url: str | None = None
     history: list | None = None
@@ -102,10 +99,7 @@ class WorkflowState:
             "user_id": self.user_id,
             "intent": self.intent,
             "llm_model": self.llm_model,
-            "embedding_model": self.embedding_model,
-            "vector_db": self.vector_db,
             "inference_engine": self.inference_engine,
-            "code_parsing": self.code_parsing,
             "api_key": self.api_key,
             "api_base_url": self.api_base_url,
             "history": self.history,

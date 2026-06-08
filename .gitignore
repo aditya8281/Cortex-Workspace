@@ -21,6 +21,7 @@ state.db
 .cortex_memory_path
 CortexMemory
 .cortex_bootstrap/
+.vscode
 
 # Node / frontend caches
 node_modules/

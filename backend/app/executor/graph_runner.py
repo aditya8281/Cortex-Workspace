@@ -26,10 +26,7 @@ class GraphRunner:
         intent=None,
         history=None,
         llm_model: str | None = None,
-        embedding_model: str | None = None,
-        vector_db: str | None = None,
         inference_engine: str | None = None,
-        code_parsing: str | None = None,
         api_key: str | None = None,
         api_base_url: str | None = None,
         context_items: list = None
@@ -48,10 +45,7 @@ class GraphRunner:
             "intent": intent,
             "history": history,
             "llm_model": llm_model,
-            "embedding_model": embedding_model,
-            "vector_db": vector_db,
             "inference_engine": inference_engine,
-            "code_parsing": code_parsing,
             "api_key": api_key,
             "api_base_url": api_base_url,
             "context_items": context_items

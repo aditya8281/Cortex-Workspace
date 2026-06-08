@@ -108,13 +108,8 @@ Note: `get_current_user` indicates authenticated access; `require_admin` indicat
 - GET `/api/v1/context` — Query: `session_id?` → List context items (optionally session-scoped). Access: public.
 - POST `/api/v1/context/resolve` — Request: list of context IDs → Response: resolved context. Access: public.
 
-**v1/hierarchical (mounted at `/api/v1/sync/hierarchical`)**
-- POST `/api/v1/sync/hierarchical/repo` — Request: `RepoIndexRequest {repo_path}` → Index repository. Access: public.
-- POST `/api/v1/sync/hierarchical/file` — Request: `FileIndexRequest {file_path,repo_path}` → Index a single file. Access: public.
-- GET `/api/v1/sync/hierarchical/search` — Query: `query, top_k` → Search hierarchical memory. Access: public.
-- GET `/api/v1/sync/hierarchical/retrieve_context` — Query: `query` → Retrieve context string. Access: public.
-- GET `/api/v1/sync/hierarchical/expand_graph` — Query: `node_id` → Expand node graph. Access: public.
-- POST `/api/v1/sync/hierarchical/build_context` — Request: `BuildContextRequest {query, history?, user_id?}` → Build context via RAG. Access: public.
+**v1/hierarchical (REMOVED — RAG pipeline was removed)**
+- The hierarchical RAG endpoints have been removed from the codebase.
 
 **v1/orchestration (mounted at `/api/v1/sync/orchestration`)**
 - POST `/api/v1/sync/orchestration/run_task` — Request: `RunTaskRequest` → Execute full orchestration graph and return result summary. Access: public.

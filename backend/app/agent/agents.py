@@ -57,15 +57,14 @@ class ChatAgent(BaseAgent):
 
 class SearchAgent(BaseAgent):
     name = "SearchAgent"
-    description = "Handles files search, semantic search, repository retrieval, and memory search."
-    capabilities = ["search", "file_search", "semantic_search", "repo_retrieval", "memory_retrieval"]
+    description = "Handles file search and memory search."
+    capabilities = ["search", "file_search", "memory_retrieval"]
 
     def __init__(self, executor: Any):
         self.executor = executor
 
     def confidence(self, query: str, context: Optional[str] = None) -> float:
         q = query.lower()
-        search_keywords = ["find", "search", "locate", "where is", "look for", "grep", "file named", "pdf", "semantic", "memory search", "retrieve"]
         if any(kw in q for kw in search_keywords):
             return 0.92
         return 0.20
@@ -79,18 +78,8 @@ class SearchAgent(BaseAgent):
     ) -> Dict[str, Any]:
         # 1. Run file search
         file_results = self.executor.file_agent.search(query)
-        
-        # 2. Run semantic RAG search
-        semantic_results = []
-        try:
-            rag_hits = await self.executor.rag.search(query, top_k=3)
-            for hit in rag_hits:
-                chunk = hit["data"]["chunk"] if isinstance(hit, dict) and "data" in hit else str(hit)
-                semantic_results.append(chunk[:400])
-        except Exception as e:
-            logger.warning(f"SearchAgent semantic retrieval failed: {e}")
 
-        # 3. Run memory search
+        # 2. Run memory search
         memory_results = []
         db = SessionLocal()
         try:
@@ -103,14 +92,13 @@ class SearchAgent(BaseAgent):
 
         system_prompt = (
             "You are a search and retrieval expert for Cortex Workspace.\n"
-            "Synthesize the file results, semantic code results, and memory matches below to answer the query.\n"
-            "Explicitly reference matching files, relevant chunks, or retrieved memories. Be precise."
+            "Synthesize the file results and memory matches below to answer the query.\n"
+            "Explicitly reference matching files or retrieved memories. Be precise."
         )
 
         search_context = (
             f"=== Search Agent Results ===\n"
             f"[File Search Results]:\n{file_results}\n\n"
-            f"[Semantic Code Chunks]:\n" + ("\n---\n".join(semantic_results) if semantic_results else "No semantic hits.") + "\n\n"
             "[Retrieved Memories]:\n" + ("\n".join(memory_results) if memory_results else "No matching memories.") + "\n"
             "============================="
         )
@@ -129,7 +117,7 @@ class SearchAgent(BaseAgent):
         return {
             "result": res["response"],
             "confidence": self.confidence(query, context),
-            "reasoning_summary": "Searched codebase files, vector database chunks, and persistent memory to construct response."
+            "reasoning_summary": "Searched codebase files and persistent memory to construct response."
         }
 
 
@@ -409,7 +397,7 @@ class ResearchAgent(BaseAgent):
     ) -> Dict[str, Any]:
         system_prompt = (
             "You are an academic and technical research agent.\n"
-            "Deconstruct technical concepts using the code documentation, RAG context, and references.\n"
+            "Deconstruct technical concepts using the code documentation and references.\n"
             "Write clean, clear explanations."
         )
         prompt = f"{context or ''}\n\nUser Query:\n{query}"
@@ -580,8 +568,6 @@ class VerificationAgent(BaseAgent):
         **kwargs: Any
     ) -> Dict[str, Any]:
         target_text = kwargs.get("target_text", query)
-        rag_context = kwargs.get("rag_context", context or "")
-        
         issues = []
         verified_paths = []
         verified_patches = []
@@ -620,28 +606,7 @@ class VerificationAgent(BaseAgent):
                 for src, dst in matches:
                     verified_patches.append(f"{src} -> {dst}")
 
-        # 3. Detect unsupported claims
-        if rag_context and any(h in rag_context for h in ["=== Retrieval Context (RAG) ===", "=== Retrieval Context (Hierarchical RAG) ===", "=== Retrieval Context (Compressed RAG) ==="]):
-            system_prompt = (
-                "You are an expert verification agent.\n"
-                "Verify if the generated answer makes any claims or imports that are completely unsupported by the provided Retrieval Context.\n"
-                "List any unsupported assertions or state 'No issues found.'."
-            )
-            prompt = f"=== Retrieval Context ===\n{rag_context}\n\n=== Generated Answer ===\n{target_text}"
-            try:
-                res = await self.executor.router.route_and_generate(
-                    prompt=prompt,
-                    system_prompt=system_prompt,
-                    model=kwargs.get("llm_model"),
-                    inference_engine=kwargs.get("inference_engine"),
-                    api_key=kwargs.get("api_key"),
-                    api_base_url=kwargs.get("api_base_url")
-                )
-                claim_result = res.get("response", "")
-                if "unsupported" in claim_result.lower() or "issue" in claim_result.lower():
-                    issues.append(f"Claim check alert: {claim_result[:300]}")
-            except Exception as e:
-                logger.warning(f"VerificationAgent claim check failed: {e}")
+
 
         verified = len(issues) == 0
         status_text = "PASSED" if verified else "FAILED"

@@ -1,53 +1,39 @@
-// Low-level session utilities. AuthContext is the single source of truth
-const TOKEN_KEY = "cortex_session_token";
-const USER_KEY = "cortex_session_user";
+/**
+ * Session — Low-level sessionStorage helpers for auth state.
+ * AuthProvider is the single source of truth; don't use these directly from components.
+ */
 
-function safeParse(raw) {
-  if (!raw) return null;
+const TOKEN_KEY = "cortex_token";
+const USER_KEY = "cortex_user";
+
+export function getSessionToken() {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+export function getSessionUser() {
+  if (typeof window === "undefined") return null;
   try {
-    return JSON.parse(raw);
+    return JSON.parse(sessionStorage.getItem(USER_KEY));
   } catch {
     return null;
   }
 }
 
-export function getSessionToken() {
-  if (typeof window === "undefined") return null;
-  return window.sessionStorage.getItem(TOKEN_KEY);
-}
-
-export function getSessionUser() {
-  if (typeof window === "undefined") return null;
-  const raw = window.sessionStorage.getItem(USER_KEY);
-  return safeParse(raw);
-}
-
 export function setSession(token, user) {
   if (typeof window === "undefined") return;
-  try {
-    if (token) {
-      window.sessionStorage.setItem(TOKEN_KEY, token);
-    } else {
-      window.sessionStorage.removeItem(TOKEN_KEY);
-    }
-    if (user !== undefined) {
-      window.sessionStorage.setItem(USER_KEY, JSON.stringify(user || null));
-    }
-  } catch (e) {}
+  if (token) {
+    sessionStorage.setItem(TOKEN_KEY, token);
+  } else {
+    sessionStorage.removeItem(TOKEN_KEY);
+  }
+  if (user !== undefined) {
+    sessionStorage.setItem(USER_KEY, JSON.stringify(user || null));
+  }
 }
 
 export function clearSession() {
   if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.removeItem(TOKEN_KEY);
-    window.sessionStorage.removeItem(USER_KEY);
-  } catch (e) {}
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
 }
-
-export const _getRawToken = getSessionToken;
-export const _getRawUser = getSessionUser;
-export const _setRawSession = setSession;
-export const _clearRawSession = clearSession;
-
-// Note: Do not access these directly from application components — use AuthProvider/useAuth instead.
-

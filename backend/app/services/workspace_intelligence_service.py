@@ -84,7 +84,7 @@ class WorkspaceIntelligenceService:
             "architecture": [
                 "FastAPI backend with layered services, routers, AI gateway, executor, and replay store.",
                 "Next.js + React frontend that surfaces chat, execution traces, models, and admin tooling.",
-                "RAG and memory subsystems support repo-aware and conversation-aware assistance.",
+                "Memory subsystems support conversation-aware assistance.",
             ],
             "repositories": repositories,
             "concepts": concepts,
@@ -114,7 +114,7 @@ class WorkspaceIntelligenceService:
             "backend/app/api/router.py",
             "backend/app/api/v1/*.py",
             "backend/app/executor/*.py",
-            "backend/app/rag/*.py",
+
             "backend/app/ai/**/*.py",
             "backend/app/agent/*.py",
             "backend/app/tools/*.py",
@@ -206,10 +206,7 @@ class WorkspaceIntelligenceService:
             add("FastAPI")
         if any("sqlalchemy" in dep.lower() for dep in deps):
             add("SQLAlchemy")
-        if any("faiss" in dep.lower() for dep in deps):
-            add("FAISS")
-        if any("sentence-transformers" in dep.lower() for dep in deps):
-            add("Sentence Transformers")
+
         if any("pymupdf" in dep.lower() for dep in deps):
             add("PyMuPDF")
 
@@ -226,7 +223,7 @@ class WorkspaceIntelligenceService:
         add(self.root / "frontend" / "app" / "layout.js", "Next.js application layout")
         add(self.root / "frontend" / "app" / "page.js", "Next.js application page")
         add(self.root / "frontend" / "next.config.js", "Next.js build configuration")
-        add(self.root / "scripts" / "rebuild_index.py", "RAG index rebuild utility")
+
         add(self.root / "Makefile", "Local development command surface")
 
         return entrypoints
@@ -266,11 +263,11 @@ class WorkspaceIntelligenceService:
         add("React UI", "react" in dependency_text or any(path.name.endswith(".tsx") for path in files))
         add("FastAPI services", "fastapi" in dependency_text or (self.root / "backend" / "app" / "main.py").exists())
         add("Next.js tooling", "next" in dependency_text or (self.root / "frontend" / "next.config.js").exists())
-        add("Repository awareness", "rag" in file_text or "repository" in source_text)
+        add("Repository awareness", "repository" in source_text)
         add("Execution replay", "execution" in file_text or (self.root / "backend" / "app" / "executor" / "execution_replay.py").exists())
         add("Model routing", "gateway" in file_text or (self.root / "backend" / "app" / "ai" / "gateway.py").exists())
         add("Memory layer", "memory" in file_text or (self.root / "backend" / "app" / "ai" / "memory").exists())
-        add("RAG retrieval", (self.root / "backend" / "app" / "rag" / "service.py").exists())
+
         add("Authentication", "auth" in file_text or (self.root / "frontend" / "app" / "page.js").exists())
         add("Admin tools", "admin" in file_text or (self.root / "frontend" / "app" / "layout.js").exists())
         add("Workspace intelligence", (self.root / "backend" / "app" / "services" / "workspace_intelligence_service.py").exists())
@@ -631,11 +628,9 @@ class WorkspaceIntelligenceService:
                 "Analyze files",
                 "Index files",
                 "Extract document contents",
-                "Build embeddings",
                 "Create summaries",
                 "Build memory",
                 "Build knowledge graphs",
-                "Perform semantic retrieval",
             ],
             "modify_permissions": [
                 "Edit files",
@@ -785,7 +780,7 @@ class WorkspaceIntelligenceService:
             "AIGateway normalizes model/provider settings.",
             "AIExecutor classifies intent and builds the execution graph.",
             "GraphRunner executes memory, tools, and LLM synthesis steps.",
-            "ToolRegistry routes to file search, system scan, and RAG.",
+            "ToolRegistry routes to file search and system scan.",
             "Execution state is persisted for replay and debugging.",
             "ResponseBuilder returns the final assistant answer and execution_id.",
         ]
@@ -810,7 +805,7 @@ class WorkspaceIntelligenceService:
         if "local-first AI operating system" in project_context:
             return (
                 "Cortex Workspace is a local-first AI operating system and engineering console "
-                "that blends chat, file intelligence, RAG, execution replay, and model routing."
+                "that blends chat, file intelligence, execution replay, and model routing."
             )
         if "React" in frameworks and dependencies:
             return "A full-stack workspace for local AI chat, repository awareness, and execution telemetry."
@@ -835,7 +830,6 @@ class WorkspaceIntelligenceService:
             "backend/app/api/router.py",
             "backend/app/executor/executor.py",
             "backend/app/executor/graph_runner.py",
-            "backend/app/rag/service.py",
             "backend/app/ai/gateway.py",
             "frontend/app/page.js",
             "frontend/app/layout.js",
@@ -849,7 +843,6 @@ class WorkspaceIntelligenceService:
             self.root / "backend" / "app" / "main.py",
             self.root / "backend" / "app" / "api" / "router.py",
             self.root / "backend" / "app" / "executor" / "executor.py",
-            self.root / "backend" / "app" / "rag" / "service.py",
             self.root / "frontend" / "app" / "page.js",
         ]:
             if not rel.exists():

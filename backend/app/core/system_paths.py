@@ -1,7 +1,7 @@
 """Canonical system path definitions for Cortex.
 
 All system-owned files must live under:
-  CORTEX_ROOT/system/{db,embeddings,vector_db,indexes,logs,cache,runtime}
+  CORTEX_ROOT/system/{db,logs,cache,runtime}
 """
 
 from __future__ import annotations
@@ -154,9 +154,6 @@ MAX_TOTAL_SCAN_SIZE_BYTES: Final[int] = 100 * 1024 * 1024 * 1024
 
 SYSTEM_SUBDIRS: Final[dict[str, str]] = {
     "db": "db",
-    "embeddings": "embeddings",
-    "vector_db": "vector_db",
-    "indexes": "indexes",
     "logs": "logs",
     "cache": "cache",
     "runtime": "runtime",

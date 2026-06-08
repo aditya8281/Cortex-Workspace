@@ -43,7 +43,6 @@ WORKDIR /app/frontend
 COPY --from=frontend-build /app/frontend/package*.json ./
 COPY --from=frontend-build /app/frontend/next.config.js ./next.config.js
 COPY --from=frontend-build /app/frontend/.next ./.next
-COPY --from=frontend-build /app/frontend/public ./public
 COPY --from=frontend-build /app/frontend/node_modules ./node_modules
 
 EXPOSE 3000

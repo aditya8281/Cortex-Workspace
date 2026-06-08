@@ -54,9 +54,11 @@ async def lifespan(app: FastAPI):
     from backend.app.core.redis import redis_cache
     await redis_cache.ping()
     
-    # Background warmup for AIExecutor and RAG index loading to optimize first-query latency
+    # Test Redis connectivity
+    from backend.app.core.redis import redis_cache
+    await redis_cache.ping()
+
     import asyncio
-    from backend.app.executor import AIExecutor
     try:
         from backend.app.db import session as db_session
         db_session.get_engine()
@@ -66,10 +68,10 @@ async def lifespan(app: FastAPI):
 
     def warmup_executor():
         try:
-            logger.info("Starting background warmup: Loading models and initializing RAG index...")
-            executor = AIExecutor()
-            executor.rag.initialize()
-            logger.info("Background warmup complete: AIExecutor and RAGService are fully ready.")
+            logger.info("Starting background warmup: Loading AIExecutor...")
+            from backend.app.executor import AIExecutor
+            AIExecutor()
+            logger.info("Background warmup complete: AIExecutor is ready.")
         except Exception as ex:
             logger.error(f"Error during background warmup: {ex}")
 
@@ -77,7 +79,6 @@ async def lifespan(app: FastAPI):
     loop.run_in_executor(None, warmup_executor)
 
     from backend.app.intelligence.observer_service import BackgroundObserverService
-    from backend.app.ai.ingestion.watcher import BackgroundFileWatcher
     from backend.app.ai.model_registry import ModelRegistry
     from backend.app.services.memory_manager import memory_manager
 
@@ -85,11 +86,6 @@ async def lifespan(app: FastAPI):
     observer.start(loop=loop)
     memory_manager.register_service("observer", observer)
     logger.info("Cortex background observer started")
-
-    file_watcher = BackgroundFileWatcher(poll_interval_seconds=15)
-    file_watcher.start()
-    memory_manager.register_service("file_watcher", file_watcher)
-    logger.info("Cortex background file watcher started")
 
     async def warmup_ollama_inventory():
         try:
@@ -103,7 +99,6 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    file_watcher.stop()
     observer.stop()
     await redis_cache.close()
     logger.info("Redis cache connection closed")

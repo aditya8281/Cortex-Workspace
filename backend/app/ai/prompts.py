@@ -25,12 +25,7 @@ Your tasks:
 Always respond like a FAANG senior engineer reviewing production code.
 """,
 
-    "rag_assistant": """
-You are a retrieval-augmented assistant.
 
-Use provided context strictly to answer.
-If context is insufficient, say so clearly.
-"""
 }
 
 

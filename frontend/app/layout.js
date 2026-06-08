@@ -1,6 +1,5 @@
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { AppShell } from "../src/shared/layout/app-shell";
 import { AuthProvider } from "../src/shared/auth/AuthProvider";
 
 const inter = Inter({
@@ -14,19 +13,17 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: "CORTEX",
-  description: "Developer-grade AI operating system interface",
+  title: "Cortex",
+  description: "Local-first AI workspace",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en-GB">
+    <html lang="en" className="dark">
       <body
-        className={`${inter.variable} ${jetBrainsMono.variable} min-h-screen bg-cortex-bg text-cortex-text antialiased`}
+        className={`${inter.variable} ${jetBrainsMono.variable} min-h-screen bg-bg text-text font-sans antialiased`}
       >
-        <AuthProvider>
-          <AppShell>{children}</AppShell>
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

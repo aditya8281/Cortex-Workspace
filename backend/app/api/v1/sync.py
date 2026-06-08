@@ -18,9 +18,6 @@ class PathRequest(BaseModel):
 def _run_sync_task(
     run_id: int,
     user_id: int | None,
-    embedding_model: str | None,
-    vector_db: str | None,
-    code_parsing: str | None,
     force: bool = False,
 ) -> None:
     from backend.app.db.session import SessionLocal
@@ -36,9 +33,6 @@ def _run_sync_task(
                     db,
                     user_id=user_id,
                     run_id=run_id,
-                    embedding_model=embedding_model,
-                    vector_db=vector_db,
-                    code_parsing=code_parsing,
                     force=force,
                 )
             )
@@ -76,9 +70,6 @@ def sync_now(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
-    embedding_model: str | None = None,
-    vector_db: str | None = None,
-    code_parsing: str | None = None,
 ):
     user_id = current_user.id if current_user else None
     status = sync_service.get_status(db)
@@ -105,9 +96,6 @@ def sync_now(
         _run_sync_task,
         run.id,
         user_id,
-        embedding_model,
-        vector_db,
-        code_parsing,
         False
     )
     db.refresh(run)
@@ -145,9 +133,6 @@ def force_resync(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
-    embedding_model: str | None = None,
-    vector_db: str | None = None,
-    code_parsing: str | None = None,
 ):
     # Triggers full indexing from a clean slate
     user_id = current_user.id if current_user else None
@@ -168,9 +153,6 @@ def force_resync(
         _run_sync_task,
         run.id,
         user_id,
-        embedding_model,
-        vector_db,
-        code_parsing,
         True
     )
     db.refresh(run)

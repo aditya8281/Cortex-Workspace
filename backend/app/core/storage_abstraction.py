@@ -19,9 +19,6 @@ logger = logging.getLogger(__name__)
 class SystemStorage:
     root: Path
     db_root: Path
-    embeddings_root: Path
-    vector_db_root: Path
-    indexes_root: Path
     logs_root: Path
     cache_root: Path
     runtime_root: Path
@@ -70,9 +67,6 @@ def get_system_storage() -> SystemStorage:
     return SystemStorage(
         root=get_system_root(),
         db_root=get_system_path("db"),
-        embeddings_root=get_system_path("embeddings"),
-        vector_db_root=get_system_path("vector_db"),
-        indexes_root=get_system_path("indexes"),
         logs_root=get_system_path("logs"),
         cache_root=get_system_path("cache"),
         runtime_root=get_system_path("runtime"),
@@ -187,21 +181,4 @@ def is_vault_path(path: str | Path) -> bool:
     return False
 
 
-def should_exclude_from_rag(path: str | Path) -> bool:
-    """Return True if *path* must never be indexed/embedded by the RAG pipeline."""
-    resolved = Path(path).expanduser().resolve()
 
-    # System internal storage is never user-facing RAG content.
-    if is_system_path(resolved):
-        return True
-
-    # Vault contents are encrypted and private.
-    if is_vault_path(resolved):
-        return True
-
-    # User memory snapshots are private per-user data.
-    for _, user_root in _iter_user_storage_roots():
-        if _path_is_relative_to(resolved, (user_root / "memory_snapshots").resolve()):
-            return True
-
-    return False

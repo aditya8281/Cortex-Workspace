@@ -98,6 +98,27 @@ class RedisCache:
             self.client = None
             self._connected = False
 
+    @staticmethod
+    def run_sync(coro):
+        """
+        Run an async coroutine from synchronous context.
+        Used by auth service functions that run in FastAPI's threadpool.
+
+        Creates a **fresh** event loop per call.  The caller's coroutine
+        (e.g. ``redis_cache.get(key)``) will reuse the shared client's
+        pool which is safe for infrequent auth operations.
+        """
+        import asyncio
+
+        new_loop = asyncio.new_event_loop()
+        try:
+            return new_loop.run_until_complete(coro)
+        finally:
+            try:
+                new_loop.close()
+            except Exception:
+                pass
+
 
 # Global redis cache instance
 redis_cache = RedisCache()

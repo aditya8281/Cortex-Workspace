@@ -121,8 +121,8 @@ class ExclusionConfig:
         resolved = path.resolve()
         path_str = str(resolved)
         try:
-            from backend.app.core.storage_abstraction import should_exclude_from_rag, is_vault_path
-            if should_exclude_from_rag(resolved) or is_vault_path(resolved):
+            from backend.app.core.storage_abstraction import is_system_path, is_vault_path
+            if is_system_path(resolved) or is_vault_path(resolved):
                 return True
         except Exception:
             pass

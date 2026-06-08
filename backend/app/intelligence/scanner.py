@@ -1,3 +1,8 @@
+"""Filesystem scanner for discovering indexable files.
+
+Moved from ``ai.ingestion.scanner`` during RAG pipeline removal.
+"""
+
 import os
 from pathlib import Path
 
@@ -7,8 +12,8 @@ from backend.app.intelligence.exclusions import default_exclusions
 
 
 class RepoScanner:
-    """
-    Scans user environment and collects files for indexing.
+    """Scans user environment and collects files for indexing.
+
     Uses intelligent home-directory discovery with configurable exclusions.
     """
 
@@ -29,7 +34,6 @@ class RepoScanner:
         if root is not None:
             roots = [Path(root).resolve()]
         else:
-            # Load user defined inclusion root folders
             roots = [Path(p).resolve() for p in config.include_folders]
             if not roots:
                 workspace = Path(settings.WORKSPACE_ROOT).resolve()
@@ -41,7 +45,7 @@ class RepoScanner:
         queue = deque()
         for r in roots:
             if r.exists() and r.is_dir() and not config.is_excluded(str(r), bypass_prefixes=bypass_prefixes):
-                queue.append((r, 0))  # (directory_path, depth)
+                queue.append((r, 0))
                 seen_dirs.add(str(r))
 
         max_depth = 15
@@ -51,7 +55,7 @@ class RepoScanner:
             curr_dir, depth = queue.popleft()
             batch_count += 1
             if batch_count % 100 == 0:
-                time.sleep(0.005)  # minor yield to prevent CPU/Disk lockup
+                time.sleep(0.005)
 
             if depth > max_depth:
                 continue
@@ -92,7 +96,7 @@ class RepoScanner:
             workspace = Path(settings.WORKSPACE_ROOT).resolve()
             if workspace.exists():
                 inclusion_roots.append(workspace)
-        
+
         bypass_prefixes = [str(r) for r in inclusion_roots] + [str(Path(raw).resolve()) for raw in changed_paths]
 
         files: list[str] = []

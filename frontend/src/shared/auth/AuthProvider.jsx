@@ -1,9 +1,19 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+/**
+ * AuthProvider — React context for authentication state.
+ * Wraps the app and provides user, token, login, logout to all children.
+ */
+
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import * as cortexApi from "./cortexApi";
-import { clearSession, getSessionToken, getSessionUser, setSession } from "./session";
+import { setTokenProvider, apiGetMe } from "./cortexApi";
+import {
+  getSessionToken,
+  getSessionUser,
+  setSession,
+  clearSession,
+} from "./session";
 
 const AuthContext = createContext(null);
 
@@ -13,94 +23,65 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // token provider for API modules
+  // Wire token provider so API calls include auth header
   const getToken = useCallback(() => token, [token]);
-
-  const onAuthError = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    clearSession();
-    router.replace("/auth");
-  }, [router]);
-
   useEffect(() => {
-    // wire token provider
-    cortexApi.setTokenProvider(getToken);
-    cortexApi.setAuthErrorHandler(onAuthError);
-  }, [getToken, onAuthError]);
+    setTokenProvider(getToken);
+  }, [getToken]);
 
-  // bootstrap auth from sessionStorage or backend
-  const bootstrapAuth = useCallback(async () => {
-    setLoading(true);
-    try {
-      const storedToken = getSessionToken();
-      const storedUser = getSessionUser();
-      if (storedToken) {
-        setToken(storedToken);
-        if (storedUser) setUser(storedUser);
-        try {
-          const me = await cortexApi.apiGetMe();
+  // Bootstrap: read session, validate with backend
+  useEffect(() => {
+    let cancelled = false;
+    async function bootstrap() {
+      setLoading(true);
+      const stored = getSessionToken();
+      if (!stored) {
+        setLoading(false);
+        return;
+      }
+      setToken(stored);
+      const cached = getSessionUser();
+      if (cached) setUser(cached);
+      try {
+        const me = await apiGetMe();
+        if (!cancelled) {
           setUser(me);
-          setSession(storedToken, me);
-        } catch (e) {
+          setSession(stored, me);
+        }
+      } catch {
+        if (!cancelled) {
+          clearSession();
           setToken(null);
           setUser(null);
-          clearSession();
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch (e) {
-      setUser(null);
-      setToken(null);
-    } finally {
-      setLoading(false);
     }
+    bootstrap();
+    return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    bootstrapAuth();
-
-    function onStorage(e) {
-      if (e.key !== "cortex_session_token" && e.key !== "cortex_session_user") {
-        return;
-      }
-
-      if (!e.newValue && e.key === "cortex_session_token") {
-        setUser(null);
-        setToken(null);
-        router.replace("/auth");
-        return;
-      }
-
-      bootstrapAuth();
-    }
-
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [bootstrapAuth, router]);
-
-  const login = useCallback(async (tokenValue, userValue) => {
-    setToken(tokenValue);
-    setUser(userValue);
-    setSession(tokenValue, userValue);
-    return true;
+  /** Login: store token + user in state and sessionStorage. */
+  const login = useCallback((tokenVal, userVal) => {
+    setToken(tokenVal);
+    setUser(userVal);
+    setSession(tokenVal, userVal);
   }, []);
 
-  const updateUser = useCallback((nextUser) => {
-    setUser((current) => {
-      const resolved = typeof nextUser === "function" ? nextUser(current) : { ...(current || {}), ...(nextUser || {}) };
-      setSession(token, resolved);
-      return resolved;
-    });
-  }, [token]);
-
+  /** Logout: clear everything and redirect to /auth. */
   const logout = useCallback(() => {
-    setUser(null);
     setToken(null);
+    setUser(null);
     clearSession();
     router.replace("/auth");
   }, [router]);
 
-  return <AuthContext.Provider value={{ user, token, loading, login, logout, bootstrapAuth, updateUser }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
@@ -108,5 +89,3 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
-
-export default AuthProvider;

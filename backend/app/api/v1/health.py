@@ -47,13 +47,10 @@ async def deep_health():
 
     memory_ok = HealthService.check_memory()
 
-    rag_ok = HealthService.check_rag()
-
     overall = all(
         [
             database_ok,
             memory_ok,
-            rag_ok,
         ]
     )
 
@@ -66,7 +63,6 @@ async def deep_health():
         "checks": {
             "database": database_ok,
             "memory": memory_ok,
-            "rag": rag_ok,
         },
     }
 
@@ -87,15 +83,7 @@ async def list_services():
         "uptime": "active"
     })
     
-    # 2. RAG Engine
-    rag_ok = HealthService.check_rag()
-    services_list.append({
-        "name": "RAG Engine",
-        "status": "running" if rag_ok else "error",
-        "uptime": "active" if rag_ok else "degraded"
-    })
-    
-    # 3. Memory Vault
+    # 2. Memory Vault
     memory_ok = HealthService.check_memory()
     services_list.append({
         "name": "Memory Vault",
@@ -144,7 +132,7 @@ async def restart_service(name: str):
             return {"message": "Observer Service restarted successfully"}
         raise HTTPException(status_code=404, detail="Observer Service service not found")
         
-    elif name in ("RAG Engine", "Memory Vault"):
+    elif name == "Memory Vault":
         from backend.app.db.session import reset_db_engine
         reset_db_engine()
         return {"message": f"{name} database engine reset/restarted successfully"}

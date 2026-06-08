@@ -12,8 +12,6 @@ from backend.app.executor.schemas import ExecutionResult
 
 from backend.app.executor.tracer import ExecutionTracer
 
-from backend.app.rag.service import RAGService
-
 from backend.app.core.logging import get_logger
 from backend.app.core.paths import PROJECT_ROOT
 
@@ -40,7 +38,6 @@ class AIExecutor:
         self.memory = MemoryRepository()
         self.file_agent = FileSearchAgent()
         self.system_agent = SystemScanner()
-        self.rag = RAGService(str(PROJECT_ROOT))
         self.tool_registry = ToolRegistry(self)
         self.tracer = ExecutionTracer()
         self.graph_builder = WorkflowGraphBuilder(self.tool_registry)
@@ -55,10 +52,7 @@ class AIExecutor:
         user_id: int | None = None,
         history: list = None,
         llm_model: str | None = None,
-        embedding_model: str | None = None,
-        vector_db: str | None = None,
         inference_engine: str | None = None,
-        code_parsing: str | None = None,
         api_key: str | None = None,
         api_base_url: str | None = None,
         context_items: list = None
@@ -67,7 +61,6 @@ class AIExecutor:
         logger.info(f"executor_started user_id={user_id} query={query[:100]}")
 
         try:
-            # Resolve context items before building the execution graph
             if context_items:
                 context_items = await self.context_resolver.resolve(context_items)
                 logger.info(f"context_resolved items={len(context_items)}")
@@ -84,10 +77,7 @@ class AIExecutor:
                 intent=intent,
                 history=history,
                 llm_model=llm_model,
-                embedding_model=embedding_model,
-                vector_db=vector_db,
                 inference_engine=inference_engine,
-                code_parsing=code_parsing,
                 api_key=api_key,
                 api_base_url=api_base_url,
                 context_items=context_items

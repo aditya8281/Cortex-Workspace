@@ -12,12 +12,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
-# Ensure backend package can be imported and force PyTorch to use CPU for embeddings to save VRAM for local LLMs
+# Ensure backend package can be importable by Python
 export PYTHONPATH="."
-export CUDA_VISIBLE_DEVICES=""
 BOOTSTRAP_DIR=".cortex_bootstrap"
 UV_SYNC_STAMP="$BOOTSTRAP_DIR/uv-sync.stamp"
-INDEX_STAMP="$BOOTSTRAP_DIR/index.stamp"
 
 mkdir -p "$BOOTSTRAP_DIR"
 
@@ -78,19 +76,7 @@ echo -e "\n${BOLD}${CYAN}[Phase 2/4] Applying database migrations...${RESET}"
 uv run alembic upgrade head
 echo -e "${GREEN}[✓] Database migrations applied successfully.${RESET}"
 
-# 4. Rebuild semantic index
-echo -e "\n${BOLD}${CYAN}[Phase 3/4] Rebuilding repository semantic index...${RESET}"
-if [ "${SKIP_INDEX_REBUILD:-0}" = "1" ]; then
-    echo -e "${YELLOW}[+] Semantic index rebuild skipped via SKIP_INDEX_REBUILD=1.${RESET}"
-elif [ ! -f "$INDEX_STAMP" ] || [ backend/app -nt "$INDEX_STAMP" ] || [ frontend/app -nt "$INDEX_STAMP" ] || [ scripts/rebuild_index.py -nt "$INDEX_STAMP" ]; then
-    uv run python scripts/rebuild_index.py
-    touch "$INDEX_STAMP"
-    echo -e "${GREEN}[✓] Semantic index populated (.cortex vector store ready).${RESET}"
-else
-    echo -e "${GREEN}[✓] Semantic index already up to date.${RESET}"
-fi
-
-# 5. Check and configure frontend dependencies
+# 4. Check and configure frontend dependencies
 echo -e "\n${BOLD}${CYAN}[Phase 4/4] Setting up frontend dependencies...${RESET}"
 if [ -d "frontend" ]; then
     if [ ! -d "frontend/node_modules" ] || [ ! -f "frontend/node_modules/.package-lock.json" ] || [ "frontend/package-lock.json" -nt "frontend/node_modules/.package-lock.json" ]; then

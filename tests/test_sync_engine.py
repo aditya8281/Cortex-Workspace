@@ -9,7 +9,7 @@ from backend.app.db.base import Base
 from backend.app.api.deps import get_db
 from backend.app.intelligence.scope_config import SyncScopeConfig
 from backend.app.intelligence.discovery import FilesystemDiscovery
-from backend.app.ai.ingestion.scanner import RepoScanner
+from backend.app.intelligence.scanner import RepoScanner
 from backend.app.intelligence.sync_service import SyncService
 
 
@@ -170,9 +170,6 @@ def test_incremental_sync_updates_progress_state(db_session, tmp_path):
 
     sync_service = SyncService()
     sync_service.scanner.scan_incremental = MagicMock(return_value=[str(target.resolve())])
-    sync_service.indexing_service.incremental_update = AsyncMock(
-        return_value=MagicMock(hash="abc123", metadata_json="{}")
-    )
     sync_service.memory.count_entries = MagicMock(return_value=0)
 
     result = sync_service.run_incremental_sync(db_session, [str(target.resolve())])
@@ -188,8 +185,6 @@ def test_incremental_sync_handles_deletions(db_session, tmp_path):
     missing = tmp_path / "deleted.txt"
 
     sync_service = SyncService()
-    sync_service.indexing_service.incremental_update = AsyncMock(return_value=None)
-    sync_service.scanner.scan_incremental = MagicMock(return_value=[])
     sync_service.memory.count_entries = MagicMock(return_value=0)
 
     result = sync_service.run_incremental_sync(db_session, [str(missing.resolve())])

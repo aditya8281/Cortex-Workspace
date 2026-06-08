@@ -3,11 +3,9 @@ from typing import Dict, List, Optional
 from backend.app.tools.base import BaseTool, ToolContext, ToolResult
 from backend.app.tools.builtin_tools import (
     MemorySearchTool,
-    RagRetrieveTool,
     FileSearchTool,
     ReadFileTool,
     SearchFilesTool,
-    RagTool,
     TerminalExecuteTool,
     SystemActionsTool,
     SystemScannerTool,
@@ -28,8 +26,6 @@ class ToolRegistry:
             self.register(WriteFileTool(executor))
             self.register(MemorySearchTool(executor))
             self.register(SystemScannerTool(executor))
-            self.register(RagTool(executor))
-            self.register(RagRetrieveTool(executor))
             self.register(SystemActionsTool(executor))
             self.register(TerminalExecuteTool(executor))
 
