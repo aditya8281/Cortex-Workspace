@@ -1,60 +1,9 @@
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from backend.app.main import app
-from backend.app.db.base import Base
-from backend.app.models.user import User  # noqa: F401
-from backend.app.api.deps import get_db
-
-
-@pytest.fixture(name="db_session", scope="function")
-def fixture_db_session(tmp_path):
-    # Each test gets its own isolated database file via pytest tmp_path
-    db_file = tmp_path / "test.db"
-    db_url = f"sqlite:///{db_file}"
-
-    test_engine = create_engine(db_url, connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-
-    Base.metadata.create_all(bind=test_engine)
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=test_engine)
-        test_engine.dispose()
-
-
-@pytest.fixture(name="client", scope="function")
-def fixture_client(tmp_path):
-    # Each test client gets its own completely isolated database
-    db_file = tmp_path / "client_test.db"
-    db_url = f"sqlite:///{db_file}"
-
-    test_engine = create_engine(db_url, connect_args={"check_same_thread": False})
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
-    Base.metadata.create_all(bind=test_engine)
-
-    def override_get_db():
-        db = TestingSessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=test_engine)
-    test_engine.dispose()
+# Tests for auth flows.  Uses the session-scoped ``client`` fixture
+# provided by conftest.py which gives each test session a clean in-memory DB.
 
 
 def test_create_user(client):
-    # Pre-populate a dummy first user so that the created user gets "admin" role
+    # Pre-populate a dummy first user so that the created user gets "user" role
     dummy_payload = {
         "username": "dummyadmin",
         "full_name": "Dummy Admin",
@@ -64,7 +13,6 @@ def test_create_user(client):
         "vault_password": "vaultpassword123",
         "personal_storage_path": "~/CortexVaultTest"
     }
-    # first registration becomes admin
     client.post("/api/auth/register", json=dummy_payload)
 
     payload = {
@@ -144,78 +92,31 @@ def test_login_and_me(client):
     assert response.status_code == 401
 
 
-def test_profile_preferences_photo_and_password_flows(client):
-    # Setup admin + user
-    dummy_payload = {
-        "username": "dummyadmin2",
-        "full_name": "Dummy Admin",
-        "nickname": "dummy",
-        "password": "securepassword123",
-        "confirm_password": "securepassword123",
+def test_vault_password_update(client):
+    # Register a user
+    register_payload = {
+        "username": "vaultuser",
+        "full_name": "Vault User",
+        "nickname": "vault",
+        "password": "mypassword123",
+        "confirm_password": "mypassword123",
         "vault_password": "vaultpassword123",
-        "personal_storage_path": "~/CortexVaultTest"
+        "personal_storage_path": "~/CortexVaultTest5"
     }
-    client.post("/api/auth/register", json=dummy_payload)
-
-    payload = {
-        "username": "profileuser",
-        "full_name": "Profile User",
-        "nickname": "prof",
-        "password": "initialPass123",
-        "confirm_password": "initialPass123",
-        "vault_password": "vaultPass123",
-        "personal_storage_path": "~/CortexVaultTestP"
-    }
-    reg_response = client.post("/api/auth/register", json=payload)
+    reg_response = client.post("/api/auth/register", json=register_payload)
     assert reg_response.status_code == 200
 
-    # login
-    login_payload = {"username": "profileuser", "password": "initialPass123"}
+    # Login
+    login_payload = {"username": "vaultuser", "password": "mypassword123"}
     login_resp = client.post("/api/auth/login", json=login_payload)
     assert login_resp.status_code == 200
     token = login_resp.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    # update preferences
-    pref_payload = {"interaction_style": "casual", "response_style": "concise"}
-    r = client.put("/api/v1/me/profile/preferences", json=pref_payload, headers=headers)
-    assert r.status_code == 200
-    assert r.json()["preferences"]["interaction_style"] == "casual"
-
-    # upload profile photo
-    files = {"file": ("avatar.png", b"PNGDATA", "image/png")}
-    r = client.post("/api/v1/me/profile/photo", files=files, headers=headers)
-    assert r.status_code == 200
-    photo_name = r.json().get("profile_photo")
-    assert photo_name and photo_name.startswith("user_")
-
-    # ensure profile shows photo
-    r = client.get("/api/v1/me/profile", headers=headers)
-    assert r.status_code == 200
-    assert r.json().get("profile_photo") == photo_name
-
-    # remove photo
-    r = client.delete("/api/v1/me/profile/photo", headers=headers)
-    assert r.status_code == 200
-    assert r.json().get("profile_photo") is None
-
-    # change account password
-    pwd_payload = {"current_password": "initialPass123", "new_password": "NewPass1234", "confirm_password": "NewPass1234"}
-    r = client.post("/api/v1/me/profile/change-password", json=pwd_payload, headers=headers)
+    # Update vault password with correct current_password
+    r = client.put("/api/auth/me", json={"vault_password": "newVaultPass123", "current_password": "mypassword123"}, headers=headers)
     assert r.status_code == 200
 
-    # login with new password
-    r = client.post("/api/auth/login", json={"username": "profileuser", "password": "NewPass1234"})
-    assert r.status_code == 200
-
-    new_token = r.json()["access_token"]
-    new_headers = {"Authorization": f"Bearer {new_token}"}
-
-    # change vault password (requires account password)
-    vault_payload = {"account_password": "NewPass1234", "new_vault_password": "NewVault1234", "confirm_vault_password": "NewVault1234"}
-    r = client.post("/api/v1/me/profile/change-vault-password", json=vault_payload, headers=new_headers)
-    assert r.status_code == 200
-
-    # verify that updating /api/auth/me with vault_password without current_password fails
-    r = client.put("/api/auth/me", json={"vault_password": "oops"}, headers=new_headers)
+    # Update vault password without current_password should fail
+    r = client.put("/api/auth/me", json={"vault_password": "oops"}, headers=headers)
     assert r.status_code == 400

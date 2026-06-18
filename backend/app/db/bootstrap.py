@@ -10,14 +10,14 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from backend.app.core.paths import PROJECT_ROOT
-from backend.app.core.system_paths import ensure_system_dirs
 from backend.app.core.storage_abstraction import get_system_storage
+from backend.app.core.system_paths import ensure_system_dirs
 
 logger = logging.getLogger(__name__)
 
 _engine = None
 _session_factory = None
-_bootstrap_lock = threading.Lock()
+_bootstrap_lock = threading.RLock()
 
 
 def get_database_path() -> Path:
@@ -94,7 +94,7 @@ def get_session_factory():
             _session_factory = sessionmaker(
                 autocommit=False,
                 autoflush=False,
-                bind=get_engine(),
+                bind=_create_engine(),
             )
         return _session_factory
 

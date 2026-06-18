@@ -1,19 +1,16 @@
 /**
- * Cortex API Client — All backend communication goes through here.
+ * Cortex API Client — Auth, Memory, and Profile.
  * Resolves backend origin dynamically and injects auth headers.
  */
 
 const API_VERSION = "/api/v1";
 
-/** Resolve the backend base URL.
- *  Uses Next.js proxy routes in production; direct backend in local dev. */
+/** Resolve the backend base URL. */
 function getBase() {
-  // Allow explicit env override for direct backend calls
   const envBase = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (envBase && /^https?:\/\//.test(envBase)) {
     return envBase.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "");
   }
-  // Use Next.js proxy routes (relative paths) — works in all environments
   return "";
 }
 
@@ -73,6 +70,10 @@ export function apiGetMe() {
   return request("GET", "/api/auth/me");
 }
 
+export function apiLogout(refreshToken) {
+  return request("POST", "/api/auth/logout", { body: { refresh_token: refreshToken } });
+}
+
 // ── Profile endpoints ───────────────────────────────────────────────
 
 export function apiGetProfile() {
@@ -93,7 +94,11 @@ export async function apiUploadAvatar(file) {
     body: fd,
   });
   let data;
-  try { data = await res.json(); } catch { data = null; }
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
   if (!res.ok) {
     const msg = data?.detail || `Upload failed (${res.status})`;
     throw new Error(msg);
@@ -105,14 +110,10 @@ export function apiRemoveAvatar() {
   return request("DELETE", "/api/v1/me/profile/photo");
 }
 
-export function apiChangePassword(payload) {
-  return request("POST", "/api/v1/me/profile/change-password", { body: payload });
-}
-
-export function apiChangeVaultPassword(payload) {
-  return request("POST", "/api/v1/me/profile/change-vault-password", { body: payload });
-}
-
-export function getProfilePhotoUrl() {
-  return `${getBase()}/api/v1/me/profile/photo`;
+/**
+ * Return the public URL for a user's profile photo.
+ * Uses the /photo/{user_id} endpoint (no auth needed for <img> tags).
+ */
+export function getProfilePhotoUrl(userId) {
+  return `${getBase()}/api/v1/me/profile/photo/${userId}`;
 }

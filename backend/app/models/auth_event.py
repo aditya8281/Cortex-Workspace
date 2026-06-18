@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
-from sqlalchemy import Integer, String, Text, DateTime
+from datetime import datetime, timezone
+
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
-from datetime import datetime
 
 from backend.app.db.base import Base
 
@@ -14,7 +15,7 @@ class AuthEvent(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String, nullable=True)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     event_type: Mapped[str] = mapped_column(String, nullable=False)
     metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
 

@@ -1,10 +1,10 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from backend.app.models.user import User
-from backend.app.core.tokens import verify_access_token
 from backend.app.core.db import get_db
+from backend.app.core.tokens import verify_access_token
+from backend.app.models.user import User
 
 oauth2_scheme = HTTPBearer()
 oauth2_scheme_optional = HTTPBearer(auto_error=False)
@@ -15,7 +15,7 @@ async def get_current_user(
     db: Session = Depends(get_db)
 ):
     try:
-        user_id = await verify_access_token(token.credentials)
+        user_id = verify_access_token(token.credentials)
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired or invalid")
 
@@ -37,7 +37,7 @@ async def get_current_user_optional(
     if token is None:
         return None
     try:
-        user_id = await verify_access_token(token.credentials)
+        user_id = verify_access_token(token.credentials)
     except Exception:
         return None
     return db.query(User).filter(User.id == int(user_id)).first()

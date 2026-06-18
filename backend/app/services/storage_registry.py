@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from backend.app.models.storage_registry import StorageRegistry
-from backend.app.core.storage_abstraction import validate_storage_path
 
 
-def get_registry_for_user(db: Session, user_id: int) -> Optional[StorageRegistry]:
+def get_registry_for_user(db: Session, user_id: int) -> StorageRegistry | None:
     return (
         db.query(StorageRegistry)
         .filter(StorageRegistry.user_id == user_id)
@@ -20,23 +18,22 @@ def get_registry_for_user(db: Session, user_id: int) -> Optional[StorageRegistry
 
 
 def register_user_storage(db: Session, user_id: int, storage_root: str) -> StorageRegistry:
-    root = str(validate_storage_path(storage_root))
     entry = get_registry_for_user(db, user_id)
     if entry is None:
         entry = StorageRegistry(
             user_id=user_id,
-            storage_root=root,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            storage_root=storage_root,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
         db.add(entry)
     else:
-        entry.storage_root = root
-        entry.updated_at = datetime.utcnow()
+        entry.storage_root = storage_root
+        entry.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(entry)
 
-    base = Path(root)
+    base = Path(storage_root)
     for subdir in ("profile", "vault", "workspace", "exports", "memory_snapshots"):
         (base / subdir).mkdir(parents=True, exist_ok=True)
 

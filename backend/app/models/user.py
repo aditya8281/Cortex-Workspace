@@ -1,4 +1,5 @@
 import json
+
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 

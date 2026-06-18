@@ -1,18 +1,22 @@
 /**
  * Dashboard shell — Post-auth layout with header.
  * Header: CORTEX branding (left), avatar menu (right).
- * Main content area is empty — to be built later.
  */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../auth/AuthProvider";
+import { getProfilePhotoUrl } from "../auth/cortexApi";
 
 export default function DashboardShell({ children }) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [photoFailed, setPhotoFailed] = useState(false);
+
+  // Reset photoFailed when user changes (e.g. logout/login different user)
+  useEffect(() => setPhotoFailed(false), [user?.id]);
 
   const initials = (user?.full_name || user?.username || "?")
     .charAt(0)
@@ -39,13 +43,14 @@ export default function DashboardShell({ children }) {
             onClick={() => setMenuOpen((v) => !v)}
             className="h-8 w-8 rounded-full bg-bg-elevated border border-border
                        flex items-center justify-center text-xs font-medium text-accent
-                       hover:border-accent/30 transition-colors"
+                       hover:border-accent/30 transition-colors overflow-hidden"
           >
-            {user?.profile_photo ? (
+            {user?.profile_photo && user?.id && !photoFailed ? (
               <img
-                src={`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1"}/me/profile/photo`}
+                src={getProfilePhotoUrl(user.id)}
                 alt=""
-                className="h-full w-full rounded-full object-cover"
+                className="h-full w-full object-cover"
+                onError={() => setPhotoFailed(true)}
               />
             ) : (
               initials
@@ -101,7 +106,7 @@ export default function DashboardShell({ children }) {
         </div>
       </header>
 
-      {/* ── Main content (empty — to be built later) ─────────────── */}
+      {/* ── Main content ───────────────────────────────────────── */}
       <main className="flex-1 p-6">
         {children}
       </main>

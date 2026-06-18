@@ -1,24 +1,16 @@
 import logging
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from backend.app.core.security import create_access_token, hash_password, verify_password
 from backend.app.models.user import User
-from backend.app.schemas.user import UserCreate, UserUpdate, UserRegisterPayload
-from backend.app.core.security import hash_password, verify_password, create_access_token
-from backend.app.services.storage_registry import get_registry_for_user
+from backend.app.schemas.user import UserCreate, UserRegisterPayload, UserUpdate
 
 logger = logging.getLogger(__name__)
 
 
 def serialize_user(db: Session, user: User) -> dict:
-    storage_root = None
-    try:
-        registry = get_registry_for_user(db, user.id)
-        if registry:
-            storage_root = registry.storage_root
-    except Exception:
-        storage_root = None
-
     return {
         "id": user.id,
         "username": user.username,
@@ -29,10 +21,6 @@ def serialize_user(db: Session, user: User) -> dict:
         "description": user.description,
         "profile_photo": user.profile_photo,
         "handles": user.handles,
-        "storage_root": storage_root,
-        # DEPRECATED: legacy aliases kept for backward-compatible responses.
-        "data_path": storage_root,
-        "personal_storage_path": storage_root,
         "preferences": user.preferences,
     }
 
@@ -47,7 +35,6 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
     is_first_user = db.query(User).count() == 0
     assigned_role = "admin" if is_first_user else "user"
 
-    # Handle both new multi-step registration and legacy UserCreate
     if hasattr(user, "vault_password"):
         vault_pw_hash = hash_password(user.vault_password)
         nickname_val = user.nickname
@@ -119,8 +106,6 @@ def login_user(db: Session, username: str, password: str):
     if not user:
         return None
 
-    # Per new storage model, do not switch system memory on user login.
-
     token = create_access_token(data={"sub": str(user.id)})
 
     return {
@@ -170,7 +155,6 @@ def demote_user(db: Session, target_user_id: int, acting_user_id: int) -> User |
     db_user = db.query(User).filter(User.id == target_user_id).first()
     if not db_user:
         return None
-    # Prevent self-demotion
     if db_user.id == acting_user_id:
         raise HTTPException(status_code=400, detail="Admins cannot demote themselves")
     db_user.role = "user"

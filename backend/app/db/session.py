@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 from backend.app.db.bootstrap import (
-    bootstrap_database,
     get_database_url as _get_database_url,
+)
+from backend.app.db.bootstrap import (
     get_engine as _get_engine,
+)
+from backend.app.db.bootstrap import (
     get_session_factory,
+)
+from backend.app.db.bootstrap import (
     reset_engine as _reset_engine,
 )
 

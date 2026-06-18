@@ -14,34 +14,30 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Resolve the database URL using the same path as the app (bootstrap.py).
+# This ensures CLI `alembic` commands and the running app always target
+# the same SQLite file, regardless of CWD.
+try:
+    from backend.app.core.system_paths import ensure_system_dirs
+    from backend.app.core.storage_abstraction import get_system_storage
+
+    ensure_system_dirs()
+    _db_path = str(get_system_storage().database_path)
+    config.set_main_option("sqlalchemy.url", f"sqlite:///{_db_path}")
+except Exception:
+    # Fallback: use the URL from alembic.ini (works when bootstrap.py
+    # overrides it at runtime).
+    pass
+
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-
-from backend.app.db.base import Base
-from backend.app.models.user import User
-from backend.app.models.user_profile import UserProfile, UserPreferences, ProfileAudit  # noqa: F401
-from backend.app.models.auth_event import AuthEvent  # noqa: F401
-from backend.app.models.user_settings import UserSettings
-from backend.app.models.context_item import ContextItem  # noqa: F401
-from backend.app.models.llm_model import CortexProvider, CortexModel, CortexRoutingProfile, CortexTaskRoute  # noqa: F401
-from backend.app.ai.memory.models import Memory
-from backend.app.intelligence.models import (  # noqa: F401
-    CortexAutomationSettings,
-    KnowledgeEntry,
-    PendingSystemAction,
-    ProactiveNotification,
-    RepositoryProfile,
-    SyncRun,
-)
+from backend.app.db.base import Base  # noqa: E402
+from backend.app.models.user import User  # noqa: F401, E402
+from backend.app.models.auth_event import AuthEvent  # noqa: F401, E402
+from backend.app.models.storage_registry import StorageRegistry  # noqa: F401, E402
+from backend.app.intelligence.models import KnowledgeEntry  # noqa: F401, E402
 
 target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def run_migrations_offline() -> None:

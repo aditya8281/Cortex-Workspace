@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -12,7 +12,7 @@ class UserCreate(BaseModel):
     username: str = Field(min_length=1, max_length=128)
     password: str = Field(min_length=8)
     role: str = Field(default="user", min_length=1, max_length=32)
-    full_name: Optional[str] = None
+    full_name: str | None = None
 
 
 class UserRegisterPayload(BaseModel):
@@ -21,17 +21,17 @@ class UserRegisterPayload(BaseModel):
     confirm_password: str = Field(min_length=8)
     full_name: str = Field(min_length=1)
     nickname: str = Field(min_length=1)
-    bio: Optional[str] = None
-    description: Optional[str] = None
-    profile_photo: Optional[str] = None
-    handles: Optional[dict[str, Any]] = None
+    bio: str | None = None
+    description: str | None = None
+    profile_photo: str | None = None
+    handles: dict[str, Any] | None = None
     vault_password: str = Field(min_length=8)
     # Canonical field: users must provide exactly one storage root.
-    storage_root: Optional[str] = None
+    storage_root: str | None = None
     # DEPRECATED aliases kept for backward-compatible API ingestion.
-    data_path: Optional[str] = None
-    personal_storage_path: Optional[str] = None
-    preferences: Optional[dict[str, Any]] = None
+    data_path: str | None = None
+    personal_storage_path: str | None = None
+    preferences: dict[str, Any] | None = None
 
 
 class UserResponse(BaseModel):
@@ -40,41 +40,41 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     nickname: str
-    bio: Optional[str] = None
-    description: Optional[str] = None
-    profile_photo: Optional[str] = None
-    handles: Optional[dict[str, Any]] = None
-    storage_root: Optional[str] = None
+    bio: str | None = None
+    description: str | None = None
+    profile_photo: str | None = None
+    handles: dict[str, Any] | None = None
+    storage_root: str | None = None
     # DEPRECATED: legacy fields kept for response backward-compat; always mirror storage_root.
-    data_path: Optional[str] = None
-    personal_storage_path: Optional[str] = None
-    preferences: Optional[dict[str, Any]] = None
+    data_path: str | None = None
+    personal_storage_path: str | None = None
+    preferences: dict[str, Any] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class UserUpdate(BaseModel):
-    username: Optional[str] = None
-    full_name: Optional[str] = None
-    role: Optional[str] = None
+    username: str | None = None
+    full_name: str | None = None
+    role: str | None = None
 
 
 class MeUpdate(BaseModel):
-    username: Optional[str] = None
-    full_name: Optional[str] = None
-    nickname: Optional[str] = None
-    bio: Optional[str] = None
-    description: Optional[str] = None
-    profile_photo: Optional[str] = None
-    handles: Optional[dict[str, Any]] = None
-    preferences: Optional[dict[str, Any]] = None
-    password: Optional[str] = None
-    current_password: Optional[str] = None
-    vault_password: Optional[str] = None
+    username: str | None = None
+    full_name: str | None = None
+    nickname: str | None = None
+    bio: str | None = None
+    description: str | None = None
+    profile_photo: str | None = None
+    handles: dict[str, Any] | None = None
+    preferences: dict[str, Any] | None = None
+    password: str | None = None
+    current_password: str | None = None
+    vault_password: str | None = None
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    refresh_token: Optional[str] = None
+    refresh_token: str | None = None
     user: UserResponse | None = None

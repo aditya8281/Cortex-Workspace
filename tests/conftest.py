@@ -1,41 +1,53 @@
-import asyncio
+import os
+import tempfile
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from backend.app.api.deps import get_db
+from backend.app.db.base import Base
+from backend.app.intelligence.models import KnowledgeEntry  # noqa: F401
+from backend.app.main import app
+from backend.app.models.auth_event import AuthEvent  # noqa: F401
+from backend.app.models.storage_registry import StorageRegistry  # noqa: F401
+from backend.app.models.user import User  # noqa: F401
 
 
-@pytest.fixture(autouse=True)
-def mock_llm_router_generate():
-    from backend.app.ai.llm_router import LLMRouter
-    async def mock_generate(self, prompt, system_prompt=None, model=None, inference_engine=None, api_key=None, api_base_url=None):
-        from backend.app.ai.intelligent_router import IntelligentRouter
-        import unittest.mock
+@pytest.fixture(autouse=True, scope="session")
+def _clean_db():
+    """Provide a single isolated file-backed database for the entire test session.
 
-        route_mock = IntelligentRouter.route_and_generate
-        if isinstance(route_mock, (unittest.mock.Mock, unittest.mock.MagicMock, AsyncMock)):
-            if asyncio.iscoroutinefunction(route_mock) or isinstance(route_mock, AsyncMock):
-                val = await route_mock(prompt)
-            else:
-                val = route_mock(prompt)
+    Uses a temp file (not in-memory) so all connections see the same data.
+    Tables are created from SQLAlchemy models so the fixture always matches
+    the current ORM definitions — no Alembic needed.
+    """
+    db_fd, db_path = tempfile.mkstemp(suffix=".test.db")
+    os.close(db_fd)
+    db_url = f"sqlite:///{db_path}"
 
-            if isinstance(val, dict) and "response" in val:
-                return val["response"]
-            if isinstance(val, str):
-                return val
+    engine = create_engine(db_url, connect_args={"check_same_thread": False})
+    Base.metadata.create_all(bind=engine)
+    TestSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-        prompt_lower = prompt.lower()
-        if "france" in prompt_lower or "paris" in prompt_lower:
-            return "Paris"
-        if "caching" in prompt_lower:
-            return "Caching is storing copies of data."
-        if "filesearchagent" in prompt_lower or "search my python files" in prompt_lower:
-            return "I ran FileSearchAgent and found nothing."
-        if "systemscanner" in prompt_lower or "check database errors" in prompt_lower:
-            return "I ran SystemScanner and found no errors."
-        if "tell me about ai" in prompt_lower:
-            return "Artificial Intelligence"
+    def _override():
+        db = TestSession()
+        try:
+            yield db
+        finally:
+            db.close()
 
-        return "Mock LLM Response"
+    app.dependency_overrides[get_db] = _override
+    yield
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
+    os.unlink(db_path)
 
-    with patch.object(LLMRouter, "generate", mock_generate):
-        yield
 
+@pytest.fixture(name="client", scope="session")
+def fixture_client():
+    """Session-scoped TestClient that uses the clean-DB override."""
+    with TestClient(app) as c:
+        yield c

@@ -2,9 +2,8 @@ import logging
 import sys
 from collections import deque
 from datetime import datetime, timezone
-from typing import Any
 from logging.config import dictConfig
-
+from typing import Any
 
 LOG_BUFFER: deque[dict[str, Any]] = deque(maxlen=500)
 

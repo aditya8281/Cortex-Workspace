@@ -1,20 +1,8 @@
-"""Centralized Portable Memory System (Cortex Brain Vault) Manager.
+"""Simplified Memory Manager — central memory system without background services."""
 
-Handles path resolution, safety validation, read/write abstraction,
-vault redirection, resets, and zip export/import.
-
-All system memory lives under ``SystemPaths["runtime"] / "memory"``.
-User vault data is accessed exclusively through ``get_user_storage()``.
-"""
-
-import shutil
-import zipfile
 import logging
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 import threading
-
-from backend.app.core.config import settings
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +10,7 @@ logger = logging.getLogger(__name__)
 class MemoryManager:
     """Centralized system-level memory manager.
 
-    This manages *system* memory (embeddings metadata, graph, sync state,
-    activity logs, cache).  User-facing vault operations go through
+    This manages *system* memory paths. User-facing vault operations go through
     ``vault_manager`` + ``get_user_storage()``.
     """
 
@@ -40,28 +27,11 @@ class MemoryManager:
     ]
 
     def __init__(self):
-        self._services: Dict[str, Any] = {}
         self._lock = threading.RLock()
-        self._indexing_paused = False
-        # NOTE: No filesystem side-effects at construction time.
-        # Directories are created lazily on first access.
-
-    # ── Service registration ──────────────────────────────────────────
-
-    def register_service(self, name: str, service: Any):
-        with self._lock:
-            self._services[name] = service
-            logger.info("Registered service %s under MemoryManager", name)
 
     # ── Path resolution ───────────────────────────────────────────────
 
     def get_memory_path(self) -> Path:
-        """Resolve the system memory root directory.
-
-        A test override attribute ``_test_override_path`` on the singleton
-        is honored to allow unit tests to point the manager at a temporary
-        directory.
-        """
         override = getattr(self, "_test_override_path", None)
         if override:
             return Path(override)
@@ -104,7 +74,7 @@ class MemoryManager:
         for category in self.CATEGORIES:
             (root / category).mkdir(parents=True, exist_ok=True)
 
-    def get_path(self, category: str, filename: Optional[str] = None) -> Path:
+    def get_path(self, category: str, filename: str | None = None) -> Path:
         if category not in self.CATEGORIES:
             raise ValueError(f"Invalid memory category: {category}")
 
@@ -155,123 +125,60 @@ class MemoryManager:
         if path.exists() and path.is_file():
             path.unlink()
 
-    def exists(self, category: str, filename: Optional[str] = None) -> bool:
+    def exists(self, category: str, filename: str | None = None) -> bool:
         try:
             return self.get_path(category, filename).exists()
         except Exception:
             return False
 
-    def list_files(self, category: str) -> List[str]:
+    def list_files(self, category: str) -> list[str]:
         dir_path = self.get_path(category)
         if not dir_path.exists():
             return []
         return [f.name for f in dir_path.iterdir() if f.is_file()]
 
-    # ── System control (pause / resume) ───────────────────────────────
-
-    def is_indexing_paused(self) -> bool:
-        return self._indexing_paused
-
-    def pause_indexing(self) -> None:
-        with self._lock:
-            self._indexing_paused = True
-            logger.info("Pausing all background indexing services...")
-            for name in ("file_watcher", "observer", "sync_service"):
-                svc = self._services.get(name)
-                if svc:
-                    try:
-                        if hasattr(svc, "stop"):
-                            svc.stop()
-                        elif hasattr(svc, "cancel_sync"):
-                            svc.cancel_sync()
-                    except Exception as exc:
-                        logger.error("Failed to stop %s: %s", name, exc)
-
-    def resume_indexing(self) -> None:
-        with self._lock:
-            self._indexing_paused = False
-            logger.info("Resuming all background indexing services...")
-            for name in ("file_watcher", "observer"):
-                svc = self._services.get(name)
-                if svc:
-                    try:
-                        svc.start()
-                    except Exception as exc:
-                        logger.error("Failed to start %s: %s", name, exc)
-
     # ── Reset ─────────────────────────────────────────────────────────
 
-    def change_memory_vault(self, new_path_str: str) -> None:
-        raise NotImplementedError(
-            "Memory vault relocation has been removed. "
-            "System memory is fixed under cortex_system/memory"
-        )
-
     def reset_vault(self) -> None:
+        import shutil
         logger.warning("Performing full Cortex Brain Vault reset!")
-        self.pause_indexing()
-        try:
-            from backend.app.db import session
-            session.reset_db_engine()
-
-            try:
-                from backend.app.core.redis import redis_cache
-                import asyncio
-                asyncio.run(redis_cache.clear())
-            except Exception as re:
-                logger.warning("Failed to clear Redis cache: %s", re)
-
-            path = self.get_memory_path()
-            if path.exists():
-                shutil.rmtree(path)
-
-            self.ensure_vault_structure()
-        finally:
-            self.resume_indexing()
+        from backend.app.db import session
+        session.reset_db_engine()
+        path = self.get_memory_path()
+        if path.exists():
+            shutil.rmtree(path)
+        self.ensure_vault_structure()
 
     # ── Backup & portability ──────────────────────────────────────────
 
     def export_memory(self, zip_path_str: str) -> str:
+        import zipfile
         root_dir = self.get_memory_path()
         zip_path = Path(zip_path_str).resolve()
         zip_path.parent.mkdir(parents=True, exist_ok=True)
-
-        self.pause_indexing()
-        try:
-            from backend.app.db import session
-            session.reset_db_engine()
-
-            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                for file_path in root_dir.rglob("*"):
-                    if file_path.is_file():
-                        zipf.write(file_path, file_path.relative_to(root_dir))
-            logger.info("Successfully exported memory vault to %s", zip_path)
-            return str(zip_path)
-        finally:
-            self.resume_indexing()
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for file_path in root_dir.rglob("*"):
+                if file_path.is_file():
+                    zipf.write(file_path, file_path.relative_to(root_dir))
+        logger.info("Successfully exported memory vault to %s", zip_path)
+        return str(zip_path)
 
     def import_memory(self, zip_path_str: str) -> None:
+        import shutil
+        import zipfile
         zip_path = Path(zip_path_str).resolve()
         if not zip_path.exists():
             raise FileNotFoundError(f"Export zip archive not found at '{zip_path}'")
-
-        self.pause_indexing()
-        try:
-            from backend.app.db import session
-            session.reset_db_engine()
-
-            root_dir = self.get_memory_path()
-            if root_dir.exists():
-                shutil.rmtree(root_dir)
-            root_dir.mkdir(parents=True, exist_ok=True)
-
-            with zipfile.ZipFile(zip_path, "r") as zipf:
-                zipf.extractall(root_dir)
-
-            self.ensure_vault_structure()
-            logger.info("Successfully imported memory vault from %s", zip_path)
-        finally:
-            self.resume_indexing()
+        from backend.app.db import session
+        session.reset_db_engine()
+        root_dir = self.get_memory_path()
+        if root_dir.exists():
+            shutil.rmtree(root_dir)
+        root_dir.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(zip_path, "r") as zipf:
+            zipf.extractall(root_dir)
+        self.ensure_vault_structure()
+        logger.info("Successfully imported memory vault from %s", zip_path)
 
 
 # Singleton — created lazily; no filesystem side-effects at import time.

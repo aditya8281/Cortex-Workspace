@@ -5,9 +5,9 @@ Provides OS-agnostic way to get CPU, RAM, GPU, and system info.
 NO OS-specific paths or direct /proc access.
 """
 
-import subprocess
 import platform
-from typing import Dict, Any
+import subprocess
+from typing import Any
 
 logger = None  # Will be imported to avoid circular imports
 
@@ -28,7 +28,7 @@ def get_system_info() -> str:
 def get_cpu_info() -> str:
     """
     Get CPU model name safely (cross-platform).
-    
+
     Uses psutil library as primary source, falls back to platform.processor().
     NO direct /proc access.
     """
@@ -38,12 +38,12 @@ def get_cpu_info() -> str:
             cpu_freq = psutil.cpu_freq()
             if cpu_freq:
                 return f"{cpu_freq.current:.2f} MHz"
-        
+
         # Fallback to platform module
         processor = platform.processor()
         if processor:
             return processor
-        
+
         # Last resort - return OS-specific safe info
         system = platform.system()
         if system == "Darwin":
@@ -54,19 +54,19 @@ def get_cpu_info() -> str:
             )
             if result.returncode == 0:
                 return result.stdout.strip()
-        
+
         return "Unknown CPU"
     except Exception:
         return platform.processor() or "Unknown CPU"
 
 
-def get_ram_info() -> Dict[str, float]:
+def get_ram_info() -> dict[str, float]:
     """
     Get RAM info safely (cross-platform).
-    
+
     Uses psutil library.
     NO direct /proc access.
-    
+
     Returns:
         Dict with 'total_gb' and 'available_gb' keys
     """
@@ -79,15 +79,15 @@ def get_ram_info() -> Dict[str, float]:
             }
     except Exception:
         pass
-    
+
     # Default fallback
     return {"total_gb": 16.0, "available_gb": 8.0}
 
 
-def get_gpu_info() -> Dict[str, Any]:
+def get_gpu_info() -> dict[str, Any]:
     """
     Get GPU info safely (cross-platform).
-    
+
     Tries NVIDIA GPUs and Apple Metal.
     Returns empty dict if no GPU detected.
     """
@@ -108,7 +108,7 @@ def get_gpu_info() -> Dict[str, Any]:
                 }
     except Exception:
         pass
-    
+
     try:
         # Try Apple Metal GPU
         if platform.system() == "Darwin":
@@ -123,14 +123,14 @@ def get_gpu_info() -> Dict[str, Any]:
                 }
     except Exception:
         pass
-    
+
     return {}
 
 
-def get_disk_info(path: str = ".") -> Dict[str, float]:
+def get_disk_info(path: str = ".") -> dict[str, float]:
     """
     Get disk usage info safely (cross-platform).
-    
+
     Uses psutil library.
     """
     try:
@@ -144,11 +144,11 @@ def get_disk_info(path: str = ".") -> Dict[str, float]:
             }
     except Exception:
         pass
-    
+
     return {"total_gb": 0, "used_gb": 0, "free_gb": 0, "percent": 0}
 
 
-def get_python_info() -> Dict[str, Any]:
+def get_python_info() -> dict[str, Any]:
     """Get Python version and implementation info."""
     return {
         "version": platform.python_version(),
@@ -157,7 +157,7 @@ def get_python_info() -> Dict[str, Any]:
     }
 
 
-def get_os_info() -> Dict[str, Any]:
+def get_os_info() -> dict[str, Any]:
     """Get complete OS info (safe, cross-platform)."""
     return {
         "system": platform.system(),

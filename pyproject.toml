@@ -3,14 +3,13 @@ name = "cortex-workspace"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.18.4",
     "argon2-cffi>=23.1.0",
     "beautifulsoup4>=4.12.0",
-    "fastapi>=0.136.3",
+    "fastapi>=0.110.0,<1.0.0",
     "httpx>=0.28.1",
-    "httpx2>=2.3.0",
     "passlib[bcrypt]>=1.7.4",
     "psycopg2-binary>=2.9.12",
     "pydantic>=2.13.4",
@@ -18,13 +17,13 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "python-jose[cryptography]>=3.5.0",
     "sqlalchemy>=2.0.50",
-    "uvicorn>=0.48.0",
+    "uvicorn>=0.22.0,<1.0.0",
     "structlog>=25.4.0",
     "redis>=5.0.1",
     "keyring>=25.0.0",
     "watchdog>=4.0.0",
     "python-multipart>=0.0.31",
-    "psutil>=7.2.2",
+    "psutil>=5.9.0",
     "Pillow>=10.0.0",
 ]
 
@@ -42,3 +41,28 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E402",   # module-level imports not at top (intentional in main.py)
+    "B008",   # function call in default argument (FastAPI Depends)
+    "B904",   # raise without from (existing exception chaining patterns)
+    "SIM105", # contextlib.suppress (existing try/except/pass patterns)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["backend"]

@@ -44,11 +44,11 @@ class RequestLoggingMiddleware:
             path = scope.get("path", "/")
 
             logger.info(
-                (
+
                     f"request_id={request_id} "
                     f"method={method} "
                     f"path={path} "
                     f"status={status_code} "
                     f"duration_ms={duration}"
-                )
+
             )

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from fastapi import Depends, HTTPException
+
 from backend.app.api.deps import get_current_user
 from backend.app.models.user import User
-from typing import Callable
 
 
 def require_role(role: str) -> Callable:

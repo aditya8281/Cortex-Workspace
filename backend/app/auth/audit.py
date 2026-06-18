@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
-from typing import Any, Optional
+from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -16,7 +16,7 @@ def log_event(
     ip: str | None,
     metadata: dict[str, Any] | None = None,
     *,
-    db: Optional[Session] = None,
+    db: Session | None = None,
 ):
     """
     Record an auth audit event.
@@ -36,7 +36,7 @@ def log_event(
         ev = AuthEvent(
             user_id=user_id,
             ip_address=ip,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             event_type=event_type,
             metadata_json=json.dumps(metadata or {}),
         )

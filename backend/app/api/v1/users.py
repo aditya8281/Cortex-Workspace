@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.app.schemas.user import UserResponse, UserUpdate
-from backend.app.services.user_service import get_user, get_users, delete_user, update_user, promote_user, demote_user
 from backend.app.api.deps import get_current_user, get_db
+from backend.app.auth.dependencies import require_admin
 from backend.app.models.user import User
-from backend.app.core.rbac import require_admin, can_modify_self
+from backend.app.schemas.user import UserResponse, UserUpdate
+from backend.app.services.user_service import delete_user, demote_user, get_user, get_users, promote_user, update_user
 
 router = APIRouter()
 
 
 def check_admin_user(current_user: User = Depends(get_current_user)):
-    # Deprecated inline check — keep wrapper for compatibility but delegate to centralized RBAC
     return require_admin(current_user)
 
 

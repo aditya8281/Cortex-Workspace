@@ -1,20 +1,18 @@
-# Cortex Workspace — System Architecture
+# Cortex Workspace — System Analysis
 
-> Last updated: 2026-06-07
+Last updated: 2026-06-18
 
 ## Overview
 
-Cortex is a local-first AI assistant platform with a FastAPI backend, Next.js frontend, and SQLite database. It provides multi-agent orchestration, intelligent memory, workspace synchronization, and a secure user vault system.
-
-## Architecture
+Cortex is a local-first workspace with authentication, a central memory system, and a clean foundation for future features.
 
 ```
 Client (Next.js :3000) ──► FastAPI Backend (:8000) ──► SQLite + Redis
 ```
 
 - **Frontend**: Next.js 15 App Router, React 19, Tailwind CSS
-- **Backend**: FastAPI (Python 3.12+), SQLAlchemy ORM, Alembic migrations
-- **Storage**: SQLite database, Redis cache, on-disk user vaults
+- **Backend**: FastAPI (Python 3.10+), SQLAlchemy ORM, Alembic migrations
+- **Storage**: SQLite database, Redis cache (optional)
 
 ## Backend Structure
 
@@ -22,20 +20,51 @@ Client (Next.js :3000) ──► FastAPI Backend (:8000) ──► SQLite + Redi
 backend/app/
 ├── main.py                  # FastAPI app entry point, lifespan, CORS, middleware
 ├── core/                    # Infrastructure: config, security, storage, DB, Redis
-├── auth/                    # Authentication: JWT, refresh tokens, rate limiting
-├── db/                      # Database engine, session, bootstrap, base model
+│   ├── config.py            # Pydantic settings from env vars
+│   ├── security.py          # Password hashing (Argon2/bcrypt), JWT creation
+│   ├── tokens.py            # Async token creation/verification wrappers
+│   ├── db.py                # DB session dependency
+│   ├── redis.py             # Redis client (async, graceful fallback)
+│   ├── middleware.py         # Request logging middleware
+│   ├── logging.py           # Buffered log handler
+│   ├── paths.py             # Project root path
+│   ├── system_paths.py      # System directory management
+│   ├── storage_abstraction.py # Path validation, user storage management
+│   └── storage_manager.py   # Storage path wrapper
+├── auth/                    # Authentication system
+│   ├── router.py            # Auth endpoints (register, login, refresh, logout, me)
+│   ├── service.py           # Auth business logic (register, login, refresh, logout)
+│   ├── tokens.py            # Refresh token management (Redis-backed + JWT fallback)
+│   ├── rate_limit.py        # Login rate limiting (Redis-backed, fail-open)
+│   ├── audit.py             # Auth event logging
+│   ├── dependencies.py      # require_admin, require_role
+│   └── __init__.py
+├── db/                      # Database layer
+│   ├── bootstrap.py         # Engine init, migrations, session factory
+│   ├── base.py              # DeclarativeBase
+│   └── session.py           # DynamicSessionLocal
 ├── models/                  # SQLAlchemy ORM models
-├── schemas/                 # Pydantic request/response schemas
-├── services/                # Business logic layer
-├── api/                     # API routes (v1 prefix)
-│   ├── router.py            # Aggregates all v1 sub-routers
-│   └── v1/                  # Individual endpoint modules
-├── ai/                      # LLM gateway, model registry, providers
-├── executor/                # Task execution: graph, workflow engine, tools
-├── agent/                   # Multi-agent orchestration
-├── intelligence/            # File sync, memory, observer services
-├── tools/                   # Built-in tool definitions
-└── state/                   # Runtime state management
+│   ├── user.py              # User (auth, profile fields)
+│   ├── auth_event.py        # AuthEvent (audit log)
+│   └── storage_registry.py  # StorageRegistry (per-user paths)
+├── schemas/
+│   └── user.py              # Pydantic schemas (UserRegister, UserResponse, etc.)
+├── services/
+│   ├── user_service.py      # User CRUD, serialization
+│   ├── storage_registry.py  # Storage path registration
+│   ├── health_service.py    # DB readiness check
+│   └── memory_manager.py    # Central memory system manager
+├── api/
+│   ├── router.py            # Aggregates v1 routers (health, users, profile)
+│   ├── auth.py              # Legacy shim → auth.router
+│   ├── memory.py            # Central memory endpoints (GET/POST /api/memory)
+│   ├── deps.py              # get_current_user, get_current_user_optional, get_db
+│   └── v1/
+│       ├── health.py        # /health/live, /ready, /deep
+│       ├── users.py         # Admin user management
+│       └── profile.py       # GET/PUT /me/profile + photo upload/delete
+└── intelligence/
+    └── models.py            # KnowledgeEntry (central memory data model)
 ```
 
 ## Frontend Structure
@@ -45,24 +74,26 @@ frontend/
 ├── app/
 │   ├── layout.js            # Root layout (fonts, AuthProvider)
 │   ├── page.js              # Landing page (/)
-│   ├── globals.css          # Global styles
+│   ├── globals.css          # Global styles (Tailwind)
 │   ├── auth/page.js         # Auth page — login + register tabs (/auth)
 │   ├── app/page.js          # Dashboard — protected (/app)
-│   └── api/auth/            # Next.js proxy routes to backend
+│   └── api/[...path]/       # Catch-all proxy to backend
 ├── src/shared/
-│   ├── auth/                # AuthProvider, session, cortexApi
+│   ├── auth/                # AuthProvider, session.js, cortexApi.js
 │   ├── ui/                  # Button, Input, Card
 │   ├── layout/              # DashboardShell
 │   └── design/              # Design tokens
+└── package.json
 ```
 
 ## Auth Flow
 
 1. User submits credentials on `/auth`
 2. Frontend calls `apiLogin`/`apiRegister` → backend `/api/auth/login` or `/api/auth/register`
-3. Backend validates, creates user, returns JWT + user object
-4. Frontend stores token in sessionStorage via `AuthProvider`
+3. Backend validates, creates user, returns JWT access token + refresh token + user object
+4. Frontend stores tokens in sessionStorage via `AuthProvider`
 5. All subsequent API calls include `Authorization: Bearer <token>` header
+6. Refresh tokens are JWT-based (7-day expiry), server-revocable via Redis when available
 
 ## Key Backend Modules
 
@@ -72,19 +103,31 @@ frontend/
 | `core/security.py` | Password hashing (Argon2/bcrypt), JWT creation |
 | `core/tokens.py` | Async token creation/verification wrappers |
 | `core/storage_abstraction.py` | Path validation, user storage management |
-| `auth/service.py` | Registration, login, token refresh, logout |
-| `auth/tokens.py` | Refresh token management (Redis-backed) |
+| `auth/router.py` | Auth endpoints (sync def for register/login, async for refresh/logout/me) |
+| `auth/service.py` | Registration, login, token refresh, logout business logic |
+| `auth/tokens.py` | Refresh token management (Redis-backed + JWT-only fallback) |
 | `services/user_service.py` | User CRUD, serialization |
-| `services/storage_registry.py` | Per-user storage path registry |
-| `ai/gateway.py` | LLM request routing |
-| `executor/executor.py` | Task execution engine |
+| `services/health_service.py` | Database readiness check |
+| `services/memory_manager.py` | Central memory system manager |
 
 ## Database
 
 - **Engine**: SQLite via SQLAlchemy
 - **Migrations**: Alembic (`migrations/versions/`)
-- **Key tables**: `users`, `user_storage_registry`, `user_settings`, `user_profiles`, `context_items`, `memories`
-- **Init**: `bootstrap_database()` runs on app startup
+- **Active tables**: `users`, `auth_events`, `knowledge_entries`, `user_storage_registry`, `alembic_version`
+- **Init**: `bootstrap_database()` runs on app startup (runs Alembic migrations)
+
+## API Endpoints (All Verified Working)
+
+| Category | Endpoints | Auth |
+|----------|-----------|------|
+| Root | `GET /` | None |
+| Auth | `POST /api/auth/register`, `/login`, `/refresh`, `/logout` | None |
+| Auth (me) | `GET /api/auth/me`, `PUT /api/auth/me` | Required |
+| Memory | `GET /api/memory`, `POST /api/memory` | Optional |
+| Health | `GET /api/v1/health/live`, `/ready`, `/deep` | None |
+| Profile | `GET/PUT /api/v1/me/profile`, `POST /photo`, `GET/DELETE /photo` | Required |
+| Users | `GET/PUT/DELETE /api/v1/users/{id}`, `POST /promote`, `/demote` | Admin |
 
 ## Configuration
 
@@ -93,20 +136,45 @@ All config via environment variables (or `.env` file):
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `SECRET_KEY` | (empty) | JWT signing key |
+| `ALGORITHM` | HS256 | JWT algorithm |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | 30 | Access token expiry |
 | `DATABASE_URL` | (computed) | SQLite path |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis for refresh tokens |
-| `AI_MODE` | `local` | AI backend mode |
-| `OLLAMA_URL` | `http://localhost:11434` | Local Ollama endpoint |
+| `APP_NAME` | Cortex Workspace | Application name |
+| `DEBUG` | False | Debug mode |
+| `API_V1_PREFIX` | /api/v1 | Versioned API prefix |
 
 ## Running
 
 ```bash
 # Backend
-cd backend && uvicorn app.main:app --reload --port 8000
+uv run uvicorn backend.app.main:app --reload --port 8000
 
 # Frontend
-cd frontend && npm run dev
+cd frontend && npm install && npm run dev
 
 # Docker
-docker-compose up
+./scripts/docker-run.sh
 ```
+
+## Application Lifecycle
+
+- **Startup**: Ensures system dirs → runs Alembic migrations → pings Redis (graceful fallback) → initializes DB engine
+- **Request Handling**: RequestLoggingMiddleware logs method/path/status/duration; DB sessions provided per-request via dependency
+- **Shutdown**: Closes Redis connection
+
+## Safety Model
+
+- No root required for normal operation
+- Docker containers run as a non-root user
+- Path access is restricted by storage abstraction
+- Rate limiting on login (Redis-backed, fail-open)
+- Admin self-protection (cannot demote yourself)
+- Profile photos validated server-side (type, size limits)
+
+## Developer Onboarding
+
+- **Backend**: `uv run uvicorn backend.app.main:app --reload --port 8000`
+- **Frontend**: `cd frontend && npm install && npm run dev`
+- **Tests**: `uv run pytest`
+- **Deployment**: Use docker-compose; configure SECRET_KEY and related env vars

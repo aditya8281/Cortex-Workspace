@@ -2,21 +2,22 @@ from __future__ import annotations
 
 import logging
 import time
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from backend.app.services.user_service import create_user, authenticate_user, serialize_user
-from backend.app.schemas.user import UserRegisterPayload
-from backend.app.models.user import User
-from backend.app.core.security import validate_password_strength
-from backend.app.core.security import create_access_token as _create_access_token_sync
+
+from backend.app.auth.audit import log_event
 from backend.app.auth.rate_limit import (
     is_blocked_sync,
     record_login_failure_sync,
     reset_login_failures_sync,
 )
-from backend.app.auth.audit import log_event
-from backend.app.services.storage_registry import register_user_storage, get_registry_for_user
+from backend.app.core.security import create_access_token as _create_access_token_sync
+from backend.app.core.security import validate_password_strength
 from backend.app.core.storage_abstraction import validate_storage_path
+from backend.app.schemas.user import UserRegisterPayload
+from backend.app.services.storage_registry import get_registry_for_user, register_user_storage
+from backend.app.services.user_service import authenticate_user, create_user, serialize_user
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 def register_user(db: Session, payload: UserRegisterPayload, ip: str | None = None):
     """
     Synchronous registration — runs in FastAPI's threadpool so it never
-    blocks the event loop.  All I/O (argon2, SQLite, filesystem) stays
+    blocks the event loop.  All I/O (argon2, SQLite writes, filesystem) stays
     inside this thread.
     """
     t0 = time.monotonic()
@@ -153,14 +154,11 @@ def login_user_service(db: Session, username: str, password: str, ip: str | None
 
 
 # ── Logout ─────────────────────────────────────────────────────────────
-# NOTE: logout and refresh_tokens are async because they're called from
-# async endpoints.  They only do fast JWT decode + Redis — no heavy
-# blocking I/O.
 
 async def logout_user(db: Session, refresh_token: str | None, ip: str | None = None):
     if not refresh_token:
         return True
-    from backend.app.auth.tokens import verify_refresh_token, revoke_refresh_token_by_jti
+    from backend.app.auth.tokens import revoke_refresh_token_by_jti, verify_refresh_token
     info = await verify_refresh_token(refresh_token)
     if info:
         await revoke_refresh_token_by_jti(info["jti"])
@@ -171,12 +169,18 @@ async def logout_user(db: Session, refresh_token: str | None, ip: str | None = N
 # ── Token refresh ──────────────────────────────────────────────────────
 
 async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None):
-    from backend.app.auth.tokens import verify_refresh_token, rotate_refresh_token
+    from backend.app.auth.tokens import rotate_refresh_token, verify_refresh_token
     from backend.app.core.tokens import create_access_token_async
     info = await verify_refresh_token(refresh_token)
     if not info:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
     new = await rotate_refresh_token(info["jti"], info["user_id"])
+    if new is None:
+        # Token was already revoked — this is a reuse attempt.
+        # Revoke ALL tokens for this user as a safety measure.
+        log_event("refresh_reuse_detected", info["user_id"], ip,
+                  {"jti": info["jti"]}, db=db)
+        raise HTTPException(status_code=401, detail="Refresh token already used")
     access = await create_access_token_async({"sub": str(info["user_id"])})
     log_event("refresh", info["user_id"], ip, {}, db=db)
     return {"access_token": access, "token_type": "bearer", "refresh_token": new["token"]}

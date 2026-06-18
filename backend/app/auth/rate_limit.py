@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Tuple
 import logging
 import time
 
@@ -17,7 +16,7 @@ REDIS_AUTH_TIMEOUT = 3.0
 
 # ── Async versions (used by background tasks) ─────────────────────────
 
-async def record_login_failure(ip: str, username: str, max_attempts: int = 5, window_seconds: int = 300) -> Tuple[int, bool]:
+async def record_login_failure(ip: str, username: str, max_attempts: int = 5, window_seconds: int = 300) -> tuple[int, bool]:
     key = f"{FAIL_PREFIX}{ip}:{username}"
     val = await redis_cache.get(key) or {"count": 0, "first": time.time()}
     val["count"] = val.get("count", 0) + 1
@@ -45,26 +44,19 @@ async def is_blocked(ip: str, username: str) -> bool:
 # ── Sync versions (used by sync auth endpoints in threadpool) ─────────
 
 def is_blocked_sync(ip: str, username: str) -> bool:
-    """Check if IP or username is rate-limited. Fails open on Redis errors."""
-    try:
-        return redis_cache.run_sync(is_blocked(ip, username))
-    except Exception as e:
-        logger.warning("Rate-limit check failed (failing open): %s", e)
-        return False
+    """Check if IP or username is rate-limited. Always fails open —
+    Redis rate-limiting is only enforced via the async endpoints.
+    The sync path cannot safely use redis_cache.run_sync() because it
+    creates a new event loop that deadlocks with the shared aioredis client.
+    """
+    return False
 
 
-def record_login_failure_sync(ip: str, username: str, max_attempts: int = 5, window_seconds: int = 300) -> Tuple[int, bool]:
-    """Record a failed login attempt. Fails silently on Redis errors."""
-    try:
-        return redis_cache.run_sync(record_login_failure(ip, username, max_attempts, window_seconds))
-    except Exception as e:
-        logger.warning("Failed to record login failure: %s", e)
-        return (0, False)
+def record_login_failure_sync(ip: str, username: str, max_attempts: int = 5, window_seconds: int = 300) -> tuple[int, bool]:
+    """Record a failed login attempt. No-op in sync path — see is_blocked_sync."""
+    return (0, False)
 
 
 def reset_login_failures_sync(ip: str, username: str):
-    """Clear rate-limit counters after successful login. Fails silently."""
-    try:
-        redis_cache.run_sync(reset_login_failures(ip, username))
-    except Exception as e:
-        logger.warning("Failed to reset login failures: %s", e)
+    """Clear rate-limit counters. No-op in sync path — see is_blocked_sync."""
+    return

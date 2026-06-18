@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from backend.app.auth import service as auth_service
 from backend.app.core.db import get_db
 from backend.app.core.tokens import verify_access_token
 from backend.app.models.user import User
 from backend.app.schemas.user import (
-    UserRegisterPayload, UserLogin, TokenResponse, UserResponse, MeUpdate,
+    MeUpdate,
+    TokenResponse,
+    UserLogin,
+    UserRegisterPayload,
+    UserResponse,
 )
-from backend.app.auth import service as auth_service
 
 oauth2_scheme = HTTPBearer()
 
@@ -51,7 +55,7 @@ async def refresh(request: Request, db: Session = Depends(get_db)):
     body = await request.json()
     refresh_token = body.get("refresh_token")
     ip = request.client.host if request.client else None
-    return auth_service.refresh_tokens(db, refresh_token, ip)
+    return await auth_service.refresh_tokens(db, refresh_token, ip)
 
 
 @router.post("/api/auth/logout")
@@ -59,7 +63,7 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     body = await request.json()
     refresh_token = body.get("refresh_token")
     ip = request.client.host if request.client else None
-    auth_service.logout_user(db, refresh_token, ip)
+    await auth_service.logout_user(db, refresh_token, ip)
     return {"message": "Logged out"}
 
 
@@ -93,7 +97,7 @@ def update_me(
     if body.vault_password is not None:
         if not body.current_password:
             raise HTTPException(status_code=400, detail="Current password required")
-        from backend.app.core.security import verify_password, hash_password
+        from backend.app.core.security import hash_password, verify_password
         if not verify_password(body.current_password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid current password")
         user.vault_password_hash = hash_password(body.vault_password)
