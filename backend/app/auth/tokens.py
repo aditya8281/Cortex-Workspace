@@ -66,17 +66,13 @@ def _mem_store_revoked(jti: str) -> None:
 def _mem_is_revoked(jti: str) -> bool:
     with _memory_lock:
         exp = _memory_revoked.get(jti)
-        if exp is not None and exp > _now().timestamp():
-            return True
-        return False
+        return bool(exp is not None and exp > _now().timestamp())
 
 
 def _mem_is_active(jti: str) -> bool:
     with _memory_lock:
         exp = _memory_active.get(jti)
-        if exp is not None and exp > _now().timestamp():
-            return True
-        return False
+        return bool(exp is not None and exp > _now().timestamp())
 
 
 # ── Dual-tier storage helpers ────────────────────────────────────────

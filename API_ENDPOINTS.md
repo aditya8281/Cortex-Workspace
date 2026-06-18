@@ -33,6 +33,7 @@ Conventions:
 | POST | `/api/auth/logout` | None | Invalidate refresh token |
 | GET | `/api/auth/me` | Required | Get current user profile |
 | PUT | `/api/auth/me` | Required | Update own account fields (vault_password with current_password) |
+| POST | `/api/auth/check-username` | None | Real-time username availability check |
 
 ### Memory (Central Memory System)
 
@@ -82,6 +83,14 @@ Conventions:
 | GET | `/api/v1/me/profile/photo/{user_id}` | None | Serve a user's profile photo (public — for `<img>` tags) |
 | DELETE | `/api/v1/me/profile/photo` | Required | Remove current user's profile photo |
 
+### GitHub
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/me/github` | Required | Check GitHub connection status |
+| POST | `/api/v1/me/github` | Required | Connect GitHub account (username + encrypted personal access token) |
+| DELETE | `/api/v1/me/github` | Required | Disconnect GitHub account |
+
 ---
 
 ## Schemas
@@ -116,6 +125,7 @@ description?: str | None
 profile_photo?: str | None
 handles?: dict
 storage_root?: str | None
+github_username?: str | None
 data_path?: str | None       # deprecated, mirrors storage_root
 personal_storage_path?: str | None  # deprecated, mirrors storage_root
 preferences?: dict
@@ -167,6 +177,29 @@ bio?: str
 description?: str
 ```
 
+### UsernameCheckRequest (/api/auth/check-username)
+```
+username: str
+```
+
+### UsernameCheckResponse
+```
+available: bool
+message: str
+```
+
+### GitHubConnectRequest (/api/v1/me/github POST)
+```
+username: str
+token: str
+```
+
+### GitHubResponse (/api/v1/me/github)
+```
+connected: bool
+github_username: str | None
+```
+
 ---
 
 ## Notes
@@ -177,3 +210,6 @@ description?: str
 - Rate limiting on login attempts is Redis-backed with graceful fallback (fail-open)
 - The memory system is user-scoped: authenticated users see only their entries plus global entries
 - Profile photos are processed server-side: resized to 256×256 WebP avatar + 64×64 thumbnail
+- GitHub tokens are encrypted with Fernet (derived from SECRET_KEY) before storage
+- Username availability can be checked in real-time via /api/auth/check-username
+- Registration uses a multi-step wizard: Account → Profile → GitHub → Vault

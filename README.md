@@ -5,8 +5,11 @@ A local-first workspace with authentication, a central memory system, and a clea
 ## What Cortex Does
 
 - Secure user authentication (register, login, JWT tokens, refresh tokens)
+- Multi-step registration wizard (Account → Profile → GitHub → Vault)
+- Real-time username availability checking
 - Central memory system for storing and retrieving knowledge entries
-- User profile management (with profile photo upload)
+- User profile management (with profile photo upload, avatar thumbnails)
+- GitHub account integration (encrypted token storage)
 - Admin user management (promote/demote/delete)
 - Health monitoring endpoints
 
@@ -80,12 +83,13 @@ See [API_ENDPOINTS.md](API_ENDPOINTS.md) for the full endpoint reference.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/auth/register` | Create account |
+| POST | `/api/auth/register` | Create account (multi-step wizard) |
 | POST | `/api/auth/login` | Login |
 | POST | `/api/auth/refresh` | Refresh tokens |
 | POST | `/api/auth/logout` | Logout |
 | GET | `/api/auth/me` | Current user |
 | PUT | `/api/auth/me` | Update account |
+| POST | `/api/auth/check-username` | Check username availability |
 | GET | `/api/memory` | List memories |
 | POST | `/api/memory` | Store memory |
 | GET | `/api/v1/health/live` | Liveness check |
@@ -94,7 +98,12 @@ See [API_ENDPOINTS.md](API_ENDPOINTS.md) for the full endpoint reference.
 | GET | `/api/v1/me/profile` | Get profile |
 | PUT | `/api/v1/me/profile` | Update profile |
 | POST | `/api/v1/me/profile/photo` | Upload photo |
+| GET | `/api/v1/me/profile/photo/{id}` | Get user photo (public) |
 | GET | `/api/v1/users` | List users (admin) |
+| DELETE | `/api/v1/users/{id}` | Delete user (admin) |
+| GET | `/api/v1/me/github` | GitHub status |
+| POST | `/api/v1/me/github` | Connect GitHub |
+| DELETE | `/api/v1/me/github` | Disconnect GitHub |
 
 ## Testing
 

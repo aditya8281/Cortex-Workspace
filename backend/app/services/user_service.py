@@ -22,6 +22,7 @@ def serialize_user(db: Session, user: User) -> dict:
         "profile_photo": user.profile_photo,
         "handles": user.handles,
         "preferences": user.preferences,
+        "github_username": user.github_username,
     }
 
 

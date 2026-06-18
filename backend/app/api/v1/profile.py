@@ -118,7 +118,18 @@ async def upload_profile_photo(
     if len(content) > 2 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 2 MB)")
 
-    # Validate image type
+    # Validate image type — check content_type header first, then PIL
+    content_type = (file.content_type or "").lower()
+    allowed_mimes = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
+
+    # If content_type says image/*, trust it for the allowed set
+    if content_type and content_type not in allowed_mimes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported image type: {content_type}. Use JPEG, PNG, or WebP.",
+        )
+
+    # Validate with PIL (auto-detect format from bytes)
     try:
         from PIL import Image
 
@@ -127,14 +138,20 @@ async def upload_profile_photo(
         if fmt not in {"jpeg", "jpg", "png", "webp"}:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported image format: {fmt}",
+                detail=f"Unsupported image format: {fmt}. Use JPEG, PNG, or WebP.",
             )
     except HTTPException:
         raise
     except Exception as exc:
+        # If content_type was valid but PIL failed, give a clearer message
+        if content_type in allowed_mimes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File could not be read as an image. The content type was {content_type}, but the file may be corrupted or invalid.",
+            )
         raise HTTPException(
             status_code=400,
-            detail=f"Could not read image: {exc}",
+            detail="Could not read image. Please upload a valid JPEG, PNG, or WebP file.",
         )
 
     fname = _save_avatar(current_user.id, content)

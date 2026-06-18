@@ -69,6 +69,12 @@ export function AuthProvider({ children }) {
     setSession(tokenVal, userVal);
   }, []);
 
+  /** Update user data without changing the token. */
+  const updateUser = useCallback((userVal) => {
+    setUser(userVal);
+    setSession(token, userVal);
+  }, [token]);
+
   /** Logout: clear everything and redirect to /auth. */
   const logout = useCallback(() => {
     setToken(null);
@@ -78,7 +84,7 @@ export function AuthProvider({ children }) {
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,5 @@
 /**
- * Cortex API Client — Auth, Memory, and Profile.
+ * Cortex API Client — Auth, Memory, Profile, and GitHub.
  * Resolves backend origin dynamically and injects auth headers.
  */
 
@@ -74,6 +74,10 @@ export function apiLogout(refreshToken) {
   return request("POST", "/api/auth/logout", { body: { refresh_token: refreshToken } });
 }
 
+export function apiCheckUsername(username) {
+  return request("POST", "/api/auth/check-username", { body: { username } });
+}
+
 // ── Profile endpoints ───────────────────────────────────────────────
 
 export function apiGetProfile() {
@@ -116,4 +120,38 @@ export function apiRemoveAvatar() {
  */
 export function getProfilePhotoUrl(userId) {
   return `${getBase()}/api/v1/me/profile/photo/${userId}`;
+}
+
+// ── GitHub endpoints ────────────────────────────────────────────────
+
+export function apiGetGitHubStatus() {
+  return request("GET", "/api/v1/me/github");
+}
+
+export function apiConnectGitHub(username, ghToken, overrideToken) {
+  // overrideToken allows calling this before the provider is wired (e.g. during registration)
+  const headers = overrideToken ? { Authorization: `Bearer ${overrideToken}` } : {};
+  return request("POST", "/api/v1/me/github", { body: { username, token: ghToken }, headers });
+}
+
+export function apiDisconnectGitHub() {
+  return request("DELETE", "/api/v1/me/github");
+}
+
+// ── Admin endpoints ────────────────────────────────────────────────
+
+export function apiListUsers() {
+  return request("GET", "/api/v1/users");
+}
+
+export function apiPromoteUser(userId) {
+  return request("POST", `/api/v1/users/${userId}/promote`);
+}
+
+export function apiDemoteUser(userId) {
+  return request("POST", `/api/v1/users/${userId}/demote`);
+}
+
+export function apiDeleteUser(userId) {
+  return request("DELETE", `/api/v1/users/${userId}`);
 }

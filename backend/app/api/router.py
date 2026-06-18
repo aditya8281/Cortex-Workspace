@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from backend.app.api.v1.github import router as github_router
 from backend.app.api.v1.health import router as health_router
 from backend.app.api.v1.profile import router as profile_router
 from backend.app.api.v1.users import router as users_router
@@ -20,4 +21,10 @@ api_router.include_router(
     profile_router,
     prefix="/me/profile",
     tags=["Profile"]
+)
+
+api_router.include_router(
+    github_router,
+    prefix="/me/github",
+    tags=["GitHub"]
 )

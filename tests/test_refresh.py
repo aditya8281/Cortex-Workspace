@@ -162,8 +162,10 @@ def test_refresh_with_garbage_token(client):
 def test_refresh_with_expired_token(client):
     """Construct a JWT with exp in the past and verify it's rejected."""
     from datetime import datetime, timedelta, timezone
+
     from jose import jwt as jose_jwt
-    from backend.app.auth.tokens import SECRET, ALGORITHM
+
+    from backend.app.auth.tokens import ALGORITHM, SECRET
 
     payload = {
         "sub": "999",

@@ -31,6 +31,8 @@ class User(Base):
     handles_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     vault_password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     preferences_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    github_username: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
+    github_token_encrypted: Mapped[str | None] = mapped_column(String, nullable=True)
 
     @property
     def handles(self) -> dict:

@@ -45,6 +45,7 @@ class UserResponse(BaseModel):
     profile_photo: str | None = None
     handles: dict[str, Any] | None = None
     storage_root: str | None = None
+    github_username: str | None = None
     # DEPRECATED: legacy fields kept for response backward-compat; always mirror storage_root.
     data_path: str | None = None
     personal_storage_path: str | None = None

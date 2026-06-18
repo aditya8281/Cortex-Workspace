@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.app.auth import service as auth_service
@@ -30,6 +31,32 @@ router = APIRouter()
 # refresh, logout, and get_me are lightweight (JWT decode + Redis) and
 # stay ``async def`` — they don't block the event loop.
 # ──────────────────────────────────────────────────────────────────
+
+
+class UsernameCheckRequest(BaseModel):
+    username: str
+
+
+class UsernameCheckResponse(BaseModel):
+    available: bool
+    message: str
+
+
+@router.post("/api/auth/check-username", response_model=UsernameCheckResponse)
+def check_username(payload: UsernameCheckRequest, db: Session = Depends(get_db)):
+    """Real-time username availability check."""
+    import re
+    username = payload.username.strip()
+    if len(username) < 3:
+        return UsernameCheckResponse(available=False, message="Username must be at least 3 characters")
+    if len(username) > 128:
+        return UsernameCheckResponse(available=False, message="Username must be 128 characters or fewer")
+    if not re.match(r'^[a-zA-Z0-9_-]+$', username):
+        return UsernameCheckResponse(available=False, message="Username can only contain letters, numbers, hyphens, and underscores")
+    existing = db.query(User).filter(User.username == username).first()
+    if existing:
+        return UsernameCheckResponse(available=False, message="Username is already taken")
+    return UsernameCheckResponse(available=True, message="Username is available")
 
 
 @router.post("/api/auth/register", response_model=TokenResponse)

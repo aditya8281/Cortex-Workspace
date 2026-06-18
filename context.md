@@ -14,6 +14,7 @@ A local-first workspace with secure authentication, a central memory system, and
 - **Frontend**: Next.js 15, React 19, Tailwind CSS
 - **Packaging**: pyproject (uv), Docker & docker-compose
 - **Auth**: JWT (access + refresh tokens), Argon2 password hashing, Redis-backed rate limiting
+- **Encryption**: Fernet (cryptography) for GitHub token storage
 
 ## Repository Structure
 
@@ -35,7 +36,7 @@ backend/app/
 │   ├── storage_abstraction.py # Path validation
 │   └── storage_manager.py   # Storage path wrapper
 ├── auth/                    # Authentication system
-│   ├── router.py            # Auth endpoints (register, login, refresh, logout, me)
+│   ├── router.py            # Auth endpoints (register, login, refresh, logout, me, check-username)
 │   ├── service.py           # Auth business logic
 │   ├── tokens.py            # Refresh token management (Redis + JWT fallback)
 │   ├── rate_limit.py        # Login rate limiting (Redis, fail-open)
@@ -47,7 +48,7 @@ backend/app/
 │   ├── base.py              # DeclarativeBase
 │   └── session.py           # DynamicSessionLocal
 ├── models/                  # SQLAlchemy models
-│   ├── user.py              # User (auth, profile fields)
+│   ├── user.py              # User (auth, profile, GitHub fields)
 │   ├── auth_event.py        # AuthEvent (audit log)
 │   └── storage_registry.py  # StorageRegistry (per-user paths)
 ├── schemas/
@@ -58,14 +59,15 @@ backend/app/
 │   ├── health_service.py    # DB readiness check
 │   └── memory_manager.py    # Central memory system manager
 ├── api/
-│   ├── router.py            # Aggregates v1 routers (health, users, profile)
+│   ├── router.py            # Aggregates v1 routers (health, users, profile, github)
 │   ├── auth.py              # Legacy shim → auth.router
 │   ├── memory.py            # Central memory endpoints (GET/POST /api/memory)
 │   ├── deps.py              # get_current_user, get_current_user_optional, get_db
 │   └── v1/
 │       ├── health.py        # /health/live, /ready, /deep
 │       ├── users.py         # Admin user management
-│       └── profile.py       # GET/PUT /me/profile + photo upload/delete
+│       ├── profile.py       # GET/PUT /me/profile + photo upload/delete
+│       └── github.py        # GitHub account connection/disconnection
 └── intelligence/
     └── models.py            # KnowledgeEntry (memory data model)
 ```
@@ -78,12 +80,14 @@ frontend/
 │   ├── layout.js            # Root layout (fonts, AuthProvider)
 │   ├── page.js              # Landing page (/)
 │   ├── globals.css          # Tailwind base styles
-│   ├── auth/page.js         # Login + register tabs (/auth)
+│   ├── auth/page.js         # Multi-step registration wizard + login (/auth)
 │   ├── app/page.js          # Dashboard (/app)
-│   └── api/[...path]/       # Catch-all proxy to backend
+│   ├── admin/page.js        # Admin dashboard — user management (/admin)
+│   ├── profile/page.js      # Profile page — avatar, GitHub, settings (/profile)
+│   └── api/[...path]/       # Catch-all proxy to backend (binary-safe)
 ├── src/shared/
 │   ├── auth/                # AuthProvider, session.js, cortexApi.js
-│   ├── ui/                  # Button, Input, Card
+│   ├── ui/                  # Button, Input, Card, Steps, PasswordStrength
 │   ├── layout/              # DashboardShell
 │   └── design/              # Design tokens
 └── package.json
@@ -99,12 +103,13 @@ frontend/
 
 ### 1. Authentication
 
-- Endpoints: `/api/auth/*` (register, login, refresh, logout, me)
+- Endpoints: `/api/auth/*` (register, login, refresh, logout, me, check-username)
 - JWT access tokens with configurable expiry (default 30 min)
 - Refresh tokens: JWT-based (7-day default), server-revocable via Redis when available
 - Rate limiting on login (Redis-backed, fails open)
 - First user auto-promoted to admin
 - Sync endpoints (register/login) run in FastAPI threadpool to avoid event loop blocking
+- Real-time username availability checking via `/api/auth/check-username`
 
 ### 2. Central Memory System
 
@@ -128,12 +133,21 @@ frontend/
 - Self-protection: admins cannot demote themselves
 - Role changes via direct update are blocked (must use promote/demote)
 
+### 5. GitHub Integration
+
+- Endpoints: `GET/POST/DELETE /api/v1/me/github`
+- Connect GitHub account with username + personal access token
+- Token encrypted with Fernet (derived from SECRET_KEY) before storage
+- Username uniqueness enforced across accounts
+- Connection status visible in profile page
+
 ## Data Model
 
 ### users
 - id, username (unique), full_name, hashed_password, role
 - nickname, bio, description, profile_photo
 - handles_json (→ handles property), vault_password_hash, preferences_json (→ preferences property)
+- github_username (unique), github_token_encrypted
 
 ### auth_events
 - id, user_id, ip_address, timestamp, event_type, metadata_json
@@ -152,10 +166,13 @@ frontend/
 | Root | `GET /` | None |
 | Auth | `POST /api/auth/register`, `/login`, `/refresh`, `/logout` | None |
 | Auth (me) | `GET /api/auth/me`, `PUT /api/auth/me` | Required |
+| Auth (check) | `POST /api/auth/check-username` | None |
 | Memory | `GET /api/memory`, `POST /api/memory` | Optional |
 | Health | `GET /api/v1/health/live`, `/ready`, `/deep` | None |
 | Profile | `GET/PUT /api/v1/me/profile`, `POST /photo`, `GET/DELETE /photo` | Required |
+| Profile (public) | `GET /api/v1/me/profile/photo/{user_id}` | None |
 | Users | `GET/PUT/DELETE /api/v1/users/{id}`, `POST /promote`, `/demote` | Admin |
+| GitHub | `GET/POST/DELETE /api/v1/me/github` | Required |
 
 ## Configuration
 
@@ -166,6 +183,7 @@ Settings loaded from environment / `.env` via Pydantic BaseSettings:
 - `APP_NAME`, `DEBUG`, `API_V1_PREFIX`
 - `CORTEX_ROOT`, `MEMORY_PATH`, `VAULT_PATH`
 - `WORKSPACE_ROOT`
+- `NEXT_PUBLIC_API_BASE_URL` (frontend proxy backend URL)
 
 ## Testing
 

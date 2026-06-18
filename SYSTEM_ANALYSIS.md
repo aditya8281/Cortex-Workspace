@@ -32,7 +32,7 @@ backend/app/
 │   ├── storage_abstraction.py # Path validation, user storage management
 │   └── storage_manager.py   # Storage path wrapper
 ├── auth/                    # Authentication system
-│   ├── router.py            # Auth endpoints (register, login, refresh, logout, me)
+│   ├── router.py            # Auth endpoints (register, login, refresh, logout, me, check-username)
 │   ├── service.py           # Auth business logic (register, login, refresh, logout)
 │   ├── tokens.py            # Refresh token management (Redis-backed + JWT fallback)
 │   ├── rate_limit.py        # Login rate limiting (Redis-backed, fail-open)
@@ -44,7 +44,7 @@ backend/app/
 │   ├── base.py              # DeclarativeBase
 │   └── session.py           # DynamicSessionLocal
 ├── models/                  # SQLAlchemy ORM models
-│   ├── user.py              # User (auth, profile fields)
+│   ├── user.py              # User (auth, profile, GitHub fields)
 │   ├── auth_event.py        # AuthEvent (audit log)
 │   └── storage_registry.py  # StorageRegistry (per-user paths)
 ├── schemas/
@@ -55,14 +55,15 @@ backend/app/
 │   ├── health_service.py    # DB readiness check
 │   └── memory_manager.py    # Central memory system manager
 ├── api/
-│   ├── router.py            # Aggregates v1 routers (health, users, profile)
+│   ├── router.py            # Aggregates v1 routers (health, users, profile, github)
 │   ├── auth.py              # Legacy shim → auth.router
 │   ├── memory.py            # Central memory endpoints (GET/POST /api/memory)
 │   ├── deps.py              # get_current_user, get_current_user_optional, get_db
 │   └── v1/
 │       ├── health.py        # /health/live, /ready, /deep
 │       ├── users.py         # Admin user management
-│       └── profile.py       # GET/PUT /me/profile + photo upload/delete
+│       ├── profile.py       # GET/PUT /me/profile + photo upload/delete
+│       └── github.py        # GitHub account connection/disconnection
 └── intelligence/
     └── models.py            # KnowledgeEntry (central memory data model)
 ```
@@ -75,12 +76,14 @@ frontend/
 │   ├── layout.js            # Root layout (fonts, AuthProvider)
 │   ├── page.js              # Landing page (/)
 │   ├── globals.css          # Global styles (Tailwind)
-│   ├── auth/page.js         # Auth page — login + register tabs (/auth)
+│   ├── auth/page.js         # Auth page — multi-step registration wizard + login (/auth)
 │   ├── app/page.js          # Dashboard — protected (/app)
-│   └── api/[...path]/       # Catch-all proxy to backend
+│   ├── admin/page.js        # Admin dashboard — user management (/admin)
+│   ├── profile/page.js      # Profile page — avatar, settings, GitHub (/profile)
+│   └── api/[...path]/       # Catch-all proxy to backend (binary-safe)
 ├── src/shared/
 │   ├── auth/                # AuthProvider, session.js, cortexApi.js
-│   ├── ui/                  # Button, Input, Card
+│   ├── ui/                  # Button, Input, Card, Steps, PasswordStrength
 │   ├── layout/              # DashboardShell
 │   └── design/              # Design tokens
 └── package.json
@@ -89,11 +92,13 @@ frontend/
 ## Auth Flow
 
 1. User submits credentials on `/auth`
-2. Frontend calls `apiLogin`/`apiRegister` → backend `/api/auth/login` or `/api/auth/register`
-3. Backend validates, creates user, returns JWT access token + refresh token + user object
-4. Frontend stores tokens in sessionStorage via `AuthProvider`
-5. All subsequent API calls include `Authorization: Bearer <token>` header
-6. Refresh tokens are JWT-based (7-day expiry), server-revocable via Redis when available
+2. Registration uses a multi-step wizard: Account → Profile → GitHub → Vault
+3. Frontend calls `apiLogin`/`apiRegister` → backend `/api/auth/login` or `/api/auth/register`
+4. Backend validates, creates user, returns JWT access token + refresh token + user object
+5. Frontend stores tokens in sessionStorage via `AuthProvider`
+6. All subsequent API calls include `Authorization: Bearer <token>` header
+7. Refresh tokens are JWT-based (7-day expiry), server-revocable via Redis when available
+8. Username availability is checked in real-time via `/api/auth/check-username`
 
 ## Key Backend Modules
 
@@ -103,7 +108,7 @@ frontend/
 | `core/security.py` | Password hashing (Argon2/bcrypt), JWT creation |
 | `core/tokens.py` | Async token creation/verification wrappers |
 | `core/storage_abstraction.py` | Path validation, user storage management |
-| `auth/router.py` | Auth endpoints (sync def for register/login, async for refresh/logout/me) |
+| `auth/router.py` | Auth endpoints (sync def for register/login, async for refresh/logout/me/check-username) |
 | `auth/service.py` | Registration, login, token refresh, logout business logic |
 | `auth/tokens.py` | Refresh token management (Redis-backed + JWT-only fallback) |
 | `services/user_service.py` | User CRUD, serialization |
@@ -115,6 +120,7 @@ frontend/
 - **Engine**: SQLite via SQLAlchemy
 - **Migrations**: Alembic (`migrations/versions/`)
 - **Active tables**: `users`, `auth_events`, `knowledge_entries`, `user_storage_registry`, `alembic_version`
+- **User columns**: id, username, full_name, hashed_password, role, nickname, bio, description, profile_photo, handles_json, vault_password_hash, preferences_json, github_username, github_token_encrypted
 - **Init**: `bootstrap_database()` runs on app startup (runs Alembic migrations)
 
 ## API Endpoints (All Verified Working)
@@ -124,10 +130,13 @@ frontend/
 | Root | `GET /` | None |
 | Auth | `POST /api/auth/register`, `/login`, `/refresh`, `/logout` | None |
 | Auth (me) | `GET /api/auth/me`, `PUT /api/auth/me` | Required |
+| Auth (check) | `POST /api/auth/check-username` | None |
 | Memory | `GET /api/memory`, `POST /api/memory` | Optional |
 | Health | `GET /api/v1/health/live`, `/ready`, `/deep` | None |
 | Profile | `GET/PUT /api/v1/me/profile`, `POST /photo`, `GET/DELETE /photo` | Required |
+| Profile (public) | `GET /api/v1/me/profile/photo/{user_id}` | None |
 | Users | `GET/PUT/DELETE /api/v1/users/{id}`, `POST /promote`, `/demote` | Admin |
+| GitHub | `GET/POST/DELETE /api/v1/me/github` | Required |
 
 ## Configuration
 
@@ -143,6 +152,7 @@ All config via environment variables (or `.env` file):
 | `APP_NAME` | Cortex Workspace | Application name |
 | `DEBUG` | False | Debug mode |
 | `API_V1_PREFIX` | /api/v1 | Versioned API prefix |
+| `NEXT_PUBLIC_API_BASE_URL` | (none) | Backend URL for frontend proxy |
 
 ## Running
 
@@ -171,6 +181,8 @@ cd frontend && npm install && npm run dev
 - Rate limiting on login (Redis-backed, fail-open)
 - Admin self-protection (cannot demote yourself)
 - Profile photos validated server-side (type, size limits)
+- GitHub tokens encrypted with Fernet (derived from SECRET_KEY)
+- Real-time username availability checking
 
 ## Developer Onboarding
 
