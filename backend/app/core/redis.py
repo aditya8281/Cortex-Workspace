@@ -96,7 +96,10 @@ class RedisCache:
 
     async def close(self):
         if self.client is not None:
-            await self.client.aclose()
+            try:
+                await self.client.aclose()
+            except RuntimeError:
+                pass  # event loop already closed
             self.client = None
             self._connected = False
 

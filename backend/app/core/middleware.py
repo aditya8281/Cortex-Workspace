@@ -2,19 +2,37 @@ import time
 import uuid
 
 from backend.app.api.metrics import record_request
+from backend.app.core.config import settings
 from backend.app.core.logging import RequestIdFilter, get_logger
 
 logger = get_logger(__name__)
 
 # Security headers added to every response.
+_CSP_DEV = (
+    b"default-src 'self'; "
+    b"script-src 'self'; "
+    b"style-src 'self' 'unsafe-inline'; "
+    b"img-src 'self' data: blob:; "
+    b"font-src 'self' data:; "
+    b"connect-src 'self' http://localhost:* ws://localhost:*"
+)
+_CSP_PROD = (
+    b"default-src 'self'; "
+    b"script-src 'self'; "
+    b"style-src 'self' 'unsafe-inline'; "
+    b"img-src 'self' data: blob:; "
+    b"font-src 'self' data:; "
+    b"connect-src 'self'"
+)
+
+_is_dev = settings.ENV in ("development", "test")
+
 _SECURITY_HEADERS: list[tuple[bytes, bytes]] = [
     (b"x-content-type-options", b"nosniff"),
     (b"x-frame-options", b"DENY"),
     (b"x-xss-protection", b"1; mode=block"),
     (b"referrer-policy", b"strict-origin-when-cross-origin"),
-    # script-src: no unsafe-inline or unsafe-eval
-    # style-src: nonce-based — nonce added at the app level by Next.js
-    (b"content-security-policy", b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:*"),
+    (b"content-security-policy", _CSP_DEV if _is_dev else _CSP_PROD),
 ]
 
 

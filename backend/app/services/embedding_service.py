@@ -21,10 +21,13 @@ class EmbeddingService:
             return
         if self.model_path:
             try:
-                import onnxruntime as ort
+                import onnxruntime as ort  # type: ignore[import-untyped]
 
                 self._model = ort.InferenceSession(self.model_path)
                 logger.info("Loaded ONNX model from %s", self.model_path)
+                return
+            except ImportError:
+                logger.warning("onnxruntime not installed — install with: pip install 'cortex-workspace[embeddings]'")
                 return
             except Exception as e:
                 logger.warning("Failed to load ONNX model: %s", e)

@@ -360,8 +360,6 @@ dependencies = [
     { name = "cryptography" },
     { name = "fastapi" },
     { name = "httpx" },
-    { name = "onnxruntime", version = "1.24.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "onnxruntime", version = "1.27.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "passlib", extra = ["bcrypt"] },
     { name = "pillow" },
     { name = "psutil" },
@@ -376,6 +374,12 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "structlog" },
     { name = "uvicorn" },
+]
+
+[package.optional-dependencies]
+embeddings = [
+    { name = "onnxruntime", version = "1.24.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "onnxruntime", version = "1.27.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 
 [package.dev-dependencies]
@@ -399,7 +403,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=48.0.0" },
     { name = "fastapi", specifier = ">=0.110.0,<1.0.0" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "onnxruntime", specifier = ">=1.18.0" },
+    { name = "onnxruntime", marker = "extra == 'embeddings'", specifier = ">=1.18.0" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "psutil", specifier = ">=5.9.0" },
@@ -415,6 +419,7 @@ requires-dist = [
     { name = "structlog", specifier = ">=25.4.0" },
     { name = "uvicorn", specifier = ">=0.22.0,<1.0.0" },
 ]
+provides-extras = ["embeddings"]
 
 [package.metadata.requires-dev]
 dev = [
