@@ -1,30 +1,23 @@
-import type { HTMLAttributes, ReactNode } from "react";
+"use client";
+
+import { type HTMLAttributes, type ReactNode } from "react";
+import { cn } from "../../lib/utils";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  className?: string;
-  children?: ReactNode;
   hover?: boolean;
   glass?: boolean;
+  children: ReactNode;
 }
 
-export default function Card({
-  className = "",
-  children,
-  hover = false,
-  glass = false,
-  ...props
-}: CardProps) {
+export default function Card({ hover, glass, className, children, ...props }: CardProps) {
   return (
     <div
-      className={[
-        "rounded-lg border shadow-card transition-all duration-200",
-        glass
-          ? "glass-panel"
-          : "bg-bg-card border-border",
-        hover && "hover:border-accent/20 hover:shadow-glow hover:-translate-y-px cursor-pointer",
-        hover && "active:translate-y-0 active:scale-[0.995]",
-        className,
-      ].join(" ")}
+      className={cn(
+        "rounded-xl border border-border-subtle bg-bg-elevated shadow-card transition-all duration-300",
+        glass && "glass-panel",
+        hover && "hover:border-border-accent hover:shadow-glow hover:-translate-y-0.5 cursor-pointer active:translate-y-0 active:scale-[0.995]",
+        className
+      )}
       {...props}
     >
       {children}
