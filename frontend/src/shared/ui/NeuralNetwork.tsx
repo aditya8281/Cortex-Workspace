@@ -145,6 +145,7 @@ export default function NeuralNetwork({
   const animationRef = useRef<number>(0);
   const timeRef = useRef(0);
   const lastFrameRef = useRef(0);
+  const animateFnRef = useRef<(ctx: CanvasRenderingContext2D, width: number, height: number) => void>(() => {});
 
   const [reducedMotion] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -326,7 +327,6 @@ export default function NeuralNetwork({
         ctx.fill();
       }
 
-      animationRef.current = requestAnimationFrame(() => animate(ctx, width, height));
     },
     [config],
   );
@@ -360,7 +360,11 @@ export default function NeuralNetwork({
     window.addEventListener("resize", resize);
 
     lastFrameRef.current = 0;
-    animate(ctx, canvas.width, canvas.height);
+    const loop = () => {
+      animate(ctx, canvas.width, canvas.height);
+      animationRef.current = requestAnimationFrame(loop);
+    };
+    animationRef.current = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener("resize", resize);

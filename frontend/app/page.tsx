@@ -4,65 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useInView } from "framer-motion";
 import { ArrowRight, Shield, Brain, Cpu, Lock } from "lucide-react";
-import GlowOrb from "../src/shared/ui/GlowOrb";
-import BrainBackground from "../src/shared/ui/BrainBackground";
-import AuthRedirect from "../src/shared/ui/AuthRedirect";
-
-const PARTICLE_COUNT = 40;
-
-function seededRandom(seed: number) {
-  let s = seed;
-  return () => {
-    s = (s * 16807 + 0) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
-
-function ParticleDots() {
-  const [particles] = useState(() => {
-    const rand = seededRandom(42);
-    return Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-      id: i,
-      x: rand() * 100,
-      y: rand() * 100,
-      size: rand() * 3 + 1,
-      delay: rand() * 5,
-      duration: rand() * 8 + 6,
-      opacity: rand() * 0.4 + 0.1,
-      xDrift: rand() * 20 - 10,
-    }));
-  });
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: p.size,
-            height: p.size,
-            background: `radial-gradient(circle, rgba(6,182,212,${p.opacity}) 0%, transparent 70%)`,
-            boxShadow: `0 0 ${p.size * 3}px rgba(6,182,212,${p.opacity * 0.5})`,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            x: [0, p.xDrift, 0],
-            opacity: [p.opacity, p.opacity * 1.5, p.opacity],
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: p.delay,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+import NeuralNetwork from "../src/shared/ui/NeuralNetwork";
 
 function TypewriterTagline() {
   const text = "Your neural operating system.";
@@ -145,8 +87,7 @@ function FeatureCard({ feature, index }: { feature: typeof FEATURES[0]; index: n
 export default function RootPage() {
   return (
     <div className="min-h-screen flex flex-col bg-bg">
-      <BrainBackground intensity="high" />
-      <AuthRedirect />
+      <NeuralNetwork intensity="high" />
 
       <header className="glass-panel h-14 flex items-center justify-between px-6 shrink-0 sticky top-0 z-20">
         <Link href="/" className="flex items-center gap-2 group">
@@ -176,11 +117,6 @@ export default function RootPage() {
       <main id="main-content" className="flex-1">
         {/* Hero Section */}
         <section className="relative flex flex-col items-center justify-center min-h-[85vh] px-6 overflow-hidden">
-          <ParticleDots />
-
-          <GlowOrb className="top-20 left-1/4 -translate-x-1/2" size={400} color="rgba(6,182,212,0.06)" />
-          <GlowOrb className="bottom-20 right-1/4 translate-x-1/2" size={350} color="rgba(6,182,212,0.05)" delay={2} />
-
           <motion.div
             className="max-w-2xl text-center relative z-10"
             initial={{ opacity: 0 }}
