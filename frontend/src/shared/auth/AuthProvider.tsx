@@ -63,7 +63,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     bootstrap();
-    return () => { cancelled = true; };
+
+    // Periodic token refresh every 25 minutes to keep the session alive
+    const refreshInterval = setInterval(() => {
+      apiRefresh("").catch(() => {
+        // Silently ignore — the next API call will handle auth failure
+      });
+    }, 25 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   /** Login: set user in state and cache. Token is in httpOnly cookie. */
