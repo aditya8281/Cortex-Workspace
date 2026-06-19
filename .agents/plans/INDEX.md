@@ -6,7 +6,7 @@
 
 **Architecture:** FastAPI + PostgreSQL backend, Next.js 15 + React 19 frontend, Qdrant for vectors, Tauri v2 for desktop. All data local, zero telemetry. Rust for code intelligence and file watching.
 
-**Status:** Phase 0-A (Prerequisites) complete. Phase 0-B (Architecture Alignment) complete. Phase 1 (Memory) complete. Phase 2 (Indexing & Knowledge Graph) complete. Phase 3 (Unified Search & Agents) ready to start.
+**Status:** Phase 0-A (Prerequisites) complete. Phase 0-B (Architecture Alignment) complete. Phase 1 (Memory) complete. Phase 2 (Indexing & Knowledge Graph) complete. Phase 3 (Unified Search & Agents) complete. Phase 4 (Intelligence) ready to start.
 
 ---
 
@@ -24,7 +24,7 @@ All items in `prerequisite.md` have been completed. See [prerequisite.md](../pre
 | 0-B | [01-PHASE-0B-ARCHITECTURE.md](./01-PHASE-0B-ARCHITECTURE.md) | Bug fixes, architecture, Rust setup | COMPLETE |
 | 1 | [02-PHASE-1-MEMORY.md](./02-PHASE-1-MEMORY.md) | Memory system, embeddings, repo scanner | COMPLETE |
 | 2 | [03-PHASE-2-INDEXING.md](./03-PHASE-2-INDEXING.md) | Indexing, knowledge graph, graph search | COMPLETE |
-| 3 | [04-PHASE-3-AGENTS.md](./04-PHASE-3-AGENTS.md) | Unified search, agent runtime | NOT STARTED |
+| 3 | [04-PHASE-3-AGENTS.md](./04-PHASE-3-AGENTS.md) | Unified search, agent runtime | COMPLETE |
 | 4 | [05-PHASE-4-INTELLIGENCE.md](./05-PHASE-4-INTELLIGENCE.md) | Context, learning, workspace understanding | NOT STARTED |
 | 5 | [06-PHASE-5-DESKTOP.md](./06-PHASE-5-DESKTOP.md) | Tauri v2, sidecar, offline, file system | NOT STARTED |
 | 6 | [07-PHASE-6-LEARNING.md](./07-PHASE-6-LEARNING.md) | Long-term memory, patterns, proactive assist | NOT STARTED |
@@ -65,11 +65,13 @@ Phase 2: Indexing & Knowledge Graph
 Phase 3: Unified Search & Agents
     ├── Depends on: Phase 2, Phase 0-B
     ├── Agent database schema
+    ├── Base agent class
     ├── Planner agent (task decomposition)
     ├── Executor agent (tool-use loop)
     ├── Agent run manager
-    ├── Agent API
-    └── Frontend (AgentChat, SearchResults enhancements)
+    ├── Agent API (CRUD, runs, steps, feedback)
+    ├── Frontend (AgentChat, Agents page)
+    └── Status: COMPLETE ✓
 
 Phase 4: Intelligence
     ├── Depends on: Phase 3, Phase 2

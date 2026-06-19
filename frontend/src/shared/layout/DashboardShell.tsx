@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Lock,
   Brain,
+  Bot,
   User,
   Settings,
   Menu,
@@ -27,6 +28,7 @@ interface DashboardShellProps {
 const navItems = [
   { label: "Dashboard", href: "/app", icon: LayoutDashboard },
   { label: "Search", href: "/search", icon: Search },
+  { label: "Agents", href: "/agents", icon: Bot },
   { label: "Vault", href: "/vault", icon: Lock },
   { label: "Memory", href: "/memory", icon: Brain },
   { label: "Profile", href: "/profile", icon: User },

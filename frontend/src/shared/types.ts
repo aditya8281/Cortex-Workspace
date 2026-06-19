@@ -290,3 +290,61 @@ export interface NodeContext {
   inherits: { id: number; name: string; file_path: string }[];
   contains: { id: number; name: string; node_type: string }[];
 }
+
+// ── Agents ─────────────────────────────────────────────────────
+
+export interface Agent {
+  id: number;
+  name: string;
+  description: string | null;
+  system_prompt: string;
+  model_id: string;
+  tools: string | null;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface AgentRun {
+  id: number;
+  agent_id: number;
+  user_id: number;
+  input: string;
+  status: "pending" | "running" | "completed" | "failed";
+  output: string | null;
+  error: string | null;
+  created_at: string | null;
+  completed_at: string | null;
+}
+
+export interface AgentStep {
+  id: number;
+  run_id: number;
+  step_number: number;
+  thought: string | null;
+  action: string;
+  action_input: Record<string, unknown> | null;
+  observation: string | null;
+  status: string;
+  created_at: string | null;
+}
+
+export interface AgentFeedback {
+  id: number;
+  rating: number;
+  comment: string | null;
+  created_at: string | null;
+}
+
+export interface AgentListResponse {
+  agents: Agent[];
+}
+
+export interface RunListResponse {
+  runs: AgentRun[];
+}
+
+export interface RunDetailResponse {
+  run: AgentRun;
+  steps: AgentStep[];
+}

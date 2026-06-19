@@ -2,6 +2,7 @@
  * API client barrel export.
  */
 
+export { agentApi } from "./agent";
 export { api } from "./client";
 export { memoryApi } from "./memory";
 export { repoApi } from "./repo";
