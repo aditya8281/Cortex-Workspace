@@ -38,6 +38,20 @@ async def register_user(db: Session, payload: UserRegisterPayload, ip: str | Non
         raise HTTPException(status_code=400, detail="Vault password does not meet strength requirements")
     logger.debug("[REGISTER] Passwords validated in %.2fs", time.monotonic() - t0)
 
+    # Validate storage path BEFORE creating user to avoid orphaned DB rows
+    storage_root = (
+        payload.storage_root
+        or payload.data_path
+        or payload.personal_storage_path
+    )
+    if not storage_root:
+        from pathlib import Path
+        storage_root = str(Path.home() / "CortexStorage" / (_normalize_username(payload.username) or "user"))
+    try:
+        validated_root = validate_storage_path(storage_root)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid storage root: {e}")
+
     try:
         t_db = time.monotonic()
         logger.info("[REGISTER] BEFORE_DB_WRITE")
@@ -49,19 +63,6 @@ async def register_user(db: Session, payload: UserRegisterPayload, ip: str | Non
             raise HTTPException(status_code=400, detail="Username already registered")
 
         t_fs = time.monotonic()
-        storage_root = (
-            payload.storage_root
-            or payload.data_path
-            or payload.personal_storage_path
-        )
-        if not storage_root:
-            from pathlib import Path
-            storage_root = str(Path.home() / "CortexStorage" / (_normalize_username(payload.username) or "user"))
-
-        try:
-            validated_root = validate_storage_path(storage_root)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Invalid storage root: {e}")
         register_user_storage(db, db_user.id, str(validated_root))
         logger.debug("[REGISTER] Storage registered in %.2fs", time.monotonic() - t_fs)
 

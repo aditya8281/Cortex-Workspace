@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.app.core.security import hash_password, verify_password
@@ -77,10 +78,14 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
     try:
         db.commit()
         db.refresh(db_user)
+    except IntegrityError as e:
+        db.rollback()
+        logger.warning("Duplicate user or constraint violation: %s", e)
+        return None
     except Exception as e:
         db.rollback()
-        logger.exception("Failed to commit new user: %s", e)
-        return None
+        logger.exception("Unexpected error committing new user: %s", e)
+        raise
 
     return db_user
 
