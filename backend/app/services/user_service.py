@@ -33,7 +33,7 @@ def _normalize_username(username: str) -> str:
 
 def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | None:
     normalized = _normalize_username(user.username)
-    existing_username = db.query(User).filter(User.username == normalized, User.deleted_at.is_(None)).first()
+    existing_username = db.query(User).filter(User.username == normalized).first()
     if existing_username:
         return None
 

@@ -94,7 +94,7 @@ def check_username(payload: UsernameCheckRequest, db: Session = Depends(get_db))
         return UsernameCheckResponse(
             available=False, message="Username can only contain letters, numbers, hyphens, and underscores"
         )
-    existing = db.query(User).filter(User.username == username, User.deleted_at.is_(None)).first()
+    existing = db.query(User).filter(User.username == username).first()
     if existing:
         return UsernameCheckResponse(available=False, message="Username is already taken")
     return UsernameCheckResponse(available=True, message="Username is available")
