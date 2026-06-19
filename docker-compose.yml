@@ -30,7 +30,7 @@ services:
       retries: 5
 
   qdrant:
-    image: qdrant/qdrant:v1.11.0
+    image: qdrant/qdrant:v1.18.0
     container_name: cortex-qdrant
     restart: unless-stopped
     ports:

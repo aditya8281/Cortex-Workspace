@@ -56,7 +56,7 @@ AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestr
 
 | Area | State |
 |------|-------|
-| Tests | 81/81 passing |
+| Tests | 108/108 passing |
 | Frontend build | Passes |
 | Linting | ruff + ESLint configured |
 | Auth + vault backend | Production-quality foundation |
@@ -292,7 +292,7 @@ make dev-frontend  # Frontend only
 ```bash
 make install       # uv sync + npm install
 make migrate       # alembic upgrade head
-make test          # 81 pytest tests
+make test          # 108 pytest tests
 make lint          # ruff + mypy
 make format        # black + ruff --fix
 make check         # lint + test

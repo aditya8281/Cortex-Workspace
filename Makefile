@@ -101,7 +101,7 @@ lint:
 	uv run mypy backend/ --ignore-missing-imports --explicit-package-bases --implicit-optional
 
 format:
-	uv run black backend/ tests/ --line-length 100
+	uv run ruff format backend/ tests/
 	uv run ruff check backend/ tests/ --fix
 
 check: lint test
