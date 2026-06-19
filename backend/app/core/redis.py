@@ -98,8 +98,8 @@ class RedisCache:
         if self.client is not None:
             try:
                 await self.client.aclose()
-            except RuntimeError:
-                pass  # event loop already closed
+            except (RuntimeError, OSError, Exception):
+                pass  # event loop already closed or connection already lost
             self.client = None
             self._connected = False
 

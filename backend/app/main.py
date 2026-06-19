@@ -60,7 +60,10 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    await redis_cache.close()
+    try:
+        await redis_cache.close()
+    except Exception:
+        pass  # event loop may already be closed during test teardown
     logger.info("Redis cache connection closed")
 
 
