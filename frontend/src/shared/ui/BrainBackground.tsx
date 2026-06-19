@@ -1,18 +1,27 @@
 "use client";
 
-import { useRef, useMemo, useEffect, useState } from "react";
+import { useRef, useMemo, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return s / 2147483647;
+  };
+}
 
 function WireframeBrain({ particleCount }: { particleCount: number }) {
   const meshRef = useRef<THREE.Mesh>(null);
 
   const particles = useMemo(() => {
+    const rand = seededRandom(42);
     const positions = new Float32Array(particleCount * 3);
     for (let i = 0; i < particleCount; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = 1.8 + Math.random() * 0.8;
+      const theta = rand() * Math.PI * 2;
+      const phi = Math.acos(2 * rand() - 1);
+      const r = 1.8 + rand() * 0.8;
       positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
       positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 2] = r * Math.cos(phi);
@@ -21,12 +30,13 @@ function WireframeBrain({ particleCount }: { particleCount: number }) {
   }, [particleCount]);
 
   const geometry = useMemo(() => {
+    const rand = seededRandom(42);
     const geo = new THREE.IcosahedronGeometry(1.3, 2);
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-      pos.setY(i, pos.getY(i) * 0.85 + (Math.random() - 0.5) * 0.1);
-      pos.setX(i, pos.getX(i) * (0.9 + Math.random() * 0.2));
-      pos.setZ(i, pos.getZ(i) * (0.9 + Math.random() * 0.2));
+      pos.setY(i, pos.getY(i) * 0.85 + (rand() - 0.5) * 0.1);
+      pos.setX(i, pos.getX(i) * (0.9 + rand() * 0.2));
+      pos.setZ(i, pos.getZ(i) * (0.9 + rand() * 0.2));
     }
     geo.computeVertexNormals();
     return geo;
@@ -49,9 +59,7 @@ function WireframeBrain({ particleCount }: { particleCount: number }) {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={particleCount}
-            array={particles}
-            itemSize={3}
+            args={[particles, 3]}
           />
         </bufferGeometry>
         <pointsMaterial
@@ -71,12 +79,10 @@ export default function BrainBackground({
 }: {
   intensity?: "low" | "medium" | "high";
 }) {
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mq.matches);
-  }, []);
+  const [reducedMotion] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
 
   if (reducedMotion) {
     return (
