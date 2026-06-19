@@ -366,10 +366,20 @@ export function apiCreateMemory(payload: {
 
 // ── Account deletion ────────────────────────────────────────────────
 
-export function apiDeleteAccount(
+export async function apiDeleteAccount(
   password: string
 ): Promise<{ message: string }> {
-  return request("DELETE", "/api/auth/me", { body: { password } });
+  const res = await fetch("/api/auth/me", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Delete failed");
+  }
+  return res.json();
 }
 
 // ── Admin endpoints ─────────────────────────────────────────────────
