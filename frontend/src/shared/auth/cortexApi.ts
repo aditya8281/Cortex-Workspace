@@ -57,7 +57,7 @@ async function tryRefresh(): Promise<boolean> {
   if (_refreshPromise) return _refreshPromise;
   _refreshPromise = (async () => {
     try {
-      const res = await fetch(`${getBase()}/api/auth/refresh`, {
+      const res = await fetch(`${getBase()}/api/v1/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -102,7 +102,7 @@ async function request<T = unknown>(
     credentials: "include",
   });
 
-  if (res.status === 401 && !_retried && !path.match(/\/api\/auth\/(login|register|refresh|logout|check-username)/)) {
+  if (res.status === 401 && !_retried && !path.match(/\/api\/v1\/auth\/(login|register|refresh|logout|check-username)/)) {
     const refreshed = await tryRefresh();
     if (refreshed) {
       return request<T>(method, path, { body, headers: extraHeaders }, true);
@@ -138,7 +138,7 @@ export function apiLogin(payload: {
   username: string;
   password: string;
 }): Promise<TokenResponse> {
-  return request("POST", "/api/auth/login", { body: payload });
+  return request("POST", "/api/v1/auth/login", { body: payload });
 }
 
 export function apiRegister(payload: {
@@ -151,27 +151,27 @@ export function apiRegister(payload: {
   vault_password: string;
   storage_root?: string;
 }): Promise<TokenResponse> {
-  return request("POST", "/api/auth/register", { body: payload });
+  return request("POST", "/api/v1/auth/register", { body: payload });
 }
 
 export function apiGetMe(): Promise<User> {
-  return request("GET", "/api/auth/me");
+  return request("GET", "/api/v1/auth/me");
 }
 
 export function apiLogout(): Promise<unknown> {
-  return request("POST", "/api/auth/logout", {
+  return request("POST", "/api/v1/auth/logout", {
     body: { refresh_token: "" },
   });
 }
 
 export function apiRefresh(): Promise<TokenResponse> {
-  return request("POST", "/api/auth/refresh", { body: { refresh_token: "" } });
+  return request("POST", "/api/v1/auth/refresh", { body: { refresh_token: "" } });
 }
 
 export function apiCheckUsername(
   username: string
 ): Promise<UsernameCheckResponse> {
-  return request("POST", "/api/auth/check-username", { body: { username } });
+  return request("POST", "/api/v1/auth/check-username", { body: { username } });
 }
 
 // ── Profile endpoints ───────────────────────────────────────────────
@@ -433,7 +433,7 @@ export function apiListMemory(params: {
   if (params.offset) query.set("offset", String(params.offset));
   if (params.category) query.set("category", params.category);
   const qs = query.toString();
-  return request("GET", `/api/memory${qs ? `?${qs}` : ""}`);
+  return request("GET", `/api/v1/memory${qs ? `?${qs}` : ""}`);
 }
 
 export function apiCreateMemory(payload: {
@@ -443,11 +443,11 @@ export function apiCreateMemory(payload: {
   source_path?: string;
   tags?: string[];
 }): Promise<{ status: string; entry: MemoryEntry }> {
-  return request("POST", "/api/memory", { body: payload });
+  return request("POST", "/api/v1/memory", { body: payload });
 }
 
 export function apiGetMemory(id: number): Promise<MemoryEntry> {
-  return request("GET", `/api/memory/${id}`);
+  return request("GET", `/api/v1/memory/${id}`);
 }
 
 export function apiUpdateMemory(
@@ -460,24 +460,24 @@ export function apiUpdateMemory(
     tags?: string[];
   },
 ): Promise<{ status: string; entry: MemoryEntry }> {
-  return request("PUT", `/api/memory/${id}`, { body: payload });
+  return request("PUT", `/api/v1/memory/${id}`, { body: payload });
 }
 
 export function apiDeleteMemory(
   id: number,
 ): Promise<{ status: string }> {
-  return request("DELETE", `/api/memory/${id}`);
+  return request("DELETE", `/api/v1/memory/${id}`);
 }
 
 export function apiSearchMemory(payload: {
   query: string;
   limit?: number;
 }): Promise<MemorySearchResponse> {
-  return request("POST", "/api/memory/search", { body: payload });
+  return request("POST", "/api/v1/memory/search", { body: payload });
 }
 
 export function apiScanRepo(repoPath: string): Promise<{ status: string; job_id: string | null }> {
-  return request("POST", "/api/memory/scan-repo", { body: { repo_path: repoPath } });
+  return request("POST", "/api/v1/memory/scan-repo", { body: { repo_path: repoPath } });
 }
 
 // ── Account deletion ────────────────────────────────────────────────
@@ -485,7 +485,7 @@ export function apiScanRepo(repoPath: string): Promise<{ status: string; job_id:
 export async function apiDeleteAccount(
   password: string
 ): Promise<{ message: string }> {
-  const url = `${getBase()}/api/auth/me`;
+  const url = `${getBase()}/api/v1/auth/me`;
   let res = await fetch(url, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },

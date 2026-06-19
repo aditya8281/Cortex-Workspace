@@ -137,11 +137,12 @@ class MemoryManager:
             filter_payload=filter_payload if filter_payload else None,
         )
 
-        entry_ids = [int(r["id"]) for r in results]
-        entries = self._db.query(KnowledgeEntry).filter(KnowledgeEntry.id.in_(entry_ids)).all() if entry_ids else []
-        entry_map = {str(e.id): self._serialize(e) for e in entries}
+        entry_ids = [r["payload"].get("entry_id") for r in results if r.get("payload")]
+        valid_ids = [eid for eid in entry_ids if eid is not None]
+        entries = self._db.query(KnowledgeEntry).filter(KnowledgeEntry.id.in_(valid_ids)).all() if valid_ids else []
+        entry_map = {e.id: self._serialize(e) for e in entries}
 
-        return [{"score": r["score"], "entry": entry_map.get(r["id"])} for r in results]
+        return [{"score": r["score"], "entry": entry_map.get(r["payload"].get("entry_id"))} for r in results]
 
     def update(
         self,

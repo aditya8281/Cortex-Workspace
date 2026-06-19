@@ -80,7 +80,7 @@ class UsernameCheckResponse(BaseModel):
     message: str
 
 
-@router.post("/api/auth/check-username", response_model=UsernameCheckResponse)
+@router.post("/api/v1/auth/check-username", response_model=UsernameCheckResponse)
 def check_username(payload: UsernameCheckRequest, db: Session = Depends(get_db)):
     """Real-time username availability check."""
     import re
@@ -100,7 +100,7 @@ def check_username(payload: UsernameCheckRequest, db: Session = Depends(get_db))
     return UsernameCheckResponse(available=True, message="Username is available")
 
 
-@router.post("/api/auth/register", response_model=TokenResponse)
+@router.post("/api/v1/auth/register", response_model=TokenResponse)
 async def register(payload: UserRegisterPayload, request: Request, response: Response, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else None
     result = await auth_service.register_user(db, payload, ip)
@@ -108,7 +108,7 @@ async def register(payload: UserRegisterPayload, request: Request, response: Res
     return result
 
 
-@router.post("/api/auth/login", response_model=TokenResponse)
+@router.post("/api/v1/auth/login", response_model=TokenResponse)
 async def login(payload: UserLogin, request: Request, response: Response, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else None
     result = await auth_service.login_user_service(db, payload.username, payload.password, ip)
@@ -120,7 +120,7 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
-@router.post("/api/auth/refresh", response_model=TokenResponse)
+@router.post("/api/v1/auth/refresh", response_model=TokenResponse)
 async def refresh(body: RefreshRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else None
     refresh_token = _get_refresh_token(request, body.refresh_token)
@@ -131,7 +131,7 @@ async def refresh(body: RefreshRequest, request: Request, response: Response, db
     return result
 
 
-@router.post("/api/auth/logout")
+@router.post("/api/v1/auth/logout")
 async def logout(body: RefreshRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else None
     refresh_token = _get_refresh_token(request, body.refresh_token)
@@ -140,7 +140,7 @@ async def logout(body: RefreshRequest, request: Request, response: Response, db:
     return {"message": "Logged out"}
 
 
-@router.get("/api/auth/me", response_model=UserResponse)
+@router.get("/api/v1/auth/me", response_model=UserResponse)
 async def get_me(request: Request, db: Session = Depends(get_db)):
     token = _get_token(request)
     if not token:
@@ -155,7 +155,7 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
     return to_user_response(db, user)
 
 
-@router.put("/api/auth/me")
+@router.put("/api/v1/auth/me")
 async def update_me(
     body: MeUpdate,
     request: Request,
@@ -193,7 +193,7 @@ class DeleteAccountRequest(BaseModel):
     password: str
 
 
-@router.delete("/api/auth/me")
+@router.delete("/api/v1/auth/me")
 async def delete_me(
     body: DeleteAccountRequest,
     request: Request,
@@ -244,7 +244,7 @@ class RestoreAccountRequest(BaseModel):
     password: str | None = None
 
 
-@router.post("/api/auth/restore")
+@router.post("/api/v1/auth/restore")
 async def restore_account(
     body: RestoreAccountRequest,
     request: Request,

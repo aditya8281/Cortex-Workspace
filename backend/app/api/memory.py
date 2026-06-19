@@ -35,7 +35,7 @@ class MemorySearchPayload(BaseModel):
     limit: int = Field(default=10, ge=1, le=100)
 
 
-@router.get("/api/memory")
+@router.get("/api/v1/memory")
 def list_memory(
     limit: int = 24,
     offset: int = 0,
@@ -62,7 +62,7 @@ def list_memory(
     }
 
 
-@router.post("/api/memory")
+@router.post("/api/v1/memory")
 def create_memory(
     payload: MemoryCreatePayload,
     db: Session = Depends(get_db),
@@ -81,7 +81,7 @@ def create_memory(
     return {"status": "created", "entry": manager._serialize(entry)}
 
 
-@router.get("/api/memory/{entry_id}")
+@router.get("/api/v1/memory/{entry_id}")
 def get_memory(
     entry_id: int,
     db: Session = Depends(get_db),
@@ -95,7 +95,7 @@ def get_memory(
     return {"entry": manager._serialize(entry)}
 
 
-@router.put("/api/memory/{entry_id}")
+@router.put("/api/v1/memory/{entry_id}")
 def update_memory(
     entry_id: int,
     payload: MemoryUpdatePayload,
@@ -116,7 +116,7 @@ def update_memory(
     return {"status": "updated", "entry": manager._serialize(entry)}
 
 
-@router.delete("/api/memory/{entry_id}")
+@router.delete("/api/v1/memory/{entry_id}")
 def delete_memory(
     entry_id: int,
     db: Session = Depends(get_db),
@@ -130,7 +130,7 @@ def delete_memory(
     return {"status": "deleted"}
 
 
-@router.post("/api/memory/search")
+@router.post("/api/v1/memory/search")
 def search_memory(
     payload: MemorySearchPayload,
     db: Session = Depends(get_db),
@@ -155,7 +155,7 @@ class BulkEmbedPayload(BaseModel):
     entry_ids: list[int] = Field(min_length=1)
 
 
-@router.post("/api/memory/scan-repo")
+@router.post("/api/v1/memory/scan-repo")
 async def scan_repo(
     payload: ScanRepoPayload,
     current_user: User = Depends(get_current_user),
@@ -169,7 +169,7 @@ async def scan_repo(
     return {"status": "queued", "job_id": job_id}
 
 
-@router.post("/api/memory/bulk-embed")
+@router.post("/api/v1/memory/bulk-embed")
 async def bulk_embed(
     payload: BulkEmbedPayload,
     current_user: User = Depends(get_current_user),

@@ -174,7 +174,9 @@ export default function MemoryPage() {
     fetchList(true);
   }
 
-  const displayEntries = viewMode === "search" ? searchResults : entries;
+  const displayEntries = viewMode === "search" 
+    ? searchResults.map(r => r.entry).filter((e): e is MemoryEntry => e !== null)
+    : entries;
   const hasMore = entries.length < total;
 
   return (
@@ -381,7 +383,11 @@ export default function MemoryPage() {
               ) : (
                 <div className="space-y-2">
                   <AnimatePresence mode="popLayout">
-                    {displayEntries.map((entry) => (
+                    {displayEntries.map((entry) => {
+                      const searchResult = viewMode === "search" 
+                        ? searchResults.find(r => r.entry?.id === entry.id)
+                        : null;
+                      return (
                       <motion.button
                         key={entry.id}
                         layout
@@ -408,16 +414,16 @@ export default function MemoryPage() {
                             )}>
                               {entry.category}
                             </span>
-                            {(entry as MemorySearchResult).score !== undefined && (
+                            {searchResult?.score !== undefined && (
                               <span className="text-[10px] font-mono text-text-muted">
-                                {((entry as MemorySearchResult).score * 100).toFixed(0)}%
+                                {(searchResult.score * 100).toFixed(0)}%
                               </span>
                             )}
                           </div>
                         </div>
                         {entry.tags && entry.tags.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
-                            {entry.tags.map((tag) => (
+                            {entry.tags.map((tag: string) => (
                               <span key={tag} className="rounded-full bg-bg-surface px-2 py-0.5 text-[10px] font-mono text-text-muted border border-border-subtle">
                                 {tag}
                               </span>
@@ -425,7 +431,8 @@ export default function MemoryPage() {
                           </div>
                         )}
                       </motion.button>
-                    ))}
+                      );
+                    })}
                   </AnimatePresence>
                 </div>
               )}

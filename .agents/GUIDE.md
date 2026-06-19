@@ -1,7 +1,6 @@
 # Cortex Execution Guide
 
-> **Purpose:** Step-by-step instructions for executing the Cortex 90-day roadmap.
-> This is the single entry point for any agent or developer working on Cortex.
+> **Purpose:** Single entry point for executing the Cortex roadmap. Track progress, verify at checkpoints, and know exactly what to do next.
 
 ---
 
@@ -10,8 +9,8 @@
 ```
 1. Read this guide completely
 2. Read prerequisite.md (ALL ITEMS COMPLETE)
-3. Start with Phase 1: Memory (Weeks 3-4)
-4. Execute phases in order
+3. Check current phase status below
+4. Start with the next unfinished phase
 5. Verify at each checkpoint before proceeding
 ```
 
@@ -21,323 +20,182 @@
 
 | Document | Purpose | Read Order |
 |----------|---------|------------|
-| `GUIDE.md` | This file — execution instructions | 1st |
-| `prerequisite.md` | What must be done before Phase 2 | 2nd |
+| `GUIDE.md` | This file — execution instructions + tracking | 1st |
+| `prerequisite.md` | What was done before Phase 2 | 2nd |
 | `INDEX.md` | Master plan index, dependency graph | 3rd |
-| `01-WEEK-3-4-MEMORY.md` | Memory & vector DB plan | 4th |
-| `02-WEEK-5-6-INDEXING.md` | Code indexing plan | 5th |
-| `03-WEEK-7-8-AGENTS.md` | Agent runtime plan | 6th |
-| `04-WEEK-9-10-INTELLIGENCE.md` | Intelligence & planning plan | 7th |
-| `05-WEEK-11-12-LAUNCH.md` | Desktop V1 & launch plan | 8th |
+| `01-PHASE-0B-ARCHITECTURE.md` | Bug fixes + architecture alignment | 4th |
+| `02-PHASE-1-MEMORY.md` | Memory system (status marker) | — |
+| `03-PHASE-2-INDEXING.md` | Indexing + knowledge graph | 5th |
+| `04-PHASE-3-AGENTS.md` | Unified search + agents | 6th |
+| `05-PHASE-4-INTELLIGENCE.md` | Context + learning + workspace understanding | 7th |
+| `06-PHASE-5-DESKTOP.md` | Tauri v2 desktop app | 8th |
+| `07-PHASE-6-LEARNING.md` | Long-term memory + patterns + proactive assist | 9th |
 
 ---
 
-## Phase 0: Prerequisites — COMPLETE
+## Progress Tracker
 
-**Status:** All prerequisite items have been completed. See [prerequisite.md](../prerequisite.md) for details.
-
-Completed:
+### Phase 0-A: Prerequisites — ✓ COMPLETE
 - [x] Critical fixes (plan alignment, FK constraints, TypeScript strict)
-- [x] Required refactors (vault decomposition, token consolidation, async auth, JSONB)
+- [x] Required refactors (vault decomposition, token consolidation, async auth)
 - [x] Missing foundations (task queue, vector DB, embeddings, WebSocket, rate limiting)
 - [x] Security improvements (JWT cookies, CSP, soft delete)
 - [x] Production readiness (TLS, logging, metrics, backups, frontend tests)
 - [x] Plan file updates
 
-**Proceed to Phase 1: Memory →**
+### Phase 0-B: Architecture Alignment — ✓ COMPLETE
+- [x] Fix memory search (ID extraction bug, wrong key mapping)
+- [x] Fix MemorySearchResult TypeScript type
+- [x] Fix profile photo save/serve mismatch
+- [x] Add FK ondelete clauses (notification, repo_index)
+- [x] Fix User model type annotations
+- [ ] Fix Knowledge Entry tags column type (kept as Text, consistent with current impl)
+- [x] Standardize API versioning to /api/v1/
+- [x] Create frontend API client abstraction
+- [x] Create service abstraction protocol
+- [x] Create storage path resolver
+- [x] Create LLM provider interface
+- [x] Decouple VECTOR_SIZE from EMBEDDING_DIM
+- [x] Cache failed model load in embedding service
+- [x] Make ALLOWED_ORIGINS a proper list
+- [ ] Consolidate test directories (low priority, optional)
+- [x] Add __init__.py to test directories
+- [x] Create Rust crates directory + workspace
+- [x] Create code-intel crate (tree-sitter + PyO3)
+- [x] Create file-watcher crate (notify)
+
+### Phase 1: Memory System — ✓ COMPLETE
+- [x] Memory CRUD API
+- [x] Vector search working
+- [x] Embedding pipeline
+- [x] Repository scanner
+- [x] Memory frontend UI
+- [x] Background effects
+- [x] Auth toggle animation fixed
+- [x] Browse button fallback
+- [x] Vault 403 error fixed
+- [x] Design system (Neural Dark) implemented
+
+### Phase 2: Indexing & Knowledge Graph
+- [ ] Graph database schema (GraphNode, GraphEdge, IndexedFile)
+- [ ] Incremental indexer (hash-based change detection)
+- [ ] Graph builder (nodes + edges from code)
+- [ ] Cross-file search (vector + graph enrichment)
+- [ ] Unified search API (/api/v1/search/)
+- [ ] Repository management API (/api/v1/repository/)
+- [ ] SearchFilters component
+- [ ] SearchResults component
+- [ ] GraphView component
+
+### Phase 3: Unified Search & Agents
+- [ ] Agent database schema (Agent, AgentRun, AgentStep, AgentFeedback)
+- [ ] Planner agent (task decomposition)
+- [ ] Executor agent (tool-use loop)
+- [ ] Agent run manager
+- [ ] Agent API (/api/v1/agents/)
+- [ ] AgentChat component
+- [ ] SearchResults enhancements
+
+### Phase 4: Intelligence
+- [ ] Context builder (workspace state + past conversations)
+- [ ] Conversation memory (semantic search over history)
+- [ ] Learning loop (feedback processing)
+- [ ] Workspace understanding (call graphs, summaries)
+- [ ] Enhanced executor with context
+- [ ] Conversation history API (/api/v1/conversations/)
+- [ ] ContextPanel component
+- [ ] MemoryTimeline component
+
+### Phase 5: Desktop V1 (Tauri v2)
+- [ ] Tauri v2 project setup with plugins
+- [ ] Backend sidecar entry point
+- [ ] Tauri Rust plugins (tray, window, fs, dialog, updater)
+- [ ] Frontend Tauri adapter
+- [ ] Custom window controls
+- [ ] Offline capabilities (IndexedDB, service worker)
+- [ ] File system integration
+- [ ] Auto-updater
+
+### Phase 6: System Understanding & Learning
+- [ ] Long-term memory model + service
+- [ ] Pattern recognizer
+- [ ] Correction tracker
+- [ ] Proactive assistant
+- [ ] Learning API (/api/v1/learning/)
+- [ ] LearningDashboard component
+- [ ] ProactiveSuggestions component
 
 ---
 
-## Phase 1: Memory (Weeks 3-4)
+## Execution Rules
 
-**Prerequisites:** Phase 0 complete (VectorDB, EmbeddingService, TaskQueue ready)
-**Plan:** `01-WEEK-3-4-MEMORY.md`
+### Rule 1: Prerequisites First
+Never start a phase without completing its dependencies. Check the dependency graph in INDEX.md.
 
-### Step 1.1: Vector DB Service (Days 1-3)
+### Rule 2: Verify Before Proceeding
+Always run verification commands at each checkpoint. Fix failures before continuing.
 
-**What to do:**
-1. Create `backend/app/services/memory_manager.py` — Memory CRUD
-2. Create `backend/app/services/vector_service.py` — Vector operations
-3. Create `backend/app/api/v1/memory.py` — Memory REST API
-4. Add Qdrant collections for memories
+### Rule 3: One Phase at a Time
+Complete each phase fully before starting the next. Phases build on each other.
 
-**Files to create/modify:**
-- `backend/app/services/memory_manager.py`
-- `backend/app/services/vector_service.py`
-- `backend/app/api/v1/memory.py`
-- `backend/app/api/router.py` — Register memory router
+### Rule 4: Test Everything
+Every new feature must have tests. Run `PYTHONPATH=. pytest tests/ -v` after each change.
 
-**Verification:**
-```bash
-PYTHONPATH=. pytest tests/test_memory*.py -v
-curl http://localhost:8000/api/v1/memory  # Returns empty list
-```
+### Rule 5: Build Frontend After Changes
+Run `cd frontend && npm run build` after any frontend modification.
 
----
+### Rule 6: Check Types
+Run `cd frontend && npx tsc --noEmit` after any TypeScript change.
 
-### Step 1.2: Embedding Pipeline (Days 4-6)
+### Rule 7: Lint Code
+Run `uv run ruff check backend/` after any Python change.
 
-**What to do:**
-1. Integrate BGE-M3 ONNX model
-2. Create embedding pipeline with batching
-3. Add mock fallback for testing
-4. Create background task for bulk embedding
-
-**Files to modify:**
-- `backend/app/services/embedding_service.py` — Real model loading
-- `backend/app/tasks/embedding_tasks.py` — Background embedding
-
-**Verification:**
-```bash
-PYTHONPATH=. pytest tests/test_embedding*.py -v
-# Embed a test string
-curl -X POST http://localhost:8000/api/v1/memory -d '{"content": "test memory"}'
-```
+### Rule 8: Create Migrations
+For every model change: `alembic revision --autogenerate -m "description"` then `alembic upgrade head`.
 
 ---
 
-### Step 1.3: Repository Scanner (Days 7-9)
+## Checkpoints
 
-**What to do:**
-1. Create git-aware repository scanner
-2. Detect file types, languages, structures
-3. Extract code symbols (functions, classes)
-4. Store scan results in knowledge entries
-
-**Files to create:**
-- `backend/app/services/repo_scanner.py`
-- `backend/app/tasks/scan_tasks.py`
-
-**Verification:**
-```bash
-PYTHONPATH=. pytest tests/test_repo_scanner.py -v
-# Scan current repo
-curl -X POST http://localhost:8000/api/v1/memory/scan -d '{"path": "."}'
-```
-
----
-
-### Step 1.4: Memory Frontend (Days 10-14)
-
-**What to do:**
-1. Create memory browser UI
-2. Add search interface
-3. Add memory creation/editing
-4. Add category filtering
-
-**Files to create:**
-- `frontend/app/memory/page.tsx`
-- `frontend/app/memory/MemoryList.tsx`
-- `frontend/app/memory/MemorySearch.tsx`
-- `frontend/app/memory/MemoryEditor.tsx`
-
-**Verification:**
-```bash
-cd frontend && npm run build  # Build succeeds
-cd frontend && npx tsc --noEmit  # No type errors
-```
-
----
-
-### Checkpoint: Phase 1 Complete
+### Checkpoint: Phase 0-B Complete
 
 ```bash
-# All tests pass
+# Backend
+uv run ruff check backend/ tests/
 PYTHONPATH=. pytest tests/ -v
 
-# Frontend builds
+# Frontend
+cd frontend && npx tsc --noEmit
+cd frontend && npx next lint
 cd frontend && npm run build
 
-# Memory API works
-curl http://localhost:8000/api/v1/memory  # Returns memories
-curl -X POST http://localhost:8000/api/v1/memory -d '{"content": "test"}'  # Creates memory
+# Rust
+cd crates && cargo check
 
-# Vector search works
-curl -X POST http://localhost:8000/api/v1/memory/search -d '{"query": "test"}'  # Returns results
+# Verify specific fixes
+# 1. Memory search works (create + search returns correct results)
+# 2. Profile photo uploads and serves correctly
+# 3. All FK constraints have ondelete clauses
+# 4. API routes use /api/v1/ prefix
 ```
-
----
-
-## Phase 2: Indexing (Weeks 5-6)
-
-**Prerequisites:** Phase 1 complete (VectorDB, RepoScanner, EmbeddingService)
-**Plan:** `02-WEEK-5-6-INDEXING.md`
-
-### Step 2.1: Code Intelligence (Days 1-5)
-
-**What to do:**
-1. Add tree-sitter for AST parsing
-2. Create code intelligence service
-3. Extract functions, classes, imports
-4. Build code symbol index
-
-**Files to create:**
-- `backend/app/services/code_intelligence.py`
-- `backend/app/models/code_symbol.py`
-- `migrations/versions/xxxx_add_code_symbols.py`
-
-**Verification:**
-```bash
-PYTHONPATH=. pytest tests/test_code_intelligence.py -v
-# Index a file
-curl -X POST http://localhost:8000/api/v1/index/file -d '{"path": "backend/app/main.py"}'
-```
-
----
-
-### Step 2.2: Knowledge Graph (Days 6-8)
-
-**What to do:**
-1. Create knowledge graph service (PostgreSQL adjacency list)
-2. Add nodes: files, functions, classes, concepts
-3. Add edges: calls, imports, contains, relates_to
-4. Create graph query API
-
-**Files to create:**
-- `backend/app/services/knowledge_graph.py`
-- `backend/app/models/graph_node.py`
-- `backend/app/models/graph_edge.py`
-- `backend/app/api/v1/graph.py`
-
-**Verification:**
-```bash
-PYTHONPATH=. pytest tests/test_knowledge_graph.py -v
-curl http://localhost:8000/api/v1/graph  # Returns graph data
-```
-
----
-
-### Step 2.3: ColBERT Code Embeddings (Days 9-10)
-
-**What to do:**
-1. Add ColBERT model for code embeddings
-2. Create code-specific embedding pipeline
-3. Index all code symbols
-
-**Files to modify:**
-- `backend/app/services/embedding_service.py` — ColBERT support
-- `backend/app/tasks/embedding_tasks.py` — Code embedding task
-
-**Verification:**
-```bash
-PYTHONPATH=. pytest tests/test_colbert.py -v
-```
-
----
-
-### Step 2.4: Graph Visualization (Days 11-14)
-
-**What to do:**
-1. Add Cytoscape.js to frontend
-2. Create graph visualization component
-3. Add interactive node exploration
-4. Add search and filter
-
-**Files to create:**
-- `frontend/app/graph/page.tsx`
-- `frontend/app/graph/GraphView.tsx`
-- `frontend/app/graph/NodeDetails.tsx`
-
-**Verification:**
-```bash
-cd frontend && npm run build
-# Graph renders in browser
-```
-
----
 
 ### Checkpoint: Phase 2 Complete
 
 ```bash
 PYTHONPATH=. pytest tests/ -v
+cd frontend && npx tsc --noEmit
 cd frontend && npm run build
 
 # Code indexing works
-curl -X POST http://localhost:8000/api/v1/index/repo -d '{"path": "."}'
+curl -X POST http://localhost:8000/api/v1/repository/repos -d '{"name": "test", "path": "."}'
+curl -X POST http://localhost:8000/api/v1/repository/repos/1/index
 
 # Knowledge graph populated
-curl http://localhost:8000/api/v1/graph/stats
+curl http://localhost:8000/api/v1/repository/repos/1/status
 
-# Graph visualization renders
-# Open http://localhost:3000/graph in browser
+# Unified search works
+curl "http://localhost:8000/api/v1/search/?q=function"
 ```
-
----
-
-## Phase 3: Agents (Weeks 7-8)
-
-**Prerequisites:** Phase 2 complete (VectorDB, CodeIntelligence, TaskQueue)
-**Plan:** `03-WEEK-7-8-AGENTS.md`
-
-### Step 3.1: Unified Search (Days 1-3)
-
-**What to do:**
-1. Create search service with reciprocal rank fusion
-2. Combine vector search, keyword search, graph search
-3. Add search API endpoint
-
-**Files to create:**
-- `backend/app/services/search_service.py`
-- `backend/app/api/v1/search.py`
-
----
-
-### Step 3.2: Agent Runtime (Days 4-7)
-
-**What to do:**
-1. Create agent runtime with tool-use loop
-2. Add tool registry
-3. Add local model support (GGUF, llama.cpp)
-4. Create agent task execution
-
-**Files to create:**
-- `backend/app/services/agent_runtime.py`
-- `backend/app/services/tool_registry.py`
-- `backend/app/models/agent_task.py`
-- `backend/app/tasks/agent_tasks.py`
-
----
-
-### Step 3.3: Coder Agent (Days 8-10)
-
-**What to do:**
-1. Create Coder agent with file read/write/execute
-2. Add code generation capabilities
-3. Add file system tools
-
-**Files to create:**
-- `backend/app/agents/coder.py`
-- `backend/app/tools/file_tools.py`
-- `backend/app/tools/exec_tools.py`
-
----
-
-### Step 3.4: Researcher Agent (Days 11-12)
-
-**What to do:**
-1. Create Researcher agent with search/browse
-2. Add web search capabilities
-3. Add information synthesis
-
-**Files to create:**
-- `backend/app/agents/researcher.py`
-- `backend/app/tools/search_tools.py`
-
----
-
-### Step 3.5: Agent Frontend (Days 13-14)
-
-**What to do:**
-1. Create agent chat UI
-2. Add streaming output display
-3. Add tool execution visualization
-
-**Files to create:**
-- `frontend/app/agents/page.tsx`
-- `frontend/app/agents/AgentChat.tsx`
-- `frontend/app/agents/ToolOutput.tsx`
-
----
 
 ### Checkpoint: Phase 3 Complete
 
@@ -345,55 +203,10 @@ curl http://localhost:8000/api/v1/graph/stats
 PYTHONPATH=. pytest tests/ -v
 cd frontend && npm run build
 
-# Search works
-curl -X POST http://localhost:8000/api/v1/search -d '{"query": "auth function"}'
-
-# Agent executes
-curl -X POST http://localhost:8000/api/v1/agents/execute -d '{"task": "find all auth functions"}'
+# Agent API works
+curl http://localhost:8000/api/v1/agents/
+curl -X POST http://localhost:8000/api/v1/agents/runs -d '{"agent_id": 1, "input": "find all auth functions"}'
 ```
-
----
-
-## Phase 4: Intelligence (Weeks 9-10)
-
-**Prerequisites:** Phase 3 complete (AgentRuntime, ToolRegistry)
-**Plan:** `04-WEEK-9-10-INTELLIGENCE.md`
-
-### Step 4.1: Reasoning Engine (Days 1-5)
-
-**What to do:**
-1. Create chain-of-thought reasoning
-2. Add reflection and self-correction
-3. Add reasoning trace storage
-
----
-
-### Step 4.2: Planning Engine (Days 6-8)
-
-**What to do:**
-1. Create task DAG planning
-2. Add dependency resolution
-3. Add plan execution tracking
-
----
-
-### Step 4.3: Multi-Agent Orchestration (Days 9-12)
-
-**What to do:**
-1. Create orchestrator agent
-2. Add agent communication
-3. Add task delegation
-
----
-
-### Step 4.4: Intelligence Frontend (Days 13-14)
-
-**What to do:**
-1. Create planning UI
-2. Add reasoning trace visualization
-3. Add agent status dashboard
-
----
 
 ### Checkpoint: Phase 4 Complete
 
@@ -401,67 +214,13 @@ curl -X POST http://localhost:8000/api/v1/agents/execute -d '{"task": "find all 
 PYTHONPATH=. pytest tests/ -v
 cd frontend && npm run build
 
-# Reasoning works
-curl -X POST http://localhost:8000/api/v1/reason -d '{"question": "How does auth work?"}'
+# Context builder works
+curl "http://localhost:8000/api/v1/conversations/timeline"
 
-# Planning works
-curl -X POST http://localhost:8000/api/v1/plan -d '{"task": "add new feature"}'
+# Learning API works
+curl http://localhost:8000/api/v1/learning/patterns
+curl http://localhost:8000/api/v1/learning/suggestions
 ```
-
----
-
-## Phase 5: Launch (Weeks 11-12)
-
-**Prerequisites:** Phase 4 complete
-**Plan:** `05-WEEK-11-12-LAUNCH.md`
-
-### Step 5.1: System Understanding (Days 1-3)
-
-**What to do:**
-1. Create codebase analysis service
-2. Add system health monitoring
-3. Add performance metrics
-
----
-
-### Step 5.2: Learning Loop (Days 4-5)
-
-**What to do:**
-1. Create feedback collection
-2. Add model fine-tuning pipeline
-3. Add metrics tracking
-
----
-
-### Step 5.3: Desktop V1 (Days 6-10)
-
-**What to do:**
-1. Initialize Tauri v2 project
-2. Bundle PostgreSQL, Qdrant, llama.cpp as sidecars
-3. Add system tray
-4. Add global shortcuts
-5. Add auto-update
-
----
-
-### Step 5.4: CI/CD for Desktop (Days 11-12)
-
-**What to do:**
-1. Add GitHub Actions for Windows/macOS/Linux
-2. Add code signing
-3. Add release automation
-
----
-
-### Step 5.5: Final Polish (Days 13-14)
-
-**What to do:**
-1. Performance optimization
-2. Bug fixes
-3. Documentation
-4. Release preparation
-
----
 
 ### Checkpoint: Phase 5 Complete
 
@@ -480,54 +239,43 @@ ls -lh frontend/src-tauri/target/release/cortex
 time ./frontend/src-tauri/target/release/cortex
 ```
 
----
+### Checkpoint: Phase 6 Complete
 
-## Execution Rules
+```bash
+PYTHONPATH=. pytest tests/ -v
+cd frontend && npm run build
 
-### Rule 1: Prerequisites First
-Never start Phase 1-5 without completing Phase 0. The codebase must be aligned.
+# Long-term memory works
+curl -X POST http://localhost:8000/api/v1/learning/longterm -d '{"content": "user prefers dark mode", "type": "preference"}'
+curl "http://localhost:8000/api/v1/learning/longterm?query=dark+mode"
 
-### Rule 2: Verify Before Proceeding
-Always run the verification commands at each checkpoint. Fix failures before continuing.
-
-### Rule 3: One Phase at a Time
-Complete each phase fully before starting the next. Phases build on each other.
-
-### Rule 4: Test Everything
-Every new feature must have tests. Run `PYTHONPATH=. pytest tests/ -v` after each change.
-
-### Rule 5: Build Frontend After Changes
-Run `cd frontend && npm run build` after any frontend modification.
-
-### Rule 6: Check Types
-Run `cd frontend && npx tsc --noEmit` after any TypeScript change.
-
-### Rule 7: Lint Code
-Run `uv run ruff check backend/` after any Python change.
+# Proactive suggestions work
+curl http://localhost:8000/api/v1/learning/suggestions
+```
 
 ---
 
 ## Common Pitfalls
 
-### Pitfall 1: Skipping Prerequisites
-**Problem:** Starting Memory plan without VectorDB or EmbeddingService.
-**Solution:** Complete prerequisite 3.2 and 3.3 first.
+### Pitfall 1: Skipping Phase 0-B
+**Problem:** Starting Phase 2 with broken memory search.
+**Solution:** Complete all Phase 0-B items first. The memory search bug will cause all search results to return null.
 
-### Pitfall 2: Not Verifying Checkpoints
-**Problem:** Moving to next phase with failing tests.
-**Solution:** Always run verification commands. Fix failures.
+### Pitfall 2: Not Running Migrations
+**Problem:** Adding models without Alembic migrations.
+**Solution:** Always run `alembic revision --autogenerate` after model changes.
 
 ### Pitfall 3: Ignoring TypeScript Errors
 **Problem:** Building frontend with type errors.
-**Solution:** Run `npx tsc --noEmit` and fix all errors.
+**Solution:** Run `npx tsc --noEmit` and fix all errors before committing.
 
-### Pitfall 4: Creating Duplicate Code
-**Problem:** Recreating files that already exist.
-**Solution:** Check existing codebase before creating new files.
+### Pitfall 4: Hardcoding Paths
+**Problem:** Using hardcoded `./CortexMemory` paths.
+**Solution:** Use `StorageResolver` from `backend/app/core/paths.py` (created in Phase 0-B).
 
-### Pitfall 5: Forgetting Migrations
-**Problem:** Adding models without migrations.
-**Solution:** Always create Alembic migrations for new models.
+### Pitfall 5: Duplicating Embedding Service
+**Problem:** Creating a second `embedding_service.py` in agents plan.
+**Solution:** Reuse existing `backend/app/services/embedding_service.py`. Import it.
 
 ---
 
@@ -581,76 +329,26 @@ docker ps | grep qdrant
 docker restart qdrant
 ```
 
----
+### Rust build fails
+```bash
+# Check Rust toolchain
+rustc --version
+cargo --version
 
-## Success Criteria
-
-### Phase 0 (Prerequisites) — COMPLETE
-- [x] All plan paths correct
-- [x] FK constraints added
-- [x] TypeScript strict mode enabled
-- [x] Vault decomposed (< 200 lines)
-- [x] Token functions consolidated
-- [x] Auth service async
-- [x] JSONB columns
-- [x] Task queue running
-- [x] Vector DB integrated
-- [x] Embedding service working
-- [x] WebSocket available
-- [x] Rate limiting active
-- [x] JWT in cookies
-- [x] CSP tightened
-- [x] Soft delete working
-- [x] TLS documented
-- [x] Correlation IDs in logs
-- [x] Metrics endpoint
-- [x] Backups documented
-- [x] Frontend tests passing
-
-### Phase 1 (Memory)
-- [ ] Memory CRUD API
-- [ ] Vector search working
-- [ ] Embedding pipeline
-- [ ] Repository scanner
-- [ ] Memory frontend UI
-
-### Phase 2 (Indexing)
-- [ ] Code intelligence (tree-sitter)
-- [ ] Knowledge graph
-- [ ] ColBERT embeddings
-- [ ] Graph visualization
-
-### Phase 3 (Agents)
-- [ ] Unified search
-- [ ] Agent runtime
-- [ ] Coder agent
-- [ ] Researcher agent
-- [ ] Agent frontend
-
-### Phase 4 (Intelligence)
-- [ ] Reasoning engine
-- [ ] Planning engine
-- [ ] Multi-agent orchestration
-- [ ] Intelligence frontend
-
-### Phase 5 (Launch)
-- [ ] System understanding
-- [ ] Learning loop
-- [ ] Desktop V1 (Tauri)
-- [ ] CI/CD for all platforms
-- [ ] Binary < 50MB
-- [ ] Cold start < 2s
+# Clean and rebuild
+cd crates && cargo clean && cargo check
+```
 
 ---
 
 ## Final Notes
 
-1. **This guide is the source of truth** for execution order
+1. **This guide is the source of truth** for execution order and progress tracking
 2. **Follow the checkpoints** — never skip verification
 3. **Reference the plan files** for detailed implementation
-4. **Update this guide** as things change
+4. **Update this guide** as phases complete
 5. **The vision is unchanged** — local-first, zero telemetry, desktop V1
 
 ---
 
-*Last updated: 2026-06-19*
+*Last updated: 2026-06-20*

@@ -1,85 +1,124 @@
-# Cortex 90-Day Master Plan
+# Cortex Master Plan Index
 
 > **For agentic workers:** This is the master index. Read prerequisite.md first, then follow the execution order below.
 
-**Goal:** Build Cortex — a local-first, autonomous AI workspace with reasoning, planning, and multi-agent intelligence — from Phase 2 to Desktop V1 in 90 days.
+**Goal:** Build Cortex — a local-first, autonomous AI workspace with reasoning, planning, and multi-agent intelligence — from architecture alignment to Desktop V1.
 
-**Architecture:** FastAPI + PostgreSQL backend, Next.js 15 + React 19 frontend, Qdrant for vectors, Tauri v2 for desktop. All data local, zero telemetry.
+**Architecture:** FastAPI + PostgreSQL backend, Next.js 15 + React 19 frontend, Qdrant for vectors, Tauri v2 for desktop. All data local, zero telemetry. Rust for code intelligence and file watching.
 
-**Status:** Prerequisites complete. Phase 2 (Memory & Indexing) is next.
-
----
-
-## Prerequisite — COMPLETE
-
-All items in prerequisite.md have been completed:
-- Critical fixes (plan alignment, FK constraints, TypeScript strict)
-- Required refactors (vault decomposition, token consolidation, async auth, JSONB)
-- Missing foundations (task queue, vector DB, embeddings, WebSocket, rate limiting)
-- Security improvements (JWT cookies, CSP, soft delete)
-- Production readiness (TLS, logging, metrics, backups, frontend tests)
+**Status:** Phase 0 (Prerequisites) complete. Phase 1 (Memory) complete. Phase 0-B (Architecture Alignment) next.
 
 ---
 
-## Plan Files (Phase 2+)
+## Prerequisites — COMPLETE
 
-| Weeks | File | Focus | Key Deliverables |
-|-------|------|-------|------------------|
-| 3-4 | [01-WEEK-3-4-MEMORY.md](./01-WEEK-3-4-MEMORY.md) | Memory | Vector DB, embeddings, repo scanner, memory UI |
-| 5-6 | [02-WEEK-5-6-INDEXING.md](./02-WEEK-5-6-INDEXING.md) | Indexing | Code intelligence, knowledge graph, graph viz |
-| 7-8 | [03-WEEK-7-8-AGENTS.md](./03-WEEK-7-8-AGENTS.md) | Agents | Unified search, agent runtime, Coder/Researcher |
-| 9-10 | [04-WEEK-9-10-INTELLIGENCE.md](./04-WEEK-9-10-INTELLIGENCE.md) | Intelligence | Reasoning, planning, multi-agent orchestration |
-| 11-12 | [05-WEEK-11-12-LAUNCH.md](./05-WEEK-11-12-LAUNCH.md) | Launch | System understanding, learning loop, Desktop V1 |
+All items in `prerequisite.md` have been completed. See [prerequisite.md](../prerequisite.md).
+
+---
+
+## Plan Files
+
+| Phase | File | Focus | Status |
+|-------|------|-------|--------|
+| 0-A | `prerequisite.md` | Repository alignment | COMPLETE |
+| 0-B | [01-PHASE-0B-ARCHITECTURE.md](./01-PHASE-0B-ARCHITECTURE.md) | Bug fixes, architecture, Rust setup | COMPLETE |
+| 1 | [02-PHASE-1-MEMORY.md](./02-PHASE-1-MEMORY.md) | Memory system, embeddings, repo scanner | COMPLETE |
+| 2 | [03-PHASE-2-INDEXING.md](./03-PHASE-2-INDEXING.md) | Indexing, knowledge graph, graph search | NOT STARTED |
+| 3 | [04-PHASE-3-AGENTS.md](./04-PHASE-3-AGENTS.md) | Unified search, agent runtime | NOT STARTED |
+| 4 | [05-PHASE-4-INTELLIGENCE.md](./05-PHASE-4-INTELLIGENCE.md) | Context, learning, workspace understanding | NOT STARTED |
+| 5 | [06-PHASE-5-DESKTOP.md](./06-PHASE-5-DESKTOP.md) | Tauri v2, sidecar, offline, file system | NOT STARTED |
+| 6 | [07-PHASE-6-LEARNING.md](./07-PHASE-6-LEARNING.md) | Long-term memory, patterns, proactive assist | NOT STARTED |
+
+---
+
+## Execution Order
+
+```
+Phase 0-A: Prerequisites
+    ├── All items in prerequisite.md
+    └── Status: COMPLETE ✓
+
+Phase 0-B: Architecture Alignment
+    ├── Depends on: Phase 0-A
+    ├── Bug fixes (memory search, profile photo, FK constraints)
+    ├── Architecture standardization (API versioning, service abstraction)
+    ├── Code quality (VECTOR_SIZE, test consolidation)
+    ├── Rust infrastructure setup
+    └── Status: NOT STARTED
+
+Phase 1: Memory System
+    ├── Depends on: Phase 0-A
+    ├── Status: COMPLETE ✓
+    └── (Note: Phase 0-B fixes bugs found in this phase)
+
+Phase 2: Indexing & Knowledge Graph
+    ├── Depends on: Phase 0-B, Phase 1
+    ├── Database schema (graph nodes, edges, file tracking)
+    ├── Incremental indexer (hash-based change detection)
+    ├── Graph builder (nodes + edges from code analysis)
+    ├── Cross-file search (vector + graph enrichment)
+    ├── Unified search API
+    ├── Repository management API
+    └── Frontend (SearchFilters, SearchResults, GraphView)
+
+Phase 3: Unified Search & Agents
+    ├── Depends on: Phase 2, Phase 0-B
+    ├── Agent database schema
+    ├── Planner agent (task decomposition)
+    ├── Executor agent (tool-use loop)
+    ├── Agent run manager
+    ├── Agent API
+    └── Frontend (AgentChat, SearchResults enhancements)
+
+Phase 4: Intelligence
+    ├── Depends on: Phase 3, Phase 2
+    ├── Context builder (workspace state + past conversations)
+    ├── Conversation memory (semantic search over history)
+    ├── Learning loop (feedback processing)
+    ├── Workspace understanding (call graphs, summaries)
+    ├── Enhanced executor with context
+    ├── Conversation history API
+    └── Frontend (ContextPanel, MemoryTimeline)
+
+Phase 5: Desktop V1 (Tauri v2)
+    ├── Depends on: Phase 0-B, Phase 4, Phase 3
+    ├── Tauri v2 project setup
+    ├── Backend sidecar
+    ├── Tauri Rust plugins (tray, window, fs, dialog, updater)
+    ├── Frontend Tauri adapter
+    ├── Offline capabilities (IndexedDB, service worker)
+    ├── File system integration
+    └── Auto-updates
+
+Phase 6: System Understanding & Learning
+    ├── Depends on: Phase 4, Phase 5, Phase 2
+    ├── Long-term memory (semantic + decay)
+    ├── Pattern recognition (coding style, workflow)
+    ├── Correction tracker
+    ├── Proactive assistant (suggestions)
+    ├── Learning API
+    └── Frontend (LearningDashboard, ProactiveSuggestions)
+```
 
 ---
 
 ## Dependency Graph
 
 ```
-Prerequisite: Repository Alignment (must complete first)
-    ├── Critical fixes (plan alignment, FK constraints, TypeScript strict)
-    ├── Required refactors (vault decomposition, token consolidation, async auth)
-    ├── Missing foundations (task queue, vector DB, embeddings, WebSocket)
-    ├── Security improvements (JWT cookies, CSP, rate limiting)
-    └── Production readiness (TLS, logging, metrics, backups)
-
-Week 3-4: Memory
-    ├── Depends on: Prerequisites (VectorDB, EmbeddingService, TaskQueue)
-    ├── Qdrant embedded vector DB
-    ├── BGE-M3 ONNX embeddings
-    ├── Repository scanner (git-aware)
-    └── Memory & vault frontend UI
-
-Week 5-6: Indexing
-    ├── Depends on: Memory (VectorDB, RepoScanner, EmbeddingService)
-    ├── tree-sitter code intelligence
-    ├── Knowledge Graph (PostgreSQL adjacency)
-    ├── ColBERT code embeddings
-    └── Graph visualization (Cytoscape.js)
-
-Week 7-8: Agents
-    ├── Depends on: Memory (VectorDB), Indexing (CodeIntelligence), TaskQueue
-    ├── Unified search with reciprocal rank fusion
-    ├── Agent runtime (tool-use loop)
-    ├── Local models (GGUF, llama.cpp)
-    ├── Coder agent (file read/write/execute)
-    └── Researcher agent (search/browse)
-
-Week 9-10: Intelligence
-    ├── Depends on: Agents (AgentRuntime, ToolRegistry), TaskQueue
-    ├── Reasoning engine (chain-of-thought + reflection)
-    ├── Planning engine (task DAGs)
-    ├── Task store (persistent state)
-    └── Multi-agent orchestrator
-
-Week 11-12: Launch
-    ├── Depends on: Intelligence, Agents
-    ├── System understanding (codebase analysis)
-    ├── Learning loop (feedback + metrics)
-    ├── Desktop V1 (Tauri v2 bundle)
-    ├── System tray & global shortcuts
-    ├── Auto-update (GitHub releases)
-    └── CI/CD for all platforms
+Phase 0-A (Prerequisites) ──┐
+                             ├──► Phase 0-B ──┐
+Phase 1 (Memory) ────────────┘                │
+                                               ├──► Phase 2 ──┐
+                                               │              │
+                                               │              ├──► Phase 3 ──┐
+                                               │              │              │
+                                               │              │              ├──► Phase 4 ──┐
+                                               │              │              │              │
+                                               │              │              │              ├──► Phase 5
+                                               │              │              │              │
+                                               │              │              │              └──► Phase 6
+                                               │              │              │
+                                               └──────────────┴──────────────┘
 ```
 
 ---
@@ -99,13 +138,15 @@ Week 11-12: Launch
 | **Styling** | Tailwind CSS | 3.4+ |
 | **Embeddings** | ONNX Runtime | BGE-M3 |
 | **Task Queue** | arq | Redis-based |
+| **Code Intel** | Rust | tree-sitter |
+| **File Watcher** | Rust | notify crate |
 
 ---
 
 ## Global Constraints
 
 - Python 3.12+, Node.js 20+, Rust 2024 edition
-- TypeScript strict mode (enabled via prerequisite), ESLint zero warnings
+- TypeScript strict mode, ESLint zero warnings
 - Python: ruff line-length 120, mypy strict
 - All async handlers, no blocking in event loop
 - No external API calls for embeddings/inference (100% local)
@@ -114,57 +155,16 @@ Week 11-12: Launch
 
 ---
 
-## Current Codebase Structure
-
-```
-Cortex-Workspace/
-├── backend/app/           # FastAPI application
-│   ├── main.py            # Entry point
-│   ├── core/              # Config, security, Redis, middleware, vector_db, websocket, rate_limit
-│   ├── auth/              # Auth system (complete, httpOnly cookies)
-│   ├── db/                # Bootstrap, session factory
-│   ├── models/            # User, AuthEvent, StorageRegistry
-│   ├── schemas/           # Pydantic models
-│   ├── services/          # Business logic, embedding_service
-│   ├── tasks/             # arq task queue worker
-│   ├── intelligence/      # KnowledgeEntry model only
-│   └── api/               # Routers
-├── frontend/              # Next.js 15, Neural Dark UI
-│   ├── app/               # Pages (App Router)
-│   └── src/shared/        # Components, auth, design tokens
-├── migrations/            # Alembic (PostgreSQL)
-├── tests/                 # 115 pytest tests (106 backend + 9 frontend)
-├── cli/                   # Commander.js CLI (stubs)
-├── docker-compose.yml     # PostgreSQL + Redis + Qdrant
-└── .agents/plans/         # This directory
-```
-
----
-
 ## Key Design Decisions
 
 1. **Qdrant over pgvector**: Supports tens of millions vectors, hybrid search, distributed scaling
 2. **Tauri v2 over Electron**: Smaller binary (~10MB vs ~150MB), Rust native, system tray
-3. **PostgreSQL over Neo4j**: Apache AGE extension gives graph capability within same DB
+3. **PostgreSQL adjacency lists over Apache AGE**: Simpler deployment, sufficient for knowledge graph
 4. **tree-sitter for code intelligence**: Multi-language AST parsing, incremental, WASM-compatible
 5. **Embedded sidecar pattern**: postgres, qdrant, llama.cpp run as Tauri sidecars
 6. **Mock embeddings fallback**: ONNX model download on first run, deterministic hash-based mock for testing
-
----
-
-## Execution Options
-
-**Prerequisite First:** Complete all items in prerequisite.md before any plan execution.
-
-**Option 1: Subagent-Driven (recommended)**
-- Dispatch a fresh subagent per task
-- Review between tasks
-- Fast iteration, isolated failures
-
-**Option 2: Inline Execution**
-- Execute tasks in session
-- Batch execution with checkpoints
-- Good for smaller changes
+7. **Service abstraction layer**: All services implement protocol for HTTP/Tauri dual consumption
+8. **Single storage resolver**: Replaces hardcoded paths for Tauri portability
 
 ---
 
@@ -178,3 +178,7 @@ Cortex-Workspace/
 | Vector search latency | < 100ms |
 | Agent execution | < 30s per task |
 | Memory usage | < 500MB idle |
+
+---
+
+*Last updated: 2026-06-20*

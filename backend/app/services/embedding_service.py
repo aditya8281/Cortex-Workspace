@@ -3,9 +3,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from backend.app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
-EMBEDDING_DIM = 768
+EMBEDDING_DIM = settings.EMBEDDING_DIM
 
 
 class EmbeddingService:
@@ -15,9 +17,10 @@ class EmbeddingService:
         self.model_path = model_path
         self._model = None
         self._tokenizer = None
+        self._load_failed = False
 
     def _load_model(self) -> None:
-        if self._model is not None:
+        if self._model is not None or self._load_failed:
             return
         if self.model_path:
             try:
@@ -28,10 +31,13 @@ class EmbeddingService:
                 return
             except ImportError:
                 logger.warning("onnxruntime not installed — install with: pip install 'cortex-workspace[embeddings]'")
+                self._load_failed = True
                 return
             except Exception as e:
                 logger.warning("Failed to load ONNX model: %s", e)
+                self._load_failed = True
         logger.info("Using mock embeddings (no model loaded)")
+        self._load_failed = True
 
     def embed(self, text: str) -> list[float]:
         self._load_model()

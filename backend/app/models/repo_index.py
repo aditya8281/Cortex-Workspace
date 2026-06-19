@@ -14,7 +14,7 @@ class RepoIndex(Base):
     __tablename__ = "repo_indexes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     repo_path: Mapped[str] = mapped_column(String(2048), nullable=False, unique=True)
     repo_name: Mapped[str] = mapped_column(String(256), nullable=False)
     primary_language: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -31,7 +31,7 @@ class CodeChunk(Base):
     __tablename__ = "code_chunks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    repo_id: Mapped[int] = mapped_column(Integer, ForeignKey("repo_indexes.id"), index=True, nullable=False)
+    repo_id: Mapped[int] = mapped_column(Integer, ForeignKey("repo_indexes.id", ondelete="CASCADE"), index=True, nullable=False)
     file_path: Mapped[str] = mapped_column(String(2048), nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)

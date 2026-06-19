@@ -118,17 +118,7 @@ export interface MemoryEntry {
 
 export interface MemorySearchResult {
   score: number;
-  id: number;
-  user_id: number | null;
-  category: string;
-  title: string;
-  content: string;
-  source_path: string | null;
-  tags: string[];
-  embedding_id: string | null;
-  vector_collection: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+  entry: MemoryEntry | null;
 }
 
 export interface MemoryListResponse {

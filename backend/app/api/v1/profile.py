@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from typing import Any
-
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -59,7 +58,7 @@ def _photo_dir(user_id: int) -> Path:
 
 
 def _avatar_path(user_id: int) -> Path:
-    return _photo_dir(user_id) / "avatar.webp"
+    return _photo_dir(user_id) / f"user_{user_id}_avatar.webp"
 
 
 def _thumb_path(user_id: int) -> Path:

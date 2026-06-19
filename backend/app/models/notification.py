@@ -14,7 +14,7 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     type: Mapped[str] = mapped_column(String(32), nullable=False, default="system")
     title: Mapped[str] = mapped_column(String(256), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)

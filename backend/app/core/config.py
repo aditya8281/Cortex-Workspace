@@ -29,7 +29,9 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("VAULT_PATH", "CORTEX_VAULT_PATH"),
     )
 
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:8000,http://localhost:8080"
+    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:8000", "http://localhost:8080"]
+
+    EMBEDDING_DIM: int = 768
 
     # Rate limiting
     RATE_LIMIT_ENABLED: bool = True

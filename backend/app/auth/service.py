@@ -187,15 +187,9 @@ async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None)
         raise HTTPException(status_code=401, detail="Refresh token already used")
     access = await create_access_token_async({"sub": str(info["user_id"])})
     log_event("refresh", info["user_id"], ip, {}, db=db)
-    # Rotate/refresh of tokens is a session boundary; clear any cached vault
-    # password for this user to force re-unlock under the new session.
-    try:
-        from backend.app.services.vault_service import _vault_cache_lock, _vault_passwords
-
-        user_id_raw = info.get("user_id")
-        if user_id_raw is not None:
-            with _vault_cache_lock:
-                _vault_passwords.pop(int(user_id_raw), None)
-    except Exception:
-        pass
+    # NOTE: We intentionally do NOT clear the vault password cache on token
+    # refresh.  The vault is a separate authentication boundary — clearing it
+    # on every access-token rotation forces users to re-enter their vault
+    # password multiple times per session, which is a poor UX.  The cache is
+    # cleared on explicit logout and lock instead.
     return {"access_token": access, "token_type": "bearer", "refresh_token": new["token"]}

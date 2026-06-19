@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 QDRANT_HOST = getattr(settings, "QDRANT_HOST", "localhost")
 QDRANT_PORT = getattr(settings, "QDRANT_PORT", 6333)
-VECTOR_SIZE = getattr(settings, "EMBEDDING_DIM", 768)
+VECTOR_SIZE = settings.EMBEDDING_DIM
 
 PointId = int | str | UUID
 
