@@ -38,6 +38,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         if auth.startswith("Bearer "):
             return await call_next(request)
 
+        # Cookie-based browser auth (cortex_access cookie) is also an API call
+        if request.cookies.get("cortex_access"):
+            return await call_next(request)
+
         if request.method in SAFE_METHODS:
             response = await call_next(request)
             token = secrets.token_urlsafe(32)
