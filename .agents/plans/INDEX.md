@@ -6,18 +6,18 @@
 
 **Architecture:** FastAPI + PostgreSQL backend, Next.js 15 + React 19 frontend, Qdrant for vectors, Tauri v2 for desktop. All data local, zero telemetry.
 
+**Status:** Prerequisites complete. Phase 2 (Memory & Indexing) is next.
+
 ---
 
-## Prerequisite (Required Before Phase 2)
+## Prerequisite — COMPLETE
 
-**[prerequisite.md](../prerequisite.md)** — Complete all items before proceeding to any plan below.
-
-This document bridges the current repository state with the roadmap. It includes:
+All items in prerequisite.md have been completed:
 - Critical fixes (plan alignment, FK constraints, TypeScript strict)
-- Required refactors (vault decomposition, token consolidation, async auth)
-- Missing foundations (task queue, vector DB, embeddings, WebSocket)
-- Security improvements (JWT cookies, CSP, rate limiting)
-- Production readiness (TLS, logging, metrics, backups)
+- Required refactors (vault decomposition, token consolidation, async auth, JSONB)
+- Missing foundations (task queue, vector DB, embeddings, WebSocket, rate limiting)
+- Security improvements (JWT cookies, CSP, soft delete)
+- Production readiness (TLS, logging, metrics, backups, frontend tests)
 
 ---
 
@@ -30,8 +30,6 @@ This document bridges the current repository state with the roadmap. It includes
 | 7-8 | [03-WEEK-7-8-AGENTS.md](./03-WEEK-7-8-AGENTS.md) | Agents | Unified search, agent runtime, Coder/Researcher |
 | 9-10 | [04-WEEK-9-10-INTELLIGENCE.md](./04-WEEK-9-10-INTELLIGENCE.md) | Intelligence | Reasoning, planning, multi-agent orchestration |
 | 11-12 | [05-WEEK-11-12-LAUNCH.md](./05-WEEK-11-12-LAUNCH.md) | Launch | System understanding, learning loop, Desktop V1 |
-
-> **Note:** Week 1-2 (Foundation) plan is deprecated. The foundation already exists in the codebase.
 
 ---
 
@@ -99,6 +97,8 @@ Week 11-12: Launch
 | **Desktop** | Tauri | v2 |
 | **Language** | TypeScript | 5.3+ |
 | **Styling** | Tailwind CSS | 3.4+ |
+| **Embeddings** | ONNX Runtime | BGE-M3 |
+| **Task Queue** | arq | Redis-based |
 
 ---
 
@@ -118,21 +118,24 @@ Week 11-12: Launch
 
 ```
 Cortex-Workspace/
-├── backend/app/           # FastAPI application (existing)
+├── backend/app/           # FastAPI application
 │   ├── main.py            # Entry point
-│   ├── core/              # Config, security, Redis, middleware
-│   ├── auth/              # Auth system (complete)
+│   ├── core/              # Config, security, Redis, middleware, vector_db, websocket, rate_limit
+│   ├── auth/              # Auth system (complete, httpOnly cookies)
 │   ├── db/                # Bootstrap, session factory
 │   ├── models/            # User, AuthEvent, StorageRegistry
 │   ├── schemas/           # Pydantic models
-│   ├── services/          # Business logic
+│   ├── services/          # Business logic, embedding_service
+│   ├── tasks/             # arq task queue worker
 │   ├── intelligence/      # KnowledgeEntry model only
 │   └── api/               # Routers
-├── frontend/              # Next.js 15 (existing)
-│   ├── app/               # Pages
+├── frontend/              # Next.js 15, Neural Dark UI
+│   ├── app/               # Pages (App Router)
 │   └── src/shared/        # Components, auth, design tokens
-├── migrations/            # Alembic (4 migrations)
-├── tests/                 # 81 pytest tests
+├── migrations/            # Alembic (PostgreSQL)
+├── tests/                 # 115 pytest tests (106 backend + 9 frontend)
+├── cli/                   # Commander.js CLI (stubs)
+├── docker-compose.yml     # PostgreSQL + Redis + Qdrant
 └── .agents/plans/         # This directory
 ```
 

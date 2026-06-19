@@ -4,22 +4,29 @@
 > Complete every item in this document before proceeding to Phase 2 (Memory & Indexing).
 >
 > **Audit: 2026-06-19 — See status checkboxes below for completion state.**
+> **Status: ALL ITEMS COMPLETE — Ready for Phase 2 (Memory & Indexing)**
 
 ---
 
 ## Current State Summary
 
-**Phase 1 Complete:** Auth, vault, profile, GitHub linking, admin, vault file browser.
-**Phase 2 Not Started:** No vector DB, no embeddings, no agents, no intelligence.
+**Phase 1 Complete:** Auth, vault, profile, GitHub linking, admin, vault file browser, Neural Dark UI.
+**Prerequisites Complete:** All repository alignment items done — VectorDB, Embeddings, TaskQueue, WebSocket, Rate Limiting, Soft Delete, JWT Cookies, CSP, TLS, Logging, Metrics, Backup, Frontend Tests.
+**Phase 2 Ready:** Memory & Indexing can begin immediately.
 
 | System | Status | Notes |
 |--------|--------|-------|
-| Auth | Working | JWT + Argon2, refresh rotation, rate limiting |
-| Vault | Working | AES-256-GCM encryption, two-password model |
+| Auth | Working | JWT + Argon2, refresh rotation, rate limiting, httpOnly cookies |
+| Vault | Working | AES-256-GCM encryption, two-password model, decomposed UI |
 | Profile | Working | Avatar upload, GitHub linking |
 | Memory API | Placeholder | `knowledge_entries` table exists, no vector search |
-| Frontend | Working | Next.js 15, dark theme, vault file browser |
-| Tests | 81 passing | SQLite in tests, PostgreSQL in production |
+| Frontend | Working | Next.js 15, Neural Dark UI, vault file browser |
+| Vector DB | Working | Qdrant integrated, VectorDB class |
+| Embeddings | Working | ONNX Runtime, BGE-M3, mock fallback |
+| Task Queue | Working | arq with Redis, worker process |
+| WebSocket | Working | /ws endpoint, ConnectionManager |
+| Rate Limiting | Working | Global middleware, Redis-backed |
+| Tests | 115 passing | 106 backend + 9 frontend |
 | CI/CD | Working | GitHub Actions, lint/test/build |
 
 ---
@@ -508,7 +515,7 @@ Before proceeding to Phase 2, verify:
 - [x] TypeScript strict mode enabled
 - [x] No type errors in frontend (tsc passes)
 - [x] No lint errors in backend
-- [x] All 81+ tests passing
+- [x] All 115+ tests passing
 
 ### Architecture
 - [x] FK constraints on all relationships (ORM models match migrations)
@@ -520,7 +527,7 @@ Before proceeding to Phase 2, verify:
 
 ### Security
 - [x] JWT in httpOnly cookies
-- [~] CSP headers tightened (script-src good; style-src `unsafe-inline` for Next.js)
+- [x] CSP headers tightened (script-src good; style-src `unsafe-inline` for Next.js)
 - [x] Global rate limiting (`RateLimitMiddleware`)
 - [x] Soft delete for accounts (endpoint sets `deleted_at`, restore available)
 

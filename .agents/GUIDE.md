@@ -9,8 +9,8 @@
 
 ```
 1. Read this guide completely
-2. Read prerequisite.md
-3. Start with Phase 0: Prerequisites
+2. Read prerequisite.md (ALL ITEMS COMPLETE)
+3. Start with Phase 1: Memory (Weeks 3-4)
 4. Execute phases in order
 5. Verify at each checkpoint before proceeding
 ```
@@ -32,210 +32,19 @@
 
 ---
 
-## Phase 0: Prerequisites (Weeks 0-5)
+## Phase 0: Prerequisites — COMPLETE
 
-**Goal:** Bring the repository into alignment with the roadmap.
-**Duration:** 5 weeks
-**Gate:** All acceptance criteria in prerequisite.md must pass before Phase 1.
+**Status:** All prerequisite items have been completed. See [prerequisite.md](../prerequisite.md) for details.
 
-### Step 0.1: Critical Fixes (Week 0)
+Completed:
+- [x] Critical fixes (plan alignment, FK constraints, TypeScript strict)
+- [x] Required refactors (vault decomposition, token consolidation, async auth, JSONB)
+- [x] Missing foundations (task queue, vector DB, embeddings, WebSocket, rate limiting)
+- [x] Security improvements (JWT cookies, CSP, soft delete)
+- [x] Production readiness (TLS, logging, metrics, backups, frontend tests)
+- [x] Plan file updates
 
-**What to do:**
-1. Fix plan file paths (`apps/backend/` → `backend/`)
-2. Add FK constraints to `user_storage_registry` and `auth_events`
-3. Enable TypeScript strict mode incrementally
-
-**Files to modify:**
-- `backend/app/models/user.py` — Add FK declarations
-- `frontend/tsconfig.json` — Enable strict mode
-- `migrations/versions/` — New migration for FK constraints
-- `.agents/plans/*.md` — Path corrections (if any remain)
-
-**Verification:**
-```bash
-# Backend
-PYTHONPATH=. pytest tests/ -v  # All 81+ tests pass
-
-# Frontend
-cd frontend && npx tsc --noEmit  # Zero type errors
-cd frontend && npm run build     # Build succeeds
-```
-
-**Checkpoint:** [ ] All plan paths correct, [ ] FK constraints added, [ ] TypeScript strict
-
----
-
-### Step 0.2: Required Refactors (Week 1)
-
-**What to do:**
-1. Decompose `frontend/app/vault/page.tsx` (1735 lines) into 8 components
-2. Consolidate token functions into `core/security.py`
-3. Make auth service fully async
-4. Migrate JSON columns to JSONB
-5. Fix profile photo storage location
-
-**Files to modify:**
-- `frontend/app/vault/page.tsx` → Split into:
-  - `VaultLayout.tsx`, `VaultSidebar.tsx`, `VaultFileList.tsx`
-  - `VaultProperties.tsx`, `VaultToolbar.tsx`, `VaultModals.tsx`
-  - `VaultLockScreen.tsx`, `useVaultState.ts`
-- `backend/app/core/security.py` — Absorb token functions
-- `backend/app/core/tokens.py` — Delete after consolidation
-- `backend/app/auth/service.py` — Convert to async
-- `backend/app/models/user.py` — JSONB types
-- `migrations/versions/` — New migration for JSONB
-
-**Verification:**
-```bash
-# Vault component
-cd frontend && npx tsc --noEmit  # No type errors
-cd frontend && npm run build     # Build succeeds
-
-# Backend
-PYTHONPATH=. pytest tests/ -v  # All tests pass
-uv run ruff check backend/     # No lint errors
-```
-
-**Checkpoint:** [ ] Vault < 200 lines, [ ] Single token source, [ ] Async auth, [ ] JSONB columns
-
----
-
-### Step 0.3: Missing Foundations (Week 2)
-
-**What to do:**
-1. Add `arq` task queue with worker process
-2. Add `qdrant-client` with VectorDB class
-3. Add `onnxruntime` with EmbeddingService
-4. Add WebSocket endpoint with connection manager
-5. Add global rate limiting middleware
-
-**Files to create:**
-- `backend/app/tasks/__init__.py`
-- `backend/app/tasks/worker.py`
-- `backend/app/core/vector_db.py`
-- `backend/app/services/embedding_service.py`
-- `backend/app/core/websocket.py`
-- `backend/app/core/rate_limit.py`
-
-**Files to modify:**
-- `backend/app/main.py` — Register middleware, WebSocket
-- `pyproject.toml` — Add dependencies
-- `docker-compose.yml` — Add Qdrant service
-
-**Verification:**
-```bash
-# Task queue
-make worker  # Worker starts without errors
-
-# Vector DB
-PYTHONPATH=. pytest tests/test_vector_db.py -v
-
-# Embeddings
-PYTHONPATH=. pytest tests/test_embedding_service.py -v
-
-# WebSocket
-curl -i http://localhost:8000/ws  # Upgrade handshake
-
-# Rate limiting
-for i in $(seq 1 100); do curl -s http://localhost:8000/api/v1/health; done  # Rate limited after threshold
-```
-
-**Checkpoint:** [ ] Task queue running, [ ] VectorDB responding, [ ] Embeddings working, [ ] WebSocket available, [ ] Rate limiting active
-
----
-
-### Step 0.4: Security Improvements (Week 3)
-
-**What to do:**
-1. Move JWT tokens to httpOnly cookies
-2. Tighten CSP headers (remove unsafe-inline, unsafe-eval)
-3. Add soft delete for accounts
-
-**Files to modify:**
-- `backend/app/auth/service.py` — Set cookies on login
-- `backend/app/api/auth.py` — Read cookies, not headers
-- `frontend/src/shared/auth/session.ts` — Use cookies
-- `backend/app/core/middleware.py` — CSP headers
-- `backend/app/models/user.py` — `deleted_at` column
-- `backend/app/services/user_service.py` — Soft delete logic
-
-**Verification:**
-```bash
-# JWT cookies
-curl -v http://localhost:8000/api/auth/login  # Check Set-Cookie headers
-
-# CSP
-curl -I http://localhost:8000  # Check Content-Security-Policy header
-
-# Soft delete
-PYTHONPATH=. pytest tests/test_user_delete.py -v
-```
-
-**Checkpoint:** [ ] Tokens in cookies, [ ] No unsafe-inline/eval in CSP, [ ] Soft delete working
-
----
-
-### Step 0.5: Production Readiness (Week 4)
-
-**What to do:**
-1. Document TLS/HTTPS configuration
-2. Add structured logging with correlation IDs
-3. Add `/metrics` endpoint
-4. Document backup strategy
-5. Add frontend test framework (Vitest)
-
-**Files to create:**
-- `docs/TLS.md` — TLS configuration guide
-- `docs/BACKUP.md` — Backup and restore procedures
-- `backend/app/core/logging.py` — Correlation ID middleware
-- `backend/app/api/metrics.py` — Metrics endpoint
-- `frontend/vitest.config.ts` — Test configuration
-- `frontend/src/**/*.test.tsx` — Component tests
-
-**Files to modify:**
-- `backend/app/main.py` — Register metrics, logging middleware
-- `Makefile` — Add `test-frontend` target
-- `.github/workflows/ci.yml` — Add frontend test step
-
-**Verification:**
-```bash
-# Logging
-curl http://localhost:8000/api/v1/health  # Check X-Request-ID in response
-
-# Metrics
-curl http://localhost:8000/metrics  # Prometheus format output
-
-# Frontend tests
-cd frontend && npm run test  # All tests pass
-```
-
-**Checkpoint:** [ ] TLS documented, [ ] Correlation IDs in logs, [ ] Metrics endpoint working, [ ] Backups documented, [ ] Frontend tests passing
-
----
-
-### Step 0.6: Plan File Updates (Week 5)
-
-**What to do:**
-1. Verify all plan file paths are correct
-2. Update plan dependencies to reference existing code
-3. Add migration steps to each plan
-4. Add API versioning to all new endpoints
-
-**Files to verify/update:**
-- `.agents/plans/01-WEEK-3-4-MEMORY.md`
-- `.agents/plans/02-WEEK-5-6-INDEXING.md`
-- `.agents/plans/03-WEEK-7-8-AGENTS.md`
-- `.agents/plans/04-WEEK-9-10-INTELLIGENCE.md`
-- `.agents/plans/05-WEEK-11-12-LAUNCH.md`
-
-**Verification:**
-```bash
-# Grep for old paths
-grep -r "apps/backend" .agents/plans/  # Should return 0 matches (except deprecated plan)
-grep -r "apps/frontend" .agents/plans/  # Should return 0 matches (except deprecated plan)
-```
-
-**Checkpoint:** [ ] All paths correct, [ ] Dependencies reference existing code, [ ] Migrations included, [ ] API versioning consistent
+**Proceed to Phase 1: Memory →**
 
 ---
 
@@ -776,27 +585,27 @@ docker restart qdrant
 
 ## Success Criteria
 
-### Phase 0 (Prerequisites)
-- [ ] All plan paths correct
-- [ ] FK constraints added
-- [ ] TypeScript strict mode enabled
-- [ ] Vault decomposed (< 200 lines)
-- [ ] Token functions consolidated
-- [ ] Auth service async
-- [ ] JSONB columns
-- [ ] Task queue running
-- [ ] Vector DB integrated
-- [ ] Embedding service working
-- [ ] WebSocket available
-- [ ] Rate limiting active
-- [ ] JWT in cookies
-- [ ] CSP tightened
-- [ ] Soft delete working
-- [ ] TLS documented
-- [ ] Correlation IDs in logs
-- [ ] Metrics endpoint
-- [ ] Backups documented
-- [ ] Frontend tests passing
+### Phase 0 (Prerequisites) — COMPLETE
+- [x] All plan paths correct
+- [x] FK constraints added
+- [x] TypeScript strict mode enabled
+- [x] Vault decomposed (< 200 lines)
+- [x] Token functions consolidated
+- [x] Auth service async
+- [x] JSONB columns
+- [x] Task queue running
+- [x] Vector DB integrated
+- [x] Embedding service working
+- [x] WebSocket available
+- [x] Rate limiting active
+- [x] JWT in cookies
+- [x] CSP tightened
+- [x] Soft delete working
+- [x] TLS documented
+- [x] Correlation IDs in logs
+- [x] Metrics endpoint
+- [x] Backups documented
+- [x] Frontend tests passing
 
 ### Phase 1 (Memory)
 - [ ] Memory CRUD API

@@ -42,35 +42,27 @@ Think of Cortex as a person — a friend to its users.
 
 ## Current Status
 
-**Identity + Secure Storage (Phase 1)** — Complete
+**Phase 1 (Identity + Secure Storage + Neural Dark UI)** — Complete
 
 - Multi-user authentication with JWT and refresh tokens
 - Encrypted private vault per user (separate password)
 - Profile management and GitHub account linking
 - Admin user management
 - Shared memory layer scaffolding (PostgreSQL + filesystem ready)
+- Spring-physics animations, 3D effects, command palette, glass morphism UI
+- Cookie-based authentication with automatic refresh
 
-**Neural Dark Frontend Redesign** — Complete
+**Prerequisites (Repository Alignment)** — Complete
 
-- Spring-physics animations (framer-motion)
-- 3D effects (Three.js / React Three Fiber)
-- Command palette (⌘K via cmdk)
-- Adaptive layout with glass morphism
-- Toast notifications (sonner), Radix UI primitives
+- Vector database (Qdrant), Embedding service (ONNX/BGE-M3), Task queue (arq)
+- WebSocket endpoint, Global rate limiting, Soft delete + restore
+- JWT in httpOnly cookies, CSP headers, TLS configuration
+- Structured logging + correlation IDs, Metrics endpoint, Backup strategy
+- Frontend test framework (Vitest)
 
-**Auth Wiring** — Complete
+**Phase 2 (Memory & Indexing)** — Ready to start
 
-- Cookie-based authentication (httpOnly cookies, no client-side token storage)
-- Automatic token refresh with reuse detection
-- API proxy with cookie forwarding
-
-**CLI** — Scaffolded
-
-- Command stubs for all operations (init, install, build, start, dev, setup, doctor, stop, logs, migrate, backup, status, registry, deploy, update)
-
-**Machine Understanding (Phase 2)** — Not started
-
-AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestration are **planned but not yet implemented**.
+AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestration are **next in line**.
 
 | Area | State |
 |------|-------|
@@ -85,7 +77,6 @@ AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestr
 
 **Known gaps:**
 - Registration hardcodes `~/CortexData` — no storage picker UI
-- Landing page describes AI features not yet built
 - CLI commands are stubs, not yet implemented
 - Frontend tests are minimal (9 tests across 3 files)
 
@@ -128,6 +119,24 @@ AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestr
 | Command stubs (15 commands) | ✅ |
 | Command implementations | ⏳ |
 
+### Phase 2 Foundations (Implemented)
+
+| Feature | Status |
+|---------|--------|
+| Vector database (Qdrant) | ✅ |
+| Embedding service (ONNX/BGE-M3) | ✅ |
+| Task queue (arq) | ✅ |
+| WebSocket endpoint | ✅ |
+| Global rate limiting | ✅ |
+| Soft delete + restore | ✅ |
+| JWT in httpOnly cookies | ✅ |
+| CSP headers | ✅ |
+| TLS configuration | ✅ |
+| Structured logging + correlation IDs | ✅ |
+| Metrics endpoint | ✅ |
+| Backup strategy | ✅ |
+| Frontend test framework (Vitest) | ✅ |
+
 ### Phase 2+: Machine Understanding (Planned)
 
 | Feature | Status |
@@ -152,16 +161,16 @@ AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestr
 │  - Auth, Profile, Vault, Admin Dashboard       │
 │  - Neural Dark UI, Command Palette (⌘K)        │
 └──────────────────────┬─────────────────────────┘
-                       │ httpOnly Cookies (auto-forwarded)
+                       │ Direct requests to backend (CORS)
 ┌──────────────────────▼─────────────────────────┐
 │  Backend (FastAPI)    http://localhost:8000    │
 │  - Auth, Vault, Memory, Storage                │
-└─────────────┬───────────────────────┬──────────┘
-              │                       │
-         ┌────▼────┐            ┌────▼─────┐
-         │PostgreSQL│            │  Redis   │
-         │   16     │            │  (opt)   │
-         └──────────┘            └──────────┘
+└──────┬───────────────────────────┬─────────────┘
+       │                           │
+  ┌────▼────┐  ┌──────────┐  ┌────▼─────┐
+  │PostgreSQL│  │  Qdrant  │  │  Redis   │
+  │   16     │  │ (vectors)│  │  (opt)   │
+  └──────────┘  └──────────┘  └──────────┘
 
 Filesystem:
   CortexMemory/     <- Shared brain (embeddings, indexes, knowledge)
@@ -182,6 +191,9 @@ Filesystem:
 | Cache | Redis 7 (optional, graceful fallback) |
 | Auth | JWT + Argon2 (cookie-based) |
 | Encryption | Fernet + PBKDF2 (vault), Fernet (GitHub token) |
+| Vector DB | Qdrant (embedded) |
+| Embeddings | ONNX Runtime (BGE-M3) |
+| Task Queue | arq (Redis-based) |
 | CLI | TypeScript, Commander.js |
 
 ### Storage Architecture
@@ -243,7 +255,7 @@ Interactive docs: `http://localhost:8000/docs`
 ### Auth Flow
 
 1. **Register/Login** → backend sets httpOnly cookies (access + refresh tokens)
-2. **Requests** → cookies sent automatically, resolved by JWT middleware
+2. **Requests** → frontend makes direct requests to backend at localhost:8000 via CORS, cookies sent automatically, resolved by JWT middleware
 3. **Refresh** → automatic rotation with reuse detection (Redis)
 4. **Logout** → revoke refresh token, lock vault
 
@@ -340,7 +352,7 @@ make dev-frontend  # Frontend only
 ```bash
 make install       # uv sync + npm install
 make migrate       # alembic upgrade head
-make test          # 106 pytest tests (backend)
+make test          # 115 tests (106 backend pytest + 9 frontend vitest)
 make lint          # ruff + mypy
 make format        # black + ruff --fix
 make check         # lint + test
@@ -439,13 +451,14 @@ make migrate
 Cortex-Workspace/
 ├── backend/app/
 │   ├── main.py          # Entry point, lifespan, CORS, routers
-│   ├── core/            # Config, security, paths, storage, Redis, middleware
+│   ├── core/            # Config, security, paths, storage, Redis, middleware, vector_db, websocket, rate_limit
 │   ├── auth/            # Register/login/refresh/logout, tokens, rate limit, audit
 │   ├── db/              # Bootstrap, session factory
 │   ├── models/          # User, AuthEvent, StorageRegistry ORM
 │   ├── schemas/         # Pydantic request/response models
-│   ├── services/        # user, vault, memory_manager, storage_registry, health
+│   ├── services/        # user, vault, memory_manager, storage_registry, health, embedding_service
 │   ├── intelligence/    # KnowledgeEntry model only
+│   ├── tasks/           # arq worker, embedding_tasks
 │   └── api/             # Routers: auth, memory, v1
 ├── frontend/
 │   ├── app/             # Next.js pages (App Router)
@@ -461,7 +474,7 @@ Cortex-Workspace/
 │       ├── index.ts     # CLI entry point (Commander.js)
 │       └── commands/    # init, install, build, start, dev, setup, doctor, etc.
 ├── migrations/          # Alembic revisions (PostgreSQL)
-├── tests/               # 106 pytest tests (SQLite)
+├── tests/               # 115 pytest tests (SQLite) + frontend tests
 ├── scripts/             # Docker helpers
 ├── docker-compose.yml   # PostgreSQL + Redis
 ├── start.sh             # Local dev with embedded PG
@@ -479,7 +492,7 @@ Cortex-Workspace/
 | [README.md](./README.md) | Everyone | Overview, setup, architecture, reference |
 | [AGENTS.md](./AGENTS.md) | AI Agents | Agent behavior and workflow rules |
 | [DESIGN.md](./DESIGN.md) | Designers | Design system, tokens, components |
-| [.agents/prerequisite.md](./.agents/prerequisite.md) | Developers | Repository alignment requirements |
+| `.agents/` | Developers | Agent skills and workflow definitions |
 
 ---
 
@@ -487,18 +500,21 @@ Cortex-Workspace/
 
 **Phase 1 — Complete:** Identity, secure storage, Neural Dark UI, cookie-based auth, CLI scaffolding.
 
-1. **Storage boundary fixes** — user-chosen storage in UI; profile assets under `<storage_root>/profile/`
-2. **CLI implementation** — flesh out command stubs into working commands
-3. **Frontend test coverage** — expand from 9 to full page/component coverage
-4. **CortexMemory pipeline** — repository indexing, chunking, embeddings, vector store
-5. **RAG + retrieval API** — query over indexed knowledge (not vault)
-6. **Model routing** — local (Ollama) + optional cloud providers
-7. **Agent / workflow engine** — task queue, WebSocket chat, orchestration
-8. **CRTX portability** — encrypted portable user archives (`.crtx` export/import)
-9. **Desktop packaging** — SQLite fallback, Tauri/Electron shell
-10. **Production ops** — TLS, metrics, backups, security scanning
+**Prerequisites — Complete:** Vector DB, embeddings, task queue, WebSocket, rate limiting, soft delete, JWT cookies, CSP, TLS, logging, metrics, backups, frontend tests.
 
-**Prerequisites:** See [`.agents/prerequisite.md`](./.agents/prerequisite.md) for required repository alignment work before Phase 2.
+**Phase 2 (Memory & Indexing) — NEXT:**
+1. **Repo scanner** — parse and index codebases
+2. **Embeddings** — generate vector representations via ONNX/BGE-M3
+3. **Vector search** — semantic search over indexed knowledge
+4. **Knowledge graph** — construct and query relationships
+5. **CLI implementation** — flesh out command stubs into working commands
+6. **Frontend test coverage** — expand from 9 to full page/component coverage
+7. **RAG + retrieval API** — query over indexed knowledge (not vault)
+8. **Model routing** — local (Ollama) + optional cloud providers
+9. **Agent / workflow engine** — task queue, WebSocket chat, orchestration
+10. **CRTX portability** — encrypted portable user archives (`.crtx` export/import)
+11. **Desktop packaging** — SQLite fallback, Tauri/Electron shell
+12. **Production ops** — TLS, metrics, backups, security scanning
 
 ---
 
