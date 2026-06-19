@@ -121,7 +121,7 @@ AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestr
 |---------|--------|
 | Memory API requires authentication | ✅ |
 | Vault path traversal protection | ✅ |
-| Access token 30-minute expiry | ✅ |
+| Access token 30-minute expiry (auto-refreshed while logged in) | ✅ |
 | CSRF double-submit protection | ✅ |
 | CORS restricted to explicit origins | ✅ |
 | WebSocket authentication | ✅ |
@@ -277,10 +277,21 @@ Interactive docs: `http://localhost:8000/docs`
 
 ### Auth Flow
 
-1. **Register/Login** → backend sets httpOnly cookies (access + refresh tokens)
-2. **Requests** → frontend makes direct requests to backend at localhost:8000 via CORS, cookies sent automatically, resolved by JWT middleware
-3. **Refresh** → automatic rotation with reuse detection (Redis)
-4. **Logout** → revoke refresh token, lock vault
+1. **Register/Login** → backend sets httpOnly cookies (`cortex_access` + `cortex_refresh`)
+2. **Requests** → frontend sends requests to `/api/*` which are proxied to the backend by Next.js. Cookies are forwarded through the proxy and sent automatically.
+3. **Refresh** → when the access token expires (after 30 min by default), the frontend automatically requests a new access token using the refresh token. No user interaction needed.
+4. **Logout** → revoke refresh token, lock vault, clear cookies
+
+**Token Expiry Behavior:**
+- **Access token** expires after 30 minutes (configurable via `ACCESS_TOKEN_EXPIRE_MINUTES`). The access token is automatically refreshed by the frontend — the user does not need to log in again.
+- **Refresh token** expires after 7 days. Once the refresh token expires, the user must log in again.
+- **Access tokens only become invalid when the user logs out or the refresh token expires.** During normal use, the session persists indefinitely through automatic token rotation.
+
+**How automatic refresh works:**
+- When any API request returns a 401 (token expired), the frontend calls `POST /api/auth/refresh` with the refresh token cookie
+- The backend rotates the refresh token (issues new access + refresh tokens, revokes the old ones)
+- The original request is automatically retried with the new access token
+- This happens transparently — the user sees no interruption
 
 Two password model:
 - **Login password** — account auth (Argon2 hash)
@@ -311,7 +322,7 @@ First registered user is auto-promoted to `admin`.
 | `DATABASE_URL` | `postgresql://cortex:cortex@localhost:5435/cortex` | App database |
 | `REDIS_URL` | `redis://localhost:6379/0` | Token store / rate limit |
 | `CORTEX_ROOT` | `ProjectRoot/CortexMemory` | System storage root |
-| `NEXT_PUBLIC_API_BASE_URL` | — | Frontend → backend URL |
+| `NEXT_PUBLIC_API_BASE_URL` | — | Optional: bypass proxy, hit backend directly (breaks cookie auth if not configured) |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | JWT access token lifetime |
 
 ---

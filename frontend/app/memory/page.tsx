@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Brain } from "lucide-react";
 import { motion } from "framer-motion";
 import Button from "../../src/shared/ui/Button";
@@ -11,6 +12,7 @@ import {
   apiListMemory,
   apiSearchMemory,
 } from "../../src/shared/auth/cortexApi";
+import { useAuth } from "../../src/shared/auth/AuthProvider";
 import MemorySearch from "./MemorySearch";
 import MemoryEditor from "./MemoryEditor";
 import MemoryDetail from "./MemoryDetail";
@@ -18,6 +20,8 @@ import MemoryDetail from "./MemoryDetail";
 type ViewMode = "list" | "search";
 
 export default function MemoryPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [entries, setEntries] = useState<MemoryEntry[]>([]);
   const [categories, setCategories] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -37,6 +41,13 @@ export default function MemoryPage() {
 
   const [offset, setOffset] = useState(0);
   const limit = 20;
+
+  // Auth guard
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/auth");
+    }
+  }, [authLoading, user, router]);
 
   const fetchList = useCallback(async (reset = false) => {
     setLoading(true);

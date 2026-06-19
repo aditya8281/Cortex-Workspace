@@ -89,7 +89,7 @@ async function request<T = unknown>(
     credentials: "include",
   });
 
-  if (res.status === 401 && !_retried && !path.includes("/api/auth/")) {
+  if (res.status === 401 && !_retried && !path.match(/\/api\/auth\/(login|register|refresh|logout|check-username)/)) {
     const refreshed = await tryRefresh();
     if (refreshed) {
       return request<T>(method, path, { body, headers: extraHeaders }, true);
@@ -468,12 +468,24 @@ export function apiScanRepo(repoPath: string): Promise<{ status: string; job_id:
 export async function apiDeleteAccount(
   password: string
 ): Promise<{ message: string }> {
-  const res = await fetch(`${getBase()}/api/auth/me`, {
+  const url = `${getBase()}/api/auth/me`;
+  let res = await fetch(url, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ password }),
   });
+  if (res.status === 401) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      res = await fetch(url, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password }),
+      });
+    }
+  }
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || "Delete failed");
