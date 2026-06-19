@@ -234,7 +234,7 @@ First registered user is auto-promoted to `admin`.
 
 ## Installation
 
-**Prerequisites:** Python 3.10+, [uv](https://github.com/astral-sh/uv), Node.js 20+, Docker (optional).
+**Prerequisites:** Python 3.10+, [uv](https://github.com/astral-sh/uv), Node.js 24+, Docker (optional).
 
 ```bash
 git clone <repo-url> Cortex-Workspace
