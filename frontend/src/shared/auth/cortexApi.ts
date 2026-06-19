@@ -1,6 +1,7 @@
 /**
  * Cortex API Client — Auth, Memory, Profile, GitHub, Vault, and CRTX.
- * Resolves backend origin dynamically. Auth is handled via httpOnly cookies.
+ * All requests go directly to the backend (CORS configured on backend).
+ * httpOnly cookies are set by the backend for its own origin.
  */
 
 import type {
@@ -18,13 +19,13 @@ import type {
   MemoryListResponse,
 } from "../types";
 
-/**
- * All requests go through the Next.js proxy at /api/[...path].
- * This avoids CORS issues and ensures httpOnly cookies are always sent
- * (SameSite=Lax cookies are NOT sent with cross-origin requests).
- */
+/** Backend base URL — requests go directly to the backend, not through proxy. */
 function getBase(): string {
-  return "";
+  const env = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (env && /^https?:\/\//.test(env)) {
+    return env.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "");
+  }
+  return "http://localhost:8000";
 }
 
 interface RequestError extends Error {
@@ -43,7 +44,7 @@ async function tryRefresh(): Promise<boolean> {
   if (_refreshPromise) return _refreshPromise;
   _refreshPromise = (async () => {
     try {
-      const res = await fetch("/api/auth/refresh", {
+      const res = await fetch(`${getBase()}/api/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -161,7 +162,7 @@ export async function apiUploadAvatar(
 ): Promise<{ profile_photo: string }> {
   const fd = new FormData();
   fd.append("file", file);
-  let res = await fetch("/api/v1/me/profile/photo", {
+  let res = await fetch(`${getBase()}/api/v1/me/profile/photo`, {
     method: "POST",
     credentials: "include",
     body: fd,
@@ -169,7 +170,7 @@ export async function apiUploadAvatar(
   if (res.status === 401) {
     const refreshed = await tryRefresh();
     if (refreshed) {
-      res = await fetch("/api/v1/me/profile/photo", {
+      res = await fetch(`${getBase()}/api/v1/me/profile/photo`, {
         method: "POST",
         credentials: "include",
         body: fd,
@@ -250,7 +251,7 @@ export async function apiVaultUploadFile(
 ): Promise<VaultUploadResult> {
   const fd = new FormData();
   fd.append("file", file);
-  const uploadUrl = `/api/v1/me/vault/files/upload?folder=${encodeURIComponent(folder)}`;
+  const uploadUrl = `${getBase()}/api/v1/me/vault/files/upload?folder=${encodeURIComponent(folder)}`;
   let res = await fetch(uploadUrl, {
     method: "POST",
     credentials: "include",
@@ -352,7 +353,7 @@ export function apiVaultChangePassword(payload: {
 }
 
 export async function apiVaultPreviewFile(filePath: string): Promise<Blob> {
-  const previewUrl = `/api/v1/me/vault/files/preview/${encodeURIComponent(filePath)}`;
+  const previewUrl = `${getBase()}/api/v1/me/vault/files/preview/${encodeURIComponent(filePath)}`;
   let res = await fetch(previewUrl, { method: "GET", credentials: "include" });
   if (res.status === 401) {
     const refreshed = await tryRefresh();
@@ -365,7 +366,7 @@ export async function apiVaultPreviewFile(filePath: string): Promise<Blob> {
 }
 
 export async function apiVaultDownloadFileBlob(filePath: string): Promise<Blob> {
-  const dlUrl = `/api/v1/me/vault/files/download/${encodeURIComponent(filePath)}`;
+  const dlUrl = `${getBase()}/api/v1/me/vault/files/download/${encodeURIComponent(filePath)}`;
   let res = await fetch(dlUrl, { method: "GET", credentials: "include" });
   if (res.status === 401) {
     const refreshed = await tryRefresh();
@@ -420,7 +421,7 @@ export function apiCreateMemory(payload: {
 export async function apiDeleteAccount(
   password: string
 ): Promise<{ message: string }> {
-  const res = await fetch("/api/auth/me", {
+  const res = await fetch(`${getBase()}/api/auth/me`, {
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
