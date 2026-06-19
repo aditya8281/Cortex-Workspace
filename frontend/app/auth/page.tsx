@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { startTransition, useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Lock, User, CodeSquare, ArrowRight, ArrowLeft, Check, FolderOpen } from "lucide-react";
@@ -11,57 +11,13 @@ import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
 import PasswordStrength from "../../src/shared/ui/PasswordStrength";
 import { cn } from "../../src/lib/utils";
-import BrainBackground from "../../src/shared/ui/BrainBackground";
+import NeuralNetwork from "../../src/shared/ui/NeuralNetwork";
+import useFolderPicker from "../../src/shared/hooks/useFolderPicker";
 
 const WIZARD_STEPS = ["Account", "Profile", "GitHub", "Vault"] as const;
 
 type Mode = "login" | "register";
 type UsernameStatus = "" | "invalid" | "checking" | "available" | "taken";
-
-function FloatingDots() {
-  const dots = useMemo(() => [
-    { id: 0, x: 12, y: 18, size: 3, delay: 0.2, duration: 5.5 },
-    { id: 1, x: 78, y: 32, size: 5, delay: 1.1, duration: 6.2 },
-    { id: 2, x: 45, y: 85, size: 2, delay: 2.3, duration: 4.8 },
-    { id: 3, x: 91, y: 12, size: 4, delay: 0.8, duration: 7.1 },
-    { id: 4, x: 23, y: 67, size: 3, delay: 1.9, duration: 5.0 },
-    { id: 5, x: 67, y: 45, size: 6, delay: 0.5, duration: 6.8 },
-    { id: 6, x: 8, y: 90, size: 2, delay: 2.7, duration: 4.3 },
-    { id: 7, x: 55, y: 20, size: 4, delay: 1.4, duration: 5.9 },
-    { id: 8, x: 35, y: 55, size: 3, delay: 0.3, duration: 6.5 },
-    { id: 9, x: 82, y: 78, size: 5, delay: 2.0, duration: 5.2 },
-    { id: 10, x: 15, y: 40, size: 2, delay: 1.6, duration: 7.0 },
-    { id: 11, x: 60, y: 8, size: 4, delay: 0.9, duration: 4.6 },
-  ], []);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {dots.map((dot) => (
-        <motion.div
-          key={dot.id}
-          className="absolute rounded-full bg-accent/20"
-          style={{
-            left: `${dot.x}%`,
-            top: `${dot.y}%`,
-            width: dot.size,
-            height: dot.size,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            opacity: [0.2, 0.6, 0.2],
-            scale: [1, 1.3, 1],
-          }}
-          transition={{
-            duration: dot.duration,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: dot.delay,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
 function ErrorShake({ children }: { children: React.ReactNode }) {
   return (
@@ -99,6 +55,7 @@ export default function AuthPage() {
   const [vaultConfirm, setVaultConfirm] = useState("");
   const [storageRoot, setStorageRoot] = useState("~/CortexData");
   const [storageCustom, setStorageCustom] = useState(false);
+  const folderPicker = useFolderPicker();
 
   const effectiveStorageRoot = (() => {
     if (storageCustom) return storageRoot;
@@ -229,10 +186,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side — visualization */}
       <div className="hidden lg:flex relative w-1/2 items-center justify-center overflow-hidden">
-        <BrainBackground intensity="low" />
-        <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/[0.02]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.06)_0%,transparent_70%)]" />
-        <FloatingDots />
+        <NeuralNetwork intensity="low" />
         <div className="relative z-10 flex flex-col items-center gap-6 px-12">
           <motion.div
             className="w-16 h-16 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center"
@@ -271,9 +225,10 @@ export default function AuthPage() {
             <div className="flex rounded-xl bg-bg-surface p-1 mb-5 border border-border/50 relative">
               <motion.div
                 className="absolute top-1 bottom-1 rounded-lg bg-bg-elevated border border-border shadow-sm"
-                layout
-                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                style={{ left: mode === "login" ? "4px" : "50%", width: "calc(50% - 4px)" }}
+                initial={false}
+                animate={{ x: mode === "login" ? 0 : "100%" }}
+                transition={{ type: "spring", damping: 30, stiffness: 400, mass: 0.8 }}
+                style={{ width: "calc(50% - 4px)" }}
               />
               {(["login", "register"] as const).map((m) => (
                 <button
@@ -398,56 +353,61 @@ export default function AuthPage() {
                         <label className="text-xs font-medium text-text-secondary">Data Storage Location</label>
                         <p className="text-xs text-text-muted">Where your personal data, vault files, and profile will be stored.</p>
 
-                        {!storageCustom ? (
-                          <div className="grid gap-2 mt-1">
-                            {[
-                              { label: "Home folder", path: "~/CortexData", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
-                              { label: "Documents folder", path: "~/Documents/Cortex", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
-                              { label: "Desktop", path: "~/CortexWorkspace", icon: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
-                            ].map((preset) => (
-                              <button
-                                key={preset.path}
-                                type="button"
-                                onClick={() => setStorageRoot(preset.path)}
-                                className={cn(
-                                  "flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200",
-                                  storageRoot === preset.path
-                                    ? "border-accent/40 bg-accent-faint text-accent"
-                                    : "border-border bg-bg-surface text-text-secondary hover:border-border hover:bg-bg-hover"
-                                )}
-                              >
-                                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d={preset.icon} />
-                                </svg>
-                                <div className="min-w-0">
-                                  <span className="text-sm font-medium block">{preset.label}</span>
-                                  <span className="text-xs text-text-muted font-mono block truncate">{preset.path}</span>
-                                </div>
-                                {storageRoot === preset.path && (
-                                  <svg className="w-4 h-4 text-accent shrink-0 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                  </svg>
-                                )}
-                              </button>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                try {
-                                  // @ts-expect-error — showDirectoryPicker is experimental
-                                  const dirHandle = await window.showDirectoryPicker();
-                                  setStorageRoot(dirHandle.name);
-                                } catch {
-                                  // User cancelled or API not supported
-                                }
-                              }}
-                              className="flex items-center gap-2 p-3 rounded-xl border border-dashed border-border text-text-muted hover:border-accent/30 hover:text-text-secondary transition-colors text-xs"
-                            >
-                              <FolderOpen className="w-4 h-4" />
-                              Browse folders...
-                            </button>
-                          </div>
+                        {folderPicker.isSupported ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const r = await folderPicker.pick();
+                              if (r) {
+                                setStorageRoot(`~/CortexData/${r.name}`);
+                                setStorageCustom(false);
+                              }
+                            }}
+                            className="flex items-center gap-3 p-3 rounded-xl border border-border bg-bg-surface text-text-secondary hover:border-accent/30 hover:bg-bg-hover transition-all duration-200 mt-1"
+                          >
+                            <FolderOpen className="w-4 h-4 shrink-0 text-accent" />
+                            <span className="text-sm font-medium">Browse for folder...</span>
+                          </button>
                         ) : (
+                          <p className="text-xs text-text-muted mt-1 italic">Use Chrome or Edge for the native folder picker.</p>
+                        )}
+
+                        {folderPicker.result && (
+                          <p className="text-xs text-accent font-mono truncate mt-1">~/CortexData/{folderPicker.result.name}</p>
+                        )}
+
+                        <p className="text-xs text-text-muted mt-2">Or choose a preset:</p>
+                        <div className="grid gap-2">
+                          {[
+                            { label: "Home folder", path: "~/CortexData" },
+                            { label: "Documents folder", path: "~/Documents/Cortex" },
+                            { label: "Desktop", path: "~/CortexWorkspace" },
+                          ].map((preset) => (
+                            <button
+                              key={preset.path}
+                              type="button"
+                              onClick={() => { setStorageRoot(preset.path); folderPicker.clear(); }}
+                              className={cn(
+                                "flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200",
+                                storageRoot === preset.path && !folderPicker.result
+                                  ? "border-accent/40 bg-accent-faint text-accent"
+                                  : "border-border bg-bg-surface text-text-secondary hover:border-border hover:bg-bg-hover"
+                              )}
+                            >
+                              <div className="min-w-0">
+                                <span className="text-sm font-medium block">{preset.label}</span>
+                                <span className="text-xs text-text-muted font-mono block truncate">{preset.path}</span>
+                              </div>
+                              {storageRoot === preset.path && !folderPicker.result && (
+                                <svg className="w-4 h-4 text-accent shrink-0 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+
+                        {!folderPicker.isSupported && (
                           <div className="grid gap-2 mt-1">
                             <Input
                               placeholder="~/MyCortexData"
@@ -455,13 +415,6 @@ export default function AuthPage() {
                               onChange={(e) => setStorageRoot(e.target.value)}
                               required
                             />
-                            <button
-                              type="button"
-                              onClick={() => setStorageCustom(false)}
-                              className="text-xs text-text-muted hover:text-text-secondary transition-colors text-left"
-                            >
-                              Back to presets
-                            </button>
                           </div>
                         )}
                       </div>
