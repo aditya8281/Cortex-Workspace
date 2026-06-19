@@ -16,7 +16,9 @@ import {
   ChevronLeft,
   LogOut,
   Shield,
+  Search,
 } from "lucide-react";
+import CommandPalette from "../ui/CommandPalette";
 
 interface DashboardShellProps {
   children: ReactNode;
@@ -47,6 +49,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [photoFailed, setPhotoFailed] = useState(false);
   const [breakpoint, setBreakpoint] = useState<"mobile" | "tablet" | "desktop">("desktop");
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const prevUserIdRef = useRef(user?.id);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -349,95 +352,107 @@ export default function DashboardShell({ children }: DashboardShellProps) {
             </button>
           </div>
 
-          {/* Right: Avatar */}
-          <div className="relative" ref={menuRef}>
+          {/* Right: Search + Avatar */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="h-8 w-8 rounded-full bg-bg-elevated border border-border-subtle
-                         flex items-center justify-center text-xs font-medium text-accent
-                         hover:border-accent/30 transition-colors overflow-hidden"
+              onClick={() => setCommandPaletteOpen(true)}
+              className="h-8 px-3 rounded-lg flex items-center gap-2 text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors text-xs font-mono border border-border-subtle"
             >
-              {user?.profile_photo && user?.id && !photoFailed ? (
-                <img
-                  src={getProfilePhotoUrl(user.id)}
-                  alt={`${user?.full_name || user?.username || "User"} avatar`}
-                  className="h-full w-full object-cover"
-                  onError={() => setPhotoFailed(true)}
-                />
-              ) : (
-                initials
-              )}
+              <Search className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Search...</span>
+              <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border-subtle bg-bg-surface px-1 py-0.5 text-[9px] text-text-muted ml-1">
+                ⌘K
+              </kbd>
             </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                className="h-8 w-8 rounded-full bg-bg-elevated border border-border-subtle
+                           flex items-center justify-center text-xs font-medium text-accent
+                           hover:border-accent/30 transition-colors overflow-hidden"
+              >
+                {user?.profile_photo && user?.id && !photoFailed ? (
+                  <img
+                    src={getProfilePhotoUrl(user.id)}
+                    alt={`${user?.full_name || user?.username || "User"} avatar`}
+                    className="h-full w-full object-cover"
+                    onError={() => setPhotoFailed(true)}
+                  />
+                ) : (
+                  initials
+                )}
+              </button>
 
-            {/* Dropdown */}
-            <AnimatePresence>
-              {menuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-xl bg-bg-elevated border border-border-subtle shadow-elevated py-1.5 overflow-hidden"
-                >
-                  <div className="px-3.5 py-2.5 border-b border-border-subtle">
-                    <p className="text-sm font-medium text-text truncate">
-                      {user?.full_name || user?.username}
-                    </p>
-                    <p className="text-[11px] text-text-muted truncate">
-                      @{user?.username}
-                    </p>
-                  </div>
+              {/* Dropdown */}
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-xl bg-bg-elevated border border-border-subtle shadow-elevated py-1.5 overflow-hidden"
+                  >
+                    <div className="px-3.5 py-2.5 border-b border-border-subtle">
+                      <p className="text-sm font-medium text-text truncate">
+                        {user?.full_name || user?.username}
+                      </p>
+                      <p className="text-[11px] text-text-muted truncate">
+                        @{user?.username}
+                      </p>
+                    </div>
 
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        router.push("/profile");
-                      }}
-                      className="w-full text-left px-3.5 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text transition-colors flex items-center gap-2.5"
-                    >
-                      <User className="h-4 w-4" />
-                      Profile
-                    </button>
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        router.push("/settings");
-                      }}
-                      className="w-full text-left px-3.5 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text transition-colors flex items-center gap-2.5"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Settings
-                    </button>
-                    {user?.role === "admin" && (
+                    <div className="py-1">
                       <button
                         onClick={() => {
                           setMenuOpen(false);
-                          router.push("/admin");
+                          router.push("/profile");
                         }}
                         className="w-full text-left px-3.5 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text transition-colors flex items-center gap-2.5"
                       >
-                        <Shield className="h-4 w-4 text-accent" />
-                        Admin
+                        <User className="h-4 w-4" />
+                        Profile
                       </button>
-                    )}
-                  </div>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          router.push("/settings");
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text transition-colors flex items-center gap-2.5"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </button>
+                      {user?.role === "admin" && (
+                        <button
+                          onClick={() => {
+                            setMenuOpen(false);
+                            router.push("/admin");
+                          }}
+                          className="w-full text-left px-3.5 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text transition-colors flex items-center gap-2.5"
+                        >
+                          <Shield className="h-4 w-4 text-accent" />
+                          Admin
+                        </button>
+                      )}
+                    </div>
 
-                  <div className="border-t border-border-subtle pt-1 mt-1">
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        logout();
-                      }}
-                      className="w-full text-left px-3.5 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text transition-colors flex items-center gap-2.5"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sign out
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    <div className="border-t border-border-subtle pt-1 mt-1">
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          logout();
+                        }}
+                        className="w-full text-left px-3.5 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text transition-colors flex items-center gap-2.5"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </header>
 
@@ -446,6 +461,8 @@ export default function DashboardShell({ children }: DashboardShellProps) {
           {children}
         </main>
       </div>
+
+      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
 
       {/* ── Mobile Bottom Tab Bar ──────────────────────────────── */}
       {isMobile && (
