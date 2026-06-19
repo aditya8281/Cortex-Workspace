@@ -8,7 +8,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { apiGetMe, apiLogout, apiVaultLock } from "./cortexApi";
+import { apiGetMe, apiLogout, apiRefresh, apiVaultLock } from "./cortexApi";
 import { getSessionUser, setSession, clearSession } from "./session";
 import { toast } from "../ui/Toast";
 import type { User } from "../types";
@@ -36,7 +36,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cached = getSessionUser();
       if (cached) setUser(cached);
       try {
-        const me = await apiGetMe();
+        let me: User;
+        try {
+          me = await apiGetMe();
+        } catch (err: unknown) {
+          const status = (err as { status?: number }).status;
+          if (status === 401) {
+            await apiRefresh("");
+            me = await apiGetMe();
+          } else {
+            throw err;
+          }
+        }
         if (!cancelled) {
           setUser(me);
           setSession(me);

@@ -105,6 +105,9 @@ export interface MemoryEntry {
 export interface MemoryListResponse {
   timestamp: string;
   count: number;
+  total?: number;
+  offset?: number;
+  limit?: number;
   categories: Record<string, number>;
   entries: MemoryEntry[];
 }

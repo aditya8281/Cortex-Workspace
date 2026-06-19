@@ -14,18 +14,23 @@ function getBackendBase(): string {
 async function proxyRequest(request: NextRequest, path: string): Promise<NextResponse> {
   const bases = [getBackendBase(), "http://backend:8000", "http://localhost:8000"];
 
-  const hasBody = request.method !== "GET" && request.method !== "HEAD" && request.method !== "DELETE";
+  const hasBody = request.method !== "GET" && request.method !== "HEAD";
   const body = hasBody ? await request.arrayBuffer() : undefined;
   const search = request.nextUrl.search || "";
 
   for (const base of bases) {
     try {
+      const proxyHeaders: Record<string, string> = {
+        "Content-Type": request.headers.get("content-type") || "application/json",
+      };
+      const authHeader = request.headers.get("authorization");
+      if (authHeader) proxyHeaders["Authorization"] = authHeader;
+      const cookieHeader = request.headers.get("cookie");
+      if (cookieHeader) proxyHeaders["Cookie"] = cookieHeader;
+
       const res = await fetch(`${base}${path}${search}`, {
         method: request.method,
-        headers: {
-          "Content-Type": request.headers.get("content-type") || "application/json",
-          ...(request.headers.get("authorization") ? { Authorization: request.headers.get("authorization")! } : {}),
-        },
+        headers: proxyHeaders,
         body: body !== undefined ? body : undefined,
         cache: "no-store",
       });
