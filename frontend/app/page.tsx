@@ -75,7 +75,7 @@ function FeatureCard({ feature, index }: { feature: typeof FEATURES[0]; index: n
       style={{ perspective: 1000 }}
       className="rounded-xl bg-bg-elevated border border-border-subtle shadow-card p-5 cursor-default transition-shadow duration-300 hover:border-border-accent hover:shadow-glow"
     >
-      <div className="h-9 w-9 rounded-md bg-accent-faint border border-accent/10 flex items-center justify-center text-accent mb-3">
+      <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center text-accent mb-3">
         {feature.icon}
       </div>
       <h3 className="text-sm font-medium text-text mb-1">{feature.title}</h3>
@@ -89,7 +89,7 @@ export default function RootPage() {
     <div className="min-h-screen flex flex-col bg-bg">
       <NeuralNetwork intensity="high" />
 
-      <header className="glass-panel h-14 flex items-center justify-between px-6 shrink-0 sticky top-0 z-20">
+      <header className="glass-panel h-14 flex items-center justify-between px-5 shrink-0 sticky top-0 z-20">
         <Link href="/" className="flex items-center gap-2 group">
           <motion.div
             className="h-1.5 w-1.5 rounded-full bg-accent"
@@ -108,7 +108,7 @@ export default function RootPage() {
         </Link>
         <Link
           href="/auth"
-          className="h-8 px-4 rounded-lg text-xs font-medium text-text-secondary border border-border hover:bg-bg-hover hover:text-text hover:border-accent/20 transition-all"
+          className="h-8 px-4 rounded-xl text-xs font-medium text-text-secondary border border-border hover:bg-bg-hover hover:text-text hover:border-accent/20 transition-all"
         >
           Sign in
         </Link>
