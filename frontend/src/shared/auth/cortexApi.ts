@@ -18,12 +18,12 @@ import type {
   MemoryListResponse,
 } from "../types";
 
-/** Resolve the backend base URL. */
-export function getBase(): string {
-  const envBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (envBase && /^https?:\/\//.test(envBase)) {
-    return envBase.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "");
-  }
+/**
+ * All requests go through the Next.js proxy at /api/[...path].
+ * This avoids CORS issues and ensures httpOnly cookies are always sent
+ * (SameSite=Lax cookies are NOT sent with cross-origin requests).
+ */
+function getBase(): string {
   return "";
 }
 
@@ -131,8 +131,7 @@ export async function apiUploadAvatar(
 ): Promise<{ profile_photo: string }> {
   const fd = new FormData();
   fd.append("file", file);
-  const url = `${getBase()}/api/v1/me/profile/photo`;
-  const res = await fetch(url, {
+  const res = await fetch("/api/v1/me/profile/photo", {
     method: "POST",
     credentials: "include",
     body: fd,
@@ -159,7 +158,7 @@ export function apiRemoveAvatar(): Promise<{ profile_photo: null }> {
  * Uses the /photo/{user_id} endpoint (no auth needed for <img> tags).
  */
 export function getProfilePhotoUrl(userId: number): string {
-  return `${getBase()}/api/v1/me/profile/photo/${userId}`;
+  return `/api/v1/me/profile/photo/${userId}`;
 }
 
 // ── GitHub endpoints ────────────────────────────────────────────────
@@ -211,8 +210,7 @@ export async function apiVaultUploadFile(
 ): Promise<VaultUploadResult> {
   const fd = new FormData();
   fd.append("file", file);
-  const url = `${getBase()}/api/v1/me/vault/files/upload?folder=${encodeURIComponent(folder)}`;
-  const res = await fetch(url, {
+  const res = await fetch(`/api/v1/me/vault/files/upload?folder=${encodeURIComponent(folder)}`, {
     method: "POST",
     credentials: "include",
     body: fd,
@@ -303,8 +301,7 @@ export function apiVaultChangePassword(payload: {
 }
 
 export async function apiVaultPreviewFile(filePath: string): Promise<Blob> {
-  const url = `${getBase()}/api/v1/me/vault/files/preview/${encodeURIComponent(filePath)}`;
-  const res = await fetch(url, {
+  const res = await fetch(`/api/v1/me/vault/files/preview/${encodeURIComponent(filePath)}`, {
     method: "GET",
     credentials: "include",
   });
@@ -315,8 +312,7 @@ export async function apiVaultPreviewFile(filePath: string): Promise<Blob> {
 }
 
 export async function apiVaultDownloadFileBlob(filePath: string): Promise<Blob> {
-  const url = `${getBase()}/api/v1/me/vault/files/download/${encodeURIComponent(filePath)}`;
-  const res = await fetch(url, {
+  const res = await fetch(`/api/v1/me/vault/files/download/${encodeURIComponent(filePath)}`, {
     method: "GET",
     credentials: "include",
   });
