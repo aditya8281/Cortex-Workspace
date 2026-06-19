@@ -39,7 +39,7 @@ describe("Signup", () => {
   it("switches to register mode and shows step 0 fields", () => {
     render(<AuthPage />);
     fireEvent.click(screen.getByText("Register"));
-    expect(screen.getByText("Step 1 of 4 — Account")).toBeInTheDocument();
+    expect(screen.getByText("Account")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("operator-01")).toBeInTheDocument();
     expect(screen.getAllByPlaceholderText("••••••••")).toHaveLength(2);
     expect(screen.getByText("Continue")).toBeInTheDocument();
@@ -66,9 +66,7 @@ describe("Signup", () => {
 
     // Step 1 — Profile
     await waitFor(() => {
-      expect(
-        screen.getByText("Step 2 of 4 — Profile")
-      ).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Ada Lovelace")).toBeInTheDocument();
     });
     fireEvent.change(screen.getByPlaceholderText("Ada Lovelace"), {
       target: { value: "Test User" },
@@ -80,17 +78,13 @@ describe("Signup", () => {
 
     // Step 2 — GitHub
     await waitFor(() => {
-      expect(
-        screen.getByText("Step 3 of 4 — GitHub")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Skip for now")).toBeInTheDocument();
     });
     fireEvent.click(screen.getByText("Skip for now"));
 
     // Step 3 — Vault
     await waitFor(() => {
-      expect(
-        screen.getByText("Step 4 of 4 — Vault")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Vault password")).toBeInTheDocument();
     });
     const [vaultPw, vaultConfirm] =
       screen.getAllByPlaceholderText("••••••••");

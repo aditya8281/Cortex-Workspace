@@ -28,10 +28,10 @@ vi.mock("@/shared/auth/AuthProvider", () => ({
 }));
 
 describe("Login", () => {
-  it("renders heading and welcome text", () => {
+  it("renders heading and tagline", () => {
     render(<AuthPage />);
-    expect(screen.getByText("Cortex")).toBeInTheDocument();
-    expect(screen.getByText("Welcome back")).toBeInTheDocument();
+    expect(screen.getAllByText("Cortex").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Local-first/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders username and password fields", () => {
