@@ -17,7 +17,7 @@ const jetBrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Cortex",
-  description: "Local-first AI workspace",
+  description: "Your machine's intelligence layer",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
