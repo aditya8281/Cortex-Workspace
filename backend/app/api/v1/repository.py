@@ -48,7 +48,7 @@ def _serialize_repo(repo: RepoIndex) -> dict:
 # ── Repository CRUD ─────────────────────────────────────────────
 
 
-@router.get("/api/v1/repos")
+@router.get("/repos")
 def list_repos(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -63,7 +63,7 @@ def list_repos(
     return {"repos": [_serialize_repo(r) for r in repos]}
 
 
-@router.post("/api/v1/repos")
+@router.post("/repos")
 def create_repo(
     payload: RepoCreatePayload,
     db: Session = Depends(get_db),
@@ -94,7 +94,7 @@ def create_repo(
     return {"status": "created", "repo": _serialize_repo(repo)}
 
 
-@router.get("/api/v1/repos/{repo_id}")
+@router.get("/repos/{repo_id}")
 def get_repo(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -107,7 +107,7 @@ def get_repo(
     return {"repo": _serialize_repo(repo)}
 
 
-@router.put("/api/v1/repos/{repo_id}")
+@router.put("/repos/{repo_id}")
 def update_repo(
     repo_id: int,
     payload: RepoUpdatePayload,
@@ -127,7 +127,7 @@ def update_repo(
     return {"status": "updated", "repo": _serialize_repo(repo)}
 
 
-@router.delete("/api/v1/repos/{repo_id}")
+@router.delete("/repos/{repo_id}")
 def delete_repo(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -146,7 +146,7 @@ def delete_repo(
 # ── Indexing ────────────────────────────────────────────────────
 
 
-@router.post("/api/v1/repos/{repo_id}/index")
+@router.post("/repos/{repo_id}/index")
 async def index_repo(
     repo_id: int,
     force: bool = False,
@@ -178,7 +178,7 @@ async def index_repo(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/v1/repos/{repo_id}/status")
+@router.get("/repos/{repo_id}/status")
 def index_status(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -209,7 +209,7 @@ def index_status(
 # ── Graph ───────────────────────────────────────────────────────
 
 
-@router.post("/api/v1/repos/{repo_id}/graph")
+@router.post("/repos/{repo_id}/graph")
 def build_graph(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -229,7 +229,7 @@ def build_graph(
     }
 
 
-@router.get("/api/v1/repos/{repo_id}/graph")
+@router.get("/repos/{repo_id}/graph")
 def get_graph(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -244,7 +244,7 @@ def get_graph(
     return builder.get_graph(repo_id)
 
 
-@router.get("/api/v1/repos/{repo_id}/graph/node/{node_id}")
+@router.get("/repos/{repo_id}/graph/node/{node_id}")
 def get_node_context(
     repo_id: int,
     node_id: int,

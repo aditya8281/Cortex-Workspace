@@ -22,7 +22,7 @@ class SearchRequest(BaseModel):
     max_results: int = Field(default=10, ge=1, le=50)
 
 
-@router.post("/api/v1/search")
+@router.post("/search")
 def unified_search(
     payload: SearchRequest,
     db: Session = Depends(get_db),
@@ -77,7 +77,7 @@ def unified_search(
     }
 
 
-@router.get("/api/v1/search")
+@router.get("/search")
 def unified_search_get(
     q: str = Query(min_length=1, max_length=1000),
     repo_id: int | None = None,

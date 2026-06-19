@@ -92,7 +92,7 @@ def get_memory(
     entry = manager.get(entry_id)
     if not entry:
         raise HTTPException(status_code=404, detail="Memory entry not found")
-    return {"entry": manager._serialize(entry)}
+    return manager._serialize(entry)
 
 
 @router.put("/api/v1/memory/{entry_id}")

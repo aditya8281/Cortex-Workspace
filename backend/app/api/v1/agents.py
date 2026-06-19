@@ -49,7 +49,7 @@ class FeedbackPayload(BaseModel):
 # ── Agent CRUD ──────────────────────────────────────────────────
 
 
-@router.get("/api/v1/agents")
+@router.get("/agents")
 def list_agents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -75,7 +75,7 @@ def list_agents(
     }
 
 
-@router.post("/api/v1/agents")
+@router.post("/agents")
 def create_agent(
     payload: AgentCreatePayload,
     db: Session = Depends(get_db),
@@ -99,13 +99,17 @@ def create_agent(
                 "description": agent.description,
                 "system_prompt": agent.system_prompt,
                 "model_id": agent.model_id,
+                "tools": agent.tools_json,
+                "is_active": agent.is_active,
+                "created_at": agent.created_at.isoformat() if agent.created_at else None,
+                "updated_at": agent.updated_at.isoformat() if agent.updated_at else None,
             },
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/api/v1/agents/{agent_id}")
+@router.get("/agents/{agent_id}")
 def get_agent(
     agent_id: int,
     db: Session = Depends(get_db),
@@ -131,7 +135,7 @@ def get_agent(
     }
 
 
-@router.put("/api/v1/agents/{agent_id}")
+@router.put("/agents/{agent_id}")
 def update_agent(
     agent_id: int,
     payload: AgentUpdatePayload,
@@ -160,7 +164,7 @@ def update_agent(
     return {"status": "updated"}
 
 
-@router.delete("/api/v1/agents/{agent_id}")
+@router.delete("/agents/{agent_id}")
 def delete_agent(
     agent_id: int,
     db: Session = Depends(get_db),
@@ -179,7 +183,7 @@ def delete_agent(
 # ── Runs ────────────────────────────────────────────────────────
 
 
-@router.post("/api/v1/agents/runs")
+@router.post("/agents/runs")
 async def create_run(
     payload: RunCreatePayload,
     db: Session = Depends(get_db),
@@ -200,7 +204,7 @@ async def create_run(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/api/v1/agents/runs")
+@router.get("/agents/runs")
 def list_runs(
     agent_id: int | None = None,
     status: str | None = None,
@@ -219,7 +223,7 @@ def list_runs(
     return {"runs": [manager.serialize_run(r) for r in runs]}
 
 
-@router.get("/api/v1/agents/runs/{run_id}")
+@router.get("/agents/runs/{run_id}")
 def get_run(
     run_id: int,
     db: Session = Depends(get_db),
@@ -238,7 +242,7 @@ def get_run(
     }
 
 
-@router.get("/api/v1/agents/runs/{run_id}/steps")
+@router.get("/agents/runs/{run_id}/steps")
 def get_run_steps(
     run_id: int,
     db: Session = Depends(get_db),
@@ -257,7 +261,7 @@ def get_run_steps(
 # ── Feedback ────────────────────────────────────────────────────
 
 
-@router.post("/api/v1/agents/runs/{run_id}/feedback")
+@router.post("/agents/runs/{run_id}/feedback")
 def add_feedback(
     run_id: int,
     payload: FeedbackPayload,
@@ -289,7 +293,7 @@ def add_feedback(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/api/v1/agents/runs/{run_id}/feedback")
+@router.get("/agents/runs/{run_id}/feedback")
 def get_feedback(
     run_id: int,
     db: Session = Depends(get_db),
