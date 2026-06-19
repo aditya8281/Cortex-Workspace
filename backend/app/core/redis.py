@@ -100,27 +100,6 @@ class RedisCache:
             self.client = None
             self._connected = False
 
-    @staticmethod
-    def run_sync(coro):
-        """
-        Run an async coroutine from synchronous context.
-
-        Creates a fresh, isolated event loop with its own Redis connection
-        to avoid conflicts with the main event loop's shared client pool.
-        """
-        import asyncio
-
-        # Create a fresh loop — never reuse the main loop
-        loop = asyncio.new_event_loop()
-        try:
-            return loop.run_until_complete(coro)
-        except Exception:
-            raise
-        finally:
-            try:
-                loop.close()
-            except Exception:
-                pass
 
 
 # Global redis cache instance

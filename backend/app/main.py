@@ -19,11 +19,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.auth import router as auth_router
 from backend.app.api.memory import router as memory_router
+from backend.app.api.metrics import router as metrics_router
 from backend.app.api.router import api_router
+from backend.app.api.ws import router as ws_router
 from backend.app.core.config import settings
+from backend.app.core.csrf import setup_csrf_protection
+from backend.app.core.https_redirect import setup_https_redirect
 from backend.app.core.logging import get_logger, setup_logging
 from backend.app.core.middleware import RequestLoggingMiddleware
+from backend.app.core.rate_limit import setup_rate_limiting
 from backend.app.core.system_paths import ensure_system_dirs
+from backend.app.core.websocket import manager
 from backend.app.db.bootstrap import bootstrap_database
 
 setup_logging()
@@ -36,7 +42,9 @@ async def lifespan(app: FastAPI):
     logger.info(f"{settings.APP_NAME} started")
 
     ensure_system_dirs()
-    bootstrap_database()
+    import sys
+    if "pytest" not in sys.modules:
+        bootstrap_database()
 
     # Test Redis connectivity (optional — fails open)
     from backend.app.core.redis import redis_cache
@@ -44,8 +52,9 @@ async def lifespan(app: FastAPI):
 
     try:
         from backend.app.db import session as db_session
-        db_session.get_engine()
-        logger.info("System database initialized at %s", db_session.get_database_url())
+        if "pytest" not in sys.modules:
+            db_session.get_engine()
+            logger.info("System database initialized at %s", db_session.get_database_url())
     except Exception as e:
         logger.error("Failed to initialize system database on startup: %s", e)
 
@@ -65,14 +74,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "http://localhost:3002",
-        "http://127.0.0.1:3002",
+        origin.strip()
+        for origin in settings.ALLOWED_ORIGINS.split(",")
+        if origin.strip()
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -83,12 +87,33 @@ app.add_middleware(
     RequestLoggingMiddleware
 )
 
+setup_rate_limiting(app)
+setup_csrf_protection(app)
+setup_https_redirect(app)
+
 app.include_router(
     api_router,
     prefix=settings.API_V1_PREFIX,
 )
 app.include_router(auth_router)
 app.include_router(memory_router)
+app.include_router(metrics_router)
+app.include_router(ws_router)
+
+
+from fastapi import WebSocket, WebSocketDisconnect
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(ws: WebSocket):
+    await manager.connect(ws)
+    try:
+        while True:
+            data = await ws.receive_text()
+            await manager.send(ws, {"echo": data})
+    except WebSocketDisconnect:
+        manager.disconnect(ws)
+
 
 @app.get("/")
 async def root():

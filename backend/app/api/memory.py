@@ -37,10 +37,12 @@ def _serialize_memory(entry: KnowledgeEntry) -> dict[str, object]:
 @router.get("/api/memory")
 def read_memory(
     limit: int = 24,
+    offset: int = 0,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
 ):
     safe_limit = max(1, min(limit, 100))
+    safe_offset = max(0, offset)
     query = db.query(KnowledgeEntry)
     category_query = db.query(KnowledgeEntry)
     if current_user is not None:
@@ -48,7 +50,8 @@ def read_memory(
         query = query.filter(filter_clause)
         category_query = category_query.filter(filter_clause)
 
-    entries = query.order_by(KnowledgeEntry.updated_at.desc()).limit(safe_limit).all()
+    total = query.count()
+    entries = query.order_by(KnowledgeEntry.updated_at.desc()).offset(safe_offset).limit(safe_limit).all()
     categories = category_query.group_by(KnowledgeEntry.category).with_entities(
         KnowledgeEntry.category,
         func.count(KnowledgeEntry.id),
@@ -56,7 +59,10 @@ def read_memory(
 
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "total": total,
         "count": len(entries),
+        "offset": safe_offset,
+        "limit": safe_limit,
         "categories": {category: count for category, count in categories},
         "entries": [_serialize_memory(entry) for entry in entries],
     }

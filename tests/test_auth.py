@@ -120,3 +120,83 @@ def test_vault_password_update(client):
     # Update vault password without current_password should fail
     r = client.put("/api/auth/me", json={"vault_password": "oops"}, headers=headers)
     assert r.status_code == 400
+
+
+def test_delete_user_soft_delete(client):
+    from datetime import datetime
+
+    from backend.app.models.storage_registry import StorageRegistry
+    from backend.app.models.user import User
+
+    storage_path = "~/CortexSoftDeleteTest"
+    register_payload = {
+        "username": "softdeluser",
+        "full_name": "Soft Delete User",
+        "nickname": "softdel",
+        "password": "mypassword123",
+        "confirm_password": "mypassword123",
+        "vault_password": "vaultpassword123",
+        "personal_storage_path": storage_path
+    }
+    reg_resp = client.post("/api/auth/register", json=register_payload)
+    assert reg_resp.status_code == 200
+    user_data = reg_resp.json()["user"]
+    user_id = user_data["id"]
+
+    from pathlib import Path
+    resolved_path = Path(storage_path).expanduser().resolve()
+    assert resolved_path.exists()
+    assert (resolved_path / "vault").exists()
+
+    # Login to get token
+    login_payload = {"username": "softdeluser", "password": "mypassword123"}
+    login_resp = client.post("/api/auth/login", json=login_payload)
+    assert login_resp.status_code == 200
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Check that registry entry is in database
+    from backend.app.api.deps import get_db
+    from backend.app.main import app
+    db_func = app.dependency_overrides[get_db]
+    db = next(db_func())
+    try:
+        reg = db.query(StorageRegistry).filter(StorageRegistry.user_id == user_id).first()
+        assert reg is not None
+        assert reg.storage_root == str(resolved_path)
+    finally:
+        db.close()
+
+    # Soft delete user
+    del_resp = client.request("DELETE", "/api/auth/me", json={"password": "mypassword123"}, headers=headers)
+    assert del_resp.status_code == 200
+
+    # Verify storage directory is PRESERVED during grace period
+    assert resolved_path.exists()
+    assert (resolved_path / "vault").exists()
+
+    # Verify registry entry is PRESERVED
+    db = next(db_func())
+    try:
+        reg = db.query(StorageRegistry).filter(StorageRegistry.user_id == user_id).first()
+        assert reg is not None
+
+        # Verify user has deleted_at set
+        user = db.query(User).filter(User.id == user_id).first()
+        assert user is not None
+        assert user.deleted_at is not None
+        assert isinstance(user.deleted_at, datetime)
+    finally:
+        db.close()
+
+    # Verify restore works
+    restore_resp = client.post("/api/auth/restore", json={"password": "mypassword123"}, headers=headers)
+    assert restore_resp.status_code == 200
+
+    db = next(db_func())
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        assert user is not None
+        assert user.deleted_at is None
+    finally:
+        db.close()

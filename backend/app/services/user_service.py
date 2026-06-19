@@ -1,33 +1,39 @@
 import logging
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from backend.app.core.security import create_access_token, hash_password, verify_password
+from backend.app.core.security import hash_password, verify_password
 from backend.app.models.user import User
-from backend.app.schemas.user import UserCreate, UserRegisterPayload, UserUpdate
+from backend.app.schemas.user import UserCreate, UserRegisterPayload, UserResponse, UserUpdate
 
 logger = logging.getLogger(__name__)
 
 
+def to_user_response(db: Session, user: User) -> UserResponse:
+    """Serialize a User ORM object to a UserResponse with storage_root."""
+    from backend.app.services.storage_registry import get_registry_for_user
+    registry = get_registry_for_user(db, user.id)
+    response = UserResponse.model_validate(user)
+    return response.model_copy(update={
+        "storage_root": registry.storage_root if registry else None
+    })
+
+
 def serialize_user(db: Session, user: User) -> dict:
-    return {
-        "id": user.id,
-        "username": user.username,
-        "full_name": user.full_name,
-        "role": user.role,
-        "nickname": user.nickname,
-        "bio": user.bio,
-        "description": user.description,
-        "profile_photo": user.profile_photo,
-        "handles": user.handles,
-        "preferences": user.preferences,
-        "github_username": user.github_username,
-    }
+    """Legacy dict serializer — prefer to_user_response() for new code."""
+    return to_user_response(db, user).model_dump()
+
+
+def _normalize_username(username: str) -> str:
+    """Normalize usernames for storage and comparison: strip and lowercase."""
+    return (username or "").strip().lower()
 
 
 def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | None:
-    existing_username = db.query(User).filter(User.username == user.username).first()
+    normalized = _normalize_username(user.username)
+    existing_username = db.query(User).filter(User.username == normalized).first()
     if existing_username:
         return None
 
@@ -36,7 +42,7 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
     is_first_user = db.query(User).count() == 0
     assigned_role = "admin" if is_first_user else "user"
 
-    if hasattr(user, "vault_password"):
+    if isinstance(user, UserRegisterPayload):
         vault_pw_hash = hash_password(user.vault_password)
         nickname_val = user.nickname
         bio_val = user.bio
@@ -54,7 +60,7 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
         preferences_val = {}
 
     db_user = User(
-        username=user.username,
+        username=normalized,
         full_name=user.full_name or user.username,
         hashed_password=hashed_pw,
         role=assigned_role,
@@ -90,7 +96,8 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
 
 
 def authenticate_user(db: Session, username: str, password: str):
-    user = db.query(User).filter(User.username == username).first()
+    normalized = _normalize_username(username)
+    user = db.query(User).filter(User.username == normalized).first()
 
     if not user:
         return None
@@ -101,26 +108,20 @@ def authenticate_user(db: Session, username: str, password: str):
     return user
 
 
-def login_user(db: Session, username: str, password: str):
-    user = authenticate_user(db, username, password)
-
-    if not user:
-        return None
-
-    token = create_access_token(data={"sub": str(user.id)})
-
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user": serialize_user(db, user),
-    }
-
-
 def delete_user(db: Session, user_id: int) -> bool:
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         return False
-    db.delete(db_user)
+    db_user.deleted_at = datetime.now(timezone.utc)
+    db.commit()
+    return True
+
+
+def restore_user(db: Session, user_id: int) -> bool:
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user or not db_user.deleted_at:
+        return False
+    db_user.deleted_at = None
     db.commit()
     return True
 
@@ -130,7 +131,7 @@ def update_user(db: Session, user_id: int, user_update: UserUpdate) -> User | No
     if not db_user:
         return None
     if user_update.username is not None:
-        db_user.username = user_update.username
+        db_user.username = _normalize_username(user_update.username)
     if user_update.full_name is not None:
         db_user.full_name = user_update.full_name
     if user_update.role is not None and user_update.role != db_user.role:

@@ -52,7 +52,7 @@ def test_register(client):
         "full_name": "Smoke User",
         "nickname": "su",
         "vault_password": "vaultpass123",
-        "personal_storage_path": "/tmp/cx_smoke",
+        "personal_storage_path": f"~/CortexStorage/smoke_{uuid.uuid4().hex[:6]}",
     })
     assert r.status_code == 200
     data = r.json()
@@ -109,7 +109,7 @@ def test_auth_refresh(client):
         "full_name": "Refresh User",
         "nickname": "ru",
         "vault_password": "vaultpass123",
-        "personal_storage_path": "/tmp/cx_refresh",
+        "personal_storage_path": f"~/CortexStorage/refresh_{uuid.uuid4().hex[:6]}",
     })
     assert r.status_code == 200
     refresh_token = r.json()["refresh_token"]
@@ -129,7 +129,7 @@ def test_auth_logout(client):
         "full_name": "Logout User",
         "nickname": "lou",
         "vault_password": "vaultpass123",
-        "personal_storage_path": "/tmp/cx_logout",
+        "personal_storage_path": f"~/CortexStorage/logout_{uuid.uuid4().hex[:6]}",
     })
     assert r.status_code == 200
     refresh_token = r.json()["refresh_token"]

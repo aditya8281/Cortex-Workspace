@@ -1,42 +1,59 @@
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
-*.pyc
-build/
-dist/
-frontend/dist/
-wheels/
-*.egg-info
+*.egg-info/
 .venv
-.env
+venv/
 .pytest_cache/
 .mypy_cache/
-app.db
-app.db-journal
-state.db
-*.db
-*.db.backup.*
 .ruff_cache/
-.cortex/
-.cortex_memory_path
-CortexMemory
-.cortex_bootstrap/
-.vscode
 
-# Node / frontend caches
+# Environment (secrets)
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Node / frontend
 node_modules/
-frontend/node_modules/
 .next/
-frontend/.next/
 .vite/
-frontend/.vite/
 coverage/
-frontend/coverage/
 *.tsbuildinfo
-frontend/*.tsbuildinfo
 
-# Logs and temp files
+# Build output
+dist/
+build/
+wheels/
+
+# Local databases
+*.db
+*.db-journal
+*.db.backup.*
+
+# Logs and temp
 *.log
 *.tmp
 tmp/
 .tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Runtime data (created at startup)
+CortexMemory/
+.cortex_bootstrap/
+.cortex/
+.cortex_memory_path
+
+# Alembic
+alembic/versions/__pycache__/

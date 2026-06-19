@@ -11,9 +11,11 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
-from backend.app.core.system_paths import get_system_root
+from backend.app.db.session import SessionLocal
+from backend.app.models.storage_registry import StorageRegistry
 from backend.app.models.user import User
 from backend.app.schemas.user import UserResponse
+from backend.app.services.user_service import to_user_response
 
 router = APIRouter()
 
@@ -23,9 +25,32 @@ router = APIRouter()
 
 def _photo_dir(user_id: int) -> Path:
     """Return (and lazily create) the directory for a user's profile photos."""
-    d = get_system_root() / "photos" / str(user_id)
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    # Try to resolve the user's registered storage root. If found, store
+    # profile photos under `<storage_root>/profile/`. Otherwise fall back to
+    # the system CortexMemory `photos/{user_id}` directory for backward
+    # compatibility. For privacy reasons we now require a registered
+    # `StorageRegistry` entry and will refuse to operate without it.
+    try:
+        db = SessionLocal()
+        reg = db.query(StorageRegistry).filter(StorageRegistry.user_id == user_id).first()
+    except Exception:
+        reg = None
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
+
+    if reg and reg.storage_root:
+        d = Path(reg.storage_root).expanduser().resolve() / "profile"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    # Do not write profile photos into system-level CortexMemory; require
+    # the user to register a storage root instead.
+    from fastapi import HTTPException
+
+    raise HTTPException(status_code=400, detail="No user storage registered. Please configure your storage root before uploading a profile photo.")
 
 
 def _avatar_path(user_id: int) -> Path:
@@ -79,7 +104,7 @@ async def get_my_profile(
     db: Session = Depends(get_db),
 ):
     """Return the current user's profile."""
-    return UserResponse.model_validate(current_user)
+    return to_user_response(db, current_user)
 
 
 @router.put("", response_model=UserResponse)
@@ -99,7 +124,7 @@ async def update_my_profile(
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-    return UserResponse.model_validate(current_user)
+    return to_user_response(db, current_user)
 
 
 # ── Profile Photo ────────────────────────────────────────────────────
@@ -142,7 +167,7 @@ async def upload_profile_photo(
             )
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception:
         # If content_type was valid but PIL failed, give a clearer message
         if content_type in allowed_mimes:
             raise HTTPException(

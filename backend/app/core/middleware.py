@@ -1,9 +1,21 @@
 import time
 import uuid
 
-from backend.app.core.logging import get_logger
+from backend.app.api.metrics import record_request
+from backend.app.core.logging import RequestIdFilter, get_logger
 
 logger = get_logger(__name__)
+
+# Security headers added to every response.
+_SECURITY_HEADERS: list[tuple[bytes, bytes]] = [
+    (b"x-content-type-options", b"nosniff"),
+    (b"x-frame-options", b"DENY"),
+    (b"x-xss-protection", b"1; mode=block"),
+    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+    # script-src: no unsafe-inline or unsafe-eval
+    # style-src: nonce-based — nonce added at the app level by Next.js
+    (b"content-security-policy", b"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:*"),
+]
 
 
 class RequestLoggingMiddleware:
@@ -16,6 +28,7 @@ class RequestLoggingMiddleware:
             return
 
         request_id = str(uuid.uuid4())
+        RequestIdFilter.set(request_id)
         start = time.perf_counter()
         status_code = 500
 
@@ -26,13 +39,8 @@ class RequestLoggingMiddleware:
                 status_code = message["status"]
                 headers = list(message.get("headers", []))
                 headers.append((b"x-request-id", request_id.encode("ascii")))
+                headers.extend(_SECURITY_HEADERS)
                 message["headers"] = headers
-                try:
-                    method = scope.get('method')
-                    path = scope.get('path')
-                    print(f"[MIDDLEWARE] response start: method={method} path={path} status={status_code}")
-                except Exception:
-                    pass
 
             await send(message)
 
@@ -42,13 +50,8 @@ class RequestLoggingMiddleware:
             duration = round((time.perf_counter() - start) * 1000, 2)
             method = scope.get("method", "UNKNOWN")
             path = scope.get("path", "/")
-
+            record_request(status_code, duration)
             logger.info(
-
-                    f"request_id={request_id} "
-                    f"method={method} "
-                    f"path={path} "
-                    f"status={status_code} "
-                    f"duration_ms={duration}"
-
+                "request_id=%s method=%s path=%s status=%s duration_ms=%s",
+                request_id, method, path, status_code, duration,
             )

@@ -18,7 +18,7 @@ help:
 	@echo "  make migrate        Apply migrations"
 	@echo "  make migration m=   Create new migration"
 	@echo "  make db-reset       Reset database"
-	@echo "  make db-shell       Open SQLite shell"
+	@echo "  make db-shell       Open PostgreSQL shell"
 	@echo ""
 	@echo "Quality:"
 	@echo "  make lint           Run ruff + mypy"
@@ -52,6 +52,11 @@ dev-no-reload:
 dev-frontend:
 	cd frontend && npm run dev
 
+dev-full:
+	@echo "Starting backend + frontend..."
+	uv run uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000 &
+	cd frontend && npm run dev
+
 build-frontend:
 	cd frontend && npm run build
 
@@ -69,16 +74,23 @@ migration:
 	uv run alembic revision -m "$(m)"
 
 db-reset:
-	@echo "⚠️ Resetting database..."
-	rm -f app.db
+	@echo "⚠️  Resetting database..."
+	@uv run python -c " \
+from sqlalchemy import create_engine, text; \
+from backend.app.core.config import settings; \
+e = create_engine(settings.DATABASE_URL); \
+conn = e.connect(); \
+conn.execute(text('DROP SCHEMA public CASCADE; CREATE SCHEMA public')); \
+conn.commit(); conn.close(); e.dispose() \
+" 2>/dev/null || true
 	uv run alembic upgrade head
 	@echo "✓ Database reset complete"
 
 db-shell:
-	sqlite3 app.db
+	psql $${DATABASE_URL:-postgresql://cortex:cortex@localhost:5432/cortex}
 
 db-backup:
-	cp app.db app.db.backup.$(shell date +%Y%m%d_%H%M%S)
+	pg_dump $${DATABASE_URL:-postgresql://cortex:cortex@localhost:5432/cortex} > cortex_backup_$(shell date +%Y%m%d_%H%M%S).sql
 
 # ============================================================================
 # QUALITY
@@ -107,6 +119,13 @@ test-cov:
 
 test-watch:
 	uv run pytest -v --looponfail
+
+# ============================================================================
+# WORKER (arq task queue)
+# ============================================================================
+
+worker:
+	uv run python -m backend.app.tasks.worker
 
 # ============================================================================
 # CLEANUP

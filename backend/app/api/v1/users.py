@@ -16,10 +16,12 @@ def check_admin_user(current_user: User = Depends(get_current_user)):
 
 @router.get("/users", response_model=list[UserResponse])
 def read_users(
+    skip: int = 0,
+    limit: int = 100,
     db: Session = Depends(get_db),
     _admin_user: User = Depends(require_admin)
 ):
-    return get_users(db)
+    return get_users(db, skip=max(0, skip), limit=max(1, min(limit, 200)))
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)

@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserLogin(BaseModel):
@@ -46,12 +47,20 @@ class UserResponse(BaseModel):
     handles: dict[str, Any] | None = None
     storage_root: str | None = None
     github_username: str | None = None
-    # DEPRECATED: legacy fields kept for response backward-compat; always mirror storage_root.
     data_path: str | None = None
     personal_storage_path: str | None = None
     preferences: dict[str, Any] | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def _serialize_datetime(cls, v: Any) -> str | None:
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
 
 
 class UserUpdate(BaseModel):

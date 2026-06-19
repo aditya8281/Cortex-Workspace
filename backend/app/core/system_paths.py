@@ -1,7 +1,7 @@
 """Canonical system path definitions for Cortex.
 
 All system-owned files must live under:
-  CORTEX_ROOT/system/{db,logs,cache,runtime}
+  ProjectRoot/CortexMemory/{db,logs,cache,runtime}
 """
 
 from __future__ import annotations
@@ -163,14 +163,20 @@ _SYSTEM_PATH_CACHE: dict[str, Path] | None = None
 
 
 def get_cortex_root() -> Path:
+    """Return the CortexMemory root directory.
+
+    Per the storage architecture spec, all system/AI data lives under
+    ``ProjectRoot/CortexMemory/`` — never inside ``.cortex/``.
+    """
     root_value = settings.CORTEX_ROOT or os.environ.get("CORTEX_ROOT")
     if root_value:
         return Path(root_value).expanduser().resolve()
-    return (PROJECT_ROOT / ".cortex").resolve()
+    return (PROJECT_ROOT / "CortexMemory").resolve()
 
 
 def get_system_root() -> Path:
-    root = get_cortex_root() / "system"
+    """System root is the CortexMemory directory itself."""
+    root = get_cortex_root()
     root.mkdir(parents=True, exist_ok=True)
     return root
 

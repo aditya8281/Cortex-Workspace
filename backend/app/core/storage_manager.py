@@ -1,4 +1,4 @@
-"""Thin compatibility wrapper around the canonical system storage layout."""
+"""Thin compatibility wrapper around the canonical CortexMemory storage layout."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 class StorageManager:
-    """Lazy compatibility wrapper around the canonical system storage layout."""
+    """Lazy compatibility wrapper around the canonical CortexMemory storage layout."""
 
     def __init__(self) -> None:
         from backend.app.core.storage_abstraction import get_system_storage
@@ -19,11 +19,9 @@ class StorageManager:
     def get_cortex_root(self) -> Path:
         return self._storage.root
 
-    def get_database_path(self) -> Path:
-        return self._storage.database_path
-
     def get_memory_path(self) -> Path:
-        return (self._storage.runtime_root / "memory").resolve()
+        """Central CortexMemory directory for all AI/system data."""
+        return self._storage.memory_root
 
     def get_logs_path(self) -> Path:
         return self._storage.logs_root
@@ -35,10 +33,14 @@ class StorageManager:
         return self._storage.cache_root
 
 
+_instance: StorageManager | None = None
+
+
 def _get_storage_manager() -> StorageManager:
-    if not hasattr(_get_storage_manager, "_instance"):
-        _get_storage_manager._instance = StorageManager()
-    return _get_storage_manager._instance
+    global _instance
+    if _instance is None:
+        _instance = StorageManager()
+    return _instance
 
 
 class _StorageManagerProxy:

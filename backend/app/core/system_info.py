@@ -14,7 +14,7 @@ logger = None  # Will be imported to avoid circular imports
 try:
     import psutil
 except ImportError:
-    psutil = None
+    psutil = None  # type: ignore[assignment]
 
 
 def get_system_info() -> str:

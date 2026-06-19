@@ -4,8 +4,8 @@ Revision ID: b00000000002
 Revises: a00000000001
 Create Date: 2026-06-18
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "b00000000002"
 down_revision = "a00000000001"
@@ -14,9 +14,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # SQLite doesn't support ALTER TABLE ... ADD CONSTRAINT, so we add
-    # the columns without the unique constraint at the DB level.
-    # The application layer enforces uniqueness via the ORM unique=True.
     op.add_column("users", sa.Column("github_username", sa.String(), nullable=True))
     op.add_column("users", sa.Column("github_token_encrypted", sa.String(), nullable=True))
 

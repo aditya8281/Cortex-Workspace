@@ -7,21 +7,21 @@ requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.18.4",
     "argon2-cffi>=23.1.0",
-    "beautifulsoup4>=4.12.0",
+    "arq>=0.26.0",
     "fastapi>=0.110.0,<1.0.0",
     "httpx>=0.28.1",
+    "onnxruntime>=1.18.0",
     "passlib[bcrypt]>=1.7.4",
-    "psycopg2-binary>=2.9.12",
+    "psycopg2-binary>=2.9.9",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.1",
     "python-dotenv>=1.2.2",
     "python-jose[cryptography]>=3.5.0",
+    "qdrant-client>=1.11.0",
     "sqlalchemy>=2.0.50",
     "uvicorn>=0.22.0,<1.0.0",
     "structlog>=25.4.0",
     "redis>=5.0.1",
-    "keyring>=25.0.0",
-    "watchdog>=4.0.0",
     "python-multipart>=0.0.31",
     "psutil>=5.9.0",
     "Pillow>=10.0.0",
@@ -38,10 +38,14 @@ dev = [
     "factory-boy>=3.3.0",
     "faker>=20.0.0",
     "ruff>=0.15.15",
+    "types-psutil",
+    "types-python-jose",
+    "types-passlib",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+filterwarnings = []
 
 [tool.ruff]
 line-length = 120

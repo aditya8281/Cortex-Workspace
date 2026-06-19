@@ -31,7 +31,7 @@ def _register(client: TestClient, username: str | None = None) -> dict:
         "full_name": "Refresh Test User",
         "nickname": "rt",
         "vault_password": "vaultpass123",
-        "personal_storage_path": f"/tmp/cx_rt_{uuid.uuid4().hex[:6]}",
+        "personal_storage_path": f"~/CortexStorage/rt_{uuid.uuid4().hex[:6]}",
     })
     assert r.status_code == 200, f"Register failed: {r.text}"
     return r.json()
@@ -140,8 +140,8 @@ def test_refresh_after_logout_fails(client):
 
 def test_refresh_with_missing_token(client):
     r = client.post("/api/auth/refresh", json={})
-    # Missing refresh_token → None → verify returns None → 401
-    assert r.status_code == 401
+    # Missing refresh_token → Pydantic validation error (422)
+    assert r.status_code == 422
 
 
 def test_refresh_with_invalid_token(client):
@@ -165,7 +165,10 @@ def test_refresh_with_expired_token(client):
 
     from jose import jwt as jose_jwt
 
-    from backend.app.auth.tokens import ALGORITHM, SECRET
+    from backend.app.core.config import settings
+
+    ALGORITHM = settings.ALGORITHM
+    SECRET = settings.SECRET_KEY
 
     payload = {
         "sub": "999",

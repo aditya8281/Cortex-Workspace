@@ -1,17 +1,21 @@
+"""Database bootstrapping — PostgreSQL.
+
+Creates the SQLAlchemy engine and session factory using the DATABASE_URL
+from application settings.  All SQLite-specific logic has been removed.
+"""
+
 from __future__ import annotations
 
 import logging
 import threading
-from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from backend.app.core.config import settings
 from backend.app.core.paths import PROJECT_ROOT
-from backend.app.core.storage_abstraction import get_system_storage
-from backend.app.core.system_paths import ensure_system_dirs
 
 logger = logging.getLogger(__name__)
 
@@ -20,31 +24,23 @@ _session_factory = None
 _bootstrap_lock = threading.RLock()
 
 
-def get_database_path() -> Path:
-    return get_system_storage().database_path
-
-
 def get_database_url() -> str:
-    return f"sqlite:///{get_database_path()}"
-
-
-
-
-def ensure_database_file() -> Path:
-    ensure_system_dirs()
-    db_path = get_database_path()
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    if db_path.exists():
-        return db_path
-
-    return db_path
+    """Return the PostgreSQL connection URL from settings."""
+    url = settings.DATABASE_URL
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL is not set.  "
+            "Configure it in your .env file, e.g.:\n"
+            "  DATABASE_URL=postgresql://cortex:cortex@localhost:5432/cortex"
+        )
+    return url
 
 
 def run_migrations() -> None:
-    db_path = ensure_database_file()
+    """Run Alembic migrations against the configured database."""
     cfg = Config(str(PROJECT_ROOT / "alembic.ini"))
-    cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
-    logger.info("Running Alembic migrations against %s", db_path)
+    cfg.set_main_option("sqlalchemy.url", get_database_url())
+    logger.info("Running Alembic migrations")
     command.upgrade(cfg, "head")
 
 
@@ -53,31 +49,24 @@ def _create_engine():
     if _engine is not None:
         return _engine
 
-    db_path = ensure_database_file()
     engine = create_engine(
-        f"sqlite:///{db_path}",
-        connect_args={"check_same_thread": False, "timeout": 30},
+        get_database_url(),
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
     )
-
-    def _set_sqlite_pragma(dbapi_conn, connection_record):
-        try:
-            cur = dbapi_conn.cursor()
-            cur.execute("PRAGMA journal_mode=WAL;")
-            cur.execute("PRAGMA synchronous=NORMAL;")
-            cur.execute("PRAGMA foreign_keys=ON;")
-            cur.close()
-        except Exception:
-            pass
-
-    event.listen(engine, "connect", _set_sqlite_pragma)
     _engine = engine
     return engine
 
 
 def bootstrap_database() -> None:
+    """Run migrations, then create the engine and session factory.
+
+    Note: ``ensure_system_dirs()`` is not called here because PostgreSQL
+    manages its own storage.  System directories (CortexMemory/) are
+    created on-demand when vault / memory services need them.
+    """
     with _bootstrap_lock:
-        ensure_system_dirs()
-        ensure_database_file()
         run_migrations()
         _create_engine()
 
@@ -106,4 +95,3 @@ def reset_engine() -> None:
             _engine.dispose()
         _engine = None
         _session_factory = None
-

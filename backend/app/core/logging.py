@@ -8,6 +8,32 @@ from typing import Any
 LOG_BUFFER: deque[dict[str, Any]] = deque(maxlen=500)
 
 
+class RequestIdFilter(logging.Filter):
+    """Injects ``request_id`` into every log record when set on the current context.
+
+    Usage:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.addFilter(RequestIdFilter())
+        # Then at request scope:
+        RequestIdFilter.set("req-123")
+        logger.info("hello")  # includes request_id=req-123
+    """
+    _request_id: str = ""
+
+    @classmethod
+    def set(cls, request_id: str) -> None:
+        cls._request_id = request_id
+
+    @classmethod
+    def get(cls) -> str:
+        return cls._request_id
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = self._request_id or "-"
+        return True
+
+
 class BufferedLogHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         try:
@@ -17,6 +43,7 @@ class BufferedLogHandler(logging.Handler):
                     "level": record.levelname.upper(),
                     "logger": record.name,
                     "message": record.getMessage(),
+                    "request_id": getattr(record, "request_id", ""),
                     "module": record.module,
                     "pathname": record.pathname,
                     "lineno": record.lineno,
@@ -37,14 +64,21 @@ def setup_logging() -> None:
                         "%(asctime)s | "
                         "%(levelname)s | "
                         "%(name)s | "
+                        "%(request_id)s | "
                         "%(message)s"
                     )
+                }
+            },
+            "filters": {
+                "request_id": {
+                    "()": RequestIdFilter,
                 }
             },
             "handlers": {
                 "console": {
                     "class": "logging.StreamHandler",
                     "formatter": "default",
+                    "filters": ["request_id"],
                     "stream": sys.stdout,
                 }
             },
@@ -56,6 +90,7 @@ def setup_logging() -> None:
     )
 
     root_logger = logging.getLogger()
+    root_logger.addFilter(RequestIdFilter())
     if not any(isinstance(handler, BufferedLogHandler) for handler in root_logger.handlers):
         buffer_handler = BufferedLogHandler()
         buffer_handler.setLevel(logging.INFO)

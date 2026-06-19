@@ -15,15 +15,13 @@ class MemoryManager:
     """
 
     CATEGORIES = [
-        "embeddings",
-        "vector_db",
-        "graph",
-        "sync_state",
-        "activity_logs",
-        "cache",
-        "user_profiles",
-        "repos",
-        "temp",
+        "embeddings",     # Vector embeddings
+        "indexes",        # Search indexes (formerly vector_db)
+        "graph",          # Knowledge graph
+        "activity_logs",  # System activity logs
+        "cache",          # Temporary cache
+        "repository",     # Repository knowledge (formerly repos)
+        "temp",           # Temporary files
     ]
 
     def __init__(self):
