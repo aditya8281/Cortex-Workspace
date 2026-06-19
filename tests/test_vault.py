@@ -106,6 +106,3 @@ def test_password_cache_isolation():
     # Cleanup
     with _vault_cache_lock:
         _vault_passwords.pop(uid_b, None)
-
-
-

@@ -72,11 +72,7 @@ def test_json_filter_by_key(client):
         user.handles = {"github": "json-filter-test", "twitter": "@jft"}
         db.flush()
 
-        result = (
-            db.query(User)
-            .filter(User.handles_json["github"].as_string() == "json-filter-test")
-            .first()
-        )
+        result = db.query(User).filter(User.handles_json["github"].as_string() == "json-filter-test").first()
         assert result is not None
 
         user.handles = {}

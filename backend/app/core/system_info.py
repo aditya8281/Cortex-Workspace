@@ -49,8 +49,7 @@ def get_cpu_info() -> str:
         if system == "Darwin":
             # macOS
             result = subprocess.run(
-                ["sysctl", "-n", "machdep.cpu.brand_string"],
-                capture_output=True, text=True, timeout=2
+                ["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True, timeout=2
             )
             if result.returncode == 0:
                 return result.stdout.strip()
@@ -95,7 +94,9 @@ def get_gpu_info() -> dict[str, Any]:
         # Try NVIDIA GPU
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"],
-            capture_output=True, text=True, timeout=3
+            capture_output=True,
+            text=True,
+            timeout=3,
         )
         if result.returncode == 0:
             parts = result.stdout.strip().split(",")
@@ -113,8 +114,7 @@ def get_gpu_info() -> dict[str, Any]:
         # Try Apple Metal GPU
         if platform.system() == "Darwin":
             result = subprocess.run(
-                ["system_profiler", "SPDisplaysDataType"],
-                capture_output=True, text=True, timeout=5
+                ["system_profiler", "SPDisplaysDataType"], capture_output=True, text=True, timeout=5
             )
             if result.returncode == 0 and "GPU" in result.stdout:
                 return {

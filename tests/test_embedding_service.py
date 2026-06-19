@@ -49,9 +49,7 @@ class TestEmbeddingService:
         v2 = svc.embed("deterministic")
         assert v1 == v2
 
-    def test_embed_different_texts_different_vectors(
-        self, svc: EmbeddingService
-    ) -> None:
+    def test_embed_different_texts_different_vectors(self, svc: EmbeddingService) -> None:
         v1 = svc.embed("cat")
         v2 = svc.embed("dog")
         assert v1 != v2

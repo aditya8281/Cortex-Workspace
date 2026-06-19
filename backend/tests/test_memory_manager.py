@@ -39,7 +39,7 @@ class TestMemoryManager:
         entry.id = 42
         db.refresh.side_effect = lambda e: setattr(e, "id", 42)
 
-        result = manager.create(
+        manager.create(
             user_id=1,
             title="Test Title",
             content="Test content",
@@ -103,7 +103,7 @@ class TestMemoryManager:
         db.query.side_effect = query_side_effect
 
         with patch.object(manager, "_db", db):
-            entries, total, categories = manager.list(limit=10, offset=0)
+            entries, total, categories = manager.list_entries(limit=10, offset=0)
 
         assert total == 2
         assert len(entries) == 2

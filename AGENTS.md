@@ -21,8 +21,8 @@
 
 ## DATABASE SCHEMA CHANGES
 
-- Whenever you make changes to the database schema, ALWAYS run the drizzle generate and migrate commands
-- NEVER run drizzle push!
+- Whenever you make changes to the database schema, ALWAYS run alembic revision + alembic upgrade head
+- NEVER use drizzle (this project uses SQLAlchemy + Alembic, not Drizzle)
 
 ## TESTING
 

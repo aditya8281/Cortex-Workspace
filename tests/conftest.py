@@ -5,13 +5,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from backend.app.api.deps import get_db
+from backend.app.api.deps import get_current_user, get_db
 from backend.app.db.base import Base
 from backend.app.intelligence.models import KnowledgeEntry  # noqa: F401
 from backend.app.main import app
 from backend.app.models.auth_event import AuthEvent  # noqa: F401
-from backend.app.models.storage_registry import StorageRegistry  # noqa: F401
 from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401
+from backend.app.models.storage_registry import StorageRegistry  # noqa: F401
 from backend.app.models.user import User  # noqa: F401
 
 
@@ -58,6 +58,38 @@ def _db_session(_engine):
     connection.close()
 
 
+@pytest.fixture()
+def mock_auth():
+    """Provide a mock authenticated user for tests that need it.
+
+    NOT autouse — only used by tests that explicitly need an authenticated user
+    without going through the full register/login flow.
+    """
+    mock_user = MagicMock(spec=User)
+    mock_user.id = 1
+    mock_user.username = "test_user"
+    mock_user.full_name = "Test User"
+    mock_user.role = "user"
+    mock_user.nickname = "testnick"
+    mock_user.bio = None
+    mock_user.description = None
+    mock_user.profile_photo = None
+    mock_user.handles_json = {}
+    mock_user.preferences_json = {}
+    mock_user.vault_locked = True
+    mock_user.github_username = None
+    mock_user.created_at = None
+    mock_user.updated_at = None
+    mock_user.deleted_at = None
+
+    def _override_current_user():
+        return mock_user
+
+    app.dependency_overrides[get_current_user] = _override_current_user
+    yield mock_user
+    app.dependency_overrides.pop(get_current_user, None)
+
+
 @pytest.fixture(name="client")
 def fixture_client():
     """Function-scoped TestClient — each test gets a fresh client."""
@@ -77,11 +109,13 @@ def _mock_external_services():
 
     mock_embedder = MagicMock()
     mock_embedder.embed_single.return_value = [0.1] * 768
-    mock_embedder.embed_batch.return_value = [[0.1] * 768]
+    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 768 for _ in texts]
     mock_embedder.compute_embedding_id.return_value = "test-embedding-id"
 
     with (
         patch("backend.app.services.memory_manager.get_vector_db", return_value=mock_vector_db),
         patch("backend.app.services.memory_manager.get_embedding_service", return_value=mock_embedder),
+        patch("backend.app.services.repo_scanner.get_embedding_service", return_value=mock_embedder),
+        patch("backend.app.services.repo_scanner.get_vector_db", return_value=mock_vector_db),
     ):
         yield

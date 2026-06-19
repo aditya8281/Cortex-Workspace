@@ -65,7 +65,7 @@ async def metrics(request: Request):
         f"cortex_request_errors_total {errors}",
         "# HELP cortex_request_duration_ms Request duration in milliseconds",
         "# TYPE cortex_request_duration_ms gauge",
-        f"cortex_request_duration_ms {{quantile=\"avg\"}} {avg_latency:.2f}",
-        f"cortex_request_duration_ms {{quantile=\"max\"}} {max_latency:.2f}",
+        f'cortex_request_duration_ms {{quantile="avg"}} {avg_latency:.2f}',
+        f'cortex_request_duration_ms {{quantile="max"}} {max_latency:.2f}',
     ]
     return PlainTextResponse("\n".join(lines) + "\n")

@@ -1,4 +1,5 @@
 """Conftest for backend/tests — loads root fixtures and patches external services."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,10 +19,13 @@ def _mock_external_services():
 
     mock_embedder = MagicMock()
     mock_embedder.embed_single.return_value = [0.1] * 768
+    mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 768 for _ in texts]
     mock_embedder.compute_embedding_id.return_value = "test-embedding-id"
 
     with (
         patch("backend.app.services.memory_manager.get_vector_db", return_value=mock_vector_db),
         patch("backend.app.services.memory_manager.get_embedding_service", return_value=mock_embedder),
+        patch("backend.app.services.repo_scanner.get_embedding_service", return_value=mock_embedder),
+        patch("backend.app.services.repo_scanner.get_vector_db", return_value=mock_vector_db),
     ):
         yield

@@ -10,10 +10,7 @@ from backend.app.models.storage_registry import StorageRegistry
 
 def get_registry_for_user(db: Session, user_id: int) -> StorageRegistry | None:
     return (
-        db.query(StorageRegistry)
-        .filter(StorageRegistry.user_id == user_id)
-        .order_by(StorageRegistry.id.desc())
-        .first()
+        db.query(StorageRegistry).filter(StorageRegistry.user_id == user_id).order_by(StorageRegistry.id.desc()).first()
     )
 
 

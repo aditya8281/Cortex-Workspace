@@ -4,6 +4,7 @@ Each test is fully self-contained — registers its own user and does not
 depend on state from other tests.  This makes them safe to run in any
 order and compatible with per-test DB isolation (rollback).
 """
+
 import uuid
 
 import pytest
@@ -25,15 +26,18 @@ _PASSWORD = "securepass123"
 def _register_user(client: TestClient) -> dict:
     """Register a user and return the response JSON."""
     storage = f"~/CortexStorage/smoke_{uuid.uuid4().hex[:6]}"
-    r = client.post("/api/auth/register", json={
-        "username": f"smoke_{uuid.uuid4().hex[:8]}",
-        "password": _PASSWORD,
-        "confirm_password": _PASSWORD,
-        "full_name": "Smoke User",
-        "nickname": "su",
-        "vault_password": "vaultpass123",
-        "personal_storage_path": storage,
-    })
+    r = client.post(
+        "/api/auth/register",
+        json={
+            "username": f"smoke_{uuid.uuid4().hex[:8]}",
+            "password": _PASSWORD,
+            "confirm_password": _PASSWORD,
+            "full_name": "Smoke User",
+            "nickname": "su",
+            "vault_password": "vaultpass123",
+            "personal_storage_path": storage,
+        },
+    )
     assert r.status_code == 200, f"Register failed: {r.text}"
     return r.json()
 
@@ -62,8 +66,9 @@ def test_health_deep(client):
 
 
 def test_memory_get(client):
+    """Memory endpoint requires authentication — verify 401 without token."""
     r = client.get("/api/memory")
-    assert r.status_code == 200
+    assert r.status_code == 401
 
 
 # ── Auth flow tests (each self-contained) ───────────────────────────
@@ -83,15 +88,18 @@ def test_login_and_me(client):
     """Register → logout flow: register, login, access /me."""
     uname = f"smoke_login_{uuid.uuid4().hex[:8]}"
     storage = f"~/CortexStorage/smoke_{uuid.uuid4().hex[:6]}"
-    client.post("/api/auth/register", json={
-        "username": uname,
-        "password": _PASSWORD,
-        "confirm_password": _PASSWORD,
-        "full_name": "Login User",
-        "nickname": "lu",
-        "vault_password": "vaultpass123",
-        "personal_storage_path": storage,
-    })
+    client.post(
+        "/api/auth/register",
+        json={
+            "username": uname,
+            "password": _PASSWORD,
+            "confirm_password": _PASSWORD,
+            "full_name": "Login User",
+            "nickname": "lu",
+            "vault_password": "vaultpass123",
+            "personal_storage_path": storage,
+        },
+    )
 
     r = client.post("/api/auth/login", json={"username": uname, "password": _PASSWORD})
     assert r.status_code == 200
@@ -107,10 +115,14 @@ def test_memory_post(client):
     data = _register_user(client)
     token = data["access_token"]
 
-    r = client.post("/api/memory", json={
-        "title": "smoke test",
-        "content": "hello from smoke test",
-    }, headers={"Authorization": f"Bearer {token}"})
+    r = client.post(
+        "/api/memory",
+        json={
+            "title": "smoke test",
+            "content": "hello from smoke test",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert r.status_code == 200
 
 

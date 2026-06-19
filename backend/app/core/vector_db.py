@@ -5,7 +5,7 @@ from uuid import UUID
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from qdrant_client.http.models import Distance, Filter, FieldCondition, MatchValue, VectorParams
+from qdrant_client.http.models import Distance, FieldCondition, Filter, MatchValue, VectorParams
 
 from backend.app.core.config import settings
 
@@ -33,11 +33,7 @@ class VectorDB:
         qdrant_points = [
             models.PointStruct(
                 id=p["id"] if isinstance(p.get("id"), (int, str, UUID)) else str(p.get("id", "")),
-                vector=(
-                    p["vector"]
-                    if isinstance(p.get("vector"), (list, dict))
-                    else []
-                ),
+                vector=(p["vector"] if isinstance(p.get("vector"), (list, dict)) else []),
                 payload=p.get("payload", {}),
             )
             for p in points
@@ -56,11 +52,8 @@ class VectorDB:
 
         query_filter = None
         if filter_payload:
-            conditions = [
-                FieldCondition(key=k, match=MatchValue(value=v))
-                for k, v in filter_payload.items()
-            ]
-            query_filter = Filter(must=conditions)
+            conditions = [FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filter_payload.items()]
+            query_filter = Filter(must=list(conditions))
 
         result = self.client.query_points(
             collection_name=collection,

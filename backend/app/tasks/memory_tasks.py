@@ -1,10 +1,11 @@
 """Background tasks for memory operations."""
+
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-from backend.app.core.db import SessionLocal
+from backend.app.db.session import SessionLocal
 from backend.app.services.memory_manager import MemoryManager
 from backend.app.services.repo_scanner import RepoScanner
 

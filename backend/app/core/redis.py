@@ -13,6 +13,7 @@ class RedisCache:
     """
     Async Redis caching client with graceful degradation if Redis is down.
     """
+
     def __init__(self, redis_url: str = settings.REDIS_URL):
         self.redis_url = redis_url
         self.client: aioredis.Redis | None = None
@@ -102,7 +103,6 @@ class RedisCache:
                 pass  # event loop already closed or connection already lost
             self.client = None
             self._connected = False
-
 
 
 # Global redis cache instance

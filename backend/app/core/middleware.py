@@ -71,5 +71,9 @@ class RequestLoggingMiddleware:
             record_request(status_code, duration)
             logger.info(
                 "request_id=%s method=%s path=%s status=%s duration_ms=%s",
-                request_id, method, path, status_code, duration,
+                request_id,
+                method,
+                path,
+                status_code,
+                duration,
             )

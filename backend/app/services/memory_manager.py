@@ -8,9 +8,9 @@ import logging
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from backend.app.core.vector_db import get_vector_db, VectorDB
+from backend.app.core.vector_db import VectorDB, get_vector_db
 from backend.app.intelligence.models import KnowledgeEntry
-from backend.app.services.embedding_service import get_embedding_service, EmbeddingService
+from backend.app.services.embedding_service import EmbeddingService, get_embedding_service
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class MemoryManager:
         """Get a knowledge entry by ID."""
         return self._db.query(KnowledgeEntry).filter(KnowledgeEntry.id == entry_id).first()
 
-    def list(
+    def list_entries(
         self,
         user_id: int | None = None,
         category: str | None = None,
@@ -89,32 +89,28 @@ class MemoryManager:
         query = self._db.query(KnowledgeEntry)
 
         if user_id is not None:
-            query = query.filter(
-                (KnowledgeEntry.user_id == user_id) | (KnowledgeEntry.user_id.is_(None))
-            )
+            query = query.filter((KnowledgeEntry.user_id == user_id) | (KnowledgeEntry.user_id.is_(None)))
 
         if category is not None:
             query = query.filter(KnowledgeEntry.category == category)
 
         total = query.count()
-        entries = (
-            query.order_by(KnowledgeEntry.updated_at.desc())
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        entries = query.order_by(KnowledgeEntry.updated_at.desc()).offset(offset).limit(limit).all()
 
         category_query = self._db.query(KnowledgeEntry)
         if user_id is not None:
             category_query = category_query.filter(
                 (KnowledgeEntry.user_id == user_id) | (KnowledgeEntry.user_id.is_(None))
             )
-        categories = dict(
-            category_query.with_entities(
+        categories: dict[str, int] = {
+            row[0]: row[1]
+            for row in category_query.with_entities(
                 KnowledgeEntry.category,
                 func.count(KnowledgeEntry.id),
-            ).group_by(KnowledgeEntry.category).all()
-        )
+            )
+            .group_by(KnowledgeEntry.category)
+            .all()
+        }
 
         return entries, total, categories
 
@@ -128,7 +124,7 @@ class MemoryManager:
         """Semantic search over knowledge entries using vector similarity."""
         query_vector = self._embedder.embed_single(query)
 
-        filter_payload = {}
+        filter_payload: dict[str, str | int] = {}
         if user_id is not None:
             filter_payload["user_id"] = user_id
         if category:
@@ -142,19 +138,10 @@ class MemoryManager:
         )
 
         entry_ids = [int(r["id"]) for r in results]
-        entries = (
-            self._db.query(KnowledgeEntry)
-            .filter(KnowledgeEntry.id.in_(entry_ids))
-            .all()
-            if entry_ids
-            else []
-        )
+        entries = self._db.query(KnowledgeEntry).filter(KnowledgeEntry.id.in_(entry_ids)).all() if entry_ids else []
         entry_map = {str(e.id): self._serialize(e) for e in entries}
 
-        return [
-            {"score": r["score"], "entry": entry_map.get(r["id"])}
-            for r in results
-        ]
+        return [{"score": r["score"], "entry": entry_map.get(r["id"])} for r in results]
 
     def update(
         self,

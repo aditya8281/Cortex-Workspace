@@ -19,7 +19,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.auth import router as auth_router
 from backend.app.api.memory import router as memory_router
-from backend.app.api.metrics import router as metrics_router
 from backend.app.api.router import api_router
 from backend.app.api.ws import router as ws_router
 from backend.app.core.config import settings
@@ -43,15 +42,18 @@ async def lifespan(app: FastAPI):
 
     ensure_system_dirs()
     import sys
+
     if "pytest" not in sys.modules:
         bootstrap_database()
 
     # Test Redis connectivity (optional — fails open)
     from backend.app.core.redis import redis_cache
+
     await redis_cache.ping()
 
     try:
         from backend.app.db import session as db_session
+
         if "pytest" not in sys.modules:
             db_session.get_engine()
             logger.info("System database initialized at %s", db_session.get_database_url())
@@ -76,19 +78,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        origin.strip()
-        for origin in settings.ALLOWED_ORIGINS.split(",")
-        if origin.strip()
-    ],
+    allow_origins=[origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
 )
 
-app.add_middleware(
-    RequestLoggingMiddleware
-)
+app.add_middleware(RequestLoggingMiddleware)
 
 setup_rate_limiting(app)
 setup_csrf_protection(app)
@@ -100,7 +96,6 @@ app.include_router(
 )
 app.include_router(auth_router)
 app.include_router(memory_router)
-app.include_router(metrics_router)
 app.include_router(ws_router)
 
 
@@ -120,6 +115,4 @@ async def websocket_endpoint(ws: WebSocket):
 
 @app.get("/")
 async def root():
-    return {
-        "message": f"{settings.APP_NAME} is running 🚀"
-    }
+    return {"message": f"{settings.APP_NAME} is running 🚀"}

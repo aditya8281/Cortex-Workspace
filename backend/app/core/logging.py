@@ -1,3 +1,4 @@
+import contextvars
 import logging
 import sys
 from collections import deque
@@ -6,6 +7,8 @@ from logging.config import dictConfig
 from typing import Any
 
 LOG_BUFFER: deque[dict[str, Any]] = deque(maxlen=500)
+
+_request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="")
 
 
 class RequestIdFilter(logging.Filter):
@@ -19,18 +22,17 @@ class RequestIdFilter(logging.Filter):
         RequestIdFilter.set("req-123")
         logger.info("hello")  # includes request_id=req-123
     """
-    _request_id: str = ""
 
     @classmethod
     def set(cls, request_id: str) -> None:
-        cls._request_id = request_id
+        _request_id_var.set(request_id)
 
     @classmethod
     def get(cls) -> str:
-        return cls._request_id
+        return _request_id_var.get()
 
     def filter(self, record: logging.LogRecord) -> bool:
-        record.request_id = self._request_id or "-"
+        record.request_id = _request_id_var.get() or "-"
         return True
 
 
@@ -59,15 +61,7 @@ def setup_logging() -> None:
             "version": 1,
             "disable_existing_loggers": False,
             "formatters": {
-                "default": {
-                    "format": (
-                        "%(asctime)s | "
-                        "%(levelname)s | "
-                        "%(name)s | "
-                        "%(request_id)s | "
-                        "%(message)s"
-                    )
-                }
+                "default": {"format": ("%(asctime)s | %(levelname)s | %(name)s | %(request_id)s | %(message)s")}
             },
             "filters": {
                 "request_id": {

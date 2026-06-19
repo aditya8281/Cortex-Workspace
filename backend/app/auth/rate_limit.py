@@ -13,7 +13,9 @@ BLOCK_PREFIX = "auth_block:"
 REDIS_AUTH_TIMEOUT = 3.0
 
 
-async def record_login_failure(ip: str, username: str, max_attempts: int = 5, window_seconds: int = 300) -> tuple[int, bool]:
+async def record_login_failure(
+    ip: str, username: str, max_attempts: int = 5, window_seconds: int = 300
+) -> tuple[int, bool]:
     key = f"{FAIL_PREFIX}{ip}:{username}"
     val = await redis_cache.get(key) or {"count": 0, "first": time.time()}
     val["count"] = val.get("count", 0) + 1

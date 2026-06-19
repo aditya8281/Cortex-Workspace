@@ -91,10 +91,7 @@ def test_login_and_me(client):
         assert reg_response.status_code == 200
 
         # 2. Login
-        login_payload = {
-            "username": "meuser",
-            "password": "mypassword123"
-        }
+        login_payload = {"username": "meuser", "password": "mypassword123"}
         response = client.post("/api/auth/login", json=login_payload)
         assert response.status_code == 200
         token_data = response.json()
@@ -141,7 +138,11 @@ def test_vault_password_update(client):
         headers = {"Authorization": f"Bearer {token}"}
 
         # Update vault password with correct current_password
-        r = client.put("/api/auth/me", json={"vault_password": "newVaultPass123", "current_password": "mypassword123"}, headers=headers)
+        r = client.put(
+            "/api/auth/me",
+            json={"vault_password": "newVaultPass123", "current_password": "mypassword123"},
+            headers=headers,
+        )
         assert r.status_code == 200
 
         # Update vault password without current_password should fail

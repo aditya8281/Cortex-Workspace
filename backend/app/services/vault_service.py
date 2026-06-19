@@ -87,14 +87,53 @@ class SecurePasswordCache(dict):
 _vault_passwords: SecurePasswordCache = SecurePasswordCache()
 
 ALLOWED_VAULT_EXTENSIONS = {
-    ".txt", ".md", ".pdf", ".doc", ".docx", ".xls", ".xlsx",
-    ".ppt", ".pptx", ".csv", ".json", ".xml", ".yaml", ".yml",
-    ".zip", ".tar", ".gz", ".7z", ".rar",
-    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg",
-    ".mp3", ".mp4", ".wav", ".avi", ".mov",
-    ".py", ".js", ".ts", ".jsx", ".tsx", ".html", ".css",
-    ".sql", ".sh", ".bat", ".conf", ".ini", ".toml",
-    ".key", ".pem", ".crt", ".env",
+    ".txt",
+    ".md",
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".ppt",
+    ".pptx",
+    ".csv",
+    ".json",
+    ".xml",
+    ".yaml",
+    ".yml",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".7z",
+    ".rar",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".svg",
+    ".mp3",
+    ".mp4",
+    ".wav",
+    ".avi",
+    ".mov",
+    ".py",
+    ".js",
+    ".ts",
+    ".jsx",
+    ".tsx",
+    ".html",
+    ".css",
+    ".sql",
+    ".sh",
+    ".bat",
+    ".conf",
+    ".ini",
+    ".toml",
+    ".key",
+    ".pem",
+    ".crt",
+    ".env",
 }
 
 
@@ -153,6 +192,7 @@ def verify_vault_password(db: Session, user: User, password: str) -> bool:
     if not user.vault_password_hash:
         return False
     from backend.app.core.security import verify_password
+
     return verify_password(password, user.vault_password_hash)
 
 
@@ -238,6 +278,7 @@ def get_vault_metadata(user_id: int, vault_dir: Path) -> dict:
         encrypted_bytes = metadata_file.read_bytes()
         decrypted_bytes = decrypt_bytes(encrypted_bytes, password)
         import json
+
         return json.loads(decrypted_bytes.decode())
     except Exception as e:
         logger.error("Error reading vault metadata: %s", e)
@@ -252,6 +293,7 @@ def save_vault_metadata(user_id: int, vault_dir: Path, metadata: dict) -> None:
         if not password:
             return
         import json
+
         data_bytes = json.dumps(metadata).encode()
         encrypted_bytes = encrypt_bytes(data_bytes, password)
         metadata_file.write_bytes(encrypted_bytes)
@@ -294,7 +336,11 @@ def update_vault_metadata(
 def list_vault_files(db: Session, user_id: int, folder: str = "/", recursive: bool = False) -> list[dict]:
     """List files and folders in the vault. Can recursively find all files."""
     vault_dir = _get_user_vault_dir(db, user_id)
-    target = vault_dir / folder.strip("/")
+    target = (vault_dir / folder.strip("/")).resolve()
+    if not str(target).startswith(str(vault_dir.resolve())):
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=403, detail="Access denied")
     if not target.exists():
         return []
 
@@ -312,16 +358,18 @@ def list_vault_files(db: Session, user_id: int, folder: str = "/", recursive: bo
             continue
         rel = item.relative_to(vault_dir)
         rel_str = str(rel)
-        entries.append({
-            "name": item.name,
-            "path": rel_str,
-            "is_dir": item.is_dir(),
-            "size": item.stat().st_size if item.is_file() else 0,
-            "modified": item.stat().st_mtime,
-            "created": item.stat().st_ctime,
-            "favorite": rel_str in favorites,
-            "tags": tags_map.get(rel_str, []),
-        })
+        entries.append(
+            {
+                "name": item.name,
+                "path": rel_str,
+                "is_dir": item.is_dir(),
+                "size": item.stat().st_size if item.is_file() else 0,
+                "modified": item.stat().st_mtime,
+                "created": item.stat().st_ctime,
+                "favorite": rel_str in favorites,
+                "tags": tags_map.get(rel_str, []),
+            }
+        )
     return entries
 
 
@@ -338,12 +386,16 @@ def upload_vault_file(db: Session, user_id: int, file_path: str, content: bytes)
         raise HTTPException(status_code=400, detail=f"File type '{ext}' is not allowed in the vault")
 
     vault_dir = _get_user_vault_dir(db, user_id)
-    target = vault_dir / file_path.strip("/")
+    target = (vault_dir / file_path.strip("/")).resolve()
+    if not str(target).startswith(str(vault_dir.resolve())):
+        raise HTTPException(status_code=403, detail="Access denied")
     target.parent.mkdir(parents=True, exist_ok=True)
 
     password = _get_cached_password(user_id)
     if not password:
-        raise HTTPException(status_code=403, detail="Vault is locked or key unavailable. Unlock the vault before uploading files.")
+        raise HTTPException(
+            status_code=403, detail="Vault is locked or key unavailable. Unlock the vault before uploading files."
+        )
 
     # Encrypt and write
     encrypted_content = encrypt_bytes(content, password)
@@ -432,7 +484,7 @@ def rename_vault_item(db: Session, user_id: int, old_path: str, new_name: str) -
         if f == old_rel:
             new_favorites.append(new_rel)
         elif f.startswith(old_rel + "/"):
-            new_favorites.append(new_rel + f[len(old_rel):])
+            new_favorites.append(new_rel + f[len(old_rel) :])
         else:
             new_favorites.append(f)
 
@@ -441,7 +493,7 @@ def rename_vault_item(db: Session, user_id: int, old_path: str, new_name: str) -
         if p == old_rel:
             new_tags[new_rel] = t
         elif p.startswith(old_rel + "/"):
-            new_tags[new_rel + p[len(old_rel):]] = t
+            new_tags[new_rel + p[len(old_rel) :]] = t
         else:
             new_tags[p] = t
 
@@ -483,16 +535,18 @@ def search_vault_files(db: Session, user_id: int, query: str) -> list[dict]:
         if query_lower in item.name.lower():
             rel = item.relative_to(vault_dir)
             rel_str = str(rel)
-            results.append({
-                "name": item.name,
-                "path": rel_str,
-                "is_dir": item.is_dir(),
-                "size": item.stat().st_size if item.is_file() else 0,
-                "modified": item.stat().st_mtime,
-                "created": item.stat().st_ctime,
-                "favorite": rel_str in favorites,
-                "tags": tags_map.get(rel_str, []),
-            })
+            results.append(
+                {
+                    "name": item.name,
+                    "path": rel_str,
+                    "is_dir": item.is_dir(),
+                    "size": item.stat().st_size if item.is_file() else 0,
+                    "modified": item.stat().st_mtime,
+                    "created": item.stat().st_ctime,
+                    "favorite": rel_str in favorites,
+                    "tags": tags_map.get(rel_str, []),
+                }
+            )
     return results
 
 
@@ -503,6 +557,7 @@ def change_vault_password(db: Session, user: User, old_pw: str, new_pw: str) -> 
 
     # Check password strength
     from backend.app.core.security import hash_password, validate_password_strength
+
     if not validate_password_strength(new_pw):
         raise HTTPException(status_code=400, detail="New vault password does not meet strength requirements")
 
@@ -530,7 +585,7 @@ def change_vault_password(db: Session, user: User, old_pw: str, new_pw: str) -> 
         except Exception:
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to decrypt file {item.name} with old password. Password change aborted to prevent data loss."
+                detail=f"Failed to decrypt file {item.name} with old password. Password change aborted to prevent data loss.",
             )
 
     decrypted_metadata = None
@@ -600,7 +655,7 @@ def move_vault_item(db: Session, user_id: int, source_path: str, destination_fol
         if f == old_rel:
             new_favorites.append(new_rel)
         elif f.startswith(old_rel + "/"):
-            new_favorites.append(new_rel + f[len(old_rel):])
+            new_favorites.append(new_rel + f[len(old_rel) :])
         else:
             new_favorites.append(f)
 
@@ -609,7 +664,7 @@ def move_vault_item(db: Session, user_id: int, source_path: str, destination_fol
         if p == old_rel:
             new_tags[new_rel] = t
         elif p.startswith(old_rel + "/"):
-            new_tags[new_rel + p[len(old_rel):]] = t
+            new_tags[new_rel + p[len(old_rel) :]] = t
         else:
             new_tags[p] = t
 
@@ -631,8 +686,7 @@ def export_vault_items(db: Session, user_id: int, paths: list[str], destination_
     dest_path = Path(os.path.expanduser(destination_dir)).resolve()
     if not dest_path.exists() or not dest_path.is_dir():
         raise HTTPException(
-            status_code=400,
-            detail=f"Destination directory '{destination_dir}' does not exist or is not a directory."
+            status_code=400, detail=f"Destination directory '{destination_dir}' does not exist or is not a directory."
         )
 
     vault_dir = _get_user_vault_dir(db, user_id)
@@ -677,4 +731,3 @@ def export_vault_items(db: Session, user_id: int, paths: list[str], destination_
                     exported_count += 1
 
     return {"exported": True, "count": exported_count}
-

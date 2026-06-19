@@ -60,25 +60,28 @@ Think of Cortex as a person — a friend to its users.
 - Structured logging + correlation IDs, Metrics endpoint, Backup strategy
 - Frontend test framework (Vitest)
 
+**Security Audit** — P0/P1 fixes applied
+
+- Memory API requires authentication
+- Vault path traversal blocked
+- Token expiry reduced to 30 minutes
+- CSRF, CORS, WebSocket security tightened
+- Foreign key constraints added to repo models
+
 **Phase 2 (Memory & Indexing)** — Ready to start
 
 AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestration are **next in line**.
 
 | Area | State |
 |------|-------|
-| Tests | 115 (backend 106, frontend 9) |
+| Tests | 156 (backend 147, frontend 9) |
 | Frontend build | Passes |
-| Linting | ruff + ESLint configured |
+| Linting | ruff + ESLint + mypy — all clean |
 | Auth + vault backend | Production-quality foundation |
 | Vault UI | Full file browser with table/list/grid views |
 | Neural Dark redesign | Complete |
 | CLI | Scaffolded (command stubs) |
 | CortexMemory AI dirs | Empty scaffolding |
-
-**Known gaps:**
-- Registration hardcodes `~/CortexData` — no storage picker UI
-- CLI commands are stubs, not yet implemented
-- Frontend tests are minimal (9 tests across 3 files)
 
 ---
 
@@ -111,6 +114,20 @@ AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestr
 | Toast notifications (sonner) | ✅ |
 | Radix UI primitives (dialog, dropdown, tooltip) | ✅ |
 | Page transitions + stagger animations | ✅ |
+
+### Security (Implemented)
+
+| Feature | Status |
+|---------|--------|
+| Memory API requires authentication | ✅ |
+| Vault path traversal protection | ✅ |
+| Access token 30-minute expiry | ✅ |
+| CSRF double-submit protection | ✅ |
+| CORS restricted to explicit origins | ✅ |
+| WebSocket authentication | ✅ |
+| Foreign key constraints on all relations | ✅ |
+| Request ID correlation (contextvars) | ✅ |
+| Health check returns 503 when degraded | ✅ |
 
 ### CLI (Scaffolded)
 
@@ -185,7 +202,7 @@ Filesystem:
 |-------|-----------|
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS |
 | Frontend UI | framer-motion, Radix UI, cmdk, sonner, Three.js, React Three Fiber |
-| Backend | FastAPI, Python 3.10+ |
+| Backend | FastAPI, Python 3.12+ |
 | Database | PostgreSQL 16 (SQLite in tests only) |
 | ORM | SQLAlchemy 2.0 + Alembic |
 | Cache | Redis 7 (optional, graceful fallback) |
@@ -232,23 +249,29 @@ Override root with `CORTEX_ROOT` env var.
 
 **`auth_events`** — Audit log: user_id, IP, timestamp, event_type, metadata.
 
-**`knowledge_entries`** — Simple text memory records (not vector embeddings).
+**`knowledge_entries`** — Text memory records with vector embeddings.
 
 **`user_storage_registry`** — One row per user: filesystem path pointer.
+
+**`repo_indexes`** — Repository metadata (FK to users).
+
+**`code_chunks`** — Indexed code with embeddings (FK to repo_indexes).
 
 ### API Structure
 
 Base URL: `http://localhost:8000`
 
-| Route | Purpose |
-|-------|---------|
-| `/api/auth/*` | Register, login, refresh, logout, check-username |
-| `/api/memory` | List/create knowledge entries (paginated) |
-| `/api/v1/health/*` | live, ready, deep |
-| `/api/v1/users/*` | Admin: list, get, update, delete, promote, demote |
-| `/api/v1/me/profile` | GET/PUT profile, photo upload/delete |
-| `/api/v1/me/github` | GET/POST/DELETE GitHub connection |
-| `/api/v1/me/vault/*` | lock/unlock, files CRUD, search |
+| Route | Purpose | Auth |
+|-------|---------|------|
+| `/api/auth/*` | Register, login, refresh, logout, check-username | Varies |
+| `/api/memory` | List/create/search knowledge entries | Required |
+| `/api/v1/health/*` | live, ready, deep | None |
+| `/api/v1/users/*` | Admin: list, get, update, delete, promote, demote | Admin |
+| `/api/v1/me/profile` | GET/PUT profile, photo upload/delete | Required |
+| `/api/v1/me/github` | GET/POST/DELETE GitHub connection | Required |
+| `/api/v1/me/vault/*` | lock/unlock, files CRUD, search | Required |
+| `/api/v1/metrics` | Prometheus-style metrics | None |
+| `/ws` | WebSocket echo endpoint | None |
 
 Interactive docs: `http://localhost:8000/docs`
 
@@ -285,16 +308,17 @@ First registered user is auto-promoted to `admin`.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `SECRET_KEY` | (empty) | JWT + Fernet derivation |
-| `DATABASE_URL` | `postgresql://cortex:cortex@localhost:5432/cortex` | App database |
+| `DATABASE_URL` | `postgresql://cortex:cortex@localhost:5435/cortex` | App database |
 | `REDIS_URL` | `redis://localhost:6379/0` | Token store / rate limit |
 | `CORTEX_ROOT` | `ProjectRoot/CortexMemory` | System storage root |
 | `NEXT_PUBLIC_API_BASE_URL` | — | Frontend → backend URL |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | JWT access token lifetime |
 
 ---
 
 ## Installation
 
-**Prerequisites:** Python 3.10+, [uv](https://github.com/astral-sh/uv), Node.js 24+, Docker (optional).
+**Prerequisites:** Python 3.12+, [uv](https://github.com/astral-sh/uv), Node.js 24+, Docker (optional).
 
 ```bash
 git clone <repo-url> Cortex-Workspace
@@ -352,9 +376,9 @@ make dev-frontend  # Frontend only
 ```bash
 make install       # uv sync + npm install
 make migrate       # alembic upgrade head
-make test          # 115 tests (106 backend pytest + 9 frontend vitest)
+make test          # 156 tests (147 backend pytest + 9 frontend vitest)
 make lint          # ruff + mypy
-make format        # black + ruff --fix
+make format        # ruff format
 make check         # lint + test
 ```
 
@@ -416,10 +440,10 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 ```bash
 # Daily backup
-pg_dump -h localhost -p 5432 -U cortex -d cortex > backup_$(date +%Y%m%d).sql
+pg_dump -h localhost -p 5435 -U cortex -d cortex > backup_$(date +%Y%m%d).sql
 
 # With compression
-pg_dump -h localhost -p 5432 -U cortex -d cortex | gzip > backup_$(date +%Y%m%d).sql.gz
+pg_dump -h localhost -p 5435 -U cortex -d cortex | gzip > backup_$(date +%Y%m%d).sql.gz
 ```
 
 ### CortexMemory (User Storage)
@@ -436,8 +460,8 @@ tar -xzf cortex_memory_*.tar.gz -C /path/to/restore/
 
 ```bash
 # Database
-psql -h localhost -p 5432 -U cortex -d cortex < backup.sql
-gunzip -c backup.sql.gz | psql -h localhost -p 5432 -U cortex -d cortex
+psql -h localhost -p 5435 -U cortex -d cortex < backup.sql
+gunzip -c backup.sql.gz | psql -h localhost -p 5435 -U cortex -d cortex
 
 # After restore, run migrations to catch up:
 make migrate
@@ -454,14 +478,14 @@ Cortex-Workspace/
 │   ├── core/            # Config, security, paths, storage, Redis, middleware, vector_db, websocket, rate_limit
 │   ├── auth/            # Register/login/refresh/logout, tokens, rate limit, audit
 │   ├── db/              # Bootstrap, session factory
-│   ├── models/          # User, AuthEvent, StorageRegistry ORM
+│   ├── models/          # User, AuthEvent, StorageRegistry, RepoIndex, CodeChunk ORM
 │   ├── schemas/         # Pydantic request/response models
-│   ├── services/        # user, vault, memory_manager, storage_registry, health, embedding_service
-│   ├── intelligence/    # KnowledgeEntry model only
-│   ├── tasks/           # arq worker, embedding_tasks
-│   └── api/             # Routers: auth, memory, v1
+│   ├── services/        # user, vault, memory_manager, storage_registry, health, embedding_service, repo_scanner
+│   ├── intelligence/    # KnowledgeEntry model
+│   ├── tasks/           # arq worker, memory_tasks
+│   └── api/             # Routers: auth, memory, metrics, v1
 ├── frontend/
-│   ├── app/             # Next.js pages (App Router)
+│   ├── app/             # Next.js pages (App Router) with error.tsx boundaries
 │   └── src/
 │       ├── lib/         # motion.ts (spring physics), utils.ts
 │       └── shared/
@@ -474,13 +498,15 @@ Cortex-Workspace/
 │       ├── index.ts     # CLI entry point (Commander.js)
 │       └── commands/    # init, install, build, start, dev, setup, doctor, etc.
 ├── migrations/          # Alembic revisions (PostgreSQL)
-├── tests/               # 115 pytest tests (SQLite) + frontend tests
-├── scripts/             # Docker helpers
-├── docker-compose.yml   # PostgreSQL + Redis
+├── tests/               # 147 pytest tests (SQLite) + frontend tests
+├── scripts/             # Docker helpers, backup
+├── docker-compose.yml   # PostgreSQL + Redis + Qdrant
+├── Dockerfile           # Multi-stage build (frontend + backend)
 ├── start.sh             # Local dev with embedded PG
 ├── CortexMemory/        # Created at runtime (gitignored)
 ├── AGENTS.md            # Agent instructions
-└── DESIGN.md            # Design system
+├── DESIGN.md            # Design system
+└── .agents/             # Agent skills and workflow definitions
 ```
 
 ---
@@ -492,7 +518,7 @@ Cortex-Workspace/
 | [README.md](./README.md) | Everyone | Overview, setup, architecture, reference |
 | [AGENTS.md](./AGENTS.md) | AI Agents | Agent behavior and workflow rules |
 | [DESIGN.md](./DESIGN.md) | Designers | Design system, tokens, components |
-| `.agents/` | Developers | Agent skills and workflow definitions |
+| `.agents/` | Developers | Agent skills, plans, and workflow definitions |
 
 ---
 
@@ -501,6 +527,8 @@ Cortex-Workspace/
 **Phase 1 — Complete:** Identity, secure storage, Neural Dark UI, cookie-based auth, CLI scaffolding.
 
 **Prerequisites — Complete:** Vector DB, embeddings, task queue, WebSocket, rate limiting, soft delete, JWT cookies, CSP, TLS, logging, metrics, backups, frontend tests.
+
+**Security Audit — Complete:** P0/P1 fixes applied (auth enforcement, path traversal, token expiry, CSRF, CORS, FK constraints).
 
 **Phase 2 (Memory & Indexing) — NEXT:**
 1. **Repo scanner** — parse and index codebases
@@ -522,8 +550,8 @@ Cortex-Workspace/
 
 GitHub Actions on push/PR to `main`/`develop`:
 
-- **Backend:** ruff, mypy (advisory — `continue-on-error: true`), pytest with PostgreSQL + Redis
-- **Frontend:** next lint (advisory — `continue-on-error: true`), tsc (advisory — `continue-on-error: true`), production build
+- **Backend:** ruff lint, ruff format, mypy type check, pytest with PostgreSQL + Redis
+- **Frontend:** next lint, TypeScript check, vitest, production build
 
 ---
 

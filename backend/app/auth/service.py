@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 # ── Register ───────────────────────────────────────────────────────────
 
+
 async def register_user(db: Session, payload: UserRegisterPayload, ip: str | None = None):
     t0 = time.monotonic()
     logger.info("[REGISTER] ENTER username=%s ip=%s", payload.username, ip)
@@ -39,13 +40,10 @@ async def register_user(db: Session, payload: UserRegisterPayload, ip: str | Non
     logger.debug("[REGISTER] Passwords validated in %.2fs", time.monotonic() - t0)
 
     # Validate storage path BEFORE creating user to avoid orphaned DB rows
-    storage_root = (
-        payload.storage_root
-        or payload.data_path
-        or payload.personal_storage_path
-    )
+    storage_root = payload.storage_root or payload.data_path or payload.personal_storage_path
     if not storage_root:
         from pathlib import Path
+
         storage_root = str(Path.home() / "CortexStorage" / (_normalize_username(payload.username) or "user"))
     try:
         validated_root = validate_storage_path(storage_root)
@@ -56,7 +54,9 @@ async def register_user(db: Session, payload: UserRegisterPayload, ip: str | Non
         t_db = time.monotonic()
         logger.info("[REGISTER] BEFORE_DB_WRITE")
         db_user = create_user(db, payload)
-        logger.info("[REGISTER] AFTER_DB_WRITE user_id=%s elapsed=%.2fs", getattr(db_user, 'id', None), time.monotonic() - t_db)
+        logger.info(
+            "[REGISTER] AFTER_DB_WRITE user_id=%s elapsed=%.2fs", getattr(db_user, "id", None), time.monotonic() - t_db
+        )
 
         if not db_user:
             log_event("registration_failed", None, ip, {"reason": "username_taken"}, db=db)
@@ -86,7 +86,7 @@ async def register_user(db: Session, payload: UserRegisterPayload, ip: str | Non
     except Exception as e:
         logger.exception("[REGISTER] FAILURE %s", e)
         try:
-            if 'db_user' in locals() and db_user:
+            if "db_user" in locals() and db_user:
                 registry = get_registry_for_user(db, db_user.id)
                 if registry:
                     db.delete(registry)
@@ -99,6 +99,7 @@ async def register_user(db: Session, payload: UserRegisterPayload, ip: str | Non
 
 
 # ── Login ──────────────────────────────────────────────────────────────
+
 
 async def login_user_service(db: Session, username: str, password: str, ip: str | None = None):
     t0 = time.monotonic()
@@ -131,6 +132,7 @@ async def login_user_service(db: Session, username: str, password: str, ip: str 
     log_event("login_success", user.id, ip, {}, db=db)
     try:
         from backend.app.services.vault_service import _vault_cache_lock, _vault_passwords
+
         with _vault_cache_lock:
             _vault_passwords.pop(user.id, None)
     except Exception:
@@ -147,6 +149,7 @@ async def login_user_service(db: Session, username: str, password: str, ip: str 
 
 # ── Logout ─────────────────────────────────────────────────────────────
 
+
 async def logout_user(db: Session, refresh_token: str | None, ip: str | None = None):
     if not refresh_token:
         return True
@@ -157,6 +160,7 @@ async def logout_user(db: Session, refresh_token: str | None, ip: str | None = N
         # Ensure any cached vault password for this user is cleared on logout
         try:
             from backend.app.services.vault_service import _vault_cache_lock, _vault_passwords
+
             user_id_raw = info.get("user_id")
             if user_id_raw is not None:
                 with _vault_cache_lock:
@@ -168,8 +172,10 @@ async def logout_user(db: Session, refresh_token: str | None, ip: str | None = N
 
 # ── Token refresh ──────────────────────────────────────────────────────
 
+
 async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None):
     from backend.app.core.security import create_access_token_async
+
     info = await verify_refresh_token(refresh_token)
     if not info:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
@@ -177,8 +183,7 @@ async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None)
     if new is None:
         # Token was already revoked — this is a reuse attempt.
         # Revoke ALL tokens for this user as a safety measure.
-        log_event("refresh_reuse_detected", info["user_id"], ip,
-                  {"jti": info["jti"]}, db=db)
+        log_event("refresh_reuse_detected", info["user_id"], ip, {"jti": info["jti"]}, db=db)
         raise HTTPException(status_code=401, detail="Refresh token already used")
     access = await create_access_token_async({"sub": str(info["user_id"])})
     log_event("refresh", info["user_id"], ip, {}, db=db)
@@ -186,6 +191,7 @@ async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None)
     # password for this user to force re-unlock under the new session.
     try:
         from backend.app.services.vault_service import _vault_cache_lock, _vault_passwords
+
         user_id_raw = info.get("user_id")
         if user_id_raw is not None:
             with _vault_cache_lock:

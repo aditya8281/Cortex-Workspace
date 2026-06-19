@@ -1,11 +1,12 @@
 """Memory API with CRUD operations and semantic search."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from backend.app.api.deps import get_current_user_optional, get_db
+from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.user import User
 from backend.app.services.memory_manager import MemoryManager
 from backend.app.tasks.worker import enqueue_task
@@ -40,12 +41,12 @@ def list_memory(
     offset: int = 0,
     category: str | None = None,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """List knowledge entries with pagination and category filtering."""
     manager = MemoryManager(db)
-    entries, total, categories = manager.list(
-        user_id=current_user.id if current_user else None,
+    entries, total, categories = manager.list_entries(
+        user_id=current_user.id,
         category=category,
         limit=min(max(limit, 1), 100),
         offset=max(offset, 0),
@@ -65,12 +66,12 @@ def list_memory(
 def create_memory(
     payload: MemoryCreatePayload,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """Create a new knowledge entry with vector embedding."""
     manager = MemoryManager(db)
     entry = manager.create(
-        user_id=current_user.id if current_user else None,
+        user_id=current_user.id,
         title=payload.title,
         content=payload.content,
         category=payload.category,
@@ -84,7 +85,7 @@ def create_memory(
 def get_memory(
     entry_id: int,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a single knowledge entry by ID."""
     manager = MemoryManager(db)
@@ -99,7 +100,7 @@ def update_memory(
     entry_id: int,
     payload: MemoryUpdatePayload,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """Update a knowledge entry and re-embed if content changed."""
     manager = MemoryManager(db)
@@ -119,7 +120,7 @@ def update_memory(
 def delete_memory(
     entry_id: int,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a knowledge entry and its vector embedding."""
     manager = MemoryManager(db)
@@ -133,13 +134,13 @@ def delete_memory(
 def search_memory(
     payload: MemorySearchPayload,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """Semantic search over knowledge entries using vector similarity."""
     manager = MemoryManager(db)
     results = manager.search(
         query=payload.query,
-        user_id=current_user.id if current_user else None,
+        user_id=current_user.id,
         category=payload.category,
         limit=payload.limit,
     )
@@ -157,13 +158,13 @@ class BulkEmbedPayload(BaseModel):
 @router.post("/api/memory/scan-repo")
 async def scan_repo(
     payload: ScanRepoPayload,
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """Trigger background repository scanning."""
     job_id = await enqueue_task(
         "scan_repo_task",
         payload.repo_path,
-        current_user.id if current_user else None,
+        current_user.id,
     )
     return {"status": "queued", "job_id": job_id}
 
@@ -171,7 +172,7 @@ async def scan_repo(
 @router.post("/api/memory/bulk-embed")
 async def bulk_embed(
     payload: BulkEmbedPayload,
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
     """Trigger background bulk embedding of memory entries."""
     job_id = await enqueue_task("bulk_embed_task", payload.entry_ids)

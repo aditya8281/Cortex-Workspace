@@ -45,9 +45,7 @@ async def websocket_demo(ws: WebSocket) -> None:
                 await manager.send(ws, {"action": "stream", "chunk": "", "done": True})
 
             else:
-                await manager.send(
-                    ws, {"action": "error", "message": f"Unknown action: {action}"}
-                )
+                await manager.send(ws, {"action": "error", "message": f"Unknown action: {action}"})
 
     except WebSocketDisconnect:
         manager.disconnect(ws, channel="demo")

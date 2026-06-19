@@ -1,4 +1,5 @@
 """GitHub connection endpoint — link/unlink a GitHub account."""
+
 from __future__ import annotations
 
 import base64
@@ -49,14 +50,18 @@ async def connect_github(
 ):
     """Connect a GitHub account by storing username + encrypted token."""
     gh_username = body.username.strip()
-    if not re.match(r'^[a-zA-Z0-9-]+$', gh_username):
+    if not re.match(r"^[a-zA-Z0-9-]+$", gh_username):
         raise HTTPException(status_code=400, detail="Invalid GitHub username")
 
     # Check if this GitHub username is already connected to another account
-    existing = db.query(User).filter(
-        User.github_username == gh_username,
-        User.id != current_user.id,
-    ).first()
+    existing = (
+        db.query(User)
+        .filter(
+            User.github_username == gh_username,
+            User.id != current_user.id,
+        )
+        .first()
+    )
     if existing:
         raise HTTPException(status_code=409, detail="This GitHub account is already connected to another user")
 
@@ -66,6 +71,7 @@ async def connect_github(
     from cryptography.fernet import Fernet
 
     from backend.app.core.config import settings
+
     # Derive a Fernet key from the app secret (deterministic, same across restarts)
     key = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
     fernet_key = Fernet(base64.urlsafe_b64encode(key))

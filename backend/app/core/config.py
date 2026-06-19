@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 525600  # 1 year — tokens only expire on logout
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes, refresh token rotation handles session续
 
     DATABASE_URL: str = "postgresql://cortex:cortex@localhost:5432/cortex"
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -46,10 +46,7 @@ class Settings(BaseSettings):
     @classmethod
     def validate_secret_key(cls, value: str) -> str:
         if not value and os.environ.get("ENV") not in ("development", "test"):
-            raise ValueError(
-                "SECRET_KEY must be set in production. "
-                "Generate one with: openssl rand -hex 32"
-            )
+            raise ValueError("SECRET_KEY must be set in production. Generate one with: openssl rand -hex 32")
         return value
 
     WORKSPACE_ROOT: str = "."

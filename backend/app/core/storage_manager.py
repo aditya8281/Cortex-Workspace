@@ -14,6 +14,7 @@ class StorageManager:
 
     def __init__(self) -> None:
         from backend.app.core.storage_abstraction import get_system_storage
+
         self._storage: SystemStorage = get_system_storage()
 
     def get_cortex_root(self) -> Path:

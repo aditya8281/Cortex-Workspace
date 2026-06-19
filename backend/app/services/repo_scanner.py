@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import os
 from dataclasses import dataclass, field
@@ -62,7 +61,6 @@ class RepoScanner:
         all_chunks: list[Chunk] = []
 
         for file_path in files:
-            ext = file_path.suffix.lower()
             lang = detect_language(str(file_path))
             if lang:
                 languages[lang] = languages.get(lang, 0) + 1
@@ -85,7 +83,7 @@ class RepoScanner:
             user_id=user_id,
             repo_path=str(path),
             repo_name=repo_name,
-            primary_language=max(languages, key=languages.get) if languages else None,
+            primary_language=max(languages, key=lambda k: languages[k]) if languages else None,
             total_files=len(files),
             total_chunks=len(all_chunks),
             status="indexing",
@@ -144,11 +142,7 @@ class RepoScanner:
         embedding_svc = get_embedding_service()
         vdb = get_vector_db()
 
-        chunks = (
-            self.db.query(CodeChunk)
-            .filter(CodeChunk.repo_id == repo_id, CodeChunk.embedding_id.is_(None))
-            .all()
-        )
+        chunks = self.db.query(CodeChunk).filter(CodeChunk.repo_id == repo_id, CodeChunk.embedding_id.is_(None)).all()
 
         batch: list[CodeChunk] = []
         for chunk in chunks:
@@ -166,7 +160,7 @@ class RepoScanner:
         vectors = embedding_svc.embed_batch(texts)
 
         points = []
-        for chunk, vector in zip(chunks, vectors):
+        for chunk, vector in zip(chunks, vectors, strict=True):
             embedding_id = embedding_svc.compute_embedding_id(chunk.content)
             chunk.embedding_id = embedding_id
             points.append(
@@ -227,7 +221,7 @@ class RepoScanner:
 
         query_vector = embedding_svc.embed_single(query)
 
-        filter_payload = {}
+        filter_payload: dict[str, str | int] = {}
         if repo_id is not None:
             filter_payload["repo_id"] = repo_id
         if language is not None:

@@ -15,11 +15,10 @@ logger = logging.getLogger(__name__)
 def to_user_response(db: Session, user: User) -> UserResponse:
     """Serialize a User ORM object to a UserResponse with storage_root."""
     from backend.app.services.storage_registry import get_registry_for_user
+
     registry = get_registry_for_user(db, user.id)
     response = UserResponse.model_validate(user)
-    return response.model_copy(update={
-        "storage_root": registry.storage_root if registry else None
-    })
+    return response.model_copy(update={"storage_root": registry.storage_root if registry else None})
 
 
 def serialize_user(db: Session, user: User) -> dict:

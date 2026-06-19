@@ -7,6 +7,7 @@ Two-password architecture:
   1. Login Password  — account authentication
   2. Vault Password  — private vault access
 """
+
 from __future__ import annotations
 
 import io
@@ -99,6 +100,7 @@ def vault_status(
 ):
     """Check vault lock status."""
     from backend.app.services.vault_service import is_vault_unlocked
+
     return {
         "locked": not is_vault_unlocked(current_user),
         "has_vault_password": current_user.vault_password_hash is not None,
@@ -140,6 +142,7 @@ async def upload_file(
 
 def get_mime_type(filename: str) -> str:
     from pathlib import Path
+
     ext = Path(filename).suffix.lower()
     mapping = {
         ".txt": "text/plain",
@@ -238,9 +241,7 @@ def update_file_metadata(
 ):
     """Update favorite status or tags for a file/folder in the vault."""
     vault_service._require_unlocked(current_user)
-    return vault_service.update_vault_metadata(
-        db, current_user.id, file_path, body.favorite, body.tags
-    )
+    return vault_service.update_vault_metadata(db, current_user.id, file_path, body.favorite, body.tags)
 
 
 @router.post("/folders")
@@ -273,9 +274,7 @@ def export_files(
 ):
     """Export decrypted vault files/folders recursively to a local directory."""
     vault_service._require_unlocked(current_user)
-    return vault_service.export_vault_items(
-        db, current_user.id, body.paths, body.destination_dir
-    )
+    return vault_service.export_vault_items(db, current_user.id, body.paths, body.destination_dir)
 
 
 @router.post("/change-password")
@@ -286,10 +285,7 @@ def change_password(
 ):
     """Rotate the vault password and re-encrypt files."""
     vault_service._require_unlocked(current_user)
-    success = vault_service.change_vault_password(
-        db, current_user, body.old_password, body.new_password
-    )
+    success = vault_service.change_vault_password(db, current_user, body.old_password, body.new_password)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to rotate password. Check old password.")
     return {"message": "Vault password changed and files re-encrypted successfully"}
-

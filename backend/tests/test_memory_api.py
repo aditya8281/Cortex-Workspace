@@ -1,10 +1,10 @@
 """Tests for Memory API endpoints."""
-import pytest
 
+# Bearer token bypasses CSRF middleware — tests don't need valid tokens
 AUTH_HEADER = {"Authorization": "Bearer test-token"}
 
 
-def test_list_memory_empty(client):
+def test_list_memory_empty(client, mock_auth):
     resp = client.get("/api/memory")
     assert resp.status_code == 200
     data = resp.json()
@@ -12,7 +12,7 @@ def test_list_memory_empty(client):
     assert data["entries"] == []
 
 
-def test_create_memory(client):
+def test_create_memory(client, mock_auth):
     resp = client.post(
         "/api/memory",
         json={"title": "Test Entry", "content": "This is test content", "category": "note"},
@@ -24,7 +24,7 @@ def test_create_memory(client):
     assert data["entry"]["title"] == "Test Entry"
 
 
-def test_create_memory_with_tags(client):
+def test_create_memory_with_tags(client, mock_auth):
     resp = client.post(
         "/api/memory",
         json={"title": "Tagged", "content": "Content with tags", "tags": ["python", "testing"]},
@@ -34,7 +34,7 @@ def test_create_memory_with_tags(client):
     assert resp.json()["entry"]["tags"] == ["python", "testing"]
 
 
-def test_get_memory(client):
+def test_get_memory(client, mock_auth):
     create_resp = client.post(
         "/api/memory",
         json={"title": "Get Me", "content": "Content"},
@@ -46,12 +46,12 @@ def test_get_memory(client):
     assert resp.json()["entry"]["title"] == "Get Me"
 
 
-def test_get_memory_not_found(client):
+def test_get_memory_not_found(client, mock_auth):
     resp = client.get("/api/memory/99999")
     assert resp.status_code == 404
 
 
-def test_update_memory(client):
+def test_update_memory(client, mock_auth):
     create_resp = client.post(
         "/api/memory",
         json={"title": "Original", "content": "Original"},
@@ -67,7 +67,7 @@ def test_update_memory(client):
     assert resp.json()["entry"]["title"] == "Updated"
 
 
-def test_delete_memory(client):
+def test_delete_memory(client, mock_auth):
     create_resp = client.post(
         "/api/memory",
         json={"title": "Delete Me", "content": "Content"},
@@ -79,7 +79,7 @@ def test_delete_memory(client):
     assert resp.json()["status"] == "deleted"
 
 
-def test_search_memory(client):
+def test_search_memory(client, mock_auth):
     client.post(
         "/api/memory",
         json={"title": "Python", "content": "Python decorators"},
@@ -95,7 +95,7 @@ def test_search_memory(client):
     assert isinstance(resp.json()["results"], list)
 
 
-def test_list_memory_category_filter(client):
+def test_list_memory_category_filter(client, mock_auth):
     client.post(
         "/api/memory",
         json={"title": "N1", "content": "C1", "category": "note"},

@@ -29,6 +29,7 @@ class SystemStorage:
         cache_root     -> CortexMemory/cache/
         runtime_root   -> CortexMemory/runtime/
     """
+
     root: Path
     logs_root: Path
     cache_root: Path
@@ -59,7 +60,15 @@ def validate_storage_path(path: str | Path) -> Path:
         raise ValueError("Storage roots cannot live inside the Cortex system directory")
 
     # Disallow obvious dangerous system locations and root
-    forbidden_roots = {Path("/etc"), Path("/bin"), Path("/sbin"), Path("/usr"), Path("/var"), Path("/opt"), Path("/root")}
+    forbidden_roots = {
+        Path("/etc"),
+        Path("/bin"),
+        Path("/sbin"),
+        Path("/usr"),
+        Path("/var"),
+        Path("/opt"),
+        Path("/root"),
+    }
     if resolved == Path("/"):
         raise ValueError(f"Storage root '{resolved}' is not allowed")
     for forb in forbidden_roots:

@@ -6,7 +6,6 @@ from backend.app.db.session import SessionLocal
 
 
 class HealthService:
-
     @staticmethod
     def check_database() -> bool:
         """
@@ -15,6 +14,7 @@ class HealthService:
         to avoid request hangs if the underlying driver/filesystem is blocked.
         """
         import threading
+
         result = {"ok": False}
 
         def _probe():

@@ -29,10 +29,12 @@ def log_event(
     owns_db = False
     if db is None:
         from backend.app.db.session import SessionLocal
+
         db = SessionLocal()
         owns_db = True
     try:
         from backend.app.models.auth_event import AuthEvent
+
         ev = AuthEvent(
             user_id=user_id,
             ip_address=ip,
@@ -43,7 +45,7 @@ def log_event(
         db.add(ev)
         db.commit()
     except Exception as exc:
-        logger.debug("Audit log_event failed: %s", exc)
+        logger.warning("Audit log_event failed: %s", exc)
         try:
             db.rollback()
         except Exception:

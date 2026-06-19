@@ -50,7 +50,10 @@ def _photo_dir(user_id: int) -> Path:
     # the user to register a storage root instead.
     from fastapi import HTTPException
 
-    raise HTTPException(status_code=400, detail="No user storage registered. Please configure your storage root before uploading a profile photo.")
+    raise HTTPException(
+        status_code=400,
+        detail="No user storage registered. Please configure your storage root before uploading a profile photo.",
+    )
 
 
 def _avatar_path(user_id: int) -> Path:

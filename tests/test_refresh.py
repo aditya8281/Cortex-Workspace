@@ -8,6 +8,7 @@ Covers:
   - Invalid / missing / expired token handling
   - Logout invalidates refresh token
 """
+
 import uuid
 
 import pytest
@@ -25,18 +26,22 @@ def _register(client: TestClient, username: str | None = None) -> dict:
     """Register a user and return the full response JSON."""
     import tempfile
     from pathlib import Path
+
     uname = username or f"rt_{uuid.uuid4().hex[:8]}"
     storage = Path.home() / f"cortex_rt_{tempfile.mktemp().split('/')[-1]}"
     storage.mkdir(parents=True, exist_ok=True)
-    r = client.post("/api/auth/register", json={
-        "username": uname,
-        "password": "securepass123",
-        "confirm_password": "securepass123",
-        "full_name": "Refresh Test User",
-        "nickname": "rt",
-        "vault_password": "vaultpass123",
-        "personal_storage_path": str(storage),
-    })
+    r = client.post(
+        "/api/auth/register",
+        json={
+            "username": uname,
+            "password": "securepass123",
+            "confirm_password": "securepass123",
+            "full_name": "Refresh Test User",
+            "nickname": "rt",
+            "vault_password": "vaultpass123",
+            "personal_storage_path": str(storage),
+        },
+    )
     assert r.status_code == 200, f"Register failed: {r.text}"
     return r.json()
 

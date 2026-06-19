@@ -28,20 +28,34 @@ def _secure_flag() -> bool:
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str | None = None) -> None:
     secure = _secure_flag()
     response.set_cookie(
-        key="cortex_access", value=access_token, httponly=True, secure=secure, samesite="lax", path="/",
+        key="cortex_access",
+        value=access_token,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
         max_age=60 * settings.ACCESS_TOKEN_EXPIRE_MINUTES,
     )
     if refresh_token:
         response.set_cookie(
-            key="cortex_refresh", value=refresh_token, httponly=True, secure=secure, samesite="lax", path="/",
+            key="cortex_refresh",
+            value=refresh_token,
+            httponly=True,
+            secure=secure,
+            samesite="lax",
+            path="/",
             max_age=604800,  # 7 days
         )
 
 
 def _clear_auth_cookies(response: Response) -> None:
     secure = _secure_flag()
-    response.set_cookie(key="cortex_access", value="", httponly=True, secure=secure, samesite="lax", path="/", max_age=0)
-    response.set_cookie(key="cortex_refresh", value="", httponly=True, secure=secure, samesite="lax", path="/", max_age=0)
+    response.set_cookie(
+        key="cortex_access", value="", httponly=True, secure=secure, samesite="lax", path="/", max_age=0
+    )
+    response.set_cookie(
+        key="cortex_refresh", value="", httponly=True, secure=secure, samesite="lax", path="/", max_age=0
+    )
 
 
 def _get_token(request: Request) -> str | None:
@@ -70,13 +84,16 @@ class UsernameCheckResponse(BaseModel):
 def check_username(payload: UsernameCheckRequest, db: Session = Depends(get_db)):
     """Real-time username availability check."""
     import re
+
     username = _normalize_username(payload.username)
     if len(username) < 3:
         return UsernameCheckResponse(available=False, message="Username must be at least 3 characters")
     if len(username) > 128:
         return UsernameCheckResponse(available=False, message="Username must be 128 characters or fewer")
-    if not re.match(r'^[a-zA-Z0-9_-]+$', username):
-        return UsernameCheckResponse(available=False, message="Username can only contain letters, numbers, hyphens, and underscores")
+    if not re.match(r"^[a-zA-Z0-9_-]+$", username):
+        return UsernameCheckResponse(
+            available=False, message="Username can only contain letters, numbers, hyphens, and underscores"
+        )
     existing = db.query(User).filter(User.username == username, User.deleted_at.is_(None)).first()
     if existing:
         return UsernameCheckResponse(available=False, message="Username is already taken")
@@ -160,6 +177,7 @@ async def update_me(
         if not body.current_password:
             raise HTTPException(status_code=400, detail="Current password required")
         from backend.app.core.security import hash_password, verify_password
+
         if not verify_password(body.current_password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid current password")
         user.vault_password_hash = hash_password(body.vault_password)
@@ -198,12 +216,14 @@ async def delete_me(
         raise HTTPException(status_code=400, detail="Account already deleted")
 
     from backend.app.core.security import verify_password
+
     if not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid password")
 
     # Clear vault cache
     try:
         from backend.app.services.vault_service import _vault_cache_lock, _vault_passwords
+
         with _vault_cache_lock:
             _vault_passwords.pop(user.id, None)
     except Exception:
@@ -211,10 +231,13 @@ async def delete_me(
 
     # Soft delete: set deleted_at, don't remove data
     from backend.app.services.user_service import delete_user
+
     delete_user(db, user.id)
 
     _clear_auth_cookies(response)
-    return {"message": "Account scheduled for deletion. You have 7 days to restore it before data is permanently removed."}
+    return {
+        "message": "Account scheduled for deletion. You have 7 days to restore it before data is permanently removed."
+    }
 
 
 class RestoreAccountRequest(BaseModel):
@@ -242,6 +265,7 @@ async def restore_account(
 
     # Check grace period
     from datetime import datetime, timezone
+
     grace_days = 7
     if user.deleted_at:
         deleted_at = user.deleted_at
@@ -253,9 +277,11 @@ async def restore_account(
 
     if body.password:
         from backend.app.core.security import verify_password
+
         if not verify_password(body.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid password")
 
     from backend.app.services.user_service import restore_user
+
     restore_user(db, user.id)
     return {"message": "Account restored successfully"}

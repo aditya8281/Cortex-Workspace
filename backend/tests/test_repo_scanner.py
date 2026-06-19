@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.app.db.base import Base
 from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401
-from backend.app.services.chunker import Chunk, chunk_code, chunk_text, detect_language
+from backend.app.services.chunker import chunk_code, chunk_text, detect_language
 from backend.app.services.repo_scanner import RepoScanner
 
 
@@ -79,9 +79,7 @@ class TestChunkCode:
         assert chunks[0].symbol_name == "foo"
 
     def test_multiple_functions(self):
-        content = (
-            "def foo():\n    pass\n\n" + "def bar():\n    pass\n\n" + "def baz():\n    pass\n"
-        )
+        content = "def foo():\n    pass\n\n" + "def bar():\n    pass\n\n" + "def baz():\n    pass\n"
         chunks = chunk_code(content, "test.py", max_tokens=10)
         assert len(chunks) >= 3
 
@@ -97,7 +95,7 @@ class TestChunkCode:
         assert chunks[0].symbol_name == "hello"
 
     def test_rust_function(self):
-        content = "fn main() {\n    println!(\"hi\");\n}\n"
+        content = 'fn main() {\n    println!("hi");\n}\n'
         chunks = chunk_code(content, "main.rs")
         assert chunks[0].symbol_name == "main"
 
@@ -127,7 +125,7 @@ class TestScanRepo:
     def test_scan_python_repo(self, mock_get_emb, mock_get_vdb, db_session):
         """Test scanning a Python-only repository."""
         mock_emb = MagicMock()
-        mock_emb.embed_batch.return_value = [[0.1] * 768]
+        mock_emb.embed_batch.side_effect = lambda texts: [[0.1] * 768 for _ in texts]
         mock_emb.compute_embedding_id.return_value = "emb_test"
         mock_get_emb.return_value = mock_emb
         mock_get_vdb.return_value = MagicMock()
@@ -151,7 +149,7 @@ class TestScanRepo:
     def test_scan_mixed_repo(self, mock_get_emb, mock_get_vdb, db_session):
         """Test scanning a multi-language repo."""
         mock_emb = MagicMock()
-        mock_emb.embed_batch.return_value = [[0.1] * 768]
+        mock_emb.embed_batch.side_effect = lambda texts: [[0.1] * 768 for _ in texts]
         mock_emb.compute_embedding_id.return_value = "emb_test"
         mock_get_emb.return_value = mock_emb
         mock_get_vdb.return_value = MagicMock()
@@ -175,7 +173,7 @@ class TestScanRepo:
     def test_scan_skips_dirs(self, mock_get_emb, mock_get_vdb, db_session):
         """Test that ignored directories are skipped."""
         mock_emb = MagicMock()
-        mock_emb.embed_batch.return_value = [[0.1] * 768]
+        mock_emb.embed_batch.side_effect = lambda texts: [[0.1] * 768 for _ in texts]
         mock_emb.compute_embedding_id.return_value = "emb_test"
         mock_get_emb.return_value = mock_emb
         mock_get_vdb.return_value = MagicMock()
@@ -206,7 +204,7 @@ class TestGetRepoStatus:
     def test_get_repo_status(self, mock_get_emb, mock_get_vdb, db_session):
         """Test getting repository status."""
         mock_emb = MagicMock()
-        mock_emb.embed_batch.return_value = [[0.1] * 768]
+        mock_emb.embed_batch.side_effect = lambda texts: [[0.1] * 768 for _ in texts]
         mock_emb.compute_embedding_id.return_value = "emb_test"
         mock_get_emb.return_value = mock_emb
         mock_get_vdb.return_value = MagicMock()
