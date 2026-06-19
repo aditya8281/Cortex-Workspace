@@ -267,7 +267,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
           {isDesktop && sidebarExpanded && (
             <div className="px-3 pb-2">
               <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-bg-hover/50">
-                <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-xs font-bold text-[#050508] overflow-hidden shrink-0">
+                <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-xs font-bold text-void overflow-hidden shrink-0">
                   {user?.profile_photo && user?.id && !photoFailed ? (
                     <img src={getProfilePhotoUrl(user.id)} alt="" className="h-full w-full object-cover" onError={() => setPhotoFailed(true)} />
                   ) : initials}

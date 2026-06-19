@@ -32,7 +32,7 @@ function MetricRing({ value, label, icon: Icon, unit = "%" }: { value: number; l
           <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
             <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
             <motion.circle
-              cx="40" cy="40" r="36" fill="none" stroke="#06b6d4" strokeWidth="4"
+              cx="40" cy="40" r="36" fill="none"               stroke="var(--accent)" strokeWidth="4"
               strokeLinecap="round" strokeDasharray={circumference}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset }}
@@ -124,7 +124,7 @@ export default function DashboardPage() {
       <PageTransition className="max-w-5xl mx-auto space-y-8">
         {/* Hero Welcome */}
         <div className="flex items-center gap-5">
-          <motion.div whileHover={{ scale: 1.05 }} className="relative h-16 w-16 rounded-full bg-accent flex items-center justify-center text-xl font-bold text-[#050508] overflow-hidden shrink-0 cursor-default">
+          <motion.div whileHover={{ scale: 1.05 }} className="relative h-16 w-16 rounded-full bg-accent flex items-center justify-center text-xl font-bold text-void overflow-hidden shrink-0 cursor-default">
             {user.profile_photo ? (
               <img src={`/api/v1/me/profile/photo/${user.id}`} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             ) : initials}

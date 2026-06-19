@@ -8,6 +8,7 @@ import { apiListUsers, apiPromoteUser, apiDemoteUser, apiDeleteUser } from "../.
 import DashboardShell from "../../src/shared/layout/DashboardShell";
 import Button from "../../src/shared/ui/Button";
 import Card from "../../src/shared/ui/Card";
+import Input from "../../src/shared/ui/Input";
 import { cn } from "../../src/lib/utils";
 import { Shield, Users, ArrowUp, ArrowDown, Trash2, RefreshCw, Search, UserCheck, Loader2 } from "lucide-react";
 import type { User } from "../../src/shared/types";
@@ -94,26 +95,32 @@ export default function AdminPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          <motion.div {...itemVariant} className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="h-4 w-4 text-text-muted" />
-              <p className="text-xs text-text-muted">Total Users</p>
-            </div>
-            <p className="text-2xl font-semibold text-text">{users.length}</p>
+          <motion.div {...itemVariant}>
+            <Card className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="h-4 w-4 text-text-muted" />
+                <p className="text-xs text-text-muted">Total Users</p>
+              </div>
+              <p className="text-2xl font-semibold text-text">{users.length}</p>
+            </Card>
           </motion.div>
-          <motion.div {...itemVariant} className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="h-4 w-4 text-accent" />
-              <p className="text-xs text-text-muted">Admins</p>
-            </div>
-            <p className="text-2xl font-semibold text-accent">{adminCount}</p>
+          <motion.div {...itemVariant}>
+            <Card className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-accent" />
+                <p className="text-xs text-text-muted">Admins</p>
+              </div>
+              <p className="text-2xl font-semibold text-accent">{adminCount}</p>
+            </Card>
           </motion.div>
-          <motion.div {...itemVariant} className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <UserCheck className="h-4 w-4 text-text-muted" />
-              <p className="text-xs text-text-muted">Regular Users</p>
-            </div>
-            <p className="text-2xl font-semibold text-text">{userCount}</p>
+          <motion.div {...itemVariant}>
+            <Card className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <UserCheck className="h-4 w-4 text-text-muted" />
+                <p className="text-xs text-text-muted">Regular Users</p>
+              </div>
+              <p className="text-2xl font-semibold text-text">{userCount}</p>
+            </Card>
           </motion.div>
         </div>
 
@@ -121,23 +128,19 @@ export default function AdminPage() {
           <div className="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-4">
             <h2 className="text-sm font-medium text-text">User Management</h2>
             <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Filter users..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 pl-8 pr-3 rounded-lg bg-bg-surface border border-border-subtle text-xs text-text placeholder:text-text-muted outline-none transition-all focus:border-accent/40 focus:ring-1 focus:ring-accent/20 w-48"
-                />
-              </div>
+              <Input
+                placeholder="Filter users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 w-48 text-xs"
+              />
               <Button variant="ghost" size="sm" onClick={fetchUsers}>
                 <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
                 Refresh
               </Button>
             </div>
           </div>
-          {error && <div className="px-5 py-2 bg-error/10 text-sm text-error border-b border-border">{error}</div>}
+          {error && <div className="px-5 py-2 text-sm text-error bg-error/10 rounded-xl border-b border-error/10">{error}</div>}
           {loading ? (
             <div className="px-5 py-8 flex flex-col items-center gap-3">
               <Loader2 className="h-6 w-6 text-accent animate-spin" />
@@ -174,7 +177,7 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2 shrink-0">
                     <span
                       className={cn(
-                        "text-xs font-medium px-2.5 py-1 rounded-full",
+                        "text-[10px] font-mono font-medium uppercase tracking-wider px-2.5 py-1 rounded-full",
                         u.role === "admin"
                           ? "bg-accent/10 text-accent border border-accent/15"
                           : "bg-bg-surface text-text-muted border border-border-subtle"

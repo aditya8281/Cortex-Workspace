@@ -187,8 +187,8 @@ export default function ProfilePage() {
                     className="w-full rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 resize-none focus:border-accent/40 focus:ring-2 focus:ring-accent/10 focus:shadow-glow"
                   />
                 </div>
-                {profileError && <p className="text-sm text-error bg-error/10 rounded-md px-3 py-2 border border-error/10">{profileError}</p>}
-                {profileSaved && <p className="text-sm text-success bg-success/10 rounded-md px-3 py-2 border border-success/10">Profile saved successfully.</p>}
+                {profileError && <p className="text-sm text-error bg-error/10 rounded-xl px-3 py-2 border border-error/10">{profileError}</p>}
+                {profileSaved && <p className="text-sm text-success bg-success/10 rounded-xl px-3 py-2 border border-success/10">Profile saved successfully.</p>}
                 <div className="flex justify-end pt-1">
                   <Button loading={profileLoading} onClick={handleProfileSave}>Save changes</Button>
                 </div>
@@ -228,7 +228,7 @@ export default function ProfilePage() {
                     </a>{" "}
                     with <code className="bg-bg-surface px-1 rounded">repo</code> scope for full access.
                   </p>
-                  {ghError && <p className="text-sm text-error bg-error/10 rounded-md px-3 py-2 border border-error/10">{ghError}</p>}
+                  {ghError && <p className="text-sm text-error bg-error/10 rounded-xl px-3 py-2 border border-error/10">{ghError}</p>}
                   <div className="flex justify-end">
                     <Button loading={ghSaving} onClick={handleGitHubConnect} size="sm">Connect</Button>
                   </div>
@@ -322,7 +322,7 @@ export default function ProfilePage() {
                 <label className="text-xs font-medium text-text-secondary">Current Projects (up to 3)</label>
                 {[0, 1, 2].map((i) => (
                   <div key={i} className="flex gap-2">
-                    <input
+                    <Input
                       value={currentProjects[i]?.name || ""}
                       onChange={(e) => {
                         const updated = [...currentProjects];
@@ -332,9 +332,9 @@ export default function ProfilePage() {
                         setCurrentProjects(updated.filter((p) => p.name));
                       }}
                       placeholder={`Project ${i + 1} name`}
-                      className="flex-1 rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
+                      className="flex-1 text-sm"
                     />
-                    <input
+                    <Input
                       value={currentProjects[i]?.description || ""}
                       onChange={(e) => {
                         const updated = [...currentProjects];
@@ -343,7 +343,7 @@ export default function ProfilePage() {
                         setCurrentProjects(updated.filter((p) => p.name));
                       }}
                       placeholder="Description"
-                      className="flex-1 rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
+                      className="flex-1 text-sm"
                     />
                   </div>
                 ))}
@@ -356,33 +356,24 @@ export default function ProfilePage() {
             <Card className="p-5">
               <h2 className="text-sm font-medium text-text mb-4">Social Links</h2>
               <div className="grid gap-3">
-                <div className="grid gap-1.5">
-                  <label className="text-xs font-medium text-text-secondary">Twitter / X</label>
-                  <input
-                    value={socialLinks.twitter || ""}
-                    onChange={(e) => setSocialLinks((prev) => ({ ...prev, twitter: e.target.value }))}
-                    placeholder="@username"
-                    className="rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <label className="text-xs font-medium text-text-secondary">LinkedIn</label>
-                  <input
-                    value={socialLinks.linkedin || ""}
-                    onChange={(e) => setSocialLinks((prev) => ({ ...prev, linkedin: e.target.value }))}
-                    placeholder="linkedin.com/in/username"
-                    className="rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
-                  />
-                </div>
-                <div className="grid gap-1.5">
-                  <label className="text-xs font-medium text-text-secondary">Website</label>
-                  <input
-                    value={socialLinks.website || ""}
-                    onChange={(e) => setSocialLinks((prev) => ({ ...prev, website: e.target.value }))}
-                    placeholder="https://yoursite.com"
-                    className="rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
-                  />
-                </div>
+                <Input
+                  label="Twitter / X"
+                  value={socialLinks.twitter || ""}
+                  onChange={(e) => setSocialLinks((prev) => ({ ...prev, twitter: e.target.value }))}
+                  placeholder="@username"
+                />
+                <Input
+                  label="LinkedIn"
+                  value={socialLinks.linkedin || ""}
+                  onChange={(e) => setSocialLinks((prev) => ({ ...prev, linkedin: e.target.value }))}
+                  placeholder="linkedin.com/in/username"
+                />
+                <Input
+                  label="Website"
+                  value={socialLinks.website || ""}
+                  onChange={(e) => setSocialLinks((prev) => ({ ...prev, website: e.target.value }))}
+                  placeholder="https://yoursite.com"
+                />
               </div>
             </Card>
           </motion.div>

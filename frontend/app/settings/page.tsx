@@ -193,7 +193,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {prefsSaved && <p className="text-sm text-success bg-success/10 rounded-md px-3 py-2 border border-success/10 mb-3">Preferences saved.</p>}
+              {prefsSaved && <p className="text-sm text-success bg-success/10 rounded-xl px-3 py-2 border border-success/10 mb-3">Preferences saved.</p>}
               
               <div className="flex justify-end">
                 <Button size="sm" loading={prefsLoading} onClick={handleSavePreferences}>Save preferences</Button>
@@ -204,7 +204,7 @@ export default function SettingsPage() {
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.08 }}>
             <Card className="p-5 border-error/20 bg-error/[0.02]">
               <div className="flex items-center gap-3 mb-4">
-                <div className="h-9 w-9 rounded-md bg-error/10 border border-error/15 flex items-center justify-center shrink-0">
+                <div className="h-9 w-9 rounded-lg bg-error/10 border border-error/15 flex items-center justify-center shrink-0">
                   <AlertTriangle className="h-4.5 w-4.5 text-error" />
                 </div>
                 <div>
@@ -243,7 +243,7 @@ export default function SettingsPage() {
                         onChange={(e) => setDeletePassword(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleDeleteAccount()}
                       />
-                      {deleteError && <p className="text-sm text-error bg-error/10 rounded-md px-3 py-2 border border-error/10">{deleteError}</p>}
+                      {deleteError && <p className="text-sm text-error bg-error/10 rounded-xl px-3 py-2 border border-error/10">{deleteError}</p>}
                       <div className="flex gap-3 justify-end">
                         <Button variant="ghost" size="sm" onClick={() => { setDeleteConfirmStep(false); setDeletePassword(""); setDeleteError(""); }}>
                           Cancel
