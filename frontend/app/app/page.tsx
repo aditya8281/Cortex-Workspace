@@ -10,6 +10,7 @@ import DashboardShell from "../../src/shared/layout/DashboardShell";
 import PageTransition from "../../src/shared/ui/PageTransition";
 import StaggerChildren from "../../src/shared/ui/StaggerChildren";
 import Card from "../../src/shared/ui/Card";
+import NeuralNetwork from "../../src/shared/ui/NeuralNetwork";
 import type { VaultStatus, SystemMetrics, SystemLog } from "../../src/shared/types";
 
 import type { LucideIcon } from "lucide-react";
@@ -119,6 +120,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell>
+      <NeuralNetwork intensity="medium" />
       <PageTransition className="max-w-5xl mx-auto space-y-8">
         {/* Hero Welcome */}
         <div className="flex items-center gap-5">
