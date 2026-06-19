@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 525600  # 1 year — tokens only expire on logout
 
     DATABASE_URL: str = "postgresql://cortex:cortex@localhost:5432/cortex"
     REDIS_URL: str = "redis://localhost:6379/0"
