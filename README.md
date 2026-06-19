@@ -73,20 +73,24 @@ Think of Cortex as a person — a friend to its users.
 - Foreign key constraints added to repo models
 - CSRF exemptions for authenticated API endpoints (vault, profile photo)
 
-**Phase 2 (Memory & Indexing)** — Partially built
+**Phase 2 (Indexing & Knowledge Graph)** — Complete
 
-| Component | Status |
-|-----------|--------|
-| Embedding service (ONNX/BGE-M3) | ✅ Functional (mock fallback) |
-| Code chunker (language detection, symbol extraction) | ✅ Regex-based (AST upgrade planned) |
-| Repository scanner (walk, chunk, embed, store) | ✅ Pipeline complete |
-| Memory manager (CRUD + vector search) | ✅ Functional |
-| Vector DB client (Qdrant wrapper) | ✅ Functional |
-| Background task queue (arq + Redis) | ✅ Functional |
-| Knowledge graph | ⏳ Planned (Week 5-6) |
-| AST-based code parsing (tree-sitter) | ⏳ Planned (Week 5-6) |
-| Incremental re-indexing | ⏳ Planned (Week 5-6) |
-| Hybrid search (BM25 + vector) | ⏳ Planned (Week 5-6) |
+- Incremental indexer (hash-based change detection)
+- Knowledge graph (graph_nodes, graph_edges)
+- File index tracking (indexed_files)
+- Cross-file search (vector + graph enrichment)
+- Unified search API
+- Repository management API (CRUD + indexing triggers)
+- Frontend: Search page with filters, results, graph view
+- Background tasks: index_repo, build_graph
+
+**Phase 3 (Unified Search & Agents)** — Complete
+
+- Agent system (base agent, planner, executor)
+- Agent run manager with step tracking
+- Agent CRUD API + run/step/feedback API
+- Frontend: Agent chat interface, Agents management page
+- Navigation: sidebar + command palette integration
 
 | Area | State |
 |------|-------|
@@ -279,7 +283,21 @@ Override root with `CORTEX_ROOT` env var.
 
 **`code_chunks`** — Indexed code with embeddings (FK to repo_indexes), symbol info, language.
 
+**`graph_nodes`** — Knowledge graph nodes (type, label, properties, embedding).
+
+**`graph_edges`** — Knowledge graph edges (source_id, target_id, relation, weight).
+
+**`indexed_files`** — File tracking for incremental indexing (path, hash, mtime, size).
+
 **`notifications`** — System notifications for users.
+
+**`agents`** — Agent definitions (name, description, config, is_active).
+
+**`agent_runs`** — Agent execution history (status, task, result, metrics).
+
+**`agent_steps`** — Individual steps within an agent run (action, input, output, duration_ms).
+
+**`agent_feedback`** — User feedback on agent runs (rating, comment).
 
 ### API Structure
 
@@ -298,6 +316,9 @@ Base URL: `http://localhost:8000`
 | `/api/v1/me/github` | GET/POST/DELETE GitHub connection | Required |
 | `/api/v1/me/vault/*` | lock/unlock, files CRUD, search | Required |
 | `/api/v1/notifications` | List/read notifications | Required |
+| `/api/v1/search` | Unified search across all data types | Required |
+| `/api/v1/repos` | Repository CRUD + indexing + graph | Required |
+| `/api/v1/agents` | Agent CRUD + runs + steps + feedback | Required |
 | `/api/v1/system/*` | System status, metrics | Varies |
 | `/ws` | WebSocket echo + demo + system metrics | None |
 
@@ -339,6 +360,8 @@ First registered user is auto-promoted to `admin`.
 | Settings | `/settings` | Vault lock/unlock, account delete |
 | Admin | `/admin` | User list, promote/demote/delete |
 | Memory | `/memory` | Knowledge base viewer and creator |
+| Search | `/search` | Unified search with filters, results, graph view |
+| Agents | `/agents` | Agent management + chat interface |
 
 **Global:** Command palette available via `⌘K` (or `Ctrl+K`) on any page.
 
@@ -517,17 +540,21 @@ Cortex-Workspace/
 │   ├── core/            # Config, security, paths, storage, Redis, middleware, vector_db, websocket, rate_limit, csrf
 │   ├── auth/            # Register/login/refresh/logout, tokens, rate limit, audit
 │   ├── db/              # Bootstrap, session factory
-│   ├── models/          # User, AuthEvent, StorageRegistry, RepoIndex, CodeChunk, Notification ORM
+│   ├── models/          # User, AuthEvent, StorageRegistry, RepoIndex, CodeChunk, GraphNode, GraphEdge, IndexedFile, Agent, AgentRun, AgentStep, AgentFeedback, Notification ORM
 │   ├── schemas/         # Pydantic request/response models
-│   ├── services/        # user, vault, memory_manager, storage_registry, health, embedding_service, repo_scanner, chunker, notification
+│   ├── services/        # user, vault, memory_manager, storage_registry, health, embedding_service, repo_scanner, chunker, notification, incremental_indexer, graph_builder, cross_file_search
 │   ├── intelligence/    # KnowledgeEntry model
+│   ├── agents/          # BaseAgent, PlannerAgent, ExecutorAgent, AgentRunManager
 │   ├── tasks/           # arq worker, memory_tasks
-│   └── api/             # Routers: auth, memory, metrics, v1 (profile, vault, github, notifications, system)
+│   └── api/             # Routers: auth, memory, metrics, agents, search, repos, v1 (profile, vault, github, notifications, system)
 ├── frontend/
 │   ├── app/             # Next.js pages (App Router) with error.tsx boundaries
+│   │   ├── search/      # Unified search page
+│   │   └── agents/      # Agent management + chat
 │   └── src/
 │       ├── lib/         # utils.ts (cn helper)
 │       └── shared/
+│           ├── api/     # agent.ts, index.ts (API clients)
 │           ├── auth/    # AuthProvider, cortexApi client, session
 │           ├── design/  # Design tokens
 │           ├── layout/  # DashboardShell (Neural Pulse sidebar)
@@ -537,7 +564,7 @@ Cortex-Workspace/
 │   └── src/
 │       ├── index.ts     # CLI entry point (Commander.js)
 │       └── commands/    # init, install, build, start, dev, setup, doctor, etc.
-├── migrations/          # Alembic revisions (PostgreSQL, 12 migrations)
+├── migrations/          # Alembic revisions (PostgreSQL, 14 migrations)
 ├── tests/               # 147+ pytest tests (SQLite) + frontend tests
 ├── scripts/             # Docker helpers, backup
 ├── docker-compose.yml   # PostgreSQL + Redis + Qdrant
@@ -571,19 +598,25 @@ Cortex-Workspace/
 
 **Security Audit — Complete:** P0/P1 fixes applied (auth enforcement, path traversal, token expiry, CSRF, CORS, FK constraints).
 
-**Phase 2 (Memory & Indexing) — In Progress:**
+**Phase 2 (Indexing & Knowledge Graph) — Complete:**
 1. ~~Repo scanner~~ — walk, chunk, embed, store pipeline complete
 2. ~~Embeddings~~ — ONNX/BGE-M3 service with mock fallback
 3. ~~Vector search~~ — Qdrant integration for semantic search
-4. **AST parsing** — tree-sitter code intelligence (next)
-5. **Knowledge graph** — entity-relationship reasoning
-6. **Incremental re-indexing** — file watcher for <5s updates
-7. **Hybrid search** — BM25 + vector + graph reranking
-8. **Graph visualization** — Cytoscape.js interactive canvas
-9. **CLI implementation** — flesh out command stubs
-10. **RAG + retrieval API** — query over indexed knowledge
-11. **Agent / workflow engine** — task queue, orchestration
-12. **Desktop packaging** — Tauri shell, SQLite fallback
+4. ~~Incremental indexing~~ — hash-based change detection
+5. ~~Knowledge graph~~ — graph_nodes, graph_edges, graph_builder
+6. ~~Cross-file search~~ — vector + graph enrichment
+7. ~~Unified search API~~ — search across all data types
+8. ~~Repository management~~ — CRUD + indexing triggers
+9. ~~Graph visualization frontend~~ — Cytoscape.js interactive canvas
+
+**Phase 3 (Unified Search & Agents) — Complete:**
+1. ~~Base agent class~~ — tool registration, execution loop
+2. ~~Planner agent~~ — task decomposition with structured plans
+3. ~~Executor agent~~ — tool-use loop (search, read, write, list)
+4. ~~Agent run manager~~ — orchestration with step tracking
+5. ~~Agent API~~ — CRUD + runs + steps + feedback
+6. ~~Agent frontend~~ — chat interface, agents management page
+7. ~~Navigation~~ — sidebar + command palette integration
 
 ---
 

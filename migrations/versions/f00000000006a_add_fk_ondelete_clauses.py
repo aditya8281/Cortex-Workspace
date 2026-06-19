@@ -1,7 +1,7 @@
 """Add ondelete clauses to FK constraints
 
-Revision ID: f00000000006
-Revises: e00000000005
+Revision ID: f00000000006a
+Revises: f00000000006
 Create Date: 2026-06-20
 """
 
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers
-revision = "f00000000006"
-down_revision = "e00000000005"
+revision = "f00000000006a"
+down_revision = "f00000000006"
 branch_labels = None
 depends_on = None
 
