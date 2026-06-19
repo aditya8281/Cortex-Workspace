@@ -10,6 +10,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { useRouter } from "next/navigation";
 import { apiGetMe, apiLogout, apiVaultLock } from "./cortexApi";
 import { getSessionUser, setSession, clearSession } from "./session";
+import { toast } from "../ui/Toast";
 import type { User } from "../types";
 
 interface AuthContextValue {
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           clearSession();
           setUser(null);
+          toast.error("Session expired. Please sign in again.");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -57,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback((userVal: User) => {
     setUser(userVal);
     setSession(userVal);
+    toast.success("Signed in successfully");
   }, []);
 
   /** Update user data. */
@@ -75,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null);
     clearSession();
+    toast.success("Signed out");
     router.replace("/auth");
   }, [router]);
 
