@@ -8,7 +8,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { apiGetMe, apiLogout, apiRefresh, apiVaultLock } from "./cortexApi";
+import { apiGetMe, apiLogout, apiVaultLock } from "./cortexApi";
 import { getSessionUser, setSession, clearSession } from "./session";
 import { toast } from "../ui/Toast";
 import type { User } from "../types";
@@ -36,18 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cached = getSessionUser();
       if (cached) setUser(cached);
       try {
-        let me: User;
-        try {
-          me = await apiGetMe();
-        } catch (err: unknown) {
-          const status = (err as { status?: number }).status;
-          if (status === 401) {
-            await apiRefresh("");
-            me = await apiGetMe();
-          } else {
-            throw err;
-          }
-        }
+        const me = await apiGetMe();
         if (!cancelled) {
           setUser(me);
           setSession(me);
@@ -56,25 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           clearSession();
           setUser(null);
-          toast.error("Session expired. Please sign in again.");
         }
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     bootstrap();
-
-    // Periodic token refresh every 25 minutes to keep the session alive
-    const refreshInterval = setInterval(() => {
-      apiRefresh("").catch(() => {
-        // Silently ignore — the next API call will handle auth failure
-      });
-    }, 25 * 60 * 1000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(refreshInterval);
-    };
+    return () => { cancelled = true; };
   }, []);
 
   /** Login: set user in state and cache. Token is in httpOnly cookie. */
@@ -93,10 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Logout: call backend to revoke tokens and lock vault, then clear session. */
   const logout = useCallback(async () => {
     try {
-      await apiVaultLock(); // ensure server-side vault lock
-      await apiLogout("");
+      await apiVaultLock();
     } catch {
-      // ignore errors and proceed to clear session client-side
+      // ignore
+    }
+    try {
+      await apiLogout();
+    } catch {
+      // ignore — cookie may already be cleared
     }
     setUser(null);
     clearSession();

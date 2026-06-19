@@ -37,10 +37,33 @@ interface RequestOptions {
   headers?: Record<string, string>;
 }
 
+let _refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefresh(): Promise<boolean> {
+  if (_refreshPromise) return _refreshPromise;
+  _refreshPromise = (async () => {
+    try {
+      const res = await fetch("/api/auth/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ refresh_token: "" }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+  return _refreshPromise;
+}
+
 async function request<T = unknown>(
   method: string,
   path: string,
-  { body, headers: extraHeaders }: RequestOptions = {}
+  { body, headers: extraHeaders }: RequestOptions = {},
+  _retried = false,
 ): Promise<T> {
   const url = `${getBase()}${path}`;
   const bodyString = body !== undefined ? JSON.stringify(body) : undefined;
@@ -54,6 +77,13 @@ async function request<T = unknown>(
     body: bodyString,
     credentials: "include",
   });
+
+  if (res.status === 401 && !_retried && !path.includes("/api/auth/")) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      return request<T>(method, path, { body, headers: extraHeaders }, true);
+    }
+  }
 
   let data: Record<string, unknown> | null = null;
   try {
@@ -104,14 +134,14 @@ export function apiGetMe(): Promise<User> {
   return request("GET", "/api/auth/me");
 }
 
-export function apiLogout(refreshToken: string): Promise<unknown> {
+export function apiLogout(): Promise<unknown> {
   return request("POST", "/api/auth/logout", {
-    body: { refresh_token: refreshToken },
+    body: { refresh_token: "" },
   });
 }
 
-export function apiRefresh(refreshToken: string): Promise<TokenResponse> {
-  return request("POST", "/api/auth/refresh", { body: { refresh_token: refreshToken } });
+export function apiRefresh(): Promise<TokenResponse> {
+  return request("POST", "/api/auth/refresh", { body: { refresh_token: "" } });
 }
 
 export function apiCheckUsername(
@@ -131,11 +161,21 @@ export async function apiUploadAvatar(
 ): Promise<{ profile_photo: string }> {
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch("/api/v1/me/profile/photo", {
+  let res = await fetch("/api/v1/me/profile/photo", {
     method: "POST",
     credentials: "include",
     body: fd,
   });
+  if (res.status === 401) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      res = await fetch("/api/v1/me/profile/photo", {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      });
+    }
+  }
   let data: { profile_photo?: string; detail?: string } | null = null;
   try {
     data = await res.json();
@@ -210,11 +250,22 @@ export async function apiVaultUploadFile(
 ): Promise<VaultUploadResult> {
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch(`/api/v1/me/vault/files/upload?folder=${encodeURIComponent(folder)}`, {
+  const uploadUrl = `/api/v1/me/vault/files/upload?folder=${encodeURIComponent(folder)}`;
+  let res = await fetch(uploadUrl, {
     method: "POST",
     credentials: "include",
     body: fd,
   });
+  if (res.status === 401) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      res = await fetch(uploadUrl, {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      });
+    }
+  }
   let data: VaultUploadResult | { detail?: string } | null = null;
   try {
     data = await res.json();
@@ -301,24 +352,28 @@ export function apiVaultChangePassword(payload: {
 }
 
 export async function apiVaultPreviewFile(filePath: string): Promise<Blob> {
-  const res = await fetch(`/api/v1/me/vault/files/preview/${encodeURIComponent(filePath)}`, {
-    method: "GET",
-    credentials: "include",
-  });
-  if (!res.ok) {
-    throw new Error(`Preview failed (${res.status})`);
+  const previewUrl = `/api/v1/me/vault/files/preview/${encodeURIComponent(filePath)}`;
+  let res = await fetch(previewUrl, { method: "GET", credentials: "include" });
+  if (res.status === 401) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      res = await fetch(previewUrl, { method: "GET", credentials: "include" });
+    }
   }
+  if (!res.ok) throw new Error(`Preview failed (${res.status})`);
   return res.blob();
 }
 
 export async function apiVaultDownloadFileBlob(filePath: string): Promise<Blob> {
-  const res = await fetch(`/api/v1/me/vault/files/download/${encodeURIComponent(filePath)}`, {
-    method: "GET",
-    credentials: "include",
-  });
-  if (!res.ok) {
-    throw new Error(`Download failed (${res.status})`);
+  const dlUrl = `/api/v1/me/vault/files/download/${encodeURIComponent(filePath)}`;
+  let res = await fetch(dlUrl, { method: "GET", credentials: "include" });
+  if (res.status === 401) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      res = await fetch(dlUrl, { method: "GET", credentials: "include" });
+    }
   }
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
   return res.blob();
 }
 
