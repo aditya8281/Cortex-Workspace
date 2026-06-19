@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
 import time
 from threading import Lock
 
+import psutil
 from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
 
@@ -45,10 +45,9 @@ async def metrics(request: Request):
     avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
     max_latency = max(latencies) if latencies else 0.0
 
-    mem = os.popen("ps -o rss= -p " + str(os.getpid())).read().strip() if hasattr(os, "getpid") else "0"
     try:
-        mem_bytes = int(mem) * 1024 if mem else 0
-    except (ValueError, TypeError):
+        mem_bytes = psutil.Process().memory_info().rss
+    except Exception:
         mem_bytes = 0
 
     lines = [

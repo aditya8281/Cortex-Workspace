@@ -17,6 +17,8 @@ from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from backend.app.core.config import settings
+
 CSRF_COOKIE_NAME = "cortex_csrf"
 CSRF_HEADER_NAME = "x-csrf-token"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
@@ -44,7 +46,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 value=token,
                 httponly=False,
                 samesite="lax",
-                secure=False,
+                secure=settings.ENV not in ("development", "test"),
                 path="/",
                 max_age=3600,
             )

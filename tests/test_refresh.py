@@ -23,7 +23,11 @@ def fixture_client():
 
 def _register(client: TestClient, username: str | None = None) -> dict:
     """Register a user and return the full response JSON."""
+    import tempfile
+    from pathlib import Path
     uname = username or f"rt_{uuid.uuid4().hex[:8]}"
+    storage = Path.home() / f"cortex_rt_{tempfile.mktemp().split('/')[-1]}"
+    storage.mkdir(parents=True, exist_ok=True)
     r = client.post("/api/auth/register", json={
         "username": uname,
         "password": "securepass123",
@@ -31,7 +35,7 @@ def _register(client: TestClient, username: str | None = None) -> dict:
         "full_name": "Refresh Test User",
         "nickname": "rt",
         "vault_password": "vaultpass123",
-        "personal_storage_path": f"~/CortexStorage/rt_{uuid.uuid4().hex[:6]}",
+        "personal_storage_path": str(storage),
     })
     assert r.status_code == 200, f"Register failed: {r.text}"
     return r.json()

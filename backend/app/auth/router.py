@@ -21,21 +21,27 @@ from backend.app.services.user_service import _normalize_username, to_user_respo
 router = APIRouter()
 
 
+def _secure_flag() -> bool:
+    return settings.ENV not in ("development", "test")
+
+
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str | None = None) -> None:
+    secure = _secure_flag()
     response.set_cookie(
-        key="cortex_access", value=access_token, httponly=True, secure=False, samesite="lax", path="/",
+        key="cortex_access", value=access_token, httponly=True, secure=secure, samesite="lax", path="/",
         max_age=60 * settings.ACCESS_TOKEN_EXPIRE_MINUTES,
     )
     if refresh_token:
         response.set_cookie(
-            key="cortex_refresh", value=refresh_token, httponly=True, secure=False, samesite="lax", path="/",
+            key="cortex_refresh", value=refresh_token, httponly=True, secure=secure, samesite="lax", path="/",
             max_age=604800,  # 7 days
         )
 
 
 def _clear_auth_cookies(response: Response) -> None:
-    response.set_cookie(key="cortex_access", value="", httponly=True, secure=False, samesite="lax", path="/", max_age=0)
-    response.set_cookie(key="cortex_refresh", value="", httponly=True, secure=False, samesite="lax", path="/", max_age=0)
+    secure = _secure_flag()
+    response.set_cookie(key="cortex_access", value="", httponly=True, secure=secure, samesite="lax", path="/", max_age=0)
+    response.set_cookie(key="cortex_refresh", value="", httponly=True, secure=secure, samesite="lax", path="/", max_age=0)
 
 
 def _get_token(request: Request) -> str | None:

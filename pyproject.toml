@@ -44,6 +44,8 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 filterwarnings = []
+# Enforce deterministic test ordering within modules
+addopts = ["--tb=short", "-q"]
 
 [tool.ruff]
 line-length = 120

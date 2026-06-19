@@ -62,7 +62,7 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: ci-test-secret-key-not-for-production
           ENV: test
-        run: uv run pytest tests/ -v --tb=short
+        run: uv run pytest tests/ -v --tb=short -q
 
   frontend:
     name: Frontend (TypeScript)
