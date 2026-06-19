@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.auth import router as auth_router
 from backend.app.api.memory import router as memory_router
 from backend.app.api.router import api_router
+from backend.app.api.v1.ws_system import router as ws_system_router
 from backend.app.api.ws import router as ws_router
 from backend.app.core.config import settings
 from backend.app.core.csrf import setup_csrf_protection
@@ -97,6 +98,7 @@ app.include_router(
 app.include_router(auth_router)
 app.include_router(memory_router)
 app.include_router(ws_router)
+app.include_router(ws_system_router)
 
 
 from fastapi import WebSocket, WebSocketDisconnect

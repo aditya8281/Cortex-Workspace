@@ -22,6 +22,11 @@ export default function ProfilePage() {
   const [nickname, setNickname] = useState("");
   const [bio, setBio] = useState("");
   const [description, setDescription] = useState("");
+  const [programmingLanguages, setProgrammingLanguages] = useState<string[]>([]);
+  const [frameworks, setFrameworks] = useState<string[]>([]);
+  const [currentProjects, setCurrentProjects] = useState<{ name: string; description: string }[]>([]);
+  const [contributionStyle, setContributionStyle] = useState("");
+  const [socialLinks, setSocialLinks] = useState<{ twitter?: string; linkedin?: string; website?: string }>({});
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState("");
@@ -47,13 +52,28 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user || fieldsInit) return;
     setFullName(user.full_name || ""); setNickname(user.nickname || ""); setBio(user.bio || ""); setDescription(user.description || "");
+    setProgrammingLanguages(user.programming_languages || []);
+    setFrameworks(user.frameworks || []);
+    setCurrentProjects((user.current_projects || []).map((p: { name: string; description?: string }) => ({ name: p.name, description: p.description || "" })));
+    setContributionStyle(user.contribution_style || "");
+    setSocialLinks(user.social_links || {});
     setGhUsername(user.github_username || ""); setGhConnected(!!user.github_username); setFieldsInit(true);
   }, [user, fieldsInit]);
 
   async function handleProfileSave() {
     setProfileLoading(true); setProfileError(""); setProfileSaved(false);
     try {
-      const updated = await apiUpdateProfile({ full_name: fullName.trim(), nickname: nickname.trim(), bio: bio.trim() || undefined, description: description.trim() || undefined });
+      const updated = await apiUpdateProfile({
+        full_name: fullName.trim(),
+        nickname: nickname.trim(),
+        bio: bio.trim() || undefined,
+        description: description.trim() || undefined,
+        programming_languages: programmingLanguages,
+        frameworks: frameworks,
+        current_projects: currentProjects,
+        contribution_style: contributionStyle || undefined,
+        social_links: socialLinks,
+      });
       updateUser({ ...user!, ...updated }); setProfileSaved(true); setTimeout(() => setProfileSaved(false), 2000);
     } catch (err) { setProfileError(err instanceof Error ? err.message : "Failed to save profile"); } finally { setProfileLoading(false); }
   }
@@ -216,6 +236,152 @@ export default function ProfilePage() {
                   <Button variant="ghost" size="sm" loading={ghLoading} onClick={handleGitHubDisconnect}>Disconnect</Button>
                 </div>
               )}
+            </Card>
+          </motion.div>
+
+          {/* Developer Info */}
+          <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.16 }}>
+            <Card className="p-5">
+              <h2 className="text-sm font-medium text-text mb-4">Developer Profile</h2>
+
+              {/* Programming Languages */}
+              <div className="grid gap-1.5 mb-4">
+                <label className="text-xs font-medium text-text-secondary">Programming Languages</label>
+                <div className="flex flex-wrap gap-2">
+                  {["Python", "TypeScript", "JavaScript", "Rust", "Go", "Java", "C++", "C#", "Ruby", "PHP", "Swift", "Kotlin"].map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => {
+                        setProgrammingLanguages((prev) =>
+                          prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
+                        );
+                      }}
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                        programmingLanguages.includes(lang)
+                          ? "bg-accent/10 text-accent border-accent/20"
+                          : "bg-bg-surface text-text-muted border-border-subtle hover:border-border"
+                      )}
+                    >
+                      {lang}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Frameworks & Tools */}
+              <div className="grid gap-1.5 mb-4">
+                <label className="text-xs font-medium text-text-secondary">Frameworks & Tools</label>
+                <div className="flex flex-wrap gap-2">
+                  {["React", "Next.js", "FastAPI", "Django", "Flask", "Docker", "Kubernetes", "PostgreSQL", "Redis", "TensorFlow", "PyTorch", "Tailwind"].map((fw) => (
+                    <button
+                      key={fw}
+                      onClick={() => {
+                        setFrameworks((prev) =>
+                          prev.includes(fw) ? prev.filter((f) => f !== fw) : [...prev, fw]
+                        );
+                      }}
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                        frameworks.includes(fw)
+                          ? "bg-accent/10 text-accent border-accent/20"
+                          : "bg-bg-surface text-text-muted border-border-subtle hover:border-border"
+                      )}
+                    >
+                      {fw}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Contribution Style */}
+              <div className="grid gap-1.5 mb-4">
+                <label className="text-xs font-medium text-text-secondary">Contribution Style</label>
+                <div className="flex flex-wrap gap-2">
+                  {["Full-stack", "Backend", "Frontend", "DevOps", "ML/AI", "Security", "Mobile", "Data"].map((style) => (
+                    <button
+                      key={style}
+                      onClick={() => setContributionStyle(contributionStyle === style ? "" : style)}
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+                        contributionStyle === style
+                          ? "bg-accent/10 text-accent border-accent/20"
+                          : "bg-bg-surface text-text-muted border-border-subtle hover:border-border"
+                      )}
+                    >
+                      {style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Current Projects */}
+              <div className="grid gap-1.5 mb-4">
+                <label className="text-xs font-medium text-text-secondary">Current Projects (up to 3)</label>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex gap-2">
+                    <input
+                      value={currentProjects[i]?.name || ""}
+                      onChange={(e) => {
+                        const updated = [...currentProjects];
+                        if (!updated[i]) updated[i] = { name: "", description: "" };
+                        updated[i].name = e.target.value;
+                        if (!updated[i].description) updated[i].description = "";
+                        setCurrentProjects(updated.filter((p) => p.name));
+                      }}
+                      placeholder={`Project ${i + 1} name`}
+                      className="flex-1 rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
+                    />
+                    <input
+                      value={currentProjects[i]?.description || ""}
+                      onChange={(e) => {
+                        const updated = [...currentProjects];
+                        if (!updated[i]) updated[i] = { name: "", description: "" };
+                        updated[i].description = e.target.value;
+                        setCurrentProjects(updated.filter((p) => p.name));
+                      }}
+                      placeholder="Description"
+                      className="flex-1 rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
+                    />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Social Links */}
+          <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.2 }}>
+            <Card className="p-5">
+              <h2 className="text-sm font-medium text-text mb-4">Social Links</h2>
+              <div className="grid gap-3">
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-medium text-text-secondary">Twitter / X</label>
+                  <input
+                    value={socialLinks.twitter || ""}
+                    onChange={(e) => setSocialLinks((prev) => ({ ...prev, twitter: e.target.value }))}
+                    placeholder="@username"
+                    className="rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-medium text-text-secondary">LinkedIn</label>
+                  <input
+                    value={socialLinks.linkedin || ""}
+                    onChange={(e) => setSocialLinks((prev) => ({ ...prev, linkedin: e.target.value }))}
+                    placeholder="linkedin.com/in/username"
+                    className="rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label className="text-xs font-medium text-text-secondary">Website</label>
+                  <input
+                    value={socialLinks.website || ""}
+                    onChange={(e) => setSocialLinks((prev) => ({ ...prev, website: e.target.value }))}
+                    placeholder="https://yoursite.com"
+                    className="rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10"
+                  />
+                </div>
+              </div>
             </Card>
           </motion.div>
 

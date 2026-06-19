@@ -4,16 +4,17 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
-import { apiDeleteAccount } from "../../src/shared/auth/cortexApi";
+import { apiDeleteAccount, apiUpdateProfile } from "../../src/shared/auth/cortexApi";
 import DashboardShell from "../../src/shared/layout/DashboardShell";
 import Button from "../../src/shared/ui/Button";
 import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
 import { AlertTriangle, Trash2, User, Shield, Hash, HardDrive, ExternalLink } from "lucide-react";
+import { cn } from "../../src/lib/utils";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user, logout, updateUser, loading: authLoading } = useAuth();
 
   useEffect(() => { if (!authLoading && !user) router.replace("/auth"); }, [user, authLoading, router]);
 
@@ -21,6 +22,12 @@ export default function SettingsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleteConfirmStep, setDeleteConfirmStep] = useState(false);
+
+  const [accentColor, setAccentColor] = useState<string>((user?.preferences as any)?.accent_color || "cyan");
+  const [fontSize, setFontSize] = useState<string>((user?.preferences as any)?.font_size || "md");
+  const [sidebarDefault, setSidebarDefault] = useState<string>((user?.preferences as any)?.sidebar_default || "expanded");
+  const [prefsSaved, setPrefsSaved] = useState(false);
+  const [prefsLoading, setPrefsLoading] = useState(false);
 
   const fadeUp = {
     initial: { opacity: 0, y: 20 },
@@ -41,6 +48,27 @@ export default function SettingsPage() {
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : "Failed to delete account");
       setDeleteLoading(false);
+    }
+  }
+
+  async function handleSavePreferences() {
+    setPrefsLoading(true);
+    try {
+      const updated = await apiUpdateProfile({
+        preferences: {
+          ...((user?.preferences as any) || {}),
+          accent_color: accentColor,
+          font_size: fontSize,
+          sidebar_default: sidebarDefault,
+        },
+      });
+      updateUser({ ...user!, ...updated });
+      setPrefsSaved(true);
+      setTimeout(() => setPrefsSaved(false), 2000);
+    } catch (err) {
+      // silent
+    } finally {
+      setPrefsLoading(false);
     }
   }
 
@@ -95,6 +123,80 @@ export default function SettingsPage() {
                   <ExternalLink className="h-3.5 w-3.5" />
                   Edit Profile
                 </Button>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.08 }}>
+            <Card className="p-5">
+              <h2 className="text-sm font-medium text-text mb-4">Preferences</h2>
+              
+              {/* Accent Color */}
+              <div className="grid gap-1.5 mb-4">
+                <label className="text-xs font-medium text-text-secondary">Accent Color</label>
+                <div className="flex gap-2">
+                  {[
+                    { name: "cyan", color: "#06b6d4" },
+                    { name: "purple", color: "#a855f7" },
+                    { name: "green", color: "#22c55e" },
+                    { name: "amber", color: "#f59e0b" },
+                  ].map((c) => (
+                    <button
+                      key={c.name}
+                      onClick={() => setAccentColor(c.name)}
+                      className={cn(
+                        "h-8 w-8 rounded-full border-2 transition-all",
+                        accentColor === c.name ? "border-white scale-110" : "border-transparent opacity-50 hover:opacity-100"
+                      )}
+                      style={{ backgroundColor: c.color }}
+                      aria-label={`${c.name} accent`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Font Size */}
+              <div className="grid gap-1.5 mb-4">
+                <label className="text-xs font-medium text-text-secondary">Font Size</label>
+                <div className="flex rounded-xl bg-bg-surface p-1 border border-border/50">
+                  {(["sm", "md", "lg"] as const).map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setFontSize(size)}
+                      className={cn(
+                        "flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors",
+                        fontSize === size ? "bg-bg-elevated text-text border border-border shadow-sm" : "text-text-muted hover:text-text-secondary"
+                      )}
+                    >
+                      {size === "sm" ? "Small" : size === "md" ? "Medium" : "Large"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sidebar Default */}
+              <div className="grid gap-1.5 mb-4">
+                <label className="text-xs font-medium text-text-secondary">Sidebar</label>
+                <div className="flex rounded-xl bg-bg-surface p-1 border border-border/50">
+                  {(["expanded", "collapsed"] as const).map((val) => (
+                    <button
+                      key={val}
+                      onClick={() => setSidebarDefault(val)}
+                      className={cn(
+                        "flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors",
+                        sidebarDefault === val ? "bg-bg-elevated text-text border border-border shadow-sm" : "text-text-muted hover:text-text-secondary"
+                      )}
+                    >
+                      {val === "expanded" ? "Expanded" : "Collapsed"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {prefsSaved && <p className="text-sm text-success bg-success/10 rounded-md px-3 py-2 border border-success/10 mb-3">Preferences saved.</p>}
+              
+              <div className="flex justify-end">
+                <Button size="sm" loading={prefsLoading} onClick={handleSavePreferences}>Save preferences</Button>
               </div>
             </Card>
           </motion.div>

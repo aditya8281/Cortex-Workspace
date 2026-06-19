@@ -19,6 +19,11 @@ export interface User {
   preferences: Record<string, unknown> | null;
   created_at?: string | null;
   updated_at?: string | null;
+  programming_languages?: string[];
+  frameworks?: string[];
+  current_projects?: { name: string; description?: string }[];
+  contribution_style?: string | null;
+  social_links?: { twitter?: string; linkedin?: string; website?: string };
 }
 
 // ── Auth ──────────────────────────────────────────────────────────
@@ -42,6 +47,12 @@ export interface ProfileUpdate {
   nickname?: string;
   bio?: string;
   description?: string;
+  programming_languages?: string[];
+  frameworks?: string[];
+  current_projects?: { name: string; description: string }[];
+  contribution_style?: string;
+  social_links?: { twitter?: string; linkedin?: string; website?: string };
+  preferences?: Record<string, unknown>;
 }
 
 // ── GitHub ────────────────────────────────────────────────────────
@@ -133,4 +144,53 @@ export interface MemoryListResponse {
 export interface MemorySearchResponse {
   query: string;
   results: MemorySearchResult[];
+}
+
+// ── System ──────────────────────────────────────────────────────
+
+export interface SystemMetrics {
+  cpu_percent: number;
+  ram_total_gb: number;
+  ram_used_gb: number;
+  ram_percent: number;
+  gpu_name: string;
+  gpu_type: string;
+  gpu_percent: number | null;
+  disk_total_gb: number;
+  disk_used_gb: number;
+  disk_percent: number;
+}
+
+export interface SystemLog {
+  timestamp: string;
+  level: string;
+  logger: string;
+  message: string;
+  request_id: string;
+  module: string;
+  pathname: string;
+  lineno: number;
+}
+
+export interface SystemLogsResponse {
+  logs: SystemLog[];
+  total: number;
+}
+
+// ── Notifications ───────────────────────────────────────────────
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string | null;
+}
+
+export interface NotificationListResponse {
+  notifications: Notification[];
+  total: number;
+  unread_count: number;
 }

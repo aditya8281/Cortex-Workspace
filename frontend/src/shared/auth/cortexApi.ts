@@ -18,6 +18,9 @@ import type {
   MemoryEntry,
   MemoryListResponse,
   MemorySearchResponse,
+  SystemMetrics,
+  SystemLogsResponse,
+  NotificationListResponse,
 } from "../types";
 
 /** Backend base URL.
@@ -511,4 +514,38 @@ export function apiDeleteUser(
   userId: number
 ): Promise<{ message: string }> {
   return request("DELETE", `/api/v1/users/${userId}`);
+}
+
+// ── System endpoints ──────────────────────────────────────────────
+
+export async function apiSystemMetrics(): Promise<SystemMetrics> {
+  return request<SystemMetrics>("GET", "/api/v1/system/metrics");
+}
+
+export async function apiSystemLogs(limit = 20): Promise<SystemLogsResponse> {
+  return request<SystemLogsResponse>("GET", `/api/v1/system/logs?limit=${limit}`);
+}
+
+// ── Notification endpoints ────────────────────────────────────────
+
+export async function apiListNotifications(
+  limit = 50,
+  unreadOnly = false,
+): Promise<NotificationListResponse> {
+  return request<NotificationListResponse>(
+    "GET",
+    `/api/v1/notifications?limit=${limit}&unread_only=${unreadOnly}`,
+  );
+}
+
+export async function apiMarkNotificationRead(id: number): Promise<unknown> {
+  return request("POST", `/api/v1/notifications/${id}/read`);
+}
+
+export async function apiMarkAllNotificationsRead(): Promise<unknown> {
+  return request("POST", "/api/v1/notifications/read-all");
+}
+
+export async function apiDeleteNotification(id: number): Promise<unknown> {
+  return request("DELETE", `/api/v1/notifications/${id}`);
 }

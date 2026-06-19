@@ -65,7 +65,7 @@ function ParticleDots() {
 }
 
 function TypewriterTagline() {
-  const text = "Your AI workspace, locally run.";
+  const text = "Your neural operating system.";
   const [displayed, setDisplayed] = useState("");
 
   useEffect(() => {
@@ -91,26 +91,26 @@ function TypewriterTagline() {
   );
 }
 
-const FEATURES = [
+const FEATURES: { icon: React.ReactNode; title: string; desc: string }[] = [
   {
     icon: <Lock className="h-5 w-5" />,
-    title: "Private by Default",
-    desc: "All data stays on your machine. End-to-end encryption for your vault.",
+    title: "Encrypted Vault",
+    desc: "Military-grade encrypted file system with zero-knowledge architecture.",
   },
   {
     icon: <Brain className="h-5 w-5" />,
-    title: "AI-Powered Memory",
-    desc: "Persistent knowledge base that learns from your repos and documents.",
+    title: "Neural Knowledge",
+    desc: "Persistent knowledge graph that learns from your code and documents.",
   },
   {
     icon: <Cpu className="h-5 w-5" />,
-    title: "Multi-Model Routing",
-    desc: "Seamlessly switch between local and cloud models based on your needs.",
+    title: "Model Router",
+    desc: "Seamlessly route between local and cloud inference engines.",
   },
   {
     icon: <Shield className="h-5 w-5" />,
-    title: "Lightning Fast",
-    desc: "Local inference with zero latency. No cloud dependency, no API rate limits.",
+    title: "Local Inference",
+    desc: "Sub-millisecond response times with on-device processing.",
   },
 ];
 
@@ -206,7 +206,7 @@ export default function RootPage() {
                 transition={{ duration: 2, repeat: Infinity }}
               />
               <span className="text-[11px] font-medium text-accent tracking-wide uppercase">
-                Local-first AI workspace
+                Neural Operating System
               </span>
             </motion.div>
 
@@ -217,7 +217,7 @@ export default function RootPage() {
               transition={{ duration: 0.6, delay: 0.4, type: "spring", damping: 20 }}
             >
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1]">
-                <span className="text-gradient">Your AI workspace,</span>
+                <span className="text-gradient">Cortex</span>
                 <br />
                 <TypewriterTagline />
               </h1>
@@ -229,8 +229,7 @@ export default function RootPage() {
               transition={{ duration: 0.5, delay: 1.2 }}
               className="mt-6 text-base sm:text-lg text-text-secondary leading-relaxed max-w-lg mx-auto"
             >
-              A private, local-first platform for orchestrating AI models,
-              managing memory, and building intelligent workflows — all on your machine.
+              Orchestrate models. Build knowledge. Run locally.
             </motion.p>
 
             {/* CTAs */}
@@ -281,11 +280,11 @@ export default function RootPage() {
         </section>
 
         {/* Features Section */}
-        <section className="px-6 pb-24">
+        <section className="px-6 pb-12">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-10">
               <h2 className="text-lg font-semibold text-text">Everything you need, locally</h2>
-              <p className="text-sm text-text-muted mt-2">No cloud, no tracking, full control.</p>
+              <p className="text-sm text-text-muted mt-2">No cloud dependency, no data leaving your machine.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {FEATURES.map((f, i) => (
@@ -294,12 +293,40 @@ export default function RootPage() {
             </div>
           </div>
         </section>
+
+        {/* System Status Bar */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 2, duration: 0.5 }}
+          className="px-6 pb-12"
+        >
+          <div className="max-w-3xl mx-auto flex items-center justify-center gap-6 py-4 border-t border-border-subtle">
+            {["Vault", "Memory", "Neural Core"].map((label, i) => (
+              <div key={label} className="flex items-center gap-2 text-xs font-mono text-text-muted">
+                <motion.span
+                  className="h-1.5 w-1.5 rounded-full bg-success"
+                  animate={{
+                    boxShadow: [
+                      "0 0 4px rgba(34,197,94,0.4)",
+                      "0 0 10px rgba(34,197,94,0.6)",
+                      "0 0 4px rgba(34,197,94,0.4)",
+                    ],
+                  }}
+                  transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                />
+                <span>{label}</span>
+                <span className="text-success">✓</span>
+              </div>
+            ))}
+          </div>
+        </motion.section>
       </main>
 
       <footer className="px-6 py-4 border-t border-border-subtle shrink-0">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <p className="text-xs text-text-muted font-mono tracking-wider uppercase">
-            Local-first · Private by default
+            Cortex
           </p>
           <p className="text-xs text-text-muted">&copy; 2026 Cortex</p>
         </div>

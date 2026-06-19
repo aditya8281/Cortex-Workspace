@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Lock, User, CodeSquare, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { Shield, Lock, User, CodeSquare, ArrowRight, ArrowLeft, Check, FolderOpen } from "lucide-react";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
 import { apiLogin, apiRegister, apiCheckUsername, apiConnectGitHub } from "../../src/shared/auth/cortexApi";
 import Button from "../../src/shared/ui/Button";
@@ -11,6 +11,7 @@ import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
 import PasswordStrength from "../../src/shared/ui/PasswordStrength";
 import { cn } from "../../src/lib/utils";
+import BrainBackground from "../../src/shared/ui/BrainBackground";
 
 const WIZARD_STEPS = ["Account", "Profile", "GitHub", "Vault"] as const;
 
@@ -220,6 +221,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side — visualization */}
       <div className="hidden lg:flex relative w-1/2 items-center justify-center overflow-hidden">
+        <BrainBackground intensity="low" />
         <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/[0.02]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,182,212,0.06)_0%,transparent_70%)]" />
         <FloatingDots />
@@ -357,10 +359,10 @@ export default function AuthPage() {
               <AnimatePresence mode="wait">
                 <motion.div
                   key={step}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
                 >
                   {/* Step 0: Account */}
                   {step === 0 && (
@@ -422,13 +424,19 @@ export default function AuthPage() {
                             ))}
                             <button
                               type="button"
-                              onClick={() => setStorageCustom(true)}
+                              onClick={async () => {
+                                try {
+                                  // @ts-expect-error — showDirectoryPicker is experimental
+                                  const dirHandle = await window.showDirectoryPicker();
+                                  setStorageRoot(dirHandle.name);
+                                } catch {
+                                  // User cancelled or API not supported
+                                }
+                              }}
                               className="flex items-center gap-2 p-3 rounded-xl border border-dashed border-border text-text-muted hover:border-accent/30 hover:text-text-secondary transition-colors text-xs"
                             >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                              </svg>
-                              Custom path...
+                              <FolderOpen className="w-4 h-4" />
+                              Browse folders...
                             </button>
                           </div>
                         ) : (

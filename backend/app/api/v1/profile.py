@@ -7,6 +7,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+from typing import Any
+
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -96,6 +98,11 @@ class ProfileUpdate(BaseModel):
     nickname: str | None = None
     bio: str | None = None
     description: str | None = None
+    programming_languages: list[str] | None = None
+    frameworks: list[str] | None = None
+    current_projects: list[dict] | None = None
+    contribution_style: str | None = None
+    social_links: dict[str, Any] | None = None
 
 
 # ── Profile CRUD ─────────────────────────────────────────────────────

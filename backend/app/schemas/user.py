@@ -50,6 +50,11 @@ class UserResponse(BaseModel):
     data_path: str | None = None
     personal_storage_path: str | None = None
     preferences: dict[str, Any] | None = None
+    programming_languages: list[str] | None = None
+    frameworks: list[str] | None = None
+    current_projects: list[dict] | None = None
+    contribution_style: str | None = None
+    social_links: dict[str, Any] | None = None
     created_at: str | None = None
     updated_at: str | None = None
 
@@ -78,6 +83,11 @@ class MeUpdate(BaseModel):
     profile_photo: str | None = None
     handles: dict[str, Any] | None = None
     preferences: dict[str, Any] | None = None
+    programming_languages: list[str] | None = None
+    frameworks: list[str] | None = None
+    current_projects: list[dict] | None = None
+    contribution_style: str | None = None
+    social_links: dict[str, Any] | None = None
     password: str | None = None
     current_password: str | None = None
     vault_password: str | None = None

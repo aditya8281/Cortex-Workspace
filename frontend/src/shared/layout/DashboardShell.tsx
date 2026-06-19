@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../auth/AuthProvider";
-import { getProfilePhotoUrl } from "../auth/cortexApi";
+import { getProfilePhotoUrl, apiListNotifications } from "../auth/cortexApi";
 import { cn } from "../../lib/utils";
 import {
   LayoutDashboard,
@@ -17,6 +17,7 @@ import {
   LogOut,
   Shield,
   Search,
+  Bell,
 } from "lucide-react";
 import CommandPalette from "../ui/CommandPalette";
 
@@ -50,6 +51,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [breakpoint, setBreakpoint] = useState<"mobile" | "tablet" | "desktop">("desktop");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const prevUserIdRef = useRef(user?.id);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -94,6 +96,11 @@ export default function DashboardShell({ children }: DashboardShellProps) {
     }
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!user) return;
+    apiListNotifications(1, true).then((data) => setUnreadCount(data.unread_count)).catch(() => {});
+  }, [user]);
+
   const initials = (user?.full_name || user?.username || "?")
     .charAt(0)
     .toUpperCase();
@@ -135,7 +142,53 @@ export default function DashboardShell({ children }: DashboardShellProps) {
 
           {/* Nav Items */}
           <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-            {navItems.map((item) => {
+            <div className="px-3 pt-1 pb-1">
+              <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-text-muted/50">Workspace</span>
+            </div>
+            {navItems.slice(0, 3).map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => router.push(item.href)}
+                  className={cn(
+                    "relative flex items-center gap-3 w-full rounded-xl text-sm transition-colors duration-200",
+                    sidebarExpanded ? "px-3 py-2.5" : "justify-center px-0 py-2.5",
+                    isActive
+                      ? "text-accent font-medium"
+                      : "text-text-secondary hover:bg-bg-hover hover:text-text"
+                  )}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="sidebar-active"
+                      className="absolute inset-0 rounded-xl bg-accent-faint border border-accent/15"
+                      transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    />
+                  )}
+                  <Icon className="h-5 w-5 shrink-0 relative z-10" />
+                  <AnimatePresence>
+                    {sidebarExpanded && (
+                      <motion.span
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: "auto" }}
+                        exit={{ opacity: 0, width: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="relative z-10 whitespace-nowrap overflow-hidden"
+                      >
+                        {item.label}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </button>
+              );
+            })}
+
+            <div className="px-3 pt-4 pb-1">
+              <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-text-muted/50">Account</span>
+            </div>
+            {navItems.slice(3).map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
               return (
@@ -209,6 +262,23 @@ export default function DashboardShell({ children }: DashboardShellProps) {
               </button>
             )}
           </nav>
+
+          {/* User section */}
+          {isDesktop && sidebarExpanded && (
+            <div className="px-3 pb-2">
+              <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-bg-hover/50">
+                <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-xs font-bold text-[#050508] overflow-hidden shrink-0">
+                  {user?.profile_photo && user?.id && !photoFailed ? (
+                    <img src={getProfilePhotoUrl(user.id)} alt="" className="h-full w-full object-cover" onError={() => setPhotoFailed(true)} />
+                  ) : initials}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text truncate">{user?.full_name || user?.username}</p>
+                  <p className="text-[10px] text-text-muted truncate">@{user?.username}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Collapse Toggle */}
           <div className="p-3 border-t border-border-subtle">
@@ -320,7 +390,8 @@ export default function DashboardShell({ children }: DashboardShellProps) {
         style={{ marginLeft: isDesktop ? sidebarWidth : 0 }}
       >
         {/* ── Header ──────────────────────────────────────────── */}
-        <header className="glass-panel h-14 flex items-center justify-between px-5 shrink-0 sticky top-0 z-20">
+        <header className="glass-panel h-14 flex items-center justify-between px-5 shrink-0 sticky top-0 z-20 relative">
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
           {/* Left: Menu button + Brand */}
           <div className="flex items-center gap-3">
             {(isTablet || isMobile) && (
@@ -366,6 +437,18 @@ export default function DashboardShell({ children }: DashboardShellProps) {
               <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border-subtle bg-bg-surface px-1 py-0.5 text-[9px] text-text-muted ml-1">
                 ⌘K
               </kbd>
+            </button>
+            <button
+              onClick={() => {/* TODO: open notifications panel */}}
+              className="relative h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-bg-hover hover:text-text transition-colors"
+              aria-label="Notifications"
+            >
+              <Bell className="h-4 w-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] rounded-full bg-accent text-[9px] font-bold text-void flex items-center justify-center px-1">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
             <div className="relative" ref={menuRef}>
               <button

@@ -14,6 +14,7 @@ function seededRandom(seed: number) {
 
 function WireframeBrain({ particleCount }: { particleCount: number }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.MeshBasicMaterial>(null);
 
   const particles = useMemo(() => {
     const rand = seededRandom(42);
@@ -44,16 +45,30 @@ function WireframeBrain({ particleCount }: { particleCount: number }) {
 
   useFrame(({ clock }) => {
     if (meshRef.current) {
-      meshRef.current.rotation.y = clock.getElapsedTime() * 0.1;
-      const scale = 1 + Math.sin(clock.getElapsedTime() * 0.5) * 0.02;
+      meshRef.current.rotation.y = clock.getElapsedTime() * 0.08;
+      const t = clock.getElapsedTime();
+      const heartbeat = Math.pow(Math.sin((t * Math.PI * 2) / 0.83), 2) * 0.06;
+      const basePulse = Math.sin(t * 0.5) * 0.02;
+      const scale = 1 + basePulse + heartbeat;
       meshRef.current.scale.setScalar(scale);
+    }
+    if (materialRef.current) {
+      const t = clock.getElapsedTime();
+      const heartbeat = Math.pow(Math.sin((t * Math.PI * 2) / 0.83), 2) * 0.15;
+      materialRef.current.opacity = 0.25 + heartbeat;
     }
   });
 
   return (
     <group>
       <mesh ref={meshRef} geometry={geometry}>
-        <meshBasicMaterial color="#06b6d4" wireframe transparent opacity={0.15} />
+        <meshBasicMaterial
+          ref={materialRef}
+          color="#06b6d4"
+          wireframe
+          transparent
+          opacity={0.25}
+        />
       </mesh>
       <points>
         <bufferGeometry>
@@ -64,9 +79,9 @@ function WireframeBrain({ particleCount }: { particleCount: number }) {
         </bufferGeometry>
         <pointsMaterial
           color="#06b6d4"
-          size={0.02}
+          size={0.025}
           transparent
-          opacity={0.4}
+          opacity={0.5}
           sizeAttenuation
         />
       </points>
@@ -93,7 +108,7 @@ export default function BrainBackground({
     );
   }
 
-  const count = intensity === "high" ? 200 : intensity === "medium" ? 100 : 50;
+  const count = intensity === "high" ? 250 : intensity === "medium" ? 150 : 80;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[-1]">
@@ -104,7 +119,7 @@ export default function BrainBackground({
         style={{ background: "transparent" }}
       >
         <ambientLight intensity={0.5} />
-        <pointLight position={[5, 5, 5]} intensity={0.3} color="#06b6d4" />
+        <pointLight position={[5, 5, 5]} intensity={0.4} color="#06b6d4" />
         <WireframeBrain particleCount={count} />
       </Canvas>
     </div>
