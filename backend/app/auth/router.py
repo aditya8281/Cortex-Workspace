@@ -77,7 +77,7 @@ def check_username(payload: UsernameCheckRequest, db: Session = Depends(get_db))
         return UsernameCheckResponse(available=False, message="Username must be 128 characters or fewer")
     if not re.match(r'^[a-zA-Z0-9_-]+$', username):
         return UsernameCheckResponse(available=False, message="Username can only contain letters, numbers, hyphens, and underscores")
-    existing = db.query(User).filter(User.username == username).first()
+    existing = db.query(User).filter(User.username == username, User.deleted_at.is_(None)).first()
     if existing:
         return UsernameCheckResponse(available=False, message="Username is already taken")
     return UsernameCheckResponse(available=True, message="Username is available")
@@ -132,7 +132,7 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
         user_id = verify_access_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(User).filter(User.id == int(user_id), User.deleted_at.is_(None)).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return to_user_response(db, user)
@@ -151,7 +151,7 @@ async def update_me(
         user_id = verify_access_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(User).filter(User.id == int(user_id), User.deleted_at.is_(None)).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 

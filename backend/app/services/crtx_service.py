@@ -64,7 +64,7 @@ def _collect_user_data(db, user_id: int) -> dict:
     from backend.app.models.user import User
     from backend.app.services.storage_registry import get_registry_for_user
 
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
     if not user:
         raise FileNotFoundError(f"User {user_id} not found")
 
@@ -259,7 +259,7 @@ def import_crtx(db, archive_path: str, export_password: str, new_storage_root: s
     from backend.app.services.storage_registry import register_user_storage
     from backend.app.services.user_service import _normalize_username
 
-    existing = db.query(User).filter(User.username == _normalize_username(user_data["username"])).first()
+    existing = db.query(User).filter(User.username == _normalize_username(user_data["username"]), User.deleted_at.is_(None)).first()
     if existing:
         # Update existing user
         existing.full_name = user_data["full_name"]

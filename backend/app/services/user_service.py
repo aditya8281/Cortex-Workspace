@@ -33,7 +33,7 @@ def _normalize_username(username: str) -> str:
 
 def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | None:
     normalized = _normalize_username(user.username)
-    existing_username = db.query(User).filter(User.username == normalized).first()
+    existing_username = db.query(User).filter(User.username == normalized, User.deleted_at.is_(None)).first()
     if existing_username:
         return None
 
@@ -86,18 +86,18 @@ def create_user(db: Session, user: UserRegisterPayload | UserCreate) -> User | N
 
 
 def get_user(db: Session, user_id: int):
-    """Get a user by ID."""
-    return db.query(User).filter(User.id == user_id).first()
+    """Get a user by ID (excludes soft-deleted)."""
+    return db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
 
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
-    """Get all users with pagination."""
-    return db.query(User).offset(skip).limit(limit).all()
+    """Get all active users with pagination (excludes soft-deleted)."""
+    return db.query(User).filter(User.deleted_at.is_(None)).offset(skip).limit(limit).all()
 
 
 def authenticate_user(db: Session, username: str, password: str):
     normalized = _normalize_username(username)
-    user = db.query(User).filter(User.username == normalized).first()
+    user = db.query(User).filter(User.username == normalized, User.deleted_at.is_(None)).first()
 
     if not user:
         return None
@@ -142,7 +142,7 @@ def update_user(db: Session, user_id: int, user_update: UserUpdate) -> User | No
 
 
 def promote_user(db: Session, target_user_id: int) -> User | None:
-    db_user = db.query(User).filter(User.id == target_user_id).first()
+    db_user = db.query(User).filter(User.id == target_user_id, User.deleted_at.is_(None)).first()
     if not db_user:
         return None
     if db_user.role == "admin":
@@ -154,7 +154,7 @@ def promote_user(db: Session, target_user_id: int) -> User | None:
 
 
 def demote_user(db: Session, target_user_id: int, acting_user_id: int) -> User | None:
-    db_user = db.query(User).filter(User.id == target_user_id).first()
+    db_user = db.query(User).filter(User.id == target_user_id, User.deleted_at.is_(None)).first()
     if not db_user:
         return None
     if db_user.id == acting_user_id:

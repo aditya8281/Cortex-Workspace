@@ -47,7 +47,7 @@ async def get_current_user(
             detail="Token expired or invalid",
         )
 
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(User).filter(User.id == int(user_id), User.deleted_at.is_(None)).first()
 
     if not user:
         raise HTTPException(
@@ -72,4 +72,4 @@ async def get_current_user_optional(
         user_id = verify_access_token(raw_token)
     except Exception:
         return None
-    return db.query(User).filter(User.id == int(user_id)).first()
+    return db.query(User).filter(User.id == int(user_id), User.deleted_at.is_(None)).first()
