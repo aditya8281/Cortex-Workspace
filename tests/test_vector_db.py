@@ -69,16 +69,18 @@ def test_search(mock_qdrant_cls):
     hit2.id = 2
     hit2.score = 0.87
     hit2.payload = {"text": "doc2"}
-    mock_client.search.return_value = [hit1, hit2]
+    mock_response = MagicMock()
+    mock_response.points = [hit1, hit2]
+    mock_client.query_points.return_value = mock_response
 
     mock_qdrant_cls.return_value = mock_client
 
     db = VectorDB()
     results = db.search("my_collection", [0.1, 0.2, 0.3], limit=5)
 
-    mock_client.search.assert_called_once_with(
+    mock_client.query_points.assert_called_once_with(
         collection_name="my_collection",
-        query_vector=[0.1, 0.2, 0.3],
+        query=[0.1, 0.2, 0.3],
         limit=5,
     )
     assert results == [
@@ -97,7 +99,7 @@ def test_search_missing_collection(mock_qdrant_cls):
     results = db.search("nonexistent", [0.1, 0.2, 0.3])
 
     assert results == []
-    mock_client.search.assert_not_called()
+    mock_client.query_points.assert_not_called()
 
 
 @patch("backend.app.core.vector_db.QdrantClient")
