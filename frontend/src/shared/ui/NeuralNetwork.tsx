@@ -102,7 +102,7 @@ function buildNetwork(
       isHub: true,
       phase: rand() * Math.PI * 2,
       pulseSpeed: 0.15 + rand() * 0.1, // slower pulse
-      glowOpacity: 0.45 + rand() * 0.15,
+      glowOpacity: 0.3 + rand() * 0.1,
       lastSignalTime: 0,
     });
   }
@@ -124,7 +124,7 @@ function buildNetwork(
       isHub: false,
       phase: rand() * Math.PI * 2,
       pulseSpeed: 0.25 + rand() * 0.2, // faster pulse
-      glowOpacity: 0.3 + rand() * 0.15,
+      glowOpacity: 0.2 + rand() * 0.1,
       lastSignalTime: 0,
     });
   }
@@ -198,7 +198,7 @@ export default function NeuralNetwork({
           const maxDist = CONNECTION_DIST_CENTER + distFromCenter * (CONNECTION_DIST_EDGE - CONNECTION_DIST_CENTER);
 
           if (dist < maxDist) {
-            const alpha = (1 - dist / maxDist) * 0.12;
+            const alpha = (1 - dist / maxDist) * 0.07;
             const isHubConnection = a.isHub || b.isHub;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
@@ -274,7 +274,7 @@ export default function NeuralNetwork({
           if (trailProg < 0) break;
           const tx = from.x + (to.x - from.x) * trailProg;
           const ty = from.y + (to.y - from.y) * trailProg;
-          const trailAlpha = (1 - ti / SIGNAL_TRAIL_LEN) * 0.45;
+          const trailAlpha = (1 - ti / SIGNAL_TRAIL_LEN) * 0.3;
           ctx.beginPath();
           ctx.arc(tx, ty, 1.5 - (ti / SIGNAL_TRAIL_LEN) * 1, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(6, 182, 212, ${trailAlpha})`;
@@ -284,12 +284,12 @@ export default function NeuralNetwork({
         // Head
         ctx.beginPath();
         ctx.arc(x, y, SIGNAL_HEAD_RADIUS, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(6, 182, 212, 0.9)";
+        ctx.fillStyle = "rgba(6, 182, 212, 0.7)";
         ctx.fill();
 
         // Head glow
         const glow = ctx.createRadialGradient(x, y, 0, x, y, 10);
-        glow.addColorStop(0, "rgba(6, 182, 212, 0.3)");
+        glow.addColorStop(0, "rgba(6, 182, 212, 0.2)");
         glow.addColorStop(1, "rgba(6, 182, 212, 0)");
         ctx.beginPath();
         ctx.arc(x, y, 10, 0, Math.PI * 2);
@@ -303,7 +303,7 @@ export default function NeuralNetwork({
         const currentRadius = n.radius * (1 + pulse);
 
         // Decay glow toward base
-        const baseGlow = n.isHub ? 0.5 : 0.35;
+        const baseGlow = n.isHub ? 0.3 : 0.2;
         if (n.glowOpacity > baseGlow + 0.1) {
           n.glowOpacity -= 0.003 * dt;
         } else if (n.glowOpacity < baseGlow) {
@@ -313,7 +313,7 @@ export default function NeuralNetwork({
         // Outer glow
         const glowR = currentRadius * 3.5;
         const glow = ctx.createRadialGradient(n.x, n.y, currentRadius * 0.3, n.x, n.y, glowR);
-        glow.addColorStop(0, `rgba(6, 182, 212, ${n.glowOpacity * 0.3})`);
+        glow.addColorStop(0, `rgba(6, 182, 212, ${n.glowOpacity * 0.2})`);
         glow.addColorStop(1, "rgba(6, 182, 212, 0)");
         ctx.beginPath();
         ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2);

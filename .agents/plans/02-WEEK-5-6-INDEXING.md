@@ -2,7 +2,24 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build code intelligence (symbols, call graphs, dependency analysis), multi-model embeddings with ColBERT reranking, and a Knowledge Graph with Apache AGE — enabling deep code understanding and entity-relationship reasoning by end of Week 6.
+**Goal:** Upgrade the existing regex-based chunker to tree-sitter AST parsing, build a Knowledge Graph with Apache AGE, add ColBERT reranking, and enable incremental re-indexing — transforming the current basic indexing pipeline into a deep code understanding system.
+
+**Current State:** The codebase already has a working indexing pipeline:
+- `backend/app/services/embedding_service.py` — ONNX embedding with mock fallback (768-dim vectors)
+- `backend/app/services/chunker.py` — Regex-based symbol extraction, 500-token chunks, language detection
+- `backend/app/services/repo_scanner.py` — Walk → chunk → embed → store pipeline
+- `backend/app/services/memory_manager.py` — KnowledgeEntry CRUD + vector search via Qdrant
+- `backend/app/core/vector_db.py` — Qdrant client wrapper (upsert, search, delete)
+- `backend/app/tasks/` — arq background tasks (scan_repo_task, embed_memory_task)
+- `backend/app/models/repo_index.py` — RepoIndex + CodeChunk models
+- `backend/app/models/intelligence/models.py` — KnowledgeEntry model
+
+**What needs upgrading:**
+1. Regex-based chunker → AST-aware tree-sitter parsing (cross-file symbol resolution)
+2. Flat code chunks → Knowledge Graph (entities, relations, call graphs)
+3. All-or-nothing re-scan → Incremental re-indexing (file watcher)
+4. Raw cosine similarity → Hybrid search (BM25 + vector + graph reranking)
+5. Mock embeddings → Real ONNX model (or ColBERT late-interaction)
 
 **Architecture:** tree-sitter provides AST parsing for 15+ languages. Apache AGE (PostgreSQL extension) stores the knowledge graph. ColBERT late-interaction model provides code-aware embeddings. A cross-encoder reranker improves search relevance. All indexed incrementally via file watcher.
 
@@ -25,11 +42,13 @@
 
 **Files:**
 - Create: `backend/app/services/code_intelligence.py`
+- Modify: `backend/app/services/chunker.py` (integrate AST-aware chunking)
 - Create: `backend/tests/test_code_intelligence.py`
 
 **Interfaces:**
-- Consumes: Task 1 from 01-WEEK-3-4-MEMORY.md (RepoScanner, CodeChunk)
+- Consumes: `repo_scanner.py` (existing file walking), `chunker.py` (existing chunking)
 - Produces: `extract_symbols(code, lang) -> list[Symbol]`, `build_call_graph(repo_id) -> CallGraph`, `analyze_impact(symbol_id) -> ImpactReport`
+- Upgrades: `chunker.py` to use AST boundaries instead of fixed token limits
 
 - [ ] **Step 1: Create app/services/code_intelligence.py**
 
@@ -362,8 +381,9 @@ git commit -m "feat(backend): add tree-sitter code intelligence with symbol extr
 - Create: `backend/tests/test_knowledge_graph.py`
 
 **Interfaces:**
-- Consumes: Task 1 (CodeIntelligence), Task 3 from 01-WEEK-3-4-MEMORY.md (EmbeddingService)
+- Consumes: Task 1 (CodeIntelligence), existing `embedding_service.py` (for entity embeddings)
 - Produces: `create_entity(type, name, props)`, `create_edge(src, dst, type, props)`, `query_neighbors(id, hops)`, `find_path(src, dst)`, `detect_communities()`
+- Integrates with: existing `memory_manager.py` (KnowledgeEntry entities become graph nodes)
 
 - [ ] **Step 1: Create app/models/graph_entity.py**
 
@@ -402,7 +422,12 @@ class GraphRelation(Base):
 - [ ] **Step 2: Create app/services/knowledge_graph.py**
 
 ```python
-"""Knowledge Graph service using PostgreSQL (no AGE extension needed for MVP)."""
+"""Knowledge Graph service using PostgreSQL (no AGE extension needed for MVP).
+
+Integrates with existing memory_manager.py — KnowledgeEntry entities become
+graph nodes. Code intelligence symbols (from code_intelligence.py) also become
+graph nodes with relations (calls, imports, defines).
+"""
 from __future__ import annotations
 import json
 import logging
@@ -604,9 +629,14 @@ from sqlalchemy import func
 - [ ] **Step 3: Create tests/test_knowledge_graph.py**
 
 ```python
+"""Tests for Knowledge Graph service.
+
+Uses SQLite in-memory database (same as existing test infrastructure).
+"""
 import tempfile
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from app.db.base import Base
-from app.db.session import SessionLocal
 from app.services.knowledge_graph import KnowledgeGraph
 
 
@@ -679,12 +709,12 @@ git commit -m "feat(backend): add Knowledge Graph with entities, relations, BFS 
 
 **Files:**
 - Create: `frontend/app/graph/page.tsx`
-- Create: `frontend/src/shared/components/GraphCanvas.tsx`
-- Add `cytoscape` to `frontend/package.json`
+- Create: `frontend/src/shared/ui/GraphCanvas.tsx`
 
 **Interfaces:**
-- Consumes: Task 1-2 (Knowledge Graph API), Task 5 from 00-WEEK-1-2-FOUNDATION.md (auth, design)
+- Consumes: Task 1-2 (Knowledge Graph API), existing auth (`AuthProvider`), existing layout (`DashboardShell`), existing design system (`DESIGN.md`)
 - Produces: Interactive graph visualization with zoom, pan, search, filter
+- Uses: Existing shared components (Button, Input, Card, Badge, Modal)
 
 - [ ] **Step 1: Add cytoscape dependency**
 
@@ -693,7 +723,7 @@ cd frontend
 npm install cytoscape
 ```
 
-- [ ] **Step 2: Create frontend/src/shared/components/GraphCanvas.tsx**
+- [ ] **Step 2: Create frontend/src/shared/ui/GraphCanvas.tsx**
 
 ```tsx
 "use client";
@@ -710,11 +740,11 @@ interface GraphCanvasProps {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  function: "#00d4ff",
-  class: "#2ed573",
-  module: "#ffa502",
-  variable: "#ff4757",
-  import: "#94a3b8",
+  function: "#06b6d4",
+  class: "#22c55e",
+  module: "#f59e0b",
+  variable: "#ef4444",
+  import: "#555566",
 };
 
 export default function GraphCanvas({ nodes, edges, onNodeClick, selectedNode }: GraphCanvasProps) {
@@ -752,7 +782,7 @@ export default function GraphCanvas({ nodes, edges, onNodeClick, selectedNode }:
     });
 
     // Draw edges
-    ctx.strokeStyle = "#243049";
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
     ctx.lineWidth = 1;
     edges.forEach((edge) => {
       const from = nodePositions[edge.source];
@@ -769,7 +799,7 @@ export default function GraphCanvas({ nodes, edges, onNodeClick, selectedNode }:
     nodes.forEach((node) => {
       const pos = nodePositions[node.id];
       if (!pos) return;
-      const color = TYPE_COLORS[node.type] || "#6b7b96";
+      const color = TYPE_COLORS[node.type] || "#555566";
       const isSelected = node.id === selectedNode;
       const isHovered = node.id === hoveredNode;
 
@@ -784,8 +814,8 @@ export default function GraphCanvas({ nodes, edges, onNodeClick, selectedNode }:
         ctx.stroke();
       }
 
-      ctx.fillStyle = "#e8edf5";
-      ctx.font = "10px 'IBM Plex Sans'";
+      ctx.fillStyle = "#f0f0f5";
+      ctx.font = "10px 'Inter'";
       ctx.textAlign = "center";
       ctx.fillText(node.label, pos.x, pos.y + 18);
     });
@@ -796,7 +826,7 @@ export default function GraphCanvas({ nodes, edges, onNodeClick, selectedNode }:
   return (
     <canvas
       ref={canvasRef}
-      className="w-full h-full bg-bg-surface rounded-lg border border-border"
+      className="w-full h-full bg-bg-surface rounded-xl border border-border-subtle"
       style={{ minHeight: "400px" }}
     />
   );
@@ -811,9 +841,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
 import DashboardShell from "../../src/shared/layout/DashboardShell";
-import GraphCanvas from "../../src/shared/components/GraphCanvas";
+import GraphCanvas from "../../src/shared/ui/GraphCanvas";
 import Card from "../../src/shared/ui/Card";
 import Input from "../../src/shared/ui/Input";
+import Badge from "../../src/shared/ui/Badge";
 
 interface GraphNode { id: string; label: string; type: string; }
 interface GraphEdge { source: string; target: string; label: string; }
@@ -831,17 +862,12 @@ export default function GraphPage() {
 
   useEffect(() => {
     if (!user) return;
-    // Fetch graph data from API
     fetchGraphData();
   }, [user]);
 
   async function fetchGraphData() {
     try {
-      const token = sessionStorage.getItem("cortex_token");
-      // Fetch entities and relations
-      const entRes = await fetch("http://localhost:8000/api/graph/entities?limit=100", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const entRes = await fetch("/api/v1/graph/entities?limit=100", { credentials: "include" });
       if (entRes.ok) {
         const data = await entRes.json();
         setNodes(data.entities?.map((e: { id: number; name: string; entity_type: string }) => ({
@@ -855,11 +881,11 @@ export default function GraphPage() {
 
   return (
     <DashboardShell>
-      <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
+      <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-display font-semibold text-text">Knowledge Graph</h1>
-            <p className="text-sm text-text-muted">{nodes.length} entities, {edges.length} relations</p>
+            <h1 className="text-xl font-semibold text-text">Knowledge Graph</h1>
+            <p className="text-sm text-text-secondary">{nodes.length} entities, {edges.length} relations</p>
           </div>
         </div>
 
@@ -874,7 +900,7 @@ export default function GraphPage() {
         {selectedNode && (
           <Card className="p-4">
             <h3 className="text-sm font-medium text-text mb-2">Selected Entity</h3>
-            <p className="text-xs text-text-muted">ID: {selectedNode}</p>
+            <p className="text-xs text-text-secondary">ID: {selectedNode}</p>
           </Card>
         )}
       </div>
@@ -883,31 +909,40 @@ export default function GraphPage() {
 }
 ```
 
-- [ ] **Step 4: Run frontend typecheck**
+- [ ] **Step 4: Run frontend build**
 
 ```bash
 cd frontend
-npm run typecheck
+npm run build
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add frontend/
-git commit -m "feat(frontend): add Knowledge Graph visualization with Cytoscape"
+git commit -m "feat(frontend): add Knowledge Graph visualization page"
 ```
 
 ---
 
 ## Week 5-6 Exit Criteria Checklist
 
-- [ ] tree-sitter code intelligence (symbol extraction, 15+ languages)
-- [ ] Call graph construction and impact analysis
-- [ ] Knowledge Graph (entities, relations, BFS, path finding)
-- [ ] Graph visualization frontend (interactive canvas)
-- [ ] Incremental re-indexing < 5s from file edit
-- [ ] Graph queries < 50ms for 3-hop traversal
+- [ ] tree-sitter code intelligence (symbol extraction, 15+ languages) — **upgrades existing regex-based chunker**
+- [ ] Call graph construction and impact analysis — **new capability**
+- [ ] Knowledge Graph (entities, relations, BFS, path finding) — **new capability**
+- [ ] Graph visualization frontend (interactive canvas) — **new page**
+- [ ] Incremental re-indexing < 5s from file edit — **upgrades existing all-or-nothing scan**
+- [ ] Graph queries < 50ms for 3-hop traversal — **new performance target**
 - [ ] All tests passing, CI/CD updated
+
+### What Already Exists (Do Not Rebuild)
+- `embedding_service.py` — ONNX embedding with mock fallback
+- `chunker.py` — Language detection + regex symbol extraction (upgrade to AST)
+- `repo_scanner.py` — Walk → chunk → embed → store pipeline
+- `memory_manager.py` — KnowledgeEntry CRUD + vector search
+- `vector_db.py` — Qdrant client wrapper
+- `repo_index.py` — RepoIndex + CodeChunk models
+- Background task queue (arq + Redis)
 
 ### Migration Steps
 1. Create model `backend/app/models/graph_entity.py` (GraphEntity, GraphRelation tables)

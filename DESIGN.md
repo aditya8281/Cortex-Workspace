@@ -23,11 +23,11 @@ All semantic tokens live in `app/globals.css` and are bridged to Tailwind with `
 
 | Token | Value | Usage |
 | --- | --- | --- |
-| `--bg-void` | `#000000` | Deep canvas background |
-| `--bg-base` | `#050508` | Page surface |
-| `--bg-elevated` | `#0a0a0f` | Cards, panels |
-| `--bg-surface` | `#111118` | Interactive surfaces |
-| `--bg-hover` | `#1a1a24` | Hover states |
+| `--bg-void` | `#000000` | Pure black canvas background |
+| `--bg-base` | `#000000` | Page surface — OLED black |
+| `--bg-elevated` | `#040406` | Cards, panels — barely above black |
+| `--bg-surface` | `#0a0a0f` | Interactive surfaces |
+| `--bg-hover` | `#111118` | Hover states |
 | `--border-subtle` | `rgba(255,255,255,0.06)` | Hairline borders |
 | `--border-default` | `rgba(255,255,255,0.10)` | Standard borders |
 | `--border-accent` | `rgba(6,182,212,0.3)` | Accent borders |
@@ -110,9 +110,39 @@ Badges are mono, uppercase, rounded-full pills with semantic colors.
 
 Wide planning workspace with adaptive navigation:
 
-- **Desktop:** Collapsible sidebar (icon-only mode)
+- **Desktop:** Fixed 240px sidebar with Neural Pulse design (pulsing active indicator, glow effects, status bar)
 - **Tablet:** Overlay sidebar with backdrop blur
 - **Mobile:** Bottom tab bar
+
+---
+
+## Background System
+
+All pages share a unified neural network canvas background (`NeuralNetwork.tsx`). The canvas is `position: fixed` covering the full viewport at `z-index: -1`.
+
+| Page | Intensity | Notes |
+| --- | --- | --- |
+| Landing (`/`) | `high` | Hero background, 80 neurons |
+| Dashboard (`/app`) | `medium` | 50 neurons |
+| Auth (`/auth`) | `low` | Subtle, 30 neurons |
+| Memory (`/memory`) | `low` | Subtle, 30 neurons |
+| Vault/Settings/Profile/Admin | `medium` | Inherited through transparent DashboardShell |
+
+**Page wrappers use `bg-transparent`** to let the canvas show through. Cards and panels use `bg-bg-elevated` (#040406) for layering depth against the OLED black base. The `html` element uses `background: #000000` to ensure OLED black across all pages.
+
+---
+
+## Sidebar Design (Neural Pulse)
+
+The desktop sidebar uses the Neural Pulse design system:
+
+- **Active indicator:** 3px pulsing cyan dot on the left edge with `pulse-dot` keyframe animation (2s cycle, opacity 0.6-1.0)
+- **Active item glow:** Subtle accent box-shadow (`0 0 20px rgba(6,182,212,0.08)`)
+- **Hover glow:** Soft accent shadow on hover (`0 0 15px rgba(6,182,212,0.04)`)
+- **Section dividers:** Neon gradient lines (`transparent -> accent/15 -> transparent`)
+- **Status bar:** Vault lock state (red/green dot) + memory count at bottom
+- **User card:** Avatar with accent glow ring + online status dot
+- `prefers-reduced-motion` disables all pulse animations
 
 ---
 

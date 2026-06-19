@@ -86,7 +86,7 @@ function FeatureCard({ feature, index }: { feature: typeof FEATURES[0]; index: n
 
 export default function RootPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-bg">
+    <div className="min-h-screen flex flex-col bg-transparent">
       <NeuralNetwork intensity="high" />
 
       <header className="glass-panel h-14 flex items-center justify-between px-5 shrink-0 sticky top-0 z-20">

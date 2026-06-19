@@ -45,8 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           clearSession();
           setUser(null);
-          // Only redirect if not already on auth page to avoid loops
-          if (typeof window !== "undefined" && !window.location.pathname.startsWith("/auth")) {
+          const PROTECTED = ["/app", "/vault", "/settings", "/admin", "/memory", "/profile"];
+          if (typeof window !== "undefined" && PROTECTED.some((p) => window.location.pathname.startsWith(p))) {
             window.location.replace("/auth");
           }
         }

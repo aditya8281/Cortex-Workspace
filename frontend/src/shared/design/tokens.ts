@@ -7,10 +7,10 @@ const tokens = {
   colors: {
     // Backgrounds
     void: "#000000",
-    bg: "#050508",
-    "bg-elevated": "#0a0a0f",
-    "bg-surface": "#111118",
-    "bg-hover": "#1a1a24",
+    bg: "#000000",
+    "bg-elevated": "#040406",
+    "bg-surface": "#0a0a0f",
+    "bg-hover": "#111118",
 
     // Borders
     "border-subtle": "rgba(255,255,255,0.06)",

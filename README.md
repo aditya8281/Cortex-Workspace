@@ -49,8 +49,12 @@ Think of Cortex as a person — a friend to its users.
 - Profile management and GitHub account linking
 - Admin user management
 - Shared memory layer scaffolding (PostgreSQL + filesystem ready)
-- Spring-physics animations, 3D effects, command palette, glass morphism UI
+- Spring-physics animations, command palette, glass morphism UI
 - Cookie-based authentication with automatic refresh
+- Neural Dark redesign with OLED black backgrounds
+- Neural Network canvas background on all pages
+- Neural Pulse sidebar with pulsing active indicators and glow effects
+- Folder picker abstraction (browser + Tauri-ready adapters)
 
 **Prerequisites (Repository Alignment)** — Complete
 
@@ -67,21 +71,32 @@ Think of Cortex as a person — a friend to its users.
 - Token expiry reduced to 30 minutes
 - CSRF, CORS, WebSocket security tightened
 - Foreign key constraints added to repo models
+- CSRF exemptions for authenticated API endpoints (vault, profile photo)
 
-**Phase 2 (Memory & Indexing)** — Ready to start
+**Phase 2 (Memory & Indexing)** — Partially built
 
-AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestration are **next in line**.
+| Component | Status |
+|-----------|--------|
+| Embedding service (ONNX/BGE-M3) | ✅ Functional (mock fallback) |
+| Code chunker (language detection, symbol extraction) | ✅ Regex-based (AST upgrade planned) |
+| Repository scanner (walk, chunk, embed, store) | ✅ Pipeline complete |
+| Memory manager (CRUD + vector search) | ✅ Functional |
+| Vector DB client (Qdrant wrapper) | ✅ Functional |
+| Background task queue (arq + Redis) | ✅ Functional |
+| Knowledge graph | ⏳ Planned (Week 5-6) |
+| AST-based code parsing (tree-sitter) | ⏳ Planned (Week 5-6) |
+| Incremental re-indexing | ⏳ Planned (Week 5-6) |
+| Hybrid search (BM25 + vector) | ⏳ Planned (Week 5-6) |
 
 | Area | State |
 |------|-------|
-| Tests | 156 (backend 147, frontend 9) |
+| Tests | 156+ (backend pytest + frontend vitest) |
 | Frontend build | Passes |
 | Linting | ruff + ESLint + mypy — all clean |
 | Auth + vault backend | Production-quality foundation |
 | Vault UI | Full file browser with table/list/grid views |
-| Neural Dark redesign | Complete |
+| Neural Dark redesign | Complete (OLED black, Neural Pulse sidebar) |
 | CLI | Scaffolded (command stubs) |
-| CortexMemory AI dirs | Empty scaffolding |
 
 ---
 
@@ -107,13 +122,17 @@ AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestr
 | Feature | Status |
 |---------|--------|
 | Spring-physics animations (framer-motion) | ✅ |
-| 3D effects (Three.js / React Three Fiber) | ✅ |
 | Command palette (⌘K via cmdk) | ✅ |
 | Glass morphism UI | ✅ |
 | Adaptive layout (DashboardShell) | ✅ |
 | Toast notifications (sonner) | ✅ |
 | Radix UI primitives (dialog, dropdown, tooltip) | ✅ |
 | Page transitions + stagger animations | ✅ |
+| OLED black backgrounds (#000000) | ✅ |
+| Neural Network canvas background (all pages) | ✅ |
+| Neural Pulse sidebar (pulsing dots, glow effects) | ✅ |
+| Status bar (vault state + memory count) | ✅ |
+| Folder picker abstraction (browser + Tauri) | ✅ |
 
 ### Security (Implemented)
 
@@ -142,29 +161,31 @@ AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestr
 |---------|--------|
 | Vector database (Qdrant) | ✅ |
 | Embedding service (ONNX/BGE-M3) | ✅ |
+| Code chunker (language detection, regex symbols) | ✅ |
+| Repository scanner (walk, chunk, embed, store) | ✅ |
+| Memory manager (CRUD + vector search) | ✅ |
 | Task queue (arq) | ✅ |
 | WebSocket endpoint | ✅ |
 | Global rate limiting | ✅ |
 | Soft delete + restore | ✅ |
 | JWT in httpOnly cookies | ✅ |
 | CSP headers | ✅ |
-| TLS configuration | ✅ |
 | Structured logging + correlation IDs | ✅ |
 | Metrics endpoint | ✅ |
-| Backup strategy | ✅ |
 | Frontend test framework (Vitest) | ✅ |
 
-### Phase 2+: Machine Understanding (Planned)
+### Phase 2: Memory & Indexing (In Progress)
 
 | Feature | Status |
 |---------|--------|
-| Repository parsing and indexing | ⏳ |
-| Embedding generation (code, documents) | ⏳ |
-| Knowledge graph construction | ⏳ |
-| Natural language queries | ⏳ |
-| Answer generation from Cortex memory | ⏳ |
-| Development task execution | ⏳ |
-| Multi-agent orchestration | ⏳ |
+| AST-based code parsing (tree-sitter) | ⏳ |
+| Symbol extraction + call graphs | ⏳ |
+| Knowledge graph (entities, relations, BFS) | ⏳ |
+| Graph visualization frontend (Cytoscape) | ⏳ |
+| Incremental re-indexing (file watcher) | ⏳ |
+| Hybrid search (BM25 + vector) | ⏳ |
+| Cross-encoder reranking | ⏳ |
+| ColBERT late-interaction embeddings | ⏳ |
 
 ---
 
@@ -175,13 +196,14 @@ AI memory, embeddings, repository indexing, knowledge graphs, and agent orchestr
 ```text
 ┌────────────────────────────────────────────────┐
 │  Frontend (Next.js 15)  http://localhost:3000  │
-│  - Auth, Profile, Vault, Admin Dashboard       │
-│  - Neural Dark UI, Command Palette (⌘K)        │
+│  - Auth, Profile, Vault, Memory, Admin         │
+│  - Neural Dark UI, Neural Network background   │
+│  - Neural Pulse sidebar, Command Palette (⌘K)  │
 └──────────────────────┬─────────────────────────┘
                        │ Direct requests to backend (CORS)
 ┌──────────────────────▼─────────────────────────┐
 │  Backend (FastAPI)    http://localhost:8000    │
-│  - Auth, Vault, Memory, Storage                │
+│  - Auth, Vault, Memory, Storage, Intelligence  │
 └──────┬───────────────────────────┬─────────────┘
        │                           │
   ┌────▼────┐  ┌──────────┐  ┌────▼─────┐
@@ -249,13 +271,15 @@ Override root with `CORTEX_ROOT` env var.
 
 **`auth_events`** — Audit log: user_id, IP, timestamp, event_type, metadata.
 
-**`knowledge_entries`** — Text memory records with vector embeddings.
+**`knowledge_entries`** — Text memory records with vector embeddings, category, tags.
 
 **`user_storage_registry`** — One row per user: filesystem path pointer.
 
-**`repo_indexes`** — Repository metadata (FK to users).
+**`repo_indexes`** — Repository metadata (FK to users), scan status, file/chunk counts.
 
-**`code_chunks`** — Indexed code with embeddings (FK to repo_indexes).
+**`code_chunks`** — Indexed code with embeddings (FK to repo_indexes), symbol info, language.
+
+**`notifications`** — System notifications for users.
 
 ### API Structure
 
@@ -265,13 +289,17 @@ Base URL: `http://localhost:8000`
 |-------|---------|------|
 | `/api/auth/*` | Register, login, refresh, logout, check-username | Varies |
 | `/api/memory` | List/create/search knowledge entries | Required |
+| `/api/memory/search` | Semantic search over memory | Required |
+| `/api/memory/scan-repo` | Trigger repository scanning | Required |
+| `/api/memory/bulk-embed` | Bulk embedding generation | Required |
 | `/api/v1/health/*` | live, ready, deep | None |
 | `/api/v1/users/*` | Admin: list, get, update, delete, promote, demote | Admin |
 | `/api/v1/me/profile` | GET/PUT profile, photo upload/delete | Required |
 | `/api/v1/me/github` | GET/POST/DELETE GitHub connection | Required |
 | `/api/v1/me/vault/*` | lock/unlock, files CRUD, search | Required |
-| `/api/v1/metrics` | Prometheus-style metrics | None |
-| `/ws` | WebSocket echo endpoint | None |
+| `/api/v1/notifications` | List/read notifications | Required |
+| `/api/v1/system/*` | System status, metrics | Varies |
+| `/ws` | WebSocket echo + demo + system metrics | None |
 
 Interactive docs: `http://localhost:8000/docs`
 
@@ -486,38 +514,40 @@ make migrate
 Cortex-Workspace/
 ├── backend/app/
 │   ├── main.py          # Entry point, lifespan, CORS, routers
-│   ├── core/            # Config, security, paths, storage, Redis, middleware, vector_db, websocket, rate_limit
+│   ├── core/            # Config, security, paths, storage, Redis, middleware, vector_db, websocket, rate_limit, csrf
 │   ├── auth/            # Register/login/refresh/logout, tokens, rate limit, audit
 │   ├── db/              # Bootstrap, session factory
-│   ├── models/          # User, AuthEvent, StorageRegistry, RepoIndex, CodeChunk ORM
+│   ├── models/          # User, AuthEvent, StorageRegistry, RepoIndex, CodeChunk, Notification ORM
 │   ├── schemas/         # Pydantic request/response models
-│   ├── services/        # user, vault, memory_manager, storage_registry, health, embedding_service, repo_scanner
+│   ├── services/        # user, vault, memory_manager, storage_registry, health, embedding_service, repo_scanner, chunker, notification
 │   ├── intelligence/    # KnowledgeEntry model
 │   ├── tasks/           # arq worker, memory_tasks
-│   └── api/             # Routers: auth, memory, metrics, v1
+│   └── api/             # Routers: auth, memory, metrics, v1 (profile, vault, github, notifications, system)
 ├── frontend/
 │   ├── app/             # Next.js pages (App Router) with error.tsx boundaries
 │   └── src/
-│       ├── lib/         # motion.ts (spring physics), utils.ts
+│       ├── lib/         # utils.ts (cn helper)
 │       └── shared/
 │           ├── auth/    # AuthProvider, cortexApi client, session
 │           ├── design/  # Design tokens
-│           ├── layout/  # DashboardShell (adaptive layout)
-│           └── ui/      # Button, Card, CommandPalette, Modal, Toast, Tooltip, etc.
+│           ├── layout/  # DashboardShell (Neural Pulse sidebar)
+│           ├── services/ # folder-picker (browser + Tauri adapters)
+│           └── ui/      # Button, Card, CommandPalette, Modal, NeuralNetwork, Toast, Tooltip, etc.
 ├── cli/
 │   └── src/
 │       ├── index.ts     # CLI entry point (Commander.js)
 │       └── commands/    # init, install, build, start, dev, setup, doctor, etc.
-├── migrations/          # Alembic revisions (PostgreSQL)
-├── tests/               # 147 pytest tests (SQLite) + frontend tests
+├── migrations/          # Alembic revisions (PostgreSQL, 12 migrations)
+├── tests/               # 147+ pytest tests (SQLite) + frontend tests
 ├── scripts/             # Docker helpers, backup
 ├── docker-compose.yml   # PostgreSQL + Redis + Qdrant
 ├── Dockerfile           # Multi-stage build (frontend + backend)
 ├── start.sh             # Local dev with embedded PG
 ├── CortexMemory/        # Created at runtime (gitignored)
 ├── AGENTS.md            # Agent instructions
-├── DESIGN.md            # Design system
-└── .agents/             # Agent skills and workflow definitions
+├── DESIGN.md            # Design system (Neural Dark + Neural Pulse)
+├── README.md            # This file
+└── .agents/             # Agent skills, plans, and workflow definitions
 ```
 
 ---
@@ -541,19 +571,19 @@ Cortex-Workspace/
 
 **Security Audit — Complete:** P0/P1 fixes applied (auth enforcement, path traversal, token expiry, CSRF, CORS, FK constraints).
 
-**Phase 2 (Memory & Indexing) — NEXT:**
-1. **Repo scanner** — parse and index codebases
-2. **Embeddings** — generate vector representations via ONNX/BGE-M3
-3. **Vector search** — semantic search over indexed knowledge
-4. **Knowledge graph** — construct and query relationships
-5. **CLI implementation** — flesh out command stubs into working commands
-6. **Frontend test coverage** — expand from 9 to full page/component coverage
-7. **RAG + retrieval API** — query over indexed knowledge (not vault)
-8. **Model routing** — local (Ollama) + optional cloud providers
-9. **Agent / workflow engine** — task queue, WebSocket chat, orchestration
-10. **CRTX portability** — encrypted portable user archives (`.crtx` export/import)
-11. **Desktop packaging** — SQLite fallback, Tauri/Electron shell
-12. **Production ops** — TLS, metrics, backups, security scanning
+**Phase 2 (Memory & Indexing) — In Progress:**
+1. ~~Repo scanner~~ — walk, chunk, embed, store pipeline complete
+2. ~~Embeddings~~ — ONNX/BGE-M3 service with mock fallback
+3. ~~Vector search~~ — Qdrant integration for semantic search
+4. **AST parsing** — tree-sitter code intelligence (next)
+5. **Knowledge graph** — entity-relationship reasoning
+6. **Incremental re-indexing** — file watcher for <5s updates
+7. **Hybrid search** — BM25 + vector + graph reranking
+8. **Graph visualization** — Cytoscape.js interactive canvas
+9. **CLI implementation** — flesh out command stubs
+10. **RAG + retrieval API** — query over indexed knowledge
+11. **Agent / workflow engine** — task queue, orchestration
+12. **Desktop packaging** — Tauri shell, SQLite fallback
 
 ---
 

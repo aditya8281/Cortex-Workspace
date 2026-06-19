@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="dark">
       <body
-        className={`${inter.variable} ${jetBrainsMono.variable} min-h-screen bg-bg text-text font-sans antialiased`}
+        className={`${inter.variable} ${jetBrainsMono.variable} min-h-screen bg-transparent text-text font-sans antialiased`}
       >
         <a
           href="#main-content"

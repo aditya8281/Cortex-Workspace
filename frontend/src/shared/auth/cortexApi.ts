@@ -73,6 +73,13 @@ async function tryRefresh(): Promise<boolean> {
   return _refreshPromise;
 }
 
+function getCsrfToken(): string | undefined {
+  return document.cookie
+    .split("; ")
+    .find((c) => c.startsWith("cortex_csrf="))
+    ?.split("=")[1];
+}
+
 async function request<T = unknown>(
   method: string,
   path: string,
@@ -82,10 +89,13 @@ async function request<T = unknown>(
   const url = `${getBase()}${path}`;
   const bodyString = body !== undefined ? JSON.stringify(body) : undefined;
 
+  const csrfToken = getCsrfToken();
+
   const res = await fetch(url, {
     method,
     headers: {
       "Content-Type": "application/json",
+      ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
       ...extraHeaders,
     },
     body: bodyString,
@@ -175,17 +185,21 @@ export async function apiUploadAvatar(
 ): Promise<{ profile_photo: string }> {
   const fd = new FormData();
   fd.append("file", file);
+  const csrfToken = getCsrfToken();
   let res = await fetch(`${getBase()}/api/v1/me/profile/photo`, {
     method: "POST",
     credentials: "include",
+    headers: csrfToken ? { "x-csrf-token": csrfToken } : {},
     body: fd,
   });
   if (res.status === 401) {
     const refreshed = await tryRefresh();
     if (refreshed) {
+      const retryCsrf = getCsrfToken();
       res = await fetch(`${getBase()}/api/v1/me/profile/photo`, {
         method: "POST",
         credentials: "include",
+        headers: retryCsrf ? { "x-csrf-token": retryCsrf } : {},
         body: fd,
       });
     }
