@@ -13,14 +13,23 @@ interface Props {
   vault: VaultContext;
 }
 
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
 function MatrixRain() {
   const columns = useState<{ x: number; chars: string[]; delay: number; speed: number }[]>(() => {
     const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノ";
+    const rand = seededRandom(99);
     return Array.from({ length: 20 }, (_, i) => ({
       x: (i / 20) * 100,
-      chars: Array.from({ length: 15 }, () => chars[Math.floor(Math.random() * chars.length)]),
-      delay: Math.random() * 3,
-      speed: 2 + Math.random() * 4,
+      chars: Array.from({ length: 15 }, () => chars[Math.floor(rand() * chars.length)]),
+      delay: rand() * 3,
+      speed: 2 + rand() * 4,
     }));
   })[0];
 

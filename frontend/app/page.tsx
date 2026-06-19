@@ -10,19 +10,28 @@ import AuthRedirect from "../src/shared/ui/AuthRedirect";
 
 const PARTICLE_COUNT = 40;
 
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
 function ParticleDots() {
-  const [particles] = useState(() =>
-    Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+  const [particles] = useState(() => {
+    const rand = seededRandom(42);
+    return Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
       id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 3 + 1,
-      delay: Math.random() * 5,
-      duration: Math.random() * 8 + 6,
-      opacity: Math.random() * 0.4 + 0.1,
-      xDrift: Math.random() * 20 - 10,
-    }))
-  );
+      x: rand() * 100,
+      y: rand() * 100,
+      size: rand() * 3 + 1,
+      delay: rand() * 5,
+      duration: rand() * 8 + 6,
+      opacity: rand() * 0.4 + 0.1,
+      xDrift: rand() * 20 - 10,
+    }));
+  });
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
