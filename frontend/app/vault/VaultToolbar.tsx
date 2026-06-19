@@ -4,12 +4,12 @@
  */
 "use client";
 
-import { motion } from "framer-motion";
 import {
   Upload, FolderPlus, Download, KeyRound, Search, X,
   LayoutGrid, List, Table,
 } from "lucide-react";
 import type { VaultContext } from "./useVaultState";
+import Button from "../../src/shared/ui/Button";
 
 interface Props {
   vault: VaultContext;
@@ -27,49 +27,45 @@ export default function VaultToolbar({ vault }: Props) {
   return (
     <div className="flex flex-wrap gap-2 items-center justify-between border-b border-border-subtle px-3 py-2.5 bg-bg-elevated/50">
       <div className="flex flex-wrap items-center gap-1.5">
-        <motion.button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => fileInputRef.current?.click()}
           disabled={loading}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="toolbar-btn inline-flex items-center gap-1.5 rounded-xl bg-accent hover:bg-accent-hover text-bg px-3 py-2 text-xs font-bold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-glow"
         >
           <Upload className="w-3.5 h-3.5" />
           <span>Upload</span>
-        </motion.button>
+        </Button>
         <input type="file" multiple className="hidden" ref={fileInputRef} onChange={handleUpload} />
 
-        <motion.button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setModalNewFolder(true)}
           disabled={loading || activeCategory !== "all"}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="toolbar-btn inline-flex items-center gap-1.5 rounded-xl border border-border-subtle bg-bg-surface hover:border-border-accent hover:bg-bg-hover text-text-secondary hover:text-text px-3 py-2 text-xs font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <FolderPlus className="w-3.5 h-3.5" />
           <span>New Folder</span>
-        </motion.button>
+        </Button>
 
-        <motion.button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setModalExport(Array.from(selectedPaths))}
           disabled={selectedPaths.size === 0}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="toolbar-btn inline-flex items-center gap-1.5 rounded-xl border border-border-subtle bg-bg-surface hover:border-border-accent hover:bg-bg-hover text-text-secondary hover:text-text px-3 py-2 text-xs font-medium transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Download className="w-3.5 h-3.5 text-accent" />
           <span>Export</span>
-        </motion.button>
+        </Button>
 
-        <motion.button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setModalChangePw(true)}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="toolbar-btn inline-flex items-center gap-1.5 rounded-xl border border-border-subtle bg-bg-surface hover:border-border-accent hover:bg-bg-hover text-text-secondary hover:text-text px-3 py-2 text-xs font-medium transition-all duration-200"
         >
           <KeyRound className="w-3.5 h-3.5" />
           <span>Rekey</span>
-        </motion.button>
+        </Button>
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
@@ -97,18 +93,19 @@ export default function VaultToolbar({ vault }: Props) {
             { view: "list" as const, icon: List },
             { view: "grid" as const, icon: LayoutGrid },
           ]).map(({ view, icon: Icon }) => (
-            <motion.button
+            <Button
               key={view}
+              variant="ghost"
+              size="sm"
               onClick={() => setActiveView(view)}
-              whileTap={{ scale: 0.95 }}
-              className={`toolbar-btn p-1.5 rounded-lg transition-all duration-200 ${
+              className={`p-1.5 ${
                 activeView === view
                   ? "bg-accent/10 text-accent"
-                  : "text-text-muted hover:bg-bg-hover hover:text-text"
+                  : ""
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
-            </motion.button>
+            </Button>
           ))}
         </div>
       </div>

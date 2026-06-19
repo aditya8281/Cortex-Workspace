@@ -52,7 +52,7 @@ export default function VaultFileList({ vault }: Props) {
         >
           <div className="relative mb-5">
             <div className="absolute inset-0 rounded-full bg-accent/5 blur-xl" />
-            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-bg-surface border border-border-subtle">
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-xl bg-bg-surface border border-border-subtle">
               <Folder className="w-8 h-8 text-text-muted" strokeWidth={1.5} />
             </div>
           </div>

@@ -67,7 +67,7 @@ export default function VaultSidebar({ vault }: Props) {
   }
 
   return (
-    <aside className="flex flex-col gap-3 glass-panel rounded-2xl p-3 overflow-hidden h-full">
+    <aside className="flex flex-col gap-3 glass-panel rounded-xl p-3 overflow-hidden h-full">
       {/* Sidebar Header */}
       <div className="glass-panel-strong flex items-center justify-between rounded-xl px-3 py-2.5">
         <div className="flex items-center gap-2">
@@ -91,7 +91,7 @@ export default function VaultSidebar({ vault }: Props) {
                 else setSelectedPaths(new Set());
               }}
               whileTap={{ scale: 0.98 }}
-              className={`w-full text-left flex items-center gap-2.5 py-2 px-2.5 text-[11px] rounded-xl transition-all duration-200 ${
+              className={`w-full text-left flex items-center gap-2.5 py-2 px-2.5 text-xs rounded-xl transition-all duration-200 ${
                 isActive
                   ? "nav-item active"
                   : "text-text-secondary hover:bg-bg-hover hover:text-text"

@@ -132,7 +132,7 @@ export default function VaultLayout({ vault }: Props) {
           <div className="w-1 cursor-col-resize bg-border-subtle hover:bg-accent hover:shadow-glow transition-all rounded-full" onMouseDown={() => { resizingRef.current = "left"; }} />
         )}
 
-        <main className="flex flex-col glass-panel overflow-hidden min-w-0 rounded-2xl">
+        <main className="flex flex-col glass-panel overflow-hidden min-w-0 rounded-xl">
           <VaultToolbar vault={vault} />
           <VaultFileList vault={vault} />
         </main>

@@ -12,12 +12,16 @@ import {
 import type { VaultContext } from "./useVaultState";
 import { isTextPreviewable, isImagePreview } from "./useVaultState";
 import type { VaultFileEntry } from "../../src/shared/types";
+import useFolderPicker from "../../src/shared/hooks/useFolderPicker";
+import Button from "../../src/shared/ui/Button";
+import Input from "../../src/shared/ui/Input";
 
 interface Props {
   vault: VaultContext;
 }
 
 export default function VaultModals({ vault }: Props) {
+  const folderPicker = useFolderPicker();
   const {
     contextMenu, treeContextMenu, previewFile, previewBlobUrl, previewText, previewLoading,
     modalNewFolder, newFolderName, modalRename, renameValue, modalDelete, modalExport, exportDest,
@@ -120,26 +124,26 @@ export default function VaultModals({ vault }: Props) {
       <ModalShell open={modalNewFolder} onClose={() => { setModalNewFolder(false); setNewFolderName(""); }}>
         <h3 className="text-sm font-bold text-text mb-1 font-display">Create Folder</h3>
         <p className="text-[10px] text-text-muted mb-4 font-mono">{currentFolder === "/" ? "Creating in root" : `Creating in ${currentFolder}`}</p>
-        <input
+        <Input
           type="text"
           value={newFolderName}
           onChange={(e) => setNewFolderName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleCreateFolder()}
           placeholder="Folder name"
           autoFocus
-          className="w-full rounded-xl border border-border-subtle bg-bg px-4 py-3 text-xs text-text placeholder-text-muted focus:border-accent focus:ring-2 focus:ring-accent/10 outline-none mb-5 transition-all duration-200"
+          className="mb-5"
         />
         <div className="flex justify-end gap-2 text-xs">
-          <button onClick={() => { setModalNewFolder(false); setNewFolderName(""); }} className="px-4 py-2 rounded-xl border border-border-subtle bg-bg-surface hover:bg-bg-hover text-text transition-colors font-medium">Cancel</button>
-          <motion.button
+          <Button variant="secondary" size="sm" onClick={() => { setModalNewFolder(false); setNewFolderName(""); }}>Cancel</Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleCreateFolder}
             disabled={loading || !newFolderName.trim()}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-bg font-bold transition-all duration-200 disabled:opacity-40 flex items-center gap-1.5"
+            loading={loading}
           >
-            {loading ? <div className="h-3 w-3 animate-spin rounded-full border-2 border-bg border-t-transparent" /> : null} Create
-          </motion.button>
+            Create
+          </Button>
         </div>
       </ModalShell>
 
@@ -147,26 +151,26 @@ export default function VaultModals({ vault }: Props) {
       <ModalShell open={!!modalRename} onClose={() => { setModalRename(null); setRenameValue(""); }}>
         <h3 className="text-sm font-bold text-text mb-1 font-display">Rename</h3>
         <p className="text-[10px] text-text-muted mb-4 truncate font-mono">Current: {modalRename?.name}</p>
-        <input
+        <Input
           type="text"
           value={renameValue}
           onChange={(e) => setRenameValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleRename()}
           placeholder="New name"
           autoFocus
-          className="w-full rounded-xl border border-border-subtle bg-bg px-4 py-3 text-xs text-text placeholder-text-muted focus:border-accent focus:ring-2 focus:ring-accent/10 outline-none mb-5 transition-all duration-200"
+          className="mb-5"
         />
         <div className="flex justify-end gap-2 text-xs">
-          <button onClick={() => { setModalRename(null); setRenameValue(""); }} className="px-4 py-2 rounded-xl border border-border-subtle bg-bg-surface hover:bg-bg-hover text-text transition-colors font-medium">Cancel</button>
-          <motion.button
+          <Button variant="secondary" size="sm" onClick={() => { setModalRename(null); setRenameValue(""); }}>Cancel</Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleRename}
             disabled={loading || !renameValue.trim() || renameValue.trim() === modalRename?.name}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-bg font-bold transition-all duration-200 disabled:opacity-40 flex items-center gap-1.5"
+            loading={loading}
           >
-            {loading ? <div className="h-3 w-3 animate-spin rounded-full border-2 border-bg border-t-transparent" /> : null} Rename
-          </motion.button>
+            Rename
+          </Button>
         </div>
       </ModalShell>
 
@@ -188,16 +192,16 @@ export default function VaultModals({ vault }: Props) {
         </div>
         <p className="text-[10px] text-error mb-4 font-mono">This action is irreversible. Decrypted file keys and data will be shredded.</p>
         <div className="flex justify-end gap-2 text-xs">
-          <button onClick={() => setModalDelete(null)} className="px-4 py-2 rounded-xl border border-border-subtle bg-bg-surface hover:bg-bg-hover text-text transition-colors font-medium">Cancel</button>
-          <motion.button
+          <Button variant="secondary" size="sm" onClick={() => setModalDelete(null)}>Cancel</Button>
+          <Button
+            variant="danger"
+            size="sm"
             onClick={handleDelete}
             disabled={loading}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-4 py-2 rounded-xl bg-error hover:bg-red-600 text-white font-bold transition-all duration-200 disabled:opacity-40 flex items-center gap-1.5"
+            loading={loading}
           >
-            {loading ? <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" /> : null} Delete {modalDelete?.length} item(s)
-          </motion.button>
+            Delete {modalDelete?.length} item(s)
+          </Button>
         </div>
       </ModalShell>
 
@@ -205,11 +209,30 @@ export default function VaultModals({ vault }: Props) {
       <ModalShell open={!!modalExport} onClose={() => setModalExport(null)}>
         <h3 className="text-sm font-bold text-text mb-1 font-display">Export Decrypted Files</h3>
         <p className="text-xs text-text-muted mb-4">Decrypt and copy {modalExport?.length} selected item(s) to a local directory on your machine.</p>
+
+        {folderPicker.isSupported ? (
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={async () => {
+                const r = await folderPicker.pick();
+                if (r) setExportDest(r.path);
+              }}
+              className="flex items-center gap-3 p-3 rounded-xl border border-border bg-bg-surface text-text-secondary hover:border-accent/30 hover:bg-bg-hover transition-all duration-200 w-full"
+            >
+              <FolderOpen className="w-4 h-4 shrink-0 text-accent" />
+              <span className="text-sm font-medium">Browse for folder...</span>
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-text-muted mb-3 italic">Use Chrome or Edge for the native folder picker.</p>
+        )}
+
         <div className="mb-3">
           <label className="micro-label mb-1.5 block">Shortcut Presets</label>
           <div className="flex gap-2">
             {[{ label: "Desktop", path: "~/Desktop" }, { label: "Downloads", path: "~/Downloads" }, { label: "Documents", path: "~/Documents" }].map((preset) => (
-              <button key={preset.label} type="button" onClick={() => setExportDest(preset.path)} className={`interactive-card px-3 py-2 text-xs font-semibold ${exportDest === preset.path ? "!border-accent !text-accent" : ""}`}>
+              <button key={preset.label} type="button" onClick={() => { setExportDest(preset.path); folderPicker.clear(); }} className={`interactive-card px-3 py-2 text-xs font-semibold ${exportDest === preset.path && !folderPicker.result ? "!border-accent !text-accent" : ""}`}>
                 {preset.label}
               </button>
             ))}
@@ -217,19 +240,18 @@ export default function VaultModals({ vault }: Props) {
         </div>
         <div className="mb-5">
           <label className="micro-label mb-1.5 block">Target Directory Path</label>
-          <input type="text" value={exportDest} onChange={(e) => setExportDest(e.target.value)} placeholder="Absolute folder path" className="w-full rounded-xl border border-border-subtle bg-bg px-4 py-3 text-xs text-text placeholder-text-muted focus:border-accent focus:ring-2 focus:ring-accent/10 outline-none font-mono transition-all duration-200" />
+          <Input type="text" value={exportDest} onChange={(e) => { setExportDest(e.target.value); folderPicker.clear(); }} placeholder="Absolute folder path" className="font-mono" />
         </div>
         <div className="flex justify-end gap-2 text-xs">
-          <button onClick={() => setModalExport(null)} className="px-4 py-2 rounded-xl border border-border-subtle bg-bg-surface hover:bg-bg-hover text-text transition-colors font-medium">Cancel</button>
-          <motion.button
+          <Button variant="secondary" size="sm" onClick={() => setModalExport(null)}>Cancel</Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleExport}
             disabled={loading || !exportDest.trim()}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-bg font-bold transition-all duration-200 disabled:opacity-40"
           >
             Decrypt & Export
-          </motion.button>
+          </Button>
         </div>
       </ModalShell>
 
@@ -238,30 +260,20 @@ export default function VaultModals({ vault }: Props) {
         <h3 className="text-sm font-bold text-text mb-1 font-display">Vault Rekey (Change Password)</h3>
         <p className="text-xs text-text-muted mb-4 leading-relaxed">Changes your locker password. The system will recursively decrypt and re-encrypt all existing items in your vault. Do not close the window.</p>
         <div className="space-y-3 mb-5">
-          <div>
-            <label className="micro-label mb-1.5 block">Current Password</label>
-            <input type="password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} className="w-full rounded-xl border border-border-subtle bg-bg px-4 py-3 text-xs text-text placeholder-text-muted focus:border-accent focus:ring-2 focus:ring-accent/10 outline-none transition-all duration-200" placeholder="Enter current password" />
-          </div>
-          <div>
-            <label className="micro-label mb-1.5 block">New Password</label>
-            <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} className="w-full rounded-xl border border-border-subtle bg-bg px-4 py-3 text-xs text-text placeholder-text-muted focus:border-accent focus:ring-2 focus:ring-accent/10 outline-none transition-all duration-200" placeholder="Enter new password" />
-          </div>
-          <div>
-            <label className="micro-label mb-1.5 block">Confirm New Password</label>
-            <input type="password" value={confirmNewPw} onChange={(e) => setConfirmNewPw(e.target.value)} className="w-full rounded-xl border border-border-subtle bg-bg px-4 py-3 text-xs text-text placeholder-text-muted focus:border-accent focus:ring-2 focus:ring-accent/10 outline-none transition-all duration-200" placeholder="Confirm new password" />
-          </div>
+          <Input type="password" value={oldPw} onChange={(e) => setOldPw(e.target.value)} placeholder="Enter current password" label="Current Password" />
+          <Input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Enter new password" label="New Password" />
+          <Input type="password" value={confirmNewPw} onChange={(e) => setConfirmNewPw(e.target.value)} placeholder="Confirm new password" label="Confirm New Password" />
         </div>
         <div className="flex justify-end gap-2 text-xs">
-          <button onClick={() => { setModalChangePw(false); setOldPw(""); setNewPw(""); setConfirmNewPw(""); }} className="px-4 py-2 rounded-xl border border-border-subtle bg-bg-surface hover:bg-bg-hover text-text transition-colors font-medium">Cancel</button>
-          <motion.button
+          <Button variant="secondary" size="sm" onClick={() => { setModalChangePw(false); setOldPw(""); setNewPw(""); setConfirmNewPw(""); }}>Cancel</Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleChangePassword}
             disabled={loading || !oldPw || !newPw || !confirmNewPw}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-bg font-bold transition-all duration-200 disabled:opacity-40"
           >
             Rotate Key
-          </motion.button>
+          </Button>
         </div>
       </ModalShell>
 
@@ -279,21 +291,21 @@ export default function VaultModals({ vault }: Props) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="w-full max-w-[900px] h-[90vh] rounded-2xl border border-border-subtle bg-bg-elevated flex flex-col shadow-modal overflow-hidden"
+              className="w-full max-w-[900px] h-[90vh] rounded-xl border border-border-subtle bg-bg-elevated flex flex-col shadow-modal overflow-hidden"
             >
               <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4 bg-bg-surface/50">
                 <div className="min-w-0">
                   <span className="micro-label text-accent">Preview</span>
                   <h3 className="text-sm font-bold text-text truncate mt-0.5 font-display">{previewFile.name}</h3>
                 </div>
-                <motion.button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => { setPreviewFile(null); setPreviewText(null); if (previewBlobUrl) { URL.revokeObjectURL(previewBlobUrl); setPreviewBlobUrl(null); } }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="p-2 rounded-xl hover:bg-bg-hover text-text-muted hover:text-text transition-colors"
+                  className="p-2"
                 >
                   <X className="w-4 h-4" />
-                </motion.button>
+                </Button>
               </div>
               <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-bg/10 relative">
                 {previewLoading ? (
@@ -316,15 +328,14 @@ export default function VaultModals({ vault }: Props) {
                 )}
               </div>
               <div className="border-t border-border-subtle px-5 py-3 flex justify-end gap-2 bg-bg-surface/50">
-                <motion.button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={() => handleDownloadFile(previewFile)}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover text-bg text-xs font-bold transition-all duration-200 flex items-center gap-2 shadow-glow"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Download Decrypted
-                </motion.button>
+                </Button>
               </div>
             </motion.div>
           </motion.div>

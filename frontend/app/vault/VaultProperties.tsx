@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { VaultContext } from "./useVaultState";
 import { formatSize, formatDate, getFileCategory } from "./useVaultState";
+import Button from "../../src/shared/ui/Button";
 
 interface Props {
   vault: VaultContext;
@@ -23,7 +24,7 @@ export default function VaultProperties({ vault }: Props) {
   } = vault;
 
   return (
-    <aside className="glass-panel rounded-2xl p-3 flex flex-col gap-3 text-xs overflow-y-auto h-full">
+    <aside className="glass-panel rounded-xl p-3 flex flex-col gap-3 text-xs overflow-y-auto h-full">
       <div className="glass-panel-strong rounded-xl px-3 py-2.5">
         <h2 className="text-xs font-bold text-text font-display">Properties</h2>
       </div>
@@ -71,25 +72,26 @@ export default function VaultProperties({ vault }: Props) {
                 <span className="text-text-secondary font-mono">{formatDate(selectedSingleItem.modified)}</span>
               </MetaRow>
               <div className="pt-2 border-t border-border-subtle flex items-center justify-between">
-                <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider">Favorite</span>
-                <motion.button
+                <span className="micro-label">Favorite</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handleToggleFavorite(selectedSingleItem)}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all duration-200 text-[11px] font-medium ${
+                  className={`gap-1.5 ${
                     selectedSingleItem.favorite
                       ? "bg-accent-muted border-accent/30 text-accent"
-                      : "border-border-subtle bg-bg-surface hover:bg-bg-hover hover:border-border text-text-secondary"
+                      : ""
                   }`}
                 >
                   <Star className="w-3 h-3" fill={selectedSingleItem.favorite ? "currentColor" : "none"} />
                   <span>{selectedSingleItem.favorite ? "Starred" : "Star"}</span>
-                </motion.button>
+                </Button>
               </div>
             </div>
 
             {/* Tags */}
             <div className="space-y-2 border-t border-border-subtle pt-2.5">
-              <span className="text-[9px] text-text-muted font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <span className="micro-label flex items-center gap-1.5">
                 <Tag className="w-3 h-3" />
                 Tags
               </span>
@@ -130,15 +132,15 @@ export default function VaultProperties({ vault }: Props) {
 
             {!selectedSingleItem.is_dir && (
               <div className="mt-auto pt-3 border-t border-border-subtle">
-                <motion.button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={() => handleDownloadFile(selectedSingleItem)}
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-bg font-bold flex items-center justify-center gap-2 text-[11px] transition-all duration-200 shadow-glow btn-glow"
+                  className="w-full"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Download decrypted
-                </motion.button>
+                </Button>
               </div>
             )}
           </motion.div>
@@ -164,23 +166,23 @@ export default function VaultProperties({ vault }: Props) {
               <MetaRow label="Combined Size">
                 <span className="text-text-secondary font-mono">{formatSize(selectedItems.reduce((acc, v) => acc + v.size, 0))}</span>
               </MetaRow>
-              <motion.button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => setModalExport(Array.from(selectedPaths))}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-bg font-bold flex items-center justify-center gap-2 text-[11px] transition-all duration-200"
+                className="w-full"
               >
                 Export selected ({selectedItems.length})
-              </motion.button>
-              <motion.button
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
                 onClick={() => setModalDelete(Array.from(selectedPaths))}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full py-2.5 rounded-xl bg-error-muted hover:bg-error/20 border border-error/20 text-error font-bold flex items-center justify-center gap-2 text-[11px] transition-all duration-200"
+                className="w-full"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Delete selected ({selectedItems.length})
-              </motion.button>
+              </Button>
             </div>
           </motion.div>
         ) : (
@@ -202,7 +204,7 @@ export default function VaultProperties({ vault }: Props) {
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <span className="block text-[9px] text-text-muted font-bold uppercase tracking-wider mb-1">{label}</span>
+      <span className="micro-label block mb-1">{label}</span>
       {children}
     </div>
   );
