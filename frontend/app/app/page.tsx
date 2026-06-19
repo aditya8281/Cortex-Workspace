@@ -37,7 +37,7 @@ export default function DashboardPage() {
           </div>
           <div className="stat-card p-4 rounded-lg bg-bg-card border border-border">
             <p className="text-xs text-text-muted mb-1">Joined</p>
-            <p className="text-lg font-semibold text-text">{user.created_at ? new Date(user.created_at).toLocaleDateString() : "\u2014"}</p>
+            <p className="text-lg font-semibold text-text">{user.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}</p>
           </div>
           <div className="stat-card p-4 rounded-lg bg-bg-card border border-border">
             <p className="text-xs text-text-muted mb-1">User ID</p>
@@ -59,7 +59,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <h1 className="text-xl font-semibold text-text">Welcome back, {user.full_name?.split(" ")[0] || user.username}</h1>
-            <p className="text-sm text-text-muted">{user.role === "admin" ? "Admin" : "Member"} \u00b7 @{user.username}</p>
+            <p className="text-sm text-text-muted">{user.role === "admin" ? "Admin" : "Member"} · @{user.username}</p>
           </div>
         </div>
 
@@ -77,7 +77,7 @@ export default function DashboardPage() {
             </div>
             <h3 className="text-sm font-medium text-text mb-1">Secure Vault</h3>
             <p className="text-xs text-text-muted">
-              {vaultStatus ? (vaultStatus.locked ? "Locked \u00b7 Click to unlock" : "Unlocked \u00b7 Active") : "Loading..."}
+              {vaultStatus ? (vaultStatus.locked ? "Locked · Click to unlock" : "Unlocked · Active") : "Loading..."}
             </p>
           </Card>
 
@@ -133,11 +133,11 @@ export default function DashboardPage() {
             </div>
             <div>
               <span className="text-xs text-text-muted font-bold uppercase tracking-wider block mb-1">Created</span>
-              <span className="text-sm text-text">{user.created_at ? new Date(user.created_at).toLocaleDateString() : "\u2014"}</span>
+              <span className="text-sm text-text">{user.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}</span>
             </div>
             <div>
               <span className="text-xs text-text-muted font-bold uppercase tracking-wider block mb-1">Storage</span>
-              <span className="text-sm text-text truncate block" title={user.storage_root || ""}>{user.storage_root ? user.storage_root.split("/").pop() : "\u2014"}</span>
+              <span className="text-sm text-text truncate block" title={user.storage_root || ""}>{user.storage_root ? user.storage_root.split("/").pop() : "—"}</span>
             </div>
           </div>
         </Card>

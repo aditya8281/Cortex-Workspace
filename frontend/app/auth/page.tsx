@@ -134,7 +134,7 @@ export default function AuthPage() {
         <div className="page-header text-center mb-6">
           <div className="flex justify-center mb-2"><div className="h-2 w-2 rounded-full bg-accent shadow-[0_0_12px_rgba(6,182,212,0.4)]" /></div>
           <h1 className="text-lg font-semibold text-text">Cortex</h1>
-          <p className="text-xs text-text-muted mt-0.5">{isRegister ? `Step ${step + 1} of ${WIZARD_STEPS.length} \u2014 ${WIZARD_STEPS[step]}` : "Welcome back"}</p>
+          <p className="text-xs text-text-muted mt-0.5">{isRegister ? `Step ${step + 1} of ${WIZARD_STEPS.length} — ${WIZARD_STEPS[step]}` : "Welcome back"}</p>
         </div>
 
         <Card className="p-5">
@@ -173,7 +173,7 @@ export default function AuthPage() {
                 <div key="step-0" className="grid gap-3 animate-fade-in-up">
                   <div>
                     <Input label="Username" placeholder="operator-01" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" error={usernameStatus === "taken" || usernameStatus === "invalid" ? usernameMsg : undefined} className={usernameStatus === "available" ? "border-success/50" : usernameStatus === "taken" ? "border-error/50" : usernameStatus === "checking" ? "border-accent/30" : ""} required />
-                    {usernameStatus === "available" && <p className="text-xs text-success mt-1">{'\u2713'} {usernameMsg}</p>}
+                    {usernameStatus === "available" && <p className="text-xs text-success mt-1">✓ {usernameMsg}</p>}
                     {usernameStatus === "checking" && <p className="text-xs text-text-muted mt-1">Checking availability...</p>}
                   </div>
                   <div>
@@ -248,7 +248,7 @@ export default function AuthPage() {
                           onClick={() => setStorageCustom(false)}
                           className="text-xs text-text-muted hover:text-text-secondary transition-colors text-left"
                         >
-                          {"\u2190"} Back to presets
+                          {"←"} Back to presets
                         </button>
                       </div>
                     )}
@@ -297,7 +297,7 @@ export default function AuthPage() {
             </>
           )}
         </Card>
-        <p className="mt-3 text-center text-xs text-text-muted font-mono tracking-wider uppercase">Local-first \u00b7 Private by default</p>
+        <p className="mt-3 text-center text-xs text-text-muted font-mono tracking-wider uppercase">Local-first · Private by default</p>
       </div>
     </div>
   );

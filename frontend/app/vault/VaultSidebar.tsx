@@ -199,7 +199,7 @@ function TreeRow({
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
             className="w-3.5 h-3.5 flex items-center justify-center shrink-0 text-text-muted hover:text-text"
           >
-            {isExpanded ? "\u25BE" : "\u25B8"}
+            {isExpanded ? "▾" : "▸"}
           </span>
         ) : (
           <span className="w-3.5 h-3.5 shrink-0" />
