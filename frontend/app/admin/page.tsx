@@ -9,7 +9,6 @@ import DashboardShell from "../../src/shared/layout/DashboardShell";
 import Button from "../../src/shared/ui/Button";
 import Card from "../../src/shared/ui/Card";
 import { cn } from "../../src/lib/utils";
-import { staggerContainer } from "../../src/lib/motion";
 import { Shield, Users, ArrowUp, ArrowDown, Trash2, RefreshCw, Search, UserCheck, Loader2 } from "lucide-react";
 import type { User } from "../../src/shared/types";
 
@@ -56,6 +55,14 @@ export default function AdminPage() {
     if (!confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
     try { await apiDeleteUser(userId); fetchUsers(); } catch (err) { setError(err instanceof Error ? err.message : ""); }
   }
+
+  const staggerContainer = {
+    animate: {
+      transition: {
+        staggerChildren: 0.08,
+      },
+    },
+  };
 
   const itemVariant = {
     initial: { opacity: 0, y: 20 },

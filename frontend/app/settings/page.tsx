@@ -9,7 +9,6 @@ import DashboardShell from "../../src/shared/layout/DashboardShell";
 import Button from "../../src/shared/ui/Button";
 import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
-import { fadeUp, scaleIn } from "../../src/lib/motion";
 import { AlertTriangle, Trash2, User, Shield, Hash, HardDrive, ExternalLink } from "lucide-react";
 
 export default function SettingsPage() {
@@ -22,6 +21,12 @@ export default function SettingsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleteConfirmStep, setDeleteConfirmStep] = useState(false);
+
+  const fadeUp = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { type: "spring" as const, damping: 25, stiffness: 200 },
+  };
 
   async function handleDeleteAccount() {
     if (!deletePassword) {

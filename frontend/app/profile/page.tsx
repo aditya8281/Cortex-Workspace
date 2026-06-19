@@ -10,7 +10,6 @@ import Button from "../../src/shared/ui/Button";
 import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
 import { cn } from "../../src/lib/utils";
-import { fadeUp, scaleIn } from "../../src/lib/motion";
 import { Camera, Check, User, Loader2, AtSign } from "lucide-react";
 
 export default function ProfilePage() {
@@ -37,6 +36,12 @@ export default function ProfilePage() {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const fadeUp = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { type: "spring" as const, damping: 25, stiffness: 200 },
+  };
 
   const [fieldsInit, setFieldsInit] = useState(false);
   useEffect(() => {
