@@ -23,7 +23,7 @@ from backend.app.core.config import settings
 CSRF_COOKIE_NAME = "cortex_csrf"
 CSRF_HEADER_NAME = "x-csrf-token"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
-EXEMPT_PREFIXES = ("/api/auth/", "/api/v1/health/", "/metrics", "/ws", "/api/v1/me/vault/")
+EXEMPT_PREFIXES = ("/api/v1/auth/", "/api/v1/health/", "/metrics", "/ws", "/api/v1/me/vault/")
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
