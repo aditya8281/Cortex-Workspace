@@ -58,3 +58,24 @@ class EmbeddingService:
         vec = vec * (EMBEDDING_DIM // len(vec)) + vec[: EMBEDDING_DIM % len(vec)]
         norm = sum(v * v for v in vec) ** 0.5
         return [v / norm for v in vec]
+
+    def embed_single(self, text: str) -> list[float]:
+        """Embed a single text into a vector (alias for embed)."""
+        return self.embed(text)
+
+    def compute_embedding_id(self, text: str) -> str:
+        """Compute a deterministic embedding ID for deduplication."""
+        import hashlib
+
+        return hashlib.sha256(text.encode()).hexdigest()[:32]
+
+
+_embedding_service: EmbeddingService | None = None
+
+
+def get_embedding_service() -> EmbeddingService:
+    """Get or create the global EmbeddingService singleton."""
+    global _embedding_service
+    if _embedding_service is None:
+        _embedding_service = EmbeddingService()
+    return _embedding_service

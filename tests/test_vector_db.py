@@ -82,6 +82,7 @@ def test_search(mock_qdrant_cls):
         collection_name="my_collection",
         query=[0.1, 0.2, 0.3],
         limit=5,
+        query_filter=None,
     )
     assert results == [
         {"id": 1, "score": 0.95, "payload": {"text": "doc1"}},

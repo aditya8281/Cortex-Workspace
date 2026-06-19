@@ -5,7 +5,7 @@ from uuid import UUID
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from qdrant_client.http.models import Distance, VectorParams
+from qdrant_client.http.models import Distance, Filter, FieldCondition, MatchValue, VectorParams
 
 from backend.app.core.config import settings
 
@@ -44,15 +44,31 @@ class VectorDB:
         ]
         self.client.upsert(collection_name=collection, points=qdrant_points)
 
-    def search(self, collection: str, vector: list[float], limit: int = 10) -> list[dict]:
+    def search(
+        self,
+        collection: str,
+        query: list[float],
+        limit: int = 10,
+        filter_payload: dict | None = None,
+    ) -> list[dict]:
         if not self.client.collection_exists(collection):
             return []
+
+        query_filter = None
+        if filter_payload:
+            conditions = [
+                FieldCondition(key=k, match=MatchValue(value=v))
+                for k, v in filter_payload.items()
+            ]
+            query_filter = Filter(must=conditions)
+
         result = self.client.query_points(
             collection_name=collection,
-            query=vector,
+            query=query,
             limit=limit,
+            query_filter=query_filter,
         )
-        return [{"id": p.id, "score": p.score, "payload": p.payload} for p in result.points]
+        return [{"id": p.id, "score": p.score, "payload": p.payload or {}} for p in result.points]
 
     def delete(self, collection: str, point_ids: list[str]) -> None:
         if self.client.collection_exists(collection):
@@ -63,3 +79,14 @@ class VectorDB:
 
     def list_collections(self) -> list[str]:
         return [c.name for c in self.client.get_collections().collections]
+
+
+_vector_db: VectorDB | None = None
+
+
+def get_vector_db() -> VectorDB:
+    """Get or create the global VectorDB singleton."""
+    global _vector_db
+    if _vector_db is None:
+        _vector_db = VectorDB()
+    return _vector_db

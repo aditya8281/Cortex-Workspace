@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Lock, Brain, Shield, User, Server } from "lucide-react";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
-import { apiVaultStatus } from "../../src/shared/auth/cortexApi";
+import { apiVaultStatus, apiListMemory } from "../../src/shared/auth/cortexApi";
 import DashboardShell from "../../src/shared/layout/DashboardShell";
 import PageTransition from "../../src/shared/ui/PageTransition";
 import StaggerChildren from "../../src/shared/ui/StaggerChildren";
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [vaultStatus, setVaultStatus] = useState<VaultStatus | null>(null);
+  const [memoryCount, setMemoryCount] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/auth");
@@ -25,6 +26,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     apiVaultStatus().then(setVaultStatus).catch(() => {});
+    apiListMemory({ limit: 1 }).then((data) => setMemoryCount(data.total ?? 0)).catch(() => {});
   }, [user]);
 
   if (loading || !user) return null;
@@ -125,7 +127,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <p className="text-2xl font-semibold text-text font-display">
-                0 entries
+                {memoryCount} {memoryCount === 1 ? "entry" : "entries"}
               </p>
               <p className="text-xs text-text-muted mt-1">Knowledge base</p>
             </Card>
@@ -201,7 +203,7 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <h3 className="text-sm font-medium text-text">Memory</h3>
                   <p className="text-xs text-text-muted truncate">
-                    Knowledge base (coming soon)
+                    AI knowledge base
                   </p>
                 </div>
               </div>

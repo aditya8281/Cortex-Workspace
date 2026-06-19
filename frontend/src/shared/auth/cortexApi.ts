@@ -17,6 +17,7 @@ import type {
   CrtxImportResult,
   MemoryEntry,
   MemoryListResponse,
+  MemorySearchResponse,
 } from "../types";
 
 /** Backend base URL — requests go directly to the backend, not through proxy. */
@@ -399,10 +400,12 @@ export function apiCrtxImport(
 export function apiListMemory(params: {
   limit?: number;
   offset?: number;
+  category?: string;
 } = {}): Promise<MemoryListResponse> {
   const query = new URLSearchParams();
   if (params.limit) query.set("limit", String(params.limit));
   if (params.offset) query.set("offset", String(params.offset));
+  if (params.category) query.set("category", params.category);
   const qs = query.toString();
   return request("GET", `/api/memory${qs ? `?${qs}` : ""}`);
 }
@@ -412,8 +415,43 @@ export function apiCreateMemory(payload: {
   content: string;
   category?: string;
   source_path?: string;
+  tags?: string[];
 }): Promise<{ status: string; entry: MemoryEntry }> {
   return request("POST", "/api/memory", { body: payload });
+}
+
+export function apiGetMemory(id: number): Promise<MemoryEntry> {
+  return request("GET", `/api/memory/${id}`);
+}
+
+export function apiUpdateMemory(
+  id: number,
+  payload: {
+    title?: string;
+    content?: string;
+    category?: string;
+    source_path?: string;
+    tags?: string[];
+  },
+): Promise<{ status: string; entry: MemoryEntry }> {
+  return request("PUT", `/api/memory/${id}`, { body: payload });
+}
+
+export function apiDeleteMemory(
+  id: number,
+): Promise<{ status: string }> {
+  return request("DELETE", `/api/memory/${id}`);
+}
+
+export function apiSearchMemory(payload: {
+  query: string;
+  limit?: number;
+}): Promise<MemorySearchResponse> {
+  return request("POST", "/api/memory/search", { body: payload });
+}
+
+export function apiScanRepo(repoPath: string): Promise<{ status: string; job_id: string | null }> {
+  return request("POST", "/api/memory/scan-repo", { body: { repo_path: repoPath } });
 }
 
 // ── Account deletion ────────────────────────────────────────────────

@@ -1,15 +1,14 @@
+"""Memory API with CRUD operations and semantic search."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user_optional, get_db
-from backend.app.intelligence.models import KnowledgeEntry
 from backend.app.models.user import User
+from backend.app.services.memory_manager import MemoryManager
+from backend.app.tasks.worker import enqueue_task
 
 router = APIRouter()
 
@@ -19,73 +18,161 @@ class MemoryCreatePayload(BaseModel):
     content: str = Field(min_length=1)
     category: str = Field(default="note", min_length=1, max_length=64)
     source_path: str | None = Field(default=None, max_length=1024)
+    tags: list[str] | None = None
 
 
-def _serialize_memory(entry: KnowledgeEntry) -> dict[str, object]:
-    return {
-        "id": entry.id,
-        "user_id": entry.user_id,
-        "category": entry.category,
-        "title": entry.title,
-        "content": entry.content,
-        "source_path": entry.source_path,
-        "created_at": entry.created_at.isoformat() if entry.created_at else None,
-        "updated_at": entry.updated_at.isoformat() if entry.updated_at else None,
-    }
+class MemoryUpdatePayload(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=512)
+    content: str | None = Field(default=None, min_length=1)
+    category: str | None = Field(default=None, min_length=1, max_length=64)
+    tags: list[str] | None = None
+
+
+class MemorySearchPayload(BaseModel):
+    query: str = Field(min_length=1, max_length=1000)
+    category: str | None = None
+    limit: int = Field(default=10, ge=1, le=100)
 
 
 @router.get("/api/memory")
-def read_memory(
+def list_memory(
     limit: int = 24,
     offset: int = 0,
+    category: str | None = None,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
 ):
-    safe_limit = max(1, min(limit, 100))
-    safe_offset = max(0, offset)
-    query = db.query(KnowledgeEntry)
-    category_query = db.query(KnowledgeEntry)
-    if current_user is not None:
-        filter_clause = (KnowledgeEntry.user_id == current_user.id) | (KnowledgeEntry.user_id.is_(None))
-        query = query.filter(filter_clause)
-        category_query = category_query.filter(filter_clause)
-
-    total = query.count()
-    entries = query.order_by(KnowledgeEntry.updated_at.desc()).offset(safe_offset).limit(safe_limit).all()
-    categories = category_query.group_by(KnowledgeEntry.category).with_entities(
-        KnowledgeEntry.category,
-        func.count(KnowledgeEntry.id),
-    ).all()
+    """List knowledge entries with pagination and category filtering."""
+    manager = MemoryManager(db)
+    entries, total, categories = manager.list(
+        user_id=current_user.id if current_user else None,
+        category=category,
+        limit=min(max(limit, 1), 100),
+        offset=max(offset, 0),
+    )
 
     return {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
         "total": total,
         "count": len(entries),
-        "offset": safe_offset,
-        "limit": safe_limit,
-        "categories": {category: count for category, count in categories},
-        "entries": [_serialize_memory(entry) for entry in entries],
+        "offset": offset,
+        "limit": limit,
+        "categories": categories,
+        "entries": [manager._serialize(e) for e in entries],
     }
 
 
 @router.post("/api/memory")
-def write_memory(
+def create_memory(
     payload: MemoryCreatePayload,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
 ):
-    entry = KnowledgeEntry(
+    """Create a new knowledge entry with vector embedding."""
+    manager = MemoryManager(db)
+    entry = manager.create(
         user_id=current_user.id if current_user else None,
-        category=payload.category,
         title=payload.title,
         content=payload.content,
+        category=payload.category,
         source_path=payload.source_path,
-        source_key=f"manual:{payload.category}:{payload.title}:{datetime.now(timezone.utc).timestamp()}",
+        tags=payload.tags,
     )
-    db.add(entry)
-    db.commit()
-    db.refresh(entry)
-    return {
-        "status": "stored",
-        "entry": _serialize_memory(entry),
-    }
+    return {"status": "created", "entry": manager._serialize(entry)}
+
+
+@router.get("/api/memory/{entry_id}")
+def get_memory(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Get a single knowledge entry by ID."""
+    manager = MemoryManager(db)
+    entry = manager.get(entry_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Memory entry not found")
+    return {"entry": manager._serialize(entry)}
+
+
+@router.put("/api/memory/{entry_id}")
+def update_memory(
+    entry_id: int,
+    payload: MemoryUpdatePayload,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Update a knowledge entry and re-embed if content changed."""
+    manager = MemoryManager(db)
+    entry = manager.update(
+        entry_id=entry_id,
+        title=payload.title,
+        content=payload.content,
+        category=payload.category,
+        tags=payload.tags,
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Memory entry not found")
+    return {"status": "updated", "entry": manager._serialize(entry)}
+
+
+@router.delete("/api/memory/{entry_id}")
+def delete_memory(
+    entry_id: int,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Delete a knowledge entry and its vector embedding."""
+    manager = MemoryManager(db)
+    deleted = manager.delete(entry_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Memory entry not found")
+    return {"status": "deleted"}
+
+
+@router.post("/api/memory/search")
+def search_memory(
+    payload: MemorySearchPayload,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Semantic search over knowledge entries using vector similarity."""
+    manager = MemoryManager(db)
+    results = manager.search(
+        query=payload.query,
+        user_id=current_user.id if current_user else None,
+        category=payload.category,
+        limit=payload.limit,
+    )
+    return {"query": payload.query, "results": results}
+
+
+class ScanRepoPayload(BaseModel):
+    repo_path: str = Field(min_length=1, max_length=2048)
+
+
+class BulkEmbedPayload(BaseModel):
+    entry_ids: list[int] = Field(min_length=1)
+
+
+@router.post("/api/memory/scan-repo")
+async def scan_repo(
+    payload: ScanRepoPayload,
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Trigger background repository scanning."""
+    job_id = await enqueue_task(
+        "scan_repo_task",
+        payload.repo_path,
+        current_user.id if current_user else None,
+    )
+    return {"status": "queued", "job_id": job_id}
+
+
+@router.post("/api/memory/bulk-embed")
+async def bulk_embed(
+    payload: BulkEmbedPayload,
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Trigger background bulk embedding of memory entries."""
+    job_id = await enqueue_task("bulk_embed_task", payload.entry_ids)
+    return {"status": "queued", "job_id": job_id}

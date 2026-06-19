@@ -1,183 +1,247 @@
-"""Simplified Memory Manager — central memory system without background services."""
+"""Memory Manager service for knowledge entry CRUD with vector search."""
 
+from __future__ import annotations
+
+import json
 import logging
-import threading
-from pathlib import Path
+
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from backend.app.core.vector_db import get_vector_db, VectorDB
+from backend.app.intelligence.models import KnowledgeEntry
+from backend.app.services.embedding_service import get_embedding_service, EmbeddingService
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_COLLECTION = "cortex_memory"
+
 
 class MemoryManager:
-    """Centralized system-level memory manager.
+    """Manages knowledge entries with vector search integration."""
 
-    This manages *system* memory paths. User-facing vault operations go through
-    ``vault_manager`` + ``get_user_storage()``.
-    """
+    def __init__(
+        self,
+        db: Session,
+        vector_db: VectorDB | None = None,
+        embedding_service: EmbeddingService | None = None,
+    ):
+        self._db = db
+        self._vector_db = vector_db or get_vector_db()
+        self._embedder = embedding_service or get_embedding_service()
 
-    CATEGORIES = [
-        "embeddings",     # Vector embeddings
-        "indexes",        # Search indexes (formerly vector_db)
-        "graph",          # Knowledge graph
-        "activity_logs",  # System activity logs
-        "cache",          # Temporary cache
-        "repository",     # Repository knowledge (formerly repos)
-        "temp",           # Temporary files
-    ]
+    def create(
+        self,
+        user_id: int | None,
+        title: str,
+        content: str,
+        category: str = "note",
+        source_path: str | None = None,
+        tags: list[str] | None = None,
+    ) -> KnowledgeEntry:
+        """Create a knowledge entry with vector embedding."""
+        embedding_id = self._embedder.compute_embedding_id(f"{title}\n{content}")
 
-    def __init__(self):
-        self._lock = threading.RLock()
+        entry = KnowledgeEntry(
+            user_id=user_id,
+            title=title,
+            content=content,
+            category=category,
+            source_path=source_path,
+            tags=json.dumps(tags) if tags else None,
+            embedding_id=embedding_id,
+            vector_collection=DEFAULT_COLLECTION,
+        )
+        self._db.add(entry)
+        self._db.commit()
+        self._db.refresh(entry)
 
-    # ── Path resolution ───────────────────────────────────────────────
+        vector = self._embedder.embed_single(content)
+        self._vector_db.upsert(
+            DEFAULT_COLLECTION,
+            [
+                {
+                    "id": embedding_id,
+                    "vector": vector,
+                    "payload": {
+                        "entry_id": entry.id,
+                        "user_id": user_id,
+                        "category": category,
+                    },
+                }
+            ],
+        )
+        logger.info("Created memory entry %d: %s", entry.id, title)
+        return entry
 
-    def get_memory_path(self) -> Path:
-        override = getattr(self, "_test_override_path", None)
-        if override:
-            return Path(override)
+    def get(self, entry_id: int) -> KnowledgeEntry | None:
+        """Get a knowledge entry by ID."""
+        return self._db.query(KnowledgeEntry).filter(KnowledgeEntry.id == entry_id).first()
 
-        from backend.app.core.storage_manager import storage_manager
-        return storage_manager.get_memory_path()
+    def list(
+        self,
+        user_id: int | None = None,
+        category: str | None = None,
+        limit: int = 24,
+        offset: int = 0,
+    ) -> tuple[list[KnowledgeEntry], int, dict[str, int]]:
+        """List knowledge entries with pagination and category counts."""
+        query = self._db.query(KnowledgeEntry)
 
-    def set_memory_path(self, path: str) -> None:
-        raise NotImplementedError(
-            "Dynamic memory path configuration has been removed "
-            "in favor of a fixed system path"
+        if user_id is not None:
+            query = query.filter(
+                (KnowledgeEntry.user_id == user_id) | (KnowledgeEntry.user_id.is_(None))
+            )
+
+        if category is not None:
+            query = query.filter(KnowledgeEntry.category == category)
+
+        total = query.count()
+        entries = (
+            query.order_by(KnowledgeEntry.updated_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
         )
 
-    def validate_memory_path(self, path: Path) -> None:
-        from backend.app.core.system_paths import get_blocked_system_paths
+        category_query = self._db.query(KnowledgeEntry)
+        if user_id is not None:
+            category_query = category_query.filter(
+                (KnowledgeEntry.user_id == user_id) | (KnowledgeEntry.user_id.is_(None))
+            )
+        categories = dict(
+            category_query.with_entities(
+                KnowledgeEntry.category,
+                func.count(KnowledgeEntry.id),
+            ).group_by(KnowledgeEntry.category).all()
+        )
 
-        resolved = path.expanduser().resolve()
-        resolved_str = str(resolved)
-        for sys_path in get_blocked_system_paths():
-            if resolved_str.startswith(sys_path) or resolved_str == sys_path:
-                raise ValueError(
-                    f"Security exception: Cannot configure memory path "
-                    f"inside system directory '{sys_path}'"
+        return entries, total, categories
+
+    def search(
+        self,
+        query: str,
+        user_id: int | None = None,
+        category: str | None = None,
+        limit: int = 10,
+    ) -> list[dict]:
+        """Semantic search over knowledge entries using vector similarity."""
+        query_vector = self._embedder.embed_single(query)
+
+        filter_payload = {}
+        if user_id is not None:
+            filter_payload["user_id"] = user_id
+        if category:
+            filter_payload["category"] = category
+
+        results = self._vector_db.search(
+            DEFAULT_COLLECTION,
+            query_vector,
+            limit=limit,
+            filter_payload=filter_payload if filter_payload else None,
+        )
+
+        entry_ids = [int(r["id"]) for r in results]
+        entries = (
+            self._db.query(KnowledgeEntry)
+            .filter(KnowledgeEntry.id.in_(entry_ids))
+            .all()
+            if entry_ids
+            else []
+        )
+        entry_map = {str(e.id): self._serialize(e) for e in entries}
+
+        return [
+            {"score": r["score"], "entry": entry_map.get(r["id"])}
+            for r in results
+        ]
+
+    def update(
+        self,
+        entry_id: int,
+        title: str | None = None,
+        content: str | None = None,
+        category: str | None = None,
+        tags: list[str] | None = None,
+    ) -> KnowledgeEntry | None:
+        """Update a knowledge entry and re-embed if content changed."""
+        entry = self.get(entry_id)
+        if not entry:
+            return None
+
+        changed = False
+        if title is not None and title != entry.title:
+            entry.title = title
+            changed = True
+        if content is not None and content != entry.content:
+            entry.content = content
+            changed = True
+        if category is not None:
+            entry.category = category
+            changed = True
+        if tags is not None:
+            entry.tags = json.dumps(tags)
+            changed = True
+
+        if changed:
+            if title is not None or content is not None:
+                new_text = f"{entry.title}\n{entry.content}"
+                new_embedding_id = self._embedder.compute_embedding_id(new_text)
+                entry.embedding_id = new_embedding_id
+                vector = self._embedder.embed_single(entry.content)
+                self._vector_db.upsert(
+                    DEFAULT_COLLECTION,
+                    [
+                        {
+                            "id": new_embedding_id,
+                            "vector": vector,
+                            "payload": {
+                                "entry_id": entry.id,
+                                "user_id": entry.user_id,
+                                "category": entry.category,
+                            },
+                        }
+                    ],
                 )
-        try:
-            resolved.mkdir(parents=True, exist_ok=True)
-            test_file = resolved / ".write_test"
-            test_file.write_text("cortex", encoding="utf-8")
-            test_file.unlink()
-        except Exception as e:
-            raise ValueError(
-                f"Permission error: Target directory '{path}' is not writeable. "
-                f"Details: {e}"
-            )
+            self._db.commit()
+            self._db.refresh(entry)
 
-    def ensure_vault_structure(self) -> None:
-        """Create the memory root directory and all standard subdirectories."""
-        root = self.get_memory_path()
-        root.mkdir(parents=True, exist_ok=True)
-        for category in self.CATEGORIES:
-            (root / category).mkdir(parents=True, exist_ok=True)
+        logger.info("Updated memory entry %d", entry_id)
+        return entry
 
-    def get_path(self, category: str, filename: str | None = None) -> Path:
-        if category not in self.CATEGORIES:
-            raise ValueError(f"Invalid memory category: {category}")
-
-        root = self.get_memory_path()
-        category_dir = (root / category).resolve()
-        target_path = (category_dir / filename).resolve() if filename else category_dir
-
-        try:
-            target_path.relative_to(root)
-        except ValueError:
-            raise PermissionError(
-                f"Security Violation: Path traversal detected outside "
-                f"memory vault for '{filename}'"
-            )
-
-        return target_path
-
-    # ── Read/Write abstraction ────────────────────────────────────────
-
-    def read_text(self, category: str, filename: str, encoding: str = "utf-8") -> str:
-        path = self.get_path(category, filename)
-        if not path.exists():
-            raise FileNotFoundError(
-                f"Memory entry '{filename}' not found under category '{category}'"
-            )
-        return path.read_text(encoding=encoding)
-
-    def write_text(self, category: str, filename: str, text: str, encoding: str = "utf-8") -> None:
-        path = self.get_path(category, filename)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding=encoding)
-
-    def read_bytes(self, category: str, filename: str) -> bytes:
-        path = self.get_path(category, filename)
-        if not path.exists():
-            raise FileNotFoundError(
-                f"Memory entry '{filename}' not found under category '{category}'"
-            )
-        return path.read_bytes()
-
-    def write_bytes(self, category: str, filename: str, data: bytes) -> None:
-        path = self.get_path(category, filename)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(data)
-
-    def delete_file(self, category: str, filename: str) -> None:
-        path = self.get_path(category, filename)
-        if path.exists() and path.is_file():
-            path.unlink()
-
-    def exists(self, category: str, filename: str | None = None) -> bool:
-        try:
-            return self.get_path(category, filename).exists()
-        except Exception:
+    def delete(self, entry_id: int) -> bool:
+        """Delete a knowledge entry and its vector embedding."""
+        entry = self.get(entry_id)
+        if not entry:
             return False
 
-    def list_files(self, category: str) -> list[str]:
-        dir_path = self.get_path(category)
-        if not dir_path.exists():
-            return []
-        return [f.name for f in dir_path.iterdir() if f.is_file()]
+        if entry.embedding_id:
+            self._vector_db.delete(DEFAULT_COLLECTION, [entry.embedding_id])
+        self._db.delete(entry)
+        self._db.commit()
 
-    # ── Reset ─────────────────────────────────────────────────────────
+        logger.info("Deleted memory entry %d", entry_id)
+        return True
 
-    def reset_vault(self) -> None:
-        import shutil
-        logger.warning("Performing full Cortex Brain Vault reset!")
-        from backend.app.db import session
-        session.reset_db_engine()
-        path = self.get_memory_path()
-        if path.exists():
-            shutil.rmtree(path)
-        self.ensure_vault_structure()
+    @staticmethod
+    def _serialize(entry: KnowledgeEntry) -> dict:
+        """Serialize entry for API response."""
+        tags = []
+        if entry.tags:
+            try:
+                tags = json.loads(entry.tags)
+            except (json.JSONDecodeError, TypeError):
+                tags = []
 
-    # ── Backup & portability ──────────────────────────────────────────
-
-    def export_memory(self, zip_path_str: str) -> str:
-        import zipfile
-        root_dir = self.get_memory_path()
-        zip_path = Path(zip_path_str).resolve()
-        zip_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-            for file_path in root_dir.rglob("*"):
-                if file_path.is_file():
-                    zipf.write(file_path, file_path.relative_to(root_dir))
-        logger.info("Successfully exported memory vault to %s", zip_path)
-        return str(zip_path)
-
-    def import_memory(self, zip_path_str: str) -> None:
-        import shutil
-        import zipfile
-        zip_path = Path(zip_path_str).resolve()
-        if not zip_path.exists():
-            raise FileNotFoundError(f"Export zip archive not found at '{zip_path}'")
-        from backend.app.db import session
-        session.reset_db_engine()
-        root_dir = self.get_memory_path()
-        if root_dir.exists():
-            shutil.rmtree(root_dir)
-        root_dir.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(zip_path, "r") as zipf:
-            zipf.extractall(root_dir)
-        self.ensure_vault_structure()
-        logger.info("Successfully imported memory vault from %s", zip_path)
-
-
-# Singleton — created lazily; no filesystem side-effects at import time.
-memory_manager = MemoryManager()
+        return {
+            "id": entry.id,
+            "user_id": entry.user_id,
+            "title": entry.title,
+            "content": entry.content,
+            "category": entry.category,
+            "source_path": entry.source_path,
+            "tags": tags,
+            "embedding_id": entry.embedding_id,
+            "created_at": entry.created_at.isoformat() if entry.created_at else None,
+            "updated_at": entry.updated_at.isoformat() if entry.updated_at else None,
+        }
