@@ -2,13 +2,13 @@ export const pageTransition = {
   initial: { opacity: 0, x: 20 },
   animate: { opacity: 1, x: 0 },
   exit: { opacity: 0, x: -20 },
-  transition: { type: "spring", damping: 25, stiffness: 200 },
+  transition: { type: "spring" as const, damping: 25, stiffness: 200 },
 };
 
 export const fadeUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { type: "spring", damping: 25, stiffness: 200 },
+  transition: { type: "spring" as const, damping: 25, stiffness: 200 },
 };
 
 export const fadeIn = {
@@ -20,7 +20,7 @@ export const fadeIn = {
 export const scaleIn = {
   initial: { opacity: 0, scale: 0.95 },
   animate: { opacity: 1, scale: 1 },
-  transition: { type: "spring", damping: 25, stiffness: 300 },
+  transition: { type: "spring" as const, damping: 25, stiffness: 300 },
 };
 
 export const staggerContainer = {
@@ -34,5 +34,5 @@ export const staggerContainer = {
 export const staggerItem = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { type: "spring", damping: 25, stiffness: 200 },
+  transition: { type: "spring" as const, damping: 25, stiffness: 200 },
 };

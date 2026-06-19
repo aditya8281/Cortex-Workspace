@@ -1,12 +1,52 @@
 /**
  * Lock screen — shown when vault is locked.
+ * Cinematic vault-door animation with matrix-style background.
  */
 "use client";
 
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Lock, Eye, EyeOff, Shield, ShieldCheck, AlertTriangle, CheckCircle } from "lucide-react";
 import type { VaultContext } from "./useVaultState";
 
 interface Props {
   vault: VaultContext;
+}
+
+function MatrixRain() {
+  const columns = useState<{ x: number; chars: string[]; delay: number; speed: number }[]>(() => {
+    const chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノ";
+    return Array.from({ length: 20 }, (_, i) => ({
+      x: (i / 20) * 100,
+      chars: Array.from({ length: 15 }, () => chars[Math.floor(Math.random() * chars.length)]),
+      delay: Math.random() * 3,
+      speed: 2 + Math.random() * 4,
+    }));
+  })[0];
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+      {columns.map((col, i) => (
+        <motion.div
+          key={i}
+          className="absolute font-mono text-[10px] text-accent/40 leading-tight"
+          style={{ left: `${col.x}%` }}
+          initial={{ y: -200 }}
+          animate={{ y: "120vh" }}
+          transition={{
+            duration: col.speed,
+            repeat: Infinity,
+            delay: col.delay,
+            ease: "linear",
+          }}
+        >
+          {col.chars.map((char, j) => (
+            <div key={j} style={{ opacity: 1 - j * 0.06 }}>{char}</div>
+          ))}
+        </motion.div>
+      ))}
+    </div>
+  );
 }
 
 export default function VaultLockScreen({ vault }: Props) {
@@ -18,62 +58,126 @@ export default function VaultLockScreen({ vault }: Props) {
   } = vault;
 
   return (
-    <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center py-16 animate-fade-in">
-      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-bg-card border border-border text-accent shadow-glow">
-        <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      </div>
-      <h1 className="text-xl font-bold text-text">Cortex Vault</h1>
-      <p className="mb-8 text-xs tracking-widest uppercase text-text-muted mt-1">Private Secure Cabinet</p>
-      <div className="glass-panel-strong w-full rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4 border-b border-border-subtle pb-3">
-          <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Unlock Locker</span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-error/10 px-2.5 py-0.5 text-[10px] font-medium text-error">
-            <span className="status-dot bg-error shadow-[0_0_6px_rgba(239,68,68,0.4)]" /> Locked
+    <div className="relative mx-auto flex max-w-[440px] flex-col items-center justify-center py-16 min-h-[75vh]">
+      <MatrixRain />
+
+      {/* Vault door icon with breathing glow */}
+      <motion.div
+        className="relative mb-8"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: "spring", damping: 20, stiffness: 200 }}
+      >
+        <div className="absolute inset-0 rounded-2xl bg-accent/10 blur-xl animate-pulse" />
+        <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-bg-surface border border-border-subtle shadow-glow">
+          <motion.div
+            animate={{ rotate: [0, 0, -5, 5, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Shield className="h-10 w-10 text-accent" strokeWidth={1.5} />
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {/* Title */}
+      <motion.div
+        className="text-center mb-8"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <h1 className="text-2xl font-bold text-text font-display tracking-tight">Cortex Vault</h1>
+        <p className="text-xs tracking-[0.25em] uppercase text-text-muted mt-2 font-mono">Private Secure Cabinet</p>
+      </motion.div>
+
+      {/* Unlock card */}
+      <motion.div
+        className="glass-panel-strong w-full rounded-2xl p-6 shadow-modal"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, type: "spring", damping: 25, stiffness: 200 }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5 pb-4 border-b border-border-subtle">
+          <span className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-[0.15em]">Unlock Locker</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-error-muted px-2.5 py-1 text-[10px] font-mono font-medium text-error">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-error opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-error" />
+            </span>
+            Locked
           </span>
         </div>
+
         <div className="space-y-4">
           <div>
-            <label className="block text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-2">Vault Password</label>
-            <div className="relative">
+            <label className="block text-[10px] font-mono font-bold text-text-muted uppercase tracking-[0.15em] mb-2">
+              Vault Password
+            </label>
+            <div className="relative group">
               <input
                 type={showPassword ? "text" : "password"}
                 value={vaultPassword}
                 onChange={(e) => setVaultPassword(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleUnlock()}
                 placeholder="Enter secret vault password"
-                className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text placeholder-text-muted focus:border-accent focus:outline-none transition-colors"
+                className="w-full rounded-xl border border-border-subtle bg-bg px-4 py-3 pr-10 text-sm text-text placeholder-text-muted focus:border-accent focus:ring-2 focus:ring-accent/10 focus:shadow-glow outline-none transition-all duration-200"
               />
-              <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-text-muted hover:text-text transition-colors">
-                {showPassword ? (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                  </svg>
-                ) : (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
+              <button
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors p-1"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
-          <button
+
+          <motion.button
             disabled={loading || !vaultPassword.trim()}
             onClick={handleUnlock}
-            className="w-full rounded-lg bg-accent hover:bg-accent-hover text-bg py-2 text-sm font-semibold transition-colors disabled:opacity-40 shadow-glow flex items-center justify-center gap-2"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full rounded-xl bg-accent hover:bg-accent-hover text-bg py-3 text-sm font-bold transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-glow hover:shadow-glow-strong flex items-center justify-center gap-2 btn-glow"
           >
-            {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-bg border-t-transparent" /> : null}
+            {loading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-bg border-t-transparent" />
+            ) : (
+              <Lock className="h-4 w-4" />
+            )}
             Unlock Cabinet
-          </button>
+          </motion.button>
         </div>
-        {error && <p className="mt-4 rounded-lg bg-error/10 border border-error/20 p-2.5 text-xs text-error font-medium">{error}</p>}
-        {successMsg && <p className="mt-4 rounded-lg bg-success/10 border border-success/20 p-2.5 text-xs text-success font-medium">{successMsg}</p>}
-      </div>
-      <p className="mt-6 text-center text-[10px] text-text-muted max-w-[280px]">
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 flex items-center gap-2 rounded-xl bg-error-muted border border-error/20 p-3 text-xs text-error font-medium"
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
+          </motion.div>
+        )}
+        {successMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 flex items-center gap-2 rounded-xl bg-success-muted border border-success/20 p-3 text-xs text-success font-medium"
+          >
+            <CheckCircle className="h-4 w-4 shrink-0" />
+            {successMsg}
+          </motion.div>
+        )}
+      </motion.div>
+
+      <motion.p
+        className="mt-8 text-center text-[10px] text-text-muted max-w-[300px] leading-relaxed"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+      >
         Private files never leave your local workspace. All operations are local, private, and zero-knowledge.
-      </p>
+      </motion.p>
     </div>
   );
 }
