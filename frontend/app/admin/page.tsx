@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
 import { apiListUsers, apiPromoteUser, apiDemoteUser, apiDeleteUser } from "../../src/shared/auth/cortexApi";
 import DashboardShell from "../../src/shared/layout/DashboardShell";
 import Button from "../../src/shared/ui/Button";
 import Card from "../../src/shared/ui/Card";
+import { cn } from "../../src/lib/utils";
+import { staggerContainer } from "../../src/lib/motion";
+import { Shield, Users, ArrowUp, ArrowDown, Trash2, RefreshCw, Search, UserCheck, Loader2 } from "lucide-react";
 import type { User } from "../../src/shared/types";
 
 export default function AdminPage() {
@@ -15,6 +19,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/auth");
@@ -52,6 +57,22 @@ export default function AdminPage() {
     try { await apiDeleteUser(userId); fetchUsers(); } catch (err) { setError(err instanceof Error ? err.message : ""); }
   }
 
+  const itemVariant = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { type: "spring" as const, damping: 25, stiffness: 200 },
+  };
+
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    const q = searchQuery.toLowerCase();
+    return users.filter(
+      (u) =>
+        (u.full_name || "").toLowerCase().includes(q) ||
+        (u.username || "").toLowerCase().includes(q)
+    );
+  }, [users, searchQuery]);
+
   if (authLoading || !user || user.role !== "admin") return null;
 
   const adminCount = users.filter((u) => u.role === "admin").length;
@@ -65,58 +86,117 @@ export default function AdminPage() {
           <p className="text-sm text-text-muted mt-1">Manage users and system settings.</p>
         </div>
 
-        <div className="appear-stagger grid grid-cols-3 gap-4">
-          <div className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <p className="text-xs text-text-muted mb-1">Total Users</p>
+        <div className="grid grid-cols-3 gap-4">
+          <motion.div {...itemVariant} className="stat-card p-4 rounded-lg bg-bg-card border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="h-4 w-4 text-text-muted" />
+              <p className="text-xs text-text-muted">Total Users</p>
+            </div>
             <p className="text-2xl font-semibold text-text">{users.length}</p>
-          </div>
-          <div className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <p className="text-xs text-text-muted mb-1">Admins</p>
+          </motion.div>
+          <motion.div {...itemVariant} className="stat-card p-4 rounded-lg bg-bg-card border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="h-4 w-4 text-accent" />
+              <p className="text-xs text-text-muted">Admins</p>
+            </div>
             <p className="text-2xl font-semibold text-accent">{adminCount}</p>
-          </div>
-          <div className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <p className="text-xs text-text-muted mb-1">Regular Users</p>
+          </motion.div>
+          <motion.div {...itemVariant} className="stat-card p-4 rounded-lg bg-bg-card border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <UserCheck className="h-4 w-4 text-text-muted" />
+              <p className="text-xs text-text-muted">Regular Users</p>
+            </div>
             <p className="text-2xl font-semibold text-text">{userCount}</p>
-          </div>
+          </motion.div>
         </div>
 
         <Card className="overflow-hidden">
-          <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+          <div className="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-4">
             <h2 className="text-sm font-medium text-text">User Management</h2>
-            <Button variant="ghost" size="sm" onClick={fetchUsers}>Refresh</Button>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+                <input
+                  type="text"
+                  placeholder="Filter users..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 pl-8 pr-3 rounded-lg bg-bg-surface border border-border-subtle text-xs text-text placeholder:text-text-muted outline-none transition-all focus:border-accent/40 focus:ring-1 focus:ring-accent/20 w-48"
+                />
+              </div>
+              <Button variant="ghost" size="sm" onClick={fetchUsers}>
+                <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+                Refresh
+              </Button>
+            </div>
           </div>
           {error && <div className="px-5 py-2 bg-error/10 text-sm text-error border-b border-border">{error}</div>}
           {loading ? (
-            <div className="px-5 py-8 text-center text-sm text-text-muted">Loading users...</div>
-          ) : users.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-text-muted">No users found.</div>
+            <div className="px-5 py-8 flex flex-col items-center gap-3">
+              <Loader2 className="h-6 w-6 text-accent animate-spin" />
+              <p className="text-sm text-text-muted">Loading users...</p>
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="px-5 py-8 text-center text-sm text-text-muted">
+              {searchQuery ? "No users match your filter." : "No users found."}
+            </div>
           ) : (
-            <div className="divide-y divide-border">
-              {users.map((u) => (
-                <div key={u.id} className="px-5 py-3 flex items-center justify-between gap-4">
+            <motion.div
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
+              className="divide-y divide-border"
+            >
+              {filteredUsers.map((u) => (
+                <motion.div
+                  key={u.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring" as const, damping: 25, stiffness: 200 }}
+                  className="px-5 py-3 flex items-center justify-between gap-4 hover:bg-bg-hover/50 transition-colors"
+                >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-8 w-8 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-xs font-medium text-accent shrink-0">
+                    <div className="h-9 w-9 rounded-full bg-bg-elevated border border-border-subtle flex items-center justify-center text-xs font-medium text-accent shrink-0">
                       {(u.full_name || u.username || "?").charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm text-text truncate">{u.full_name || u.username}</p>
-                      <p className="text-xs text-text-muted truncate">@{u.username} - #{u.id}</p>
+                      <p className="text-xs text-text-muted truncate">@{u.username} &middot; #{u.id}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={["text-xs font-medium px-2 py-0.5 rounded-full", u.role === "admin" ? "bg-accent/10 text-accent" : "bg-bg-surface text-text-muted"].join(" ")}>{u.role}</span>
+                    <span
+                      className={cn(
+                        "text-xs font-medium px-2.5 py-1 rounded-full",
+                        u.role === "admin"
+                          ? "bg-accent/10 text-accent border border-accent/15"
+                          : "bg-bg-surface text-text-muted border border-border-subtle"
+                      )}
+                    >
+                      {u.role}
+                    </span>
                     {u.id !== user.id && (
                       <>
-                        {u.role === "user" ? (<Button variant="ghost" size="sm" onClick={() => handlePromote(u.id)}>Promote</Button>) : (<Button variant="ghost" size="sm" onClick={() => handleDemote(u.id)}>Demote</Button>)}
+                        {u.role === "user" ? (
+                          <Button variant="ghost" size="sm" onClick={() => handlePromote(u.id)}>
+                            <ArrowUp className="h-3.5 w-3.5" />
+                            Promote
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => handleDemote(u.id)}>
+                            <ArrowDown className="h-3.5 w-3.5" />
+                            Demote
+                          </Button>
+                        )}
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(u.id)}>
-                          <svg className="h-3.5 w-3.5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                          <Trash2 className="h-3.5 w-3.5 text-error" />
                         </Button>
                       </>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
         </Card>
       </div>

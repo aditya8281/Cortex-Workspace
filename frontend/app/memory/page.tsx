@@ -2,12 +2,16 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
 import { apiListMemory, apiCreateMemory } from "../../src/shared/auth/cortexApi";
 import DashboardShell from "../../src/shared/layout/DashboardShell";
 import Button from "../../src/shared/ui/Button";
 import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
+import { cn } from "../../src/lib/utils";
+import { staggerContainer, staggerItem, scaleIn } from "../../src/lib/motion";
+import { Brain, Plus, X, Hash, Calendar, FolderOpen, Loader2 } from "lucide-react";
 import type { MemoryEntry, MemoryListResponse } from "../../src/shared/types";
 
 const CATEGORIES = ["all", "note", "repository", "embedding", "index", "system"] as const;
@@ -119,67 +123,91 @@ export default function MemoryPage() {
             </p>
           </div>
           <Button onClick={() => setShowCreate(!showCreate)}>
-            {showCreate ? "Cancel" : "New Entry"}
+            {showCreate ? (
+              <>
+                <X className="h-4 w-4" />
+                Cancel
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                New Entry
+              </>
+            )}
           </Button>
         </div>
 
-        {showCreate && (
-          <Card className="p-5 animate-fade-in-up">
-            <h2 className="text-sm font-medium text-text mb-4">Create Knowledge Entry</h2>
-            <div className="grid gap-3">
-              <Input
-                label="Title"
-                placeholder="Entry title"
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                required
-              />
-              <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-text-secondary">Category</label>
-                <div className="flex gap-2 flex-wrap">
-                  {["note", "repository", "embedding", "index", "system"].map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setNewCategory(cat)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                        newCategory === cat
-                          ? "bg-accent text-bg shadow-glow"
-                          : "bg-bg-surface border border-border text-text-secondary hover:bg-bg-hover hover:text-text"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+        <AnimatePresence>
+          {showCreate && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            >
+              <Card className="p-5">
+                <h2 className="text-sm font-medium text-text mb-4">Create Knowledge Entry</h2>
+                <div className="grid gap-3">
+                  <Input
+                    label="Title"
+                    placeholder="Entry title"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    required
+                  />
+                  <div className="grid gap-1.5">
+                    <label className="text-xs font-medium text-text-secondary">Category</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {["note", "repository", "embedding", "index", "system"].map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setNewCategory(cat)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                            newCategory === cat
+                              ? "bg-accent text-bg shadow-glow"
+                              : "bg-bg-surface border border-border text-text-secondary hover:bg-bg-hover hover:text-text"
+                          )}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label className="text-xs font-medium text-text-secondary">Content</label>
+                    <textarea
+                      value={newContent}
+                      onChange={(e) => setNewContent(e.target.value)}
+                      placeholder="Write your knowledge entry content here..."
+                      rows={6}
+                      className="w-full rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 resize-none focus:border-accent/40 focus:ring-2 focus:ring-accent/10 focus:shadow-glow"
+                      required
+                    />
+                  </div>
+                  {createError && (
+                    <p className="text-sm text-error bg-error/10 rounded-md px-3 py-2 border border-error/10">{createError}</p>
+                  )}
+                  <div className="flex justify-end">
+                    <Button loading={createLoading} onClick={handleCreate}>
+                      Create Entry
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-text-secondary">Content</label>
-                <textarea
-                  value={newContent}
-                  onChange={(e) => setNewContent(e.target.value)}
-                  placeholder="Write your knowledge entry content here..."
-                  rows={6}
-                  className="w-full rounded-md bg-bg-surface border border-border px-3 py-2 text-sm text-text placeholder:text-text-muted outline-none transition-colors resize-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20"
-                  required
-                />
-              </div>
-              {createError && (
-                <p className="text-sm text-error bg-error/10 rounded-md px-3 py-2 border border-error/10">{createError}</p>
-              )}
-              <div className="flex justify-end">
-                <Button loading={createLoading} onClick={handleCreate}>
-                  Create Entry
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {createSuccess && (
-          <div className="rounded-md bg-success/10 border border-success/10 px-4 py-2 text-sm text-success font-medium">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl bg-success/10 border border-success/10 px-4 py-2 text-sm text-success font-medium"
+          >
             Entry created successfully.
-          </div>
+          </motion.div>
         )}
 
         <div className="flex gap-2 flex-wrap">
@@ -187,22 +215,32 @@ export default function MemoryPage() {
             <button
               key={cat}
               onClick={() => handleCategoryChange(cat)}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+              className={cn(
+                "relative px-4 py-1.5 rounded-full text-xs font-medium transition-all",
                 activeCategory === cat
-                  ? "bg-accent text-bg shadow-glow"
+                  ? "text-bg"
                   : "bg-bg-surface border border-border text-text-secondary hover:bg-bg-hover hover:text-text"
-              }`}
+              )}
             >
-              {cat.charAt(0).toUpperCase() + cat.slice(1)}
-              {cat !== "all" && categories[cat] ? (
-                <span className="ml-1.5 text-[11px] opacity-70">({categories[cat]})</span>
-              ) : null}
+              {activeCategory === cat && (
+                <motion.div
+                  layoutId="memory-category-indicator"
+                  className="absolute inset-0 rounded-full bg-accent shadow-glow"
+                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                />
+              )}
+              <span className="relative z-10">
+                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {cat !== "all" && categories[cat] ? (
+                  <span className="ml-1.5 text-[11px] opacity-70">({categories[cat]})</span>
+                ) : null}
+              </span>
             </button>
           ))}
         </div>
 
         {error && (
-          <div className="rounded-md bg-error/10 border border-error/10 px-4 py-2 text-sm text-error">
+          <div className="rounded-xl bg-error/10 border border-error/10 px-4 py-2 text-sm text-error">
             {error}
           </div>
         )}
@@ -210,47 +248,61 @@ export default function MemoryPage() {
         {loading && entries.length === 0 ? (
           <div className="flex items-center justify-center py-20">
             <div className="flex flex-col items-center gap-3">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              <Loader2 className="h-8 w-8 text-accent animate-spin" />
               <p className="text-sm text-text-muted">Loading memory entries...</p>
             </div>
           </div>
         ) : filteredEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <svg className="w-12 h-12 text-text-muted mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5" />
-            </svg>
+            <div className="h-12 w-12 rounded-xl bg-bg-surface border border-border-subtle flex items-center justify-center mb-3">
+              <Brain className="h-6 w-6 text-text-muted" />
+            </div>
             <p className="text-sm font-medium text-text-secondary">No memory entries found</p>
             <p className="text-xs text-text-muted mt-1">Create your first knowledge entry to get started.</p>
           </div>
         ) : (
-          <div className="appear-stagger space-y-3">
-            {filteredEntries.map((entry) => (
-              <Card key={entry.id} hover className="interactive-card p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-sm font-medium text-text truncate">{entry.title}</h3>
-                      <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent-faint text-accent border border-accent/10">
-                        {entry.category}
-                      </span>
-                    </div>
-                    <p className="text-sm text-text-muted line-clamp-2 mb-2">{entry.content}</p>
-                    <div className="flex items-center gap-3 text-xs text-text-muted">
-                      <span>#{entry.id}</span>
-                      {entry.source_path && (
-                        <span className="font-mono truncate max-w-[200px]" title={entry.source_path}>
-                          {entry.source_path}
+          <motion.div
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+            className="space-y-3"
+          >
+            {filteredEntries.map((entry, i) => (
+              <motion.div key={entry.id} variants={staggerItem} custom={i}>
+                <Card hover className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <h3 className="text-sm font-medium text-text truncate">{entry.title}</h3>
+                        <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent-faint text-accent border border-accent/10">
+                          {entry.category}
                         </span>
-                      )}
-                      {entry.created_at && (
-                        <span>{new Date(entry.created_at).toLocaleDateString()}</span>
-                      )}
+                      </div>
+                      <p className="text-sm text-text-muted line-clamp-2 mb-2.5">{entry.content}</p>
+                      <div className="flex items-center gap-3 text-xs text-text-muted">
+                        <span className="flex items-center gap-1">
+                          <Hash className="h-3 w-3" />
+                          {entry.id}
+                        </span>
+                        {entry.source_path && (
+                          <span className="flex items-center gap-1 font-mono truncate max-w-[200px]" title={entry.source_path}>
+                            <FolderOpen className="h-3 w-3 shrink-0" />
+                            {entry.source_path}
+                          </span>
+                        )}
+                        {entry.created_at && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(entry.created_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
 
         {hasMore && !loading && filteredEntries.length > 0 && (
@@ -263,7 +315,7 @@ export default function MemoryPage() {
 
         {loading && entries.length > 0 && (
           <div className="flex justify-center py-4">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            <Loader2 className="h-6 w-6 text-accent animate-spin" />
           </div>
         )}
       </div>
