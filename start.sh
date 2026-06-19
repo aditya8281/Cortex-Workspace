@@ -223,12 +223,36 @@ else
 fi
 
 
-# 5. Launch development servers
+# 5. Find available ports
+echo -e "\n${BOLD}${CYAN}[Phase 4/4] Finding available ports...${RESET}"
+
+find_available_port() {
+    local start=$1
+    local port=$start
+    while [ $port -lt $((start + 100)) ]; do
+        if ! ss -tlnp 2>/dev/null | grep -q ":${port} " && ! lsof -i ":${port}" >/dev/null 2>&1; then
+            echo "$port"
+            return 0
+        fi
+        port=$((port + 1))
+    done
+    echo "$start"
+    return 1
+}
+
+BACKEND_PORT=$(find_available_port 8000)
+FRONTEND_PORT=$(find_available_port 3000)
+
+# Write backend URL for the frontend proxy
+mkdir -p frontend
+echo "CORTEX_BACKEND_URL=http://localhost:${BACKEND_PORT}" > frontend/.env.local
+
+# 6. Launch development servers
 echo -e "\n${BOLD}${GREEN}====================================================${RESET}"
 echo -e "${BOLD}${GREEN}  ✓ Setup complete! Launching development servers...  ${RESET}"
 echo -e "${BOLD}${GREEN}====================================================${RESET}"
-echo -e "${CYAN}Backend API will be live at:   ${BOLD}http://localhost:8000${RESET}"
-echo -e "${CYAN}Frontend UI will be live at:    ${BOLD}http://localhost:3000${RESET}"
+echo -e "${CYAN}Backend API will be live at:   ${BOLD}http://localhost:${BACKEND_PORT}${RESET}"
+echo -e "${CYAN}Frontend UI will be live at:    ${BOLD}http://localhost:${FRONTEND_PORT}${RESET}"
 echo -e "Press ${BOLD}Ctrl+C${RESET} to terminate all services.\n"
 
 # Process cleanup handler
@@ -250,12 +274,12 @@ cleanup() {
 trap cleanup SIGINT SIGTERM EXIT
 
 # Start backend server in the background
-uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 &
+uv run uvicorn backend.app.main:app --host 0.0.0.0 --port "$BACKEND_PORT" &
 BACKEND_PID=$!
 
 # Start frontend server in the background
 if [ -d "frontend" ]; then
-    (cd frontend && npm run dev) &
+    (cd frontend && PORT="$FRONTEND_PORT" npm run dev) &
     FRONTEND_PID=$!
 fi
 

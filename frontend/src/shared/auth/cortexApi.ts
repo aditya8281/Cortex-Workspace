@@ -20,13 +20,22 @@ import type {
   MemorySearchResponse,
 } from "../types";
 
-/** Backend base URL — requests go directly to the backend, not through proxy. */
+/** Backend base URL.
+ *
+ *  By default returns "" so all requests are relative and go through the
+ *  Next.js API proxy at `/api/*` (same origin, no CORS issues, works with
+ *  any backend port).
+ *
+ *  Set `NEXT_PUBLIC_API_BASE_URL` to an absolute URL (e.g. http://localhost:8003)
+ *  to bypass the proxy and hit the backend directly (requires matching CORS
+ *  config on the backend).
+ */
 function getBase(): string {
   const env = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (env && /^https?:\/\//.test(env)) {
     return env.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "");
   }
-  return "http://localhost:8000";
+  return "";
 }
 
 interface RequestError extends Error {
