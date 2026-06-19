@@ -341,15 +341,18 @@ export default function DashboardShell({ children }: DashboardShellProps) {
                 <Menu className="h-5 w-5" />
               </button>
             )}
-            <button
-              onClick={() => router.push("/app")}
-              className="flex items-center gap-2 group"
-            >
-              <div className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(6,182,212,0.4)] group-hover:shadow-[0_0_12px_rgba(6,182,212,0.6)] transition-shadow" />
-              <span className="font-mono text-[11px] tracking-[0.2em] uppercase text-text-secondary group-hover:text-text transition-colors">
-                Cortex
-              </span>
-            </button>
+            {/* Only show brand in header when sidebar is collapsed or on mobile */}
+            {!(isDesktop && sidebarExpanded) && (
+              <button
+                onClick={() => router.push("/app")}
+                className="flex items-center gap-2 group"
+              >
+                <div className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(6,182,212,0.4)] group-hover:shadow-[0_0_12px_rgba(6,182,212,0.6)] transition-shadow" />
+                <span className="font-mono text-[11px] tracking-[0.2em] uppercase text-text-secondary group-hover:text-text transition-colors">
+                  Cortex
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Right: Search + Avatar */}
