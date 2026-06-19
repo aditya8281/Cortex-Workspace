@@ -2,36 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
-import { Lock, User, Brain, Shield, Calendar, Hash } from "lucide-react";
+import { motion } from "framer-motion";
+import { Lock, Brain, Shield, User, Server } from "lucide-react";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
 import { apiVaultStatus } from "../../src/shared/auth/cortexApi";
 import DashboardShell from "../../src/shared/layout/DashboardShell";
 import PageTransition from "../../src/shared/ui/PageTransition";
 import StaggerChildren from "../../src/shared/ui/StaggerChildren";
 import Card from "../../src/shared/ui/Card";
-import Badge from "../../src/shared/ui/Badge";
 import type { VaultStatus } from "../../src/shared/types";
-
-function AnimatedCounter({ value, duration = 1.2 }: { value: number; duration?: number }) {
-  const count = useMotionValue(0);
-  const rounded = useTransform(count, (v) => Math.round(v));
-  const [display, setDisplay] = useState(0);
-
-  useEffect(() => {
-    const controls = animate(count, value, {
-      duration,
-      ease: [0.25, 0.46, 0.45, 0.94],
-    });
-    const unsubscribe = rounded.on("change", (v) => setDisplay(v));
-    return () => {
-      controls.stop();
-      unsubscribe();
-    };
-  }, [value, count, rounded, duration]);
-
-  return <span>{display}</span>;
-}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -53,14 +32,22 @@ export default function DashboardPage() {
     .charAt(0)
     .toUpperCase();
 
+  const memberSince = user.created_at
+    ? new Date(user.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "—";
+
   return (
     <DashboardShell>
       <PageTransition className="max-w-5xl mx-auto space-y-8">
-        {/* ── Welcome Section ──────────────────────────────────── */}
+        {/* ── Hero Welcome ──────────────────────────────────── */}
         <div className="flex items-center gap-5">
           <motion.div
             whileHover={{ scale: 1.05 }}
-            className="relative h-14 w-14 rounded-full bg-bg-surface border border-border-subtle flex items-center justify-center text-lg font-semibold text-accent overflow-hidden shrink-0 cursor-default"
+            className="relative h-16 w-16 rounded-full bg-accent flex items-center justify-center text-xl font-bold text-[#050508] overflow-hidden shrink-0 cursor-default"
           >
             {user.profile_photo ? (
               <img
@@ -74,12 +61,12 @@ export default function DashboardPage() {
             ) : (
               initials
             )}
-            {/* Glow ring on hover */}
             <motion.div
               className="absolute inset-0 rounded-full"
               initial={{ boxShadow: "0 0 0 0px rgba(6,182,212,0)" }}
               whileHover={{
-                boxShadow: "0 0 0 3px rgba(6,182,212,0.3), 0 0 20px rgba(6,182,212,0.15)",
+                boxShadow:
+                  "0 0 0 3px rgba(6,182,212,0.3), 0 0 20px rgba(6,182,212,0.15)",
               }}
               transition={{ duration: 0.3 }}
             />
@@ -88,9 +75,9 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-semibold text-text font-display tracking-tight">
               Welcome back, {user.full_name?.split(" ")[0] || user.username}
             </h1>
-            <p className="text-sm text-text-secondary mt-0.5">
+            <p className="text-sm text-text-secondary mt-0.5 flex items-center gap-1.5">
               {user.role === "admin" ? (
-                <span className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1">
                   <Shield className="h-3.5 w-3.5 text-accent" />
                   Admin
                 </span>
@@ -102,84 +89,86 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Stat Cards ───────────────────────────────────────── */}
-        <StaggerChildren className="grid grid-cols-2 sm:grid-cols-4 gap-4" staggerDelay={0.06}>
-          <Card className="p-4 group">
-            <div className="flex items-center justify-between mb-3">
-              <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
-                <Shield className="h-4 w-4 text-accent" />
+        {/* ── System Status ───────────────────────────────── */}
+        <div>
+          <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-text-muted mb-4">
+            System Status
+          </h2>
+          <StaggerChildren
+            className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+            staggerDelay={0.06}
+          >
+            <Card className="p-4 group">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
+                  <Lock className="h-4 w-4 text-accent" />
+                </div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  Vault
+                </span>
               </div>
-              <Badge variant="accent">Role</Badge>
-            </div>
-            <p className="text-2xl font-semibold text-text font-display capitalize">
-              {user.role}
-            </p>
-            <p className="text-xs text-text-muted mt-1">Account type</p>
-          </Card>
+              <p className="text-2xl font-semibold text-text font-display">
+                {vaultStatus ? (vaultStatus.locked ? "Locked" : "Active") : "—"}
+              </p>
+              <p className="text-xs text-text-muted mt-1">Vault status</p>
+            </Card>
 
-          <Card className="p-4 group">
-            <div className="flex items-center justify-between mb-3">
-              <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-accent" />
+            <Card className="p-4 group">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
+                  <Brain className="h-4 w-4 text-accent" />
+                </div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  Memory
+                </span>
               </div>
-              <Badge variant="default">Joined</Badge>
-            </div>
-            <p className="text-2xl font-semibold text-text font-display">
-              {user.created_at
-                ? new Date(user.created_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })
-                : "—"}
-            </p>
-            <p className="text-xs text-text-muted mt-1">
-              {user.created_at ? new Date(user.created_at).getFullYear() : "Year"}
-            </p>
-          </Card>
+              <p className="text-2xl font-semibold text-text font-display">
+                0 entries
+              </p>
+              <p className="text-xs text-text-muted mt-1">Knowledge base</p>
+            </Card>
 
-          <Card className="p-4 group">
-            <div className="flex items-center justify-between mb-3">
-              <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
-                <Hash className="h-4 w-4 text-accent" />
+            <Card className="p-4 group">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
+                  <User className="h-4 w-4 text-accent" />
+                </div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  Account
+                </span>
               </div>
-              <Badge variant="default">ID</Badge>
-            </div>
-            <p className="text-2xl font-semibold text-text font-display font-mono">
-              <AnimatedCounter value={user.id} />
-            </p>
-            <p className="text-xs text-text-muted mt-1">User identifier</p>
-          </Card>
+              <p className="text-lg font-semibold text-text font-display">
+                {memberSince}
+              </p>
+              <p className="text-xs text-text-muted mt-1">Member since</p>
+            </Card>
 
-          <Card className="p-4 group">
-            <div className="flex items-center justify-between mb-3">
-              <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
-                <Lock className="h-4 w-4 text-accent" />
+            <Card className="p-4 group">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
+                  <Server className="h-4 w-4 text-accent" />
+                </div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+                  Server
+                </span>
               </div>
-              {vaultStatus && (
-                <motion.span
-                  className={`h-2.5 w-2.5 rounded-full ${vaultStatus.locked ? "bg-error" : "bg-success"}`}
-                  animate={{
-                    boxShadow: vaultStatus.locked
-                      ? ["0 0 4px rgba(239,68,68,0.4)", "0 0 10px rgba(239,68,68,0.6)", "0 0 4px rgba(239,68,68,0.4)"]
-                      : ["0 0 4px rgba(34,197,94,0.4)", "0 0 10px rgba(34,197,94,0.6)", "0 0 4px rgba(34,197,94,0.4)"],
-                  }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                />
-              )}
-            </div>
-            <p className="text-2xl font-semibold text-text font-display">
-              {vaultStatus ? (vaultStatus.locked ? "Locked" : "Active") : "—"}
-            </p>
-            <p className="text-xs text-text-muted mt-1">Vault status</p>
-          </Card>
-        </StaggerChildren>
+              <p className="text-2xl font-semibold text-text font-display">
+                Connected
+              </p>
+              <p className="text-xs text-text-muted mt-1">Server status</p>
+            </Card>
+          </StaggerChildren>
+        </div>
 
-        {/* ── Quick Actions ────────────────────────────────────── */}
+        {/* ── Quick Actions ────────────────────────────────── */}
         <div>
           <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-text-muted mb-4">
             Quick Actions
           </h2>
-          <StaggerChildren className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" staggerDelay={0.06}>
+          <StaggerChildren
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+            staggerDelay={0.06}
+          >
             <Card
               hover
               className="p-5 cursor-pointer"
@@ -192,11 +181,7 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <h3 className="text-sm font-medium text-text">Vault</h3>
                   <p className="text-xs text-text-muted truncate">
-                    {vaultStatus
-                      ? vaultStatus.locked
-                        ? "Locked · Click to unlock"
-                        : "Unlocked · Active"
-                      : "Loading..."}
+                    Manage encrypted files
                   </p>
                 </div>
               </div>
@@ -214,7 +199,7 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <h3 className="text-sm font-medium text-text">Memory</h3>
                   <p className="text-xs text-text-muted truncate">
-                    Knowledge base and entries
+                    Knowledge base (coming soon)
                   </p>
                 </div>
               </div>
@@ -232,7 +217,7 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <h3 className="text-sm font-medium text-text">Profile</h3>
                   <p className="text-xs text-text-muted truncate">
-                    Manage your account settings
+                    Account settings
                   </p>
                 </div>
               </div>
@@ -251,13 +236,25 @@ export default function DashboardPage() {
                   <div className="min-w-0">
                     <h3 className="text-sm font-medium text-text">Admin</h3>
                     <p className="text-xs text-text-muted truncate">
-                      Manage users and system
+                      User management (admin only)
                     </p>
                   </div>
                 </div>
               </Card>
             )}
           </StaggerChildren>
+        </div>
+
+        {/* ── Recent Activity ──────────────────────────────── */}
+        <div>
+          <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-text-muted mb-4">
+            Recent Activity
+          </h2>
+          <Card className="p-8 text-center">
+            <p className="text-sm text-text-muted">
+              Activity tracking coming soon
+            </p>
+          </Card>
         </div>
       </PageTransition>
     </DashboardShell>
