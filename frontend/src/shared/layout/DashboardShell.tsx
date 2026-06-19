@@ -457,7 +457,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
         </header>
 
         {/* ── Main content ───────────────────────────────────── */}
-        <main className={cn("flex-1 p-6", isMobile && "pb-24")}>
+        <main id="main-content" className={cn("flex-1 p-6", isMobile && "pb-24")}>
           {children}
         </main>
       </div>

@@ -162,7 +162,7 @@ export default function RootPage() {
         </Link>
       </header>
 
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* Hero Section */}
         <section className="relative flex flex-col items-center justify-center min-h-[85vh] px-6 overflow-hidden">
           <ParticleDots />
