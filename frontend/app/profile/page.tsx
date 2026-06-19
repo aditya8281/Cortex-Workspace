@@ -11,7 +11,7 @@ import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
 import { cn } from "../../src/lib/utils";
 import { fadeUp, scaleIn } from "../../src/lib/motion";
-import { Camera, Check, X, User, Loader2, AtSign } from "lucide-react";
+import { Camera, Check, User, Loader2, AtSign } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();

@@ -126,7 +126,6 @@ export default function useVaultState() {
     navHistory: nav.navHistory,
     navIndex: nav.navIndex,
     expandedFolders: nav.expandedFolders,
-    editingTreePath: nav.editingTreePath,
     treeContextMenu: nav.treeContextMenu,
     loading: core.loading,
     error: core.error,

@@ -7,7 +7,7 @@
 import { motion } from "framer-motion";
 import {
   Upload, FolderPlus, Download, KeyRound, Search, X,
-  LayoutGrid, List, Table, SlidersHorizontal,
+  LayoutGrid, List, Table,
 } from "lucide-react";
 import type { VaultContext } from "./useVaultState";
 

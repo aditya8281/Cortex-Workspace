@@ -122,10 +122,6 @@ export function apiCheckUsername(
 
 // ── Profile endpoints ───────────────────────────────────────────────
 
-export function apiGetProfile(): Promise<User> {
-  return request("GET", "/api/v1/me/profile");
-}
-
 export function apiUpdateProfile(payload: ProfileUpdate): Promise<User> {
   return request("PUT", "/api/v1/me/profile", { body: payload });
 }
@@ -167,10 +163,6 @@ export function getProfilePhotoUrl(userId: number): string {
 }
 
 // ── GitHub endpoints ────────────────────────────────────────────────
-
-export function apiGetGitHubStatus(): Promise<GitHubStatus> {
-  return request("GET", "/api/v1/me/github");
-}
 
 export function apiConnectGitHub(
   username: string,

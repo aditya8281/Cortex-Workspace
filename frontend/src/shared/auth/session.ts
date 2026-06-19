@@ -8,10 +8,6 @@ import type { User } from "../types";
 
 const USER_KEY = "cortex_user";
 
-export function getSessionToken(): string | null {
-  return null;
-}
-
 export function getSessionUser(): User | null {
   if (typeof window === "undefined") return null;
   try {
@@ -26,14 +22,6 @@ export function setSession(user?: User | null): void {
   if (user !== undefined) {
     sessionStorage.setItem(USER_KEY, JSON.stringify(user ?? null));
   }
-}
-
-export function getSessionRefresh(): string | null {
-  return null;
-}
-
-export function setSessionRefresh(_refreshToken: string | null): void {
-  // No-op: refresh tokens are in httpOnly cookies
 }
 
 export function clearSession(): void {

@@ -7,7 +7,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FolderOpen, Eye, Download, Pencil, Trash2, AlertTriangle, X,
-  File, Folder, FolderPlus,
+  File, FolderPlus,
 } from "lucide-react";
 import type { VaultContext } from "./useVaultState";
 import { isTextPreviewable, isImagePreview } from "./useVaultState";

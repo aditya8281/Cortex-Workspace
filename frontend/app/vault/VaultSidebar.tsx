@@ -7,7 +7,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FolderLock, Files, FileText, Image, Archive, ShieldCheck, Star, Clock,
-  FolderOpen, FolderClosed, ChevronRight, ChevronDown, Lock, Plus, Minus,
+  FolderOpen, FolderClosed, ChevronRight, ChevronDown, Lock,
 } from "lucide-react";
 import type { VaultContext } from "./useVaultState";
 import type { VaultFileEntry } from "../../src/shared/types";

@@ -10,7 +10,7 @@ import Button from "../../src/shared/ui/Button";
 import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
 import { cn } from "../../src/lib/utils";
-import { staggerContainer, staggerItem, scaleIn } from "../../src/lib/motion";
+import { staggerContainer, staggerItem } from "../../src/lib/motion";
 import { Brain, Plus, X, Hash, Calendar, FolderOpen, Loader2 } from "lucide-react";
 import type { MemoryEntry, MemoryListResponse } from "../../src/shared/types";
 

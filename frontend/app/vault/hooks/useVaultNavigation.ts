@@ -25,7 +25,6 @@ export default function useVaultNavigation({
   const [navHistory, setNavHistory] = useState<string[]>(["/"]);
   const [navIndex, setNavIndex] = useState(0);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(["/"]));
-  const [editingTreePath, setEditingTreePath] = useState<string | null>(null);
   const [treeContextMenu, setTreeContextMenu] = useState<{ visible: boolean; x: number; y: number; path: string } | null>(null);
   const [addressBarEditing, setAddressBarEditing] = useState(false);
   const [addressBarValue, setAddressBarValue] = useState("/");
@@ -130,7 +129,6 @@ export default function useVaultNavigation({
     navHistory,
     navIndex,
     expandedFolders,
-    editingTreePath,
     treeContextMenu,
     addressBarEditing,
     addressBarValue,
@@ -138,7 +136,6 @@ export default function useVaultNavigation({
     setNavHistory,
     setNavIndex,
     setExpandedFolders,
-    setEditingTreePath,
     setTreeContextMenu,
     setAddressBarEditing,
     setAddressBarValue,

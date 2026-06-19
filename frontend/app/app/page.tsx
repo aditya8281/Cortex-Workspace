@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { Lock, User, Brain, Shield, Calendar, Hash } from "lucide-react";
@@ -52,9 +52,6 @@ export default function DashboardPage() {
   const initials = (user.full_name || user.username || "?")
     .charAt(0)
     .toUpperCase();
-
-  const memberCount = 1;
-  const entryCount = 0;
 
   return (
     <DashboardShell>
