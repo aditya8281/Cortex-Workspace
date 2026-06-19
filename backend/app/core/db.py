@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.security import verify_access_token
 from backend.app.db.session import SessionLocal
 
-oauth2_scheme = HTTPBearer()
+oauth2_scheme = HTTPBearer(auto_error=False)
 oauth2_scheme_optional = HTTPBearer(auto_error=False)
 
 
