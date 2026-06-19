@@ -1,7 +1,7 @@
 """Add ondelete clauses to FK constraints
 
 Revision ID: f00000000006a
-Revises: f00000000006
+Revises: k00000000011
 Create Date: 2026-06-20
 """
 
@@ -11,71 +11,53 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = "f00000000006a"
-down_revision = "f00000000006"
+down_revision = "k00000000011"
 branch_labels = None
 depends_on = None
 
 
+def _get_existing_fk(bind, table: str, referred_table: str):
+    """Find existing FK constraint name on a table referencing another table."""
+    result = bind.execute(
+        sa.text(
+            "SELECT conname FROM pg_constraint "
+            "JOIN pg_class ON pg_constraint.conrelid = pg_class.oid "
+            "JOIN pg_class ref ON pg_constraint.confrelid = ref.oid "
+            "WHERE pg_class.relname = :table "
+            "AND ref.relname = :referred "
+            "AND pg_constraint.contype = 'f'"
+        ),
+        {"table": table, "referred": referred_table},
+    )
+    row = result.fetchone()
+    return row[0] if row else None
+
+
+def _drop_and_recreate_fk(table: str, referred_table: str, cols, referred_cols, ondelete: str, fk_name: str):
+    """Drop existing FK on a table referencing another (by any name) and recreate with ondelete."""
+    bind = op.get_bind()
+    existing = _get_existing_fk(bind, table, referred_table)
+    if existing:
+        op.drop_constraint(existing, table, type_="foreignkey")
+    op.create_foreign_key(fk_name, table, referred_table, cols, referred_cols, ondelete=ondelete)
+
+
 def upgrade() -> None:
-    # Drop and recreate notification.user_id FK with ondelete CASCADE
-    op.drop_constraint("notifications_user_id_fkey", "notifications", type_="foreignkey")
-    op.create_foreign_key(
-        "notifications_user_id_fkey",
-        "notifications",
-        "users",
-        ["user_id"],
-        ["id"],
-        ondelete="CASCADE",
-    )
+    # notifications.user_id FK with ondelete CASCADE
+    _drop_and_recreate_fk("notifications", "users", ["user_id"], ["id"], "CASCADE", "notifications_user_id_fkey")
 
-    # Drop and recreate repo_indexes.user_id FK with ondelete SET NULL
-    op.drop_constraint("repo_indexes_user_id_fkey", "repo_indexes", type_="foreignkey")
-    op.create_foreign_key(
-        "repo_indexes_user_id_fkey",
-        "repo_indexes",
-        "users",
-        ["user_id"],
-        ["id"],
-        ondelete="SET NULL",
-    )
+    # repo_indexes.user_id FK with ondelete SET NULL
+    _drop_and_recreate_fk("repo_indexes", "users", ["user_id"], ["id"], "SET NULL", "repo_indexes_user_id_fkey")
 
-    # Drop and recreate code_chunks.repo_id FK with ondelete CASCADE
-    op.drop_constraint("code_chunks_repo_id_fkey", "code_chunks", type_="foreignkey")
-    op.create_foreign_key(
-        "code_chunks_repo_id_fkey",
-        "code_chunks",
-        "repo_indexes",
-        ["repo_id"],
-        ["id"],
-        ondelete="CASCADE",
+    # code_chunks.repo_id FK with ondelete CASCADE
+    _drop_and_recreate_fk(
+        "code_chunks", "repo_indexes", ["repo_id"], ["id"], "CASCADE", "code_chunks_repo_id_fkey"
     )
 
 
 def downgrade() -> None:
-    # Revert to original FKs without ondelete
-    op.drop_constraint("notifications_user_id_fkey", "notifications", type_="foreignkey")
-    op.create_foreign_key(
-        "notifications_user_id_fkey",
-        "notifications",
-        "users",
-        ["user_id"],
-        ["id"],
-    )
-
-    op.drop_constraint("repo_indexes_user_id_fkey", "repo_indexes", type_="foreignkey")
-    op.create_foreign_key(
-        "repo_indexes_user_id_fkey",
-        "repo_indexes",
-        "users",
-        ["user_id"],
-        ["id"],
-    )
-
-    op.drop_constraint("code_chunks_repo_id_fkey", "code_chunks", type_="foreignkey")
-    op.create_foreign_key(
-        "code_chunks_repo_id_fkey",
-        "code_chunks",
-        "repo_indexes",
-        ["repo_id"],
-        ["id"],
+    _drop_and_recreate_fk("notifications", "users", ["user_id"], ["id"], "NO ACTION", "notifications_user_id_fkey")
+    _drop_and_recreate_fk("repo_indexes", "users", ["user_id"], ["id"], "NO ACTION", "repo_indexes_user_id_fkey")
+    _drop_and_recreate_fk(
+        "code_chunks", "repo_indexes", ["repo_id"], ["id"], "NO ACTION", "code_chunks_repo_id_fkey"
     )
