@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { startTransition, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
@@ -51,13 +51,15 @@ export default function ProfilePage() {
   const [fieldsInit, setFieldsInit] = useState(false);
   useEffect(() => {
     if (!user || fieldsInit) return;
-    setFullName(user.full_name || ""); setNickname(user.nickname || ""); setBio(user.bio || ""); setDescription(user.description || "");
-    setProgrammingLanguages(user.programming_languages || []);
-    setFrameworks(user.frameworks || []);
-    setCurrentProjects((user.current_projects || []).map((p: { name: string; description?: string }) => ({ name: p.name, description: p.description || "" })));
-    setContributionStyle(user.contribution_style || "");
-    setSocialLinks(user.social_links || {});
-    setGhUsername(user.github_username || ""); setGhConnected(!!user.github_username); setFieldsInit(true);
+    startTransition(() => {
+      setFullName(user.full_name || ""); setNickname(user.nickname || ""); setBio(user.bio || ""); setDescription(user.description || "");
+      setProgrammingLanguages(user.programming_languages || []);
+      setFrameworks(user.frameworks || []);
+      setCurrentProjects((user.current_projects || []).map((p: { name: string; description?: string }) => ({ name: p.name, description: p.description || "" })));
+      setContributionStyle(user.contribution_style || "");
+      setSocialLinks(user.social_links || {});
+      setGhUsername(user.github_username || ""); setGhConnected(!!user.github_username); setFieldsInit(true);
+    });
   }, [user, fieldsInit]);
 
   async function handleProfileSave() {

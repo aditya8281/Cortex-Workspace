@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { startTransition, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Lock, User, CodeSquare, ArrowRight, ArrowLeft, Check, FolderOpen } from "lucide-react";
@@ -128,9 +128,17 @@ export default function AuthPage() {
   useEffect(() => {
     if (mode !== "register") return;
     if (usernameTimer.current) clearTimeout(usernameTimer.current);
-    if (!username.trim()) { setUsernameStatus(""); setUsernameMsg(""); return; }
-    setUsernameStatus("checking");
-    setUsernameMsg("");
+    if (!username.trim()) {
+      startTransition(() => {
+        setUsernameStatus("");
+        setUsernameMsg("");
+      });
+      return;
+    }
+    startTransition(() => {
+      setUsernameStatus("checking");
+      setUsernameMsg("");
+    });
     usernameTimer.current = setTimeout(() => checkUsername(username), 400);
     return () => { if (usernameTimer.current) clearTimeout(usernameTimer.current); };
   }, [username, mode, checkUsername]);
