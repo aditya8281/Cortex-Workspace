@@ -62,6 +62,11 @@ describe("Signup", () => {
       screen.getAllByPlaceholderText("••••••••");
     fireEvent.change(pwInput, { target: { value: "Password1" } });
     fireEvent.change(confirmPwInput, { target: { value: "Password1" } });
+
+    // Wait for the username availability check to complete
+    await waitFor(() => {
+      expect(screen.queryByText("Checking availability...")).not.toBeInTheDocument();
+    });
     fireEvent.click(screen.getByText("Continue"));
 
     // Step 1 — Profile

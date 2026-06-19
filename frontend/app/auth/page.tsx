@@ -9,7 +9,6 @@ import { apiLogin, apiRegister, apiCheckUsername, apiConnectGitHub } from "../..
 import Button from "../../src/shared/ui/Button";
 import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
-import Steps from "../../src/shared/ui/Steps";
 import PasswordStrength from "../../src/shared/ui/PasswordStrength";
 import { cn } from "../../src/lib/utils";
 
@@ -129,16 +128,37 @@ export default function AuthPage() {
     if (mode !== "register") return;
     if (usernameTimer.current) clearTimeout(usernameTimer.current);
     if (!username.trim()) { setUsernameStatus(""); setUsernameMsg(""); return; }
+    setUsernameStatus("checking");
+    setUsernameMsg("");
     usernameTimer.current = setTimeout(() => checkUsername(username), 400);
     return () => { if (usernameTimer.current) clearTimeout(usernameTimer.current); };
   }, [username, mode, checkUsername]);
 
-  function switchMode(next: Mode) { setMode(next); setStep(0); setError(""); }
+  function switchMode(next: Mode) {
+    setMode(next);
+    setStep(0);
+    setError("");
+    setUsername("");
+    setPassword("");
+    setConfirmPassword("");
+    setFullName("");
+    setNickname("");
+    setBio("");
+    setGhUsername("");
+    setGhToken("");
+    setVaultPassword("");
+    setVaultConfirm("");
+    setStorageRoot("~/CortexData");
+    setStorageCustom(false);
+    setUsernameStatus("");
+    setUsernameMsg("");
+  }
 
   function validateStep(s: number): boolean {
     setError("");
     if (s === 0) {
       if (!username.trim()) { setError("Username is required."); return false; }
+      if (usernameStatus === "checking") { setError("Still checking username availability..."); return false; }
       if (usernameStatus === "taken") { setError("Username is already taken."); return false; }
       if (usernameStatus === "invalid") { setError(usernameMsg || "Invalid username."); return false; }
       if (password.length < 8) { setError("Password must be at least 8 characters."); return false; }
@@ -174,8 +194,9 @@ export default function AuthPage() {
     setLoading(true); setError("");
     try {
       const data = await apiRegister({ username: username.trim(), password, confirm_password: confirmPassword, full_name: fullName.trim(), nickname: nickname.trim(), bio: bio.trim() || undefined, vault_password: vaultPassword, storage_root: effectiveStorageRoot.trim() });
-      login(data.user!);
-      if (ghUsername.trim() && ghToken.trim()) { try { await apiConnectGitHub(ghUsername.trim(), ghToken); } catch {} }
+      if (!data.user) { setError("Registration succeeded but user data is missing. Please try logging in."); setLoading(false); return; }
+      login(data.user);
+      if (ghUsername.trim() && ghToken.trim()) { try { await apiConnectGitHub(ghUsername.trim(), ghToken.trim()); } catch { setError("GitHub connection failed. You can connect later from settings."); } }
       router.replace("/app");
     } catch (err) { setError(err instanceof Error ? err.message : "Registration failed."); } finally { setLoading(false); }
   }
@@ -184,7 +205,8 @@ export default function AuthPage() {
     e.preventDefault(); setLoading(true); setError("");
     try {
       const data = await apiLogin({ username: username.trim(), password });
-      login(data.user!);
+      if (!data.user) { setError("Login succeeded but user data is missing. Please try again."); setLoading(false); return; }
+      login(data.user);
       router.replace("/app");
     } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong."); } finally { setLoading(false); }
   }
@@ -260,7 +282,7 @@ export default function AuthPage() {
             {/* Wizard progress */}
             {isRegister && (
               <div className="mb-5">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-3" role="tablist">
                   {WIZARD_STEPS.map((s, i) => {
                     const Icon = stepIcons[i];
                     const isDone = i < step;
@@ -268,6 +290,8 @@ export default function AuthPage() {
                     return (
                       <div key={s} className="flex items-center">
                         <motion.div
+                          role="tab"
+                          aria-selected={isActive}
                           className={cn(
                             "w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300",
                             isDone
@@ -282,7 +306,7 @@ export default function AuthPage() {
                           {isDone ? <Check className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
                         </motion.div>
                         {i < WIZARD_STEPS.length - 1 && (
-                          <div className="w-8 sm:w-12 h-px mx-1">
+                          <div className="w-8 sm:w-12 h-px mx-1 relative">
                             <motion.div
                               className="h-full bg-accent/30"
                               initial={{ scaleX: 0 }}
@@ -322,7 +346,7 @@ export default function AuthPage() {
                 <Input label="Username" placeholder="operator-01" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required />
                 <Input label="Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
                 <ErrorShake key={shakeKey}>
-                  {error && <p className="text-sm text-error bg-error/10 rounded-xl px-3 py-2 border border-error/10">{error}</p>}
+                  {error && <p role="alert" className="text-sm text-error bg-error/10 rounded-xl px-3 py-2 border border-error/10">{error}</p>}
                 </ErrorShake>
                 <Button type="submit" loading={loading} className="w-full mt-1">Sign in</Button>
               </form>
@@ -427,8 +451,8 @@ export default function AuthPage() {
                       </div>
 
                       <div className="grid gap-1.5">
-                        <label className="text-xs font-medium text-text-secondary">Bio <span className="text-text-muted">(optional)</span></label>
-                        <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about yourself..." rows={2} className="w-full rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 resize-none focus:border-accent/40 focus:ring-2 focus:ring-accent/10 focus:shadow-glow" />
+                        <label htmlFor="bio" className="text-xs font-medium text-text-secondary">Bio <span className="text-text-muted">(optional)</span></label>
+                        <textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about yourself..." rows={2} className="w-full rounded-xl bg-bg-surface border border-border-subtle px-3.5 py-2.5 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 resize-none focus:border-accent/40 focus:ring-2 focus:ring-accent/10 focus:shadow-glow" />
                       </div>
                     </div>
                   )}
@@ -490,7 +514,7 @@ export default function AuthPage() {
             {/* Error display for register */}
             {isRegister && error && (
               <ErrorShake key={shakeKey}>
-                <p className="text-sm text-error bg-error/10 rounded-xl px-3 py-2 border border-error/10 mt-4">{error}</p>
+                <p role="alert" className="text-sm text-error bg-error/10 rounded-xl px-3 py-2 border border-error/10 mt-4">{error}</p>
               </ErrorShake>
             )}
 
