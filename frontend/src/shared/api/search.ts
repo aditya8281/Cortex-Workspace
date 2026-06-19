@@ -1,15 +1,47 @@
 /**
- * Search API client (placeholder for Phase 3).
+ * Search API client — unified code + memory search.
  */
 
 import { api } from "./client";
+import type { SearchResponse, GraphData, NodeContext } from "../types";
 
 export const searchApi = {
-  unified: (query: string, params?: { repo_id?: number; node_type?: string; max_results?: number }): Promise<any[]> => {
+  /** Unified search across code and memory. */
+  unified: (
+    query: string,
+    params?: {
+      repo_id?: number;
+      node_type?: string;
+      language?: string;
+      max_results?: number;
+    },
+  ): Promise<SearchResponse> => {
     const searchParams = new URLSearchParams({ q: query });
     if (params?.repo_id) searchParams.set("repo_id", String(params.repo_id));
     if (params?.node_type) searchParams.set("node_type", params.node_type);
+    if (params?.language) searchParams.set("language", params.language);
     if (params?.max_results) searchParams.set("max_results", String(params.max_results));
-    return api.get(`/api/v1/search/?${searchParams.toString()}`);
+    return api.get(`/api/v1/search?${searchParams.toString()}`);
+  },
+
+  /** POST variant for complex queries. */
+  unifiedPost: (body: {
+    query: string;
+    repo_id?: number;
+    node_type?: string;
+    language?: string;
+    max_results?: number;
+  }): Promise<SearchResponse> => {
+    return api.post("/api/v1/search", body);
+  },
+
+  /** Get graph for a repository. */
+  getGraph: (repoId: number): Promise<GraphData> => {
+    return api.get(`/api/v1/repos/${repoId}/graph`);
+  },
+
+  /** Get context for a specific graph node. */
+  getNodeContext: (repoId: number, nodeId: number): Promise<NodeContext> => {
+    return api.get(`/api/v1/repos/${repoId}/graph/node/${nodeId}`);
   },
 };

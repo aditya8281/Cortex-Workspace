@@ -1,4 +1,4 @@
-"""Background tasks for memory operations."""
+"""Background tasks for memory and indexing operations."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import logging
 from typing import Any
 
 from backend.app.db.session import SessionLocal
+from backend.app.services.graph_builder import GraphBuilder
+from backend.app.services.incremental_indexer import IncrementalIndexer
 from backend.app.services.memory_manager import MemoryManager
 from backend.app.services.repo_scanner import RepoScanner
 
@@ -70,5 +72,45 @@ async def bulk_embed_task(ctx: dict, entry_ids: list[int]) -> dict[str, Any]:
             "success": success_count,
             "errors": error_count,
         }
+    finally:
+        db.close()
+
+
+async def index_repo_task(ctx: dict, repo_id: int, force: bool = False) -> dict[str, Any]:
+    """Background task to incrementally index a repository."""
+    db = SessionLocal()
+    try:
+        indexer = IncrementalIndexer(db)
+        result = indexer.index_repo(repo_id, force=force)
+        return {
+            "status": "success",
+            "repo_id": result.repo_id,
+            "files_scanned": result.files_scanned,
+            "files_indexed": result.files_indexed,
+            "files_skipped": result.files_skipped,
+            "chunks_created": result.chunks_created,
+        }
+    except Exception as e:
+        logger.error("Failed to index repo %d: %s", repo_id, e)
+        return {"status": "error", "message": str(e)}
+    finally:
+        db.close()
+
+
+async def build_graph_task(ctx: dict, repo_id: int) -> dict[str, Any]:
+    """Background task to build knowledge graph for a repository."""
+    db = SessionLocal()
+    try:
+        builder = GraphBuilder(db)
+        result = builder.build_graph(repo_id)
+        return {
+            "status": "success",
+            "repo_id": result.repo_id,
+            "nodes_created": result.nodes_created,
+            "edges_created": result.edges_created,
+        }
+    except Exception as e:
+        logger.error("Failed to build graph for repo %d: %s", repo_id, e)
+        return {"status": "error", "message": str(e)}
     finally:
         db.close()

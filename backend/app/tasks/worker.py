@@ -7,7 +7,13 @@ from arq.connections import RedisSettings
 from arq.cron import cron
 
 from backend.app.core.config import settings
-from backend.app.tasks.memory_tasks import bulk_embed_task, embed_memory_task, scan_repo_task
+from backend.app.tasks.memory_tasks import (
+    build_graph_task,
+    bulk_embed_task,
+    embed_memory_task,
+    index_repo_task,
+    scan_repo_task,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +37,7 @@ async def health_check_task(ctx: dict) -> str:
 
 
 class WorkerSettings:
-    functions = [sample_task, health_check_task, embed_memory_task, scan_repo_task, bulk_embed_task]
+    functions = [sample_task, health_check_task, embed_memory_task, scan_repo_task, bulk_embed_task, index_repo_task, build_graph_task]
     redis_settings = REDIS_SETTINGS
     keep_result = 3600
     keep_result_forever = False

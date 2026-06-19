@@ -5,6 +5,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+# Project root — the directory containing alembic.ini and backend/
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 
 class StorageResolver:
     """Resolves storage paths for web and Tauri modes."""

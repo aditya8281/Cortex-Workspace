@@ -4,5 +4,6 @@
 
 export { api } from "./client";
 export { memoryApi } from "./memory";
-export { vaultApi } from "./vault";
+export { repoApi } from "./repo";
 export { searchApi } from "./search";
+export { vaultApi } from "./vault";

@@ -184,3 +184,109 @@ export interface NotificationListResponse {
   total: number;
   unread_count: number;
 }
+
+// ── Search ─────────────────────────────────────────────────────
+
+export interface SearchResult {
+  type: "code" | "memory";
+  score: number;
+  chunk_id?: number;
+  entry_id?: number;
+  file_path?: string;
+  name?: string;
+  node_type?: string;
+  language?: string | null;
+  content_preview?: string;
+  start_line?: number;
+  end_line?: number;
+  context?: {
+    calls?: string[];
+    called_by?: string[];
+    imports?: string[];
+    inherits?: string[];
+    contains?: string[];
+  };
+  entry?: MemoryEntry | null;
+}
+
+export interface SearchResponse {
+  query: string;
+  total: number;
+  results: SearchResult[];
+}
+
+// ── Repository ────────────────────────────────────────────────
+
+export interface Repository {
+  id: number;
+  user_id: number | null;
+  repo_path: string;
+  repo_name: string;
+  primary_language: string | null;
+  total_files: number;
+  total_chunks: number;
+  last_indexed_at: string | null;
+  status: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface RepoListResponse {
+  repos: Repository[];
+}
+
+export interface RepoStatus {
+  repo_id: number;
+  status: string;
+  total_files: number;
+  total_chunks: number;
+  indexed_files: number;
+  indexed: number;
+  pending: number;
+  errors: number;
+  last_indexed_at: string | null;
+}
+
+export interface IndexResult {
+  status: string;
+  files_scanned: number;
+  files_indexed: number;
+  files_skipped: number;
+  chunks_created: number;
+}
+
+// ── Graph ─────────────────────────────────────────────────────
+
+export interface GraphNode {
+  id: number;
+  name: string;
+  node_type: string;
+  file_path: string;
+  language: string | null;
+  qualified_name?: string | null;
+  start_line?: number | null;
+  end_line?: number | null;
+}
+
+export interface GraphEdge {
+  id: number;
+  source_id: number;
+  target_id: number;
+  edge_type: string;
+  weight: number;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface NodeContext {
+  node: GraphNode;
+  calls: { id: number; name: string; file_path: string }[];
+  called_by: { id: number; name: string; file_path: string }[];
+  imports: { id: number; name: string; file_path: string }[];
+  imported_by: { id: number; name: string; file_path: string }[];
+  inherits: { id: number; name: string; file_path: string }[];
+  contains: { id: number; name: string; node_type: string }[];
+}

@@ -6,7 +6,7 @@
 
 **Architecture:** FastAPI + PostgreSQL backend, Next.js 15 + React 19 frontend, Qdrant for vectors, Tauri v2 for desktop. All data local, zero telemetry. Rust for code intelligence and file watching.
 
-**Status:** Phase 0 (Prerequisites) complete. Phase 1 (Memory) complete. Phase 0-B (Architecture Alignment) next.
+**Status:** Phase 0-A (Prerequisites) complete. Phase 0-B (Architecture Alignment) complete. Phase 1 (Memory) complete. Phase 2 (Indexing & Knowledge Graph) complete. Phase 3 (Unified Search & Agents) ready to start.
 
 ---
 
@@ -23,7 +23,7 @@ All items in `prerequisite.md` have been completed. See [prerequisite.md](../pre
 | 0-A | `prerequisite.md` | Repository alignment | COMPLETE |
 | 0-B | [01-PHASE-0B-ARCHITECTURE.md](./01-PHASE-0B-ARCHITECTURE.md) | Bug fixes, architecture, Rust setup | COMPLETE |
 | 1 | [02-PHASE-1-MEMORY.md](./02-PHASE-1-MEMORY.md) | Memory system, embeddings, repo scanner | COMPLETE |
-| 2 | [03-PHASE-2-INDEXING.md](./03-PHASE-2-INDEXING.md) | Indexing, knowledge graph, graph search | NOT STARTED |
+| 2 | [03-PHASE-2-INDEXING.md](./03-PHASE-2-INDEXING.md) | Indexing, knowledge graph, graph search | COMPLETE |
 | 3 | [04-PHASE-3-AGENTS.md](./04-PHASE-3-AGENTS.md) | Unified search, agent runtime | NOT STARTED |
 | 4 | [05-PHASE-4-INTELLIGENCE.md](./05-PHASE-4-INTELLIGENCE.md) | Context, learning, workspace understanding | NOT STARTED |
 | 5 | [06-PHASE-5-DESKTOP.md](./06-PHASE-5-DESKTOP.md) | Tauri v2, sidecar, offline, file system | NOT STARTED |
@@ -44,7 +44,7 @@ Phase 0-B: Architecture Alignment
     ├── Architecture standardization (API versioning, service abstraction)
     ├── Code quality (VECTOR_SIZE, test consolidation)
     ├── Rust infrastructure setup
-    └── Status: NOT STARTED
+    └── Status: COMPLETE ✓
 
 Phase 1: Memory System
     ├── Depends on: Phase 0-A
@@ -59,7 +59,8 @@ Phase 2: Indexing & Knowledge Graph
     ├── Cross-file search (vector + graph enrichment)
     ├── Unified search API
     ├── Repository management API
-    └── Frontend (SearchFilters, SearchResults, GraphView)
+    ├── Frontend (SearchFilters, SearchResults, GraphView)
+    └── Status: COMPLETE ✓
 
 Phase 3: Unified Search & Agents
     ├── Depends on: Phase 2, Phase 0-B

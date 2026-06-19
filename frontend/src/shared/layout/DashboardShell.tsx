@@ -26,6 +26,7 @@ interface DashboardShellProps {
 
 const navItems = [
   { label: "Dashboard", href: "/app", icon: LayoutDashboard },
+  { label: "Search", href: "/search", icon: Search },
   { label: "Vault", href: "/vault", icon: Lock },
   { label: "Memory", href: "/memory", icon: Brain },
   { label: "Profile", href: "/profile", icon: User },
