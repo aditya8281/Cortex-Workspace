@@ -1,13 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { Lock, User, Brain, Shield, Calendar, Hash } from "lucide-react";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
 import { apiVaultStatus } from "../../src/shared/auth/cortexApi";
 import DashboardShell from "../../src/shared/layout/DashboardShell";
+import PageTransition from "../../src/shared/ui/PageTransition";
+import StaggerChildren from "../../src/shared/ui/StaggerChildren";
 import Card from "../../src/shared/ui/Card";
-import Button from "../../src/shared/ui/Button";
+import Badge from "../../src/shared/ui/Badge";
 import type { VaultStatus } from "../../src/shared/types";
+
+function AnimatedCounter({ value, duration = 1.2 }: { value: number; duration?: number }) {
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, (v) => Math.round(v));
+  const [display, setDisplay] = useState(0);
+
+  useEffect(() => {
+    const controls = animate(count, value, {
+      duration,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    });
+    const unsubscribe = rounded.on("change", (v) => setDisplay(v));
+    return () => {
+      controls.stop();
+      unsubscribe();
+    };
+  }, [value, count, rounded, duration]);
+
+  return <span>{display}</span>;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -25,130 +49,220 @@ export default function DashboardPage() {
 
   if (loading || !user) return null;
 
-  const initials = (user.full_name || user.username || "?").charAt(0).toUpperCase();
+  const initials = (user.full_name || user.username || "?")
+    .charAt(0)
+    .toUpperCase();
+
+  const memberCount = 1;
+  const entryCount = 0;
 
   return (
     <DashboardShell>
-      <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-        <div className="appear-stagger grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <p className="text-xs text-text-muted mb-1">Role</p>
-            <p className="text-lg font-semibold text-text capitalize">{user.role}</p>
-          </div>
-          <div className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <p className="text-xs text-text-muted mb-1">Joined</p>
-            <p className="text-lg font-semibold text-text">{user.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}</p>
-          </div>
-          <div className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <p className="text-xs text-text-muted mb-1">User ID</p>
-            <p className="text-lg font-semibold text-text font-mono">#{user.id}</p>
-          </div>
-          <div className="stat-card p-4 rounded-lg bg-bg-card border border-border">
-            <p className="text-xs text-text-muted mb-1">Vault</p>
-            <p className="text-lg font-semibold text-text">{vaultStatus ? (vaultStatus.locked ? "Locked" : "Active") : "..."}</p>
-          </div>
-        </div>
-
-        <div className="page-header flex items-center gap-4">
-          <div className="h-12 w-12 rounded-full bg-bg-elevated border border-border flex items-center justify-center text-lg font-semibold text-accent overflow-hidden shrink-0">
+      <PageTransition className="max-w-5xl mx-auto space-y-8">
+        {/* ── Welcome Section ──────────────────────────────────── */}
+        <div className="flex items-center gap-5">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="relative h-14 w-14 rounded-full bg-bg-surface border border-border-subtle flex items-center justify-center text-lg font-semibold text-accent overflow-hidden shrink-0 cursor-default"
+          >
             {user.profile_photo ? (
-              <img src={`/api/v1/me/profile/photo/${user.id}`} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <img
+                src={`/api/v1/me/profile/photo/${user.id}`}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
             ) : (
               initials
             )}
-          </div>
+            {/* Glow ring on hover */}
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              initial={{ boxShadow: "0 0 0 0px rgba(6,182,212,0)" }}
+              whileHover={{
+                boxShadow: "0 0 0 3px rgba(6,182,212,0.3), 0 0 20px rgba(6,182,212,0.15)",
+              }}
+              transition={{ duration: 0.3 }}
+            />
+          </motion.div>
           <div>
-            <h1 className="text-xl font-semibold text-text">Welcome back, {user.full_name?.split(" ")[0] || user.username}</h1>
-            <p className="text-sm text-text-muted">{user.role === "admin" ? "Admin" : "Member"} · @{user.username}</p>
+            <h1 className="text-2xl font-semibold text-text font-display tracking-tight">
+              Welcome back, {user.full_name?.split(" ")[0] || user.username}
+            </h1>
+            <p className="text-sm text-text-secondary mt-0.5">
+              {user.role === "admin" ? (
+                <span className="flex items-center gap-1.5">
+                  <Shield className="h-3.5 w-3.5 text-accent" />
+                  Admin
+                </span>
+              ) : (
+                "Member"
+              )}{" "}
+              · @{user.username}
+            </p>
           </div>
         </div>
 
-        <div className="appear-stagger grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card hover className="interactive-card p-5" onClick={() => router.push("/vault")}>
+        {/* ── Stat Cards ───────────────────────────────────────── */}
+        <StaggerChildren className="grid grid-cols-2 sm:grid-cols-4 gap-4" staggerDelay={0.06}>
+          <Card className="p-4 group">
             <div className="flex items-center justify-between mb-3">
-              <div className="h-9 w-9 rounded-md bg-accent-faint border border-accent/10 flex items-center justify-center">
-                <svg className="h-4.5 w-4.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                </svg>
+              <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
+                <Shield className="h-4 w-4 text-accent" />
               </div>
-              {vaultStatus && (
-                <span className={`h-2 w-2 rounded-full ${vaultStatus.locked ? "bg-error" : "bg-success"}`} />
-              )}
+              <Badge variant="accent">Role</Badge>
             </div>
-            <h3 className="text-sm font-medium text-text mb-1">Secure Vault</h3>
-            <p className="text-xs text-text-muted">
-              {vaultStatus ? (vaultStatus.locked ? "Locked · Click to unlock" : "Unlocked · Active") : "Loading..."}
+            <p className="text-2xl font-semibold text-text font-display capitalize">
+              {user.role}
+            </p>
+            <p className="text-xs text-text-muted mt-1">Account type</p>
+          </Card>
+
+          <Card className="p-4 group">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-accent" />
+              </div>
+              <Badge variant="default">Joined</Badge>
+            </div>
+            <p className="text-2xl font-semibold text-text font-display">
+              {user.created_at
+                ? new Date(user.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "—"}
+            </p>
+            <p className="text-xs text-text-muted mt-1">
+              {user.created_at ? new Date(user.created_at).getFullYear() : "Year"}
             </p>
           </Card>
 
-          <Card hover className="interactive-card p-5" onClick={() => router.push("/profile")}>
+          <Card className="p-4 group">
             <div className="flex items-center justify-between mb-3">
-              <div className="h-9 w-9 rounded-md bg-accent-faint border border-accent/10 flex items-center justify-center">
-                <svg className="h-4.5 w-4.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                </svg>
+              <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
+                <Hash className="h-4 w-4 text-accent" />
               </div>
+              <Badge variant="default">ID</Badge>
             </div>
-            <h3 className="text-sm font-medium text-text mb-1">Profile</h3>
-            <p className="text-xs text-text-muted">Manage your account settings</p>
+            <p className="text-2xl font-semibold text-text font-display font-mono">
+              <AnimatedCounter value={user.id} />
+            </p>
+            <p className="text-xs text-text-muted mt-1">User identifier</p>
           </Card>
 
-          <Card hover className="interactive-card p-5" onClick={() => router.push("/memory")}>
+          <Card className="p-4 group">
             <div className="flex items-center justify-between mb-3">
-              <div className="h-9 w-9 rounded-md bg-accent-faint border border-accent/10 flex items-center justify-center">
-                <svg className="h-4.5 w-4.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5" />
-                </svg>
+              <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
+                <Lock className="h-4 w-4 text-accent" />
               </div>
+              {vaultStatus && (
+                <motion.span
+                  className={`h-2.5 w-2.5 rounded-full ${vaultStatus.locked ? "bg-error" : "bg-success"}`}
+                  animate={{
+                    boxShadow: vaultStatus.locked
+                      ? ["0 0 4px rgba(239,68,68,0.4)", "0 0 10px rgba(239,68,68,0.6)", "0 0 4px rgba(239,68,68,0.4)"]
+                      : ["0 0 4px rgba(34,197,94,0.4)", "0 0 10px rgba(34,197,94,0.6)", "0 0 4px rgba(34,197,94,0.4)"],
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                />
+              )}
             </div>
-            <h3 className="text-sm font-medium text-text mb-1">Memory</h3>
-            <p className="text-xs text-text-muted">Knowledge base and entries</p>
+            <p className="text-2xl font-semibold text-text font-display">
+              {vaultStatus ? (vaultStatus.locked ? "Locked" : "Active") : "—"}
+            </p>
+            <p className="text-xs text-text-muted mt-1">Vault status</p>
           </Card>
+        </StaggerChildren>
 
-          {user.role === "admin" && (
-            <Card hover className="interactive-card p-5" onClick={() => router.push("/admin")}>
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-9 w-9 rounded-md bg-accent-faint border border-accent/10 flex items-center justify-center">
-                  <svg className="h-4.5 w-4.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                  </svg>
+        {/* ── Quick Actions ────────────────────────────────────── */}
+        <div>
+          <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-text-muted mb-4">
+            Quick Actions
+          </h2>
+          <StaggerChildren className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" staggerDelay={0.06}>
+            <Card
+              hover
+              className="p-5 cursor-pointer"
+              onClick={() => router.push("/vault")}
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center shrink-0">
+                  <Lock className="h-5 w-5 text-accent" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-medium text-text">Vault</h3>
+                  <p className="text-xs text-text-muted truncate">
+                    {vaultStatus
+                      ? vaultStatus.locked
+                        ? "Locked · Click to unlock"
+                        : "Unlocked · Active"
+                      : "Loading..."}
+                  </p>
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-text mb-1">Admin Panel</h3>
-              <p className="text-xs text-text-muted">Manage users and system</p>
             </Card>
-          )}
-        </div>
 
-        <Card className="p-5">
-          <h2 className="text-sm font-medium text-text mb-3">Account Details</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <span className="text-xs text-text-muted font-bold uppercase tracking-wider block mb-1">User ID</span>
-              <span className="text-sm text-text font-mono">#{user.id}</span>
-            </div>
-            <div>
-              <span className="text-xs text-text-muted font-bold uppercase tracking-wider block mb-1">Role</span>
-              <span className="text-sm text-text capitalize">{user.role}</span>
-            </div>
-            <div>
-              <span className="text-xs text-text-muted font-bold uppercase tracking-wider block mb-1">Created</span>
-              <span className="text-sm text-text">{user.created_at ? new Date(user.created_at).toLocaleDateString() : "—"}</span>
-            </div>
-            <div>
-              <span className="text-xs text-text-muted font-bold uppercase tracking-wider block mb-1">Storage</span>
-              <span className="text-sm text-text truncate block" title={user.storage_root || ""}>{user.storage_root ? user.storage_root.split("/").pop() : "—"}</span>
-            </div>
-          </div>
-        </Card>
+            <Card
+              hover
+              className="p-5 cursor-pointer"
+              onClick={() => router.push("/memory")}
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center shrink-0">
+                  <Brain className="h-5 w-5 text-accent" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-medium text-text">Memory</h3>
+                  <p className="text-xs text-text-muted truncate">
+                    Knowledge base and entries
+                  </p>
+                </div>
+              </div>
+            </Card>
 
-        <div className="flex gap-3 flex-wrap">
-          <Button variant="secondary" size="sm" onClick={() => router.push("/vault")}>Open Vault</Button>
-          <Button variant="secondary" size="sm" onClick={() => router.push("/memory")}>Memory</Button>
-          <Button variant="secondary" size="sm" onClick={() => router.push("/profile")}>Edit Profile</Button>
-          <Button variant="ghost" size="sm" onClick={() => router.push("/settings")}>Settings</Button>
+            <Card
+              hover
+              className="p-5 cursor-pointer"
+              onClick={() => router.push("/profile")}
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center shrink-0">
+                  <User className="h-5 w-5 text-accent" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-medium text-text">Profile</h3>
+                  <p className="text-xs text-text-muted truncate">
+                    Manage your account settings
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {user.role === "admin" && (
+              <Card
+                hover
+                className="p-5 cursor-pointer"
+                onClick={() => router.push("/admin")}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center shrink-0">
+                    <Shield className="h-5 w-5 text-accent" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-medium text-text">Admin</h3>
+                    <p className="text-xs text-text-muted truncate">
+                      Manage users and system
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </StaggerChildren>
         </div>
-      </div>
+      </PageTransition>
     </DashboardShell>
   );
 }
