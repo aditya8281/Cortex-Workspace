@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, useInView } from "framer-motion";
 import { ArrowRight, Shield, Brain, Cpu, Lock } from "lucide-react";
 import GlowOrb from "../src/shared/ui/GlowOrb";
+import BrainBackground from "../src/shared/ui/BrainBackground";
 import AuthRedirect from "../src/shared/ui/AuthRedirect";
 
 const PARTICLE_COUNT = 40;
@@ -135,6 +136,7 @@ function FeatureCard({ feature, index }: { feature: typeof FEATURES[0]; index: n
 export default function RootPage() {
   return (
     <div className="min-h-screen flex flex-col bg-bg">
+      <BrainBackground intensity="high" />
       <AuthRedirect />
 
       <header className="glass-panel h-14 flex items-center justify-between px-6 shrink-0 sticky top-0 z-20">

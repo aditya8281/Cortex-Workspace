@@ -11,6 +11,7 @@ import PageTransition from "../../src/shared/ui/PageTransition";
 import StaggerChildren from "../../src/shared/ui/StaggerChildren";
 import Card from "../../src/shared/ui/Card";
 import type { VaultStatus } from "../../src/shared/types";
+import BrainBackground from "../../src/shared/ui/BrainBackground";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell>
+      <BrainBackground intensity="low" />
       <PageTransition className="max-w-5xl mx-auto space-y-8">
         {/* ── Hero Welcome ──────────────────────────────────── */}
         <div className="flex items-center gap-5">
