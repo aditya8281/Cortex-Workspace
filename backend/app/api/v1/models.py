@@ -91,15 +91,19 @@ async def llm_metrics(
 
 def _detect_hardware() -> dict:
     """Detect system hardware (sync — called from sync endpoint)."""
-    ram_gb = psutil.virtual_memory().total / (1024**3)
+    ram = psutil.virtual_memory()
+    ram_gb = ram.total / (1024**3)
+    ram_used_gb = ram.used / (1024**3)
+    ram_percent = ram.percent
     cpu_count = psutil.cpu_count() or 1
+    cpu_percent = psutil.cpu_percent(interval=0.1)
 
-    gpu_info: dict = {"available": False, "name": None, "vram_gb": 0}
+    gpu_info: dict = {"available": False, "name": None, "vram_gb": 0, "vram_used_gb": 0, "gpu_percent": 0}
     try:
         import subprocess
 
         result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
+            ["nvidia-smi", "--query-gpu=name,memory.total,memory.used,utilization.gpu", "--format=csv,noheader,nounits"],
             capture_output=True,
             text=True,
             timeout=5,
@@ -110,12 +114,17 @@ def _detect_hardware() -> dict:
                 "available": True,
                 "name": parts[0],
                 "vram_gb": float(parts[1]) / 1024,
+                "vram_used_gb": float(parts[2]) / 1024,
+                "gpu_percent": float(parts[3]),
             }
     except Exception:
         pass
 
     return {
         "ram_gb": round(ram_gb, 1),
+        "ram_used_gb": round(ram_used_gb, 1),
+        "ram_percent": ram_percent,
         "cpu_count": cpu_count,
+        "cpu_percent": cpu_percent,
         "gpu": gpu_info,
     }

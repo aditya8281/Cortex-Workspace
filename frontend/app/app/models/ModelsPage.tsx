@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import DashboardShell from "@/shared/layout/DashboardShell";
 import Card from "@/shared/ui/Card";
+import Badge from "@/shared/ui/Badge";
 import { MetricRing } from "@/shared/ui/MetricRing";
 import { TabGroup, TabPanel } from "@/shared/ui/TabGroup";
 import NeuralNetwork from "@/shared/ui/NeuralNetwork";
@@ -45,9 +46,7 @@ export default function ModelsPage() {
 
   if (loading || !user) return null;
 
-  const ramUsedPercent = hardware
-    ? Math.round((hardware.ram_gb * 0.6) / hardware.ram_gb * 100)
-    : 0;
+  const ramUsedPercent = hardware ? hardware.ram_percent : 0;
 
   return (
     <DashboardShell>
@@ -142,14 +141,59 @@ export default function ModelsPage() {
                 </p>
               </Card>
             ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-text-secondary">
-                    Based on your hardware ({hardware?.ram_gb ?? "?"}GB RAM
-                    {hardware?.gpu.available ? `, ${hardware.gpu.name}` : ""})
-                  </p>
+              <div className="space-y-6">
+                <p className="text-sm text-text-secondary">
+                  Based on your hardware ({hardware?.ram_gb ?? "?"}GB RAM
+                  {hardware?.gpu.available ? `, ${hardware.gpu.name}` : ""})
+                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {recommendedModels.slice(0, 3).map((model, idx) => (
+                    <motion.div
+                      key={model.name}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: idx * 0.1 }}
+                    >
+                      <Card
+                        gradient
+                        className="p-6 h-full flex flex-col relative overflow-hidden"
+                      >
+                        {idx === 0 && (
+                          <div className="absolute top-3 right-3">
+                            <Badge variant="accent">Best Match</Badge>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
+                            <Brain size={24} className="text-accent" />
+                          </div>
+                          <div>
+                            <h3 className="text-base font-semibold text-text">
+                              {model.display_name}
+                            </h3>
+                            <p className="text-xs text-text-muted font-mono">
+                              {model.parameter_count} parameters
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-text-secondary mb-4 flex-1">
+                          {model.description}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {model.capabilities.map((cap) => (
+                            <Badge key={cap} variant={cap === "code" ? "success" : "default"}>
+                              {cap}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-text-muted pt-3 border-t border-border-subtle">
+                          <span>{model.context_length.toLocaleString()} context</span>
+                          <span>{model.hardware_requirements.min_ram_gb}GB RAM min</span>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  ))}
                 </div>
-                <ModelBrowser />
               </div>
             )}
           </TabPanel>

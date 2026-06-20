@@ -380,11 +380,16 @@ export interface ModelInfo {
 
 export interface HardwareInfo {
   ram_gb: number;
+  ram_used_gb: number;
+  ram_percent: number;
   cpu_count: number;
+  cpu_percent: number;
   gpu: {
     available: boolean;
     name: string | null;
     vram_gb: number;
+    vram_used_gb: number;
+    gpu_percent: number;
   };
 }
 
