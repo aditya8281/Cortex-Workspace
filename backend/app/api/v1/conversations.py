@@ -25,6 +25,7 @@ class CreateConversationPayload(BaseModel):
 
 class SendMessagePayload(BaseModel):
     content: str = Field(min_length=1, max_length=10000)
+    model: str | None = None
 
 
 # ── CRUD Endpoints ──────────────────────────────────────────────────
@@ -115,6 +116,8 @@ async def _stream_chat_response(
     conversation_id: int,
     user_content: str,
     db: Session,
+    model: str | None = None,
+    user_id: int | None = None,
 ) -> AsyncGenerator[str, None]:
     """Generator that yields SSE events for the chat response."""
     from backend.app.services.llm.manager import llm_manager
@@ -126,6 +129,13 @@ async def _stream_chat_response(
     user_tokens = estimate_tokens(user_content)
     svc.add_message(conversation_id, "user", user_content, tokens=user_tokens)
 
+    # Update model_used on conversation
+    if model and user_id:
+        conv = svc.get(conversation_id, user_id)
+        if conv:
+            conv.model_used = model
+            db.commit()
+
     # Build context from conversation history (token-budget aware)
     history = svc.get_context_messages(conversation_id)
     messages = [LLMMessage(role=m.role, content=m.content) for m in history]
@@ -134,7 +144,7 @@ async def _stream_chat_response(
     response_tokens = 0
 
     try:
-        async for chunk in llm_manager.chat_stream(messages, max_tokens=2048, temperature=0.7):
+        async for chunk in llm_manager.chat_stream(messages, model=model, max_tokens=2048, temperature=0.7):
             full_response += chunk
             response_tokens = estimate_tokens(full_response)
             yield f"data: {json.dumps({'type': 'chunk', 'content': chunk, 'tokens': response_tokens})}\n\n"
@@ -170,7 +180,7 @@ async def send_message(
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     return StreamingResponse(
-        _stream_chat_response(conversation_id, payload.content, db),
+        _stream_chat_response(conversation_id, payload.content, db, model=payload.model, user_id=current_user.id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

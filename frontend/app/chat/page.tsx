@@ -33,6 +33,8 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
   const messagesEnd = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -60,6 +62,12 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
+
+  useEffect(() => {
+    api.get<{ models: Array<{ id: string; name: string }> }>("/api/v1/models").then((data) => {
+      setAvailableModels(data.models.map((m) => m.id));
+    }).catch(() => {});
+  }, []);
 
   const createConversation = async () => {
     const data = await api.post<{ id: number }>("/api/v1/conversations", {
@@ -96,7 +104,7 @@ export default function ChatPage() {
       const res = await fetch(`/api/v1/conversations/${activeId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: userMsg.content }),
+        body: JSON.stringify({ content: userMsg.content, model: selectedModel || undefined }),
         signal: abortRef.current?.signal,
       });
 
@@ -156,7 +164,7 @@ export default function ChatPage() {
       setSending(false);
       setStreamingContent("");
     }
-  }, [input, activeId, sending]);
+  }, [input, activeId, sending, selectedModel]);
 
   const deleteConversation = async (id: number) => {
     await api.delete(`/api/v1/conversations/${id}`);
@@ -270,6 +278,20 @@ export default function ChatPage() {
 
           {/* Input */}
           <div className="p-4 border-t border-border-subtle">
+            {availableModels.length > 0 && (
+              <div className="flex gap-2 max-w-3xl mx-auto mb-2">
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="text-xs bg-bg-surface border border-border-subtle rounded-lg px-3 py-1.5 text-text-secondary focus:outline-none focus:border-accent transition-colors"
+                >
+                  <option value="">Default model</option>
+                  {availableModels.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex gap-2 max-w-3xl mx-auto">
               <input
                 value={input}
