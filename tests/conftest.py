@@ -105,6 +105,12 @@ def fixture_client():
         yield c
 
 
+@pytest.fixture()
+def db_session(_db_session):
+    """Alias for _db_session for clarity in new tests."""
+    return _db_session
+
+
 @pytest.fixture(autouse=True)
 def _mock_external_services():
     """Mock vector DB and embedding service for all integration tests."""
