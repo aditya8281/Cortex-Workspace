@@ -7,7 +7,6 @@ import type { IndexingConfig, IndexingPreview } from "@/shared/types";
 import Card from "@/shared/ui/Card";
 import Input from "@/shared/ui/Input";
 import Button from "@/shared/ui/Button";
-import { cn } from "@/lib/utils";
 
 export default function IndexingConfigForm() {
   const [config, setConfig] = useState<IndexingConfig | null>(null);

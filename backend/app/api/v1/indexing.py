@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.core.db import get_current_user, get_db
-from backend.app.models.user import User
 from backend.app.models.indexing_config import IndexingConfig
+from backend.app.models.user import User
 from backend.app.services.indexing_rules import IndexingRules
 
 router = APIRouter()
