@@ -26,6 +26,7 @@ import { memoryApi } from "@/shared/api";
 import { agentApi } from "@/shared/api";
 import Link from "next/link";
 import type { SystemMetrics, SystemLog } from "@/shared/types";
+import SyncStatus from "@/shared/components/SyncStatus";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -133,6 +134,7 @@ export default function DashboardPage() {
                 </span>
                 <span className="text-text-muted text-sm">@{user.username}</span>
               </div>
+              <SyncStatus />
             </div>
           </div>
 

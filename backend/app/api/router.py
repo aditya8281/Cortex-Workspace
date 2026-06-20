@@ -10,6 +10,7 @@ from backend.app.api.v1.notifications import router as notifications_router
 from backend.app.api.v1.profile import router as profile_router
 from backend.app.api.v1.repository import router as repository_router
 from backend.app.api.v1.search import router as search_router
+from backend.app.api.v1.sync import router as sync_router
 from backend.app.api.v1.system import router as system_router
 from backend.app.api.v1.users import router as users_router
 from backend.app.api.v1.vault import router as vault_router
@@ -41,3 +42,5 @@ api_router.include_router(agents_router, tags=["Agents"])
 api_router.include_router(models_router, tags=["Models"])
 
 api_router.include_router(indexing_router, tags=["Indexing"])
+
+api_router.include_router(sync_router, tags=["Sync"])
