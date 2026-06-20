@@ -75,10 +75,12 @@ async def lifespan(app: FastAPI):
 
     from backend.app.services.file_watcher import file_watcher
     await file_watcher.start()
+    logger.info("File watcher started")
 
     yield
 
     await file_watcher.stop()
+    logger.info("File watcher stopped")
 
     try:
         await redis_cache.close()
