@@ -29,6 +29,7 @@ dependencies = [
 
 [project.optional-dependencies]
 embeddings = ["onnxruntime>=1.18.0"]
+llm = ["llama-cpp-python>=0.3.0"]
 
 [dependency-groups]
 dev = [

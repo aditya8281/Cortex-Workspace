@@ -1,6 +1,9 @@
 """Abstract LLM provider interface."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -8,9 +11,7 @@ class LLMProvider(ABC):
     """Abstract interface for LLM providers."""
 
     @abstractmethod
-    async def chat(
-        self, messages: list[dict], tools: list[dict], config: Any
-    ) -> tuple[str, list[dict] | None]:
+    async def chat(self, messages: list[dict], tools: list[dict], config: Any) -> tuple[str, list[dict] | None]:
         """Send messages to LLM, return (text, optional_tool_calls)."""
         ...
 
@@ -18,3 +19,28 @@ class LLMProvider(ABC):
     def list_models(self) -> list[dict[str, Any]]:
         """List available models."""
         ...
+
+
+@dataclass
+class LLMMessage:
+    role: str  # "system", "user", "assistant"
+    content: str
+
+
+@dataclass
+class LLMResponse:
+    content: str
+    model: str
+    tokens_prompt: int = 0
+    tokens_completion: int = 0
+    finish_reason: str = "stop"  # "stop", "length"
+
+
+@dataclass
+class LLMModelInfo:
+    name: str
+    size_bytes: int = 0
+    quantization: str | None = None
+    context_length: int = 4096
+    capabilities: list[str] = field(default_factory=list)
+    description: str = ""

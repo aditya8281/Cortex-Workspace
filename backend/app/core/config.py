@@ -29,9 +29,23 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("VAULT_PATH", "CORTEX_VAULT_PATH"),
     )
 
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:8000", "http://localhost:8080"]
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "http://localhost:8000",
+        "http://localhost:8080",
+    ]
 
     EMBEDDING_DIM: int = 768
+
+    # LLM Settings
+    LLM_PROVIDER: str = "auto"  # "auto", "llama_cpp", "ollama", "none"
+    LLM_MODEL_PATH: str = ""  # Path to GGUF model file
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    LLM_CONTEXT_SIZE: int = 4096
+    LLM_GPU_LAYERS: int = 0
 
     # Rate limiting
     RATE_LIMIT_ENABLED: bool = True

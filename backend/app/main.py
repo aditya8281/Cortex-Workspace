@@ -52,6 +52,18 @@ async def lifespan(app: FastAPI):
 
     await redis_cache.ping()
 
+    # Initialize LLM manager
+    from backend.app.services.llm.manager import llm_manager
+
+    llm_manager.configure(
+        llama_model_path=settings.LLM_MODEL_PATH or None,
+        ollama_url=settings.OLLAMA_BASE_URL if settings.LLM_PROVIDER in ("auto", "ollama") else None,
+        n_ctx=settings.LLM_CONTEXT_SIZE,
+        n_gpu_layers=settings.LLM_GPU_LAYERS,
+    )
+    llm_status = await llm_manager.health_check()
+    logger.info("LLM providers: %s", llm_status)
+
     try:
         from backend.app.db import session as db_session
 
