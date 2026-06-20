@@ -77,6 +77,26 @@ async def lifespan(app: FastAPI):
     await file_watcher.start()
     logger.info("File watcher started")
 
+    # Clean up orphaned agent runs left behind by a previous crash/restart
+    if "pytest" not in sys.modules:
+        from backend.app.db.session import SessionLocal as _SessionLocal
+        from backend.app.models.agent import AgentRun
+
+        db = _SessionLocal()
+        try:
+            orphaned = db.query(AgentRun).filter(AgentRun.status == "running").count()
+            if orphaned > 0:
+                db.query(AgentRun).filter(AgentRun.status == "running").update(
+                    {"status": "failed", "error": "Server restarted during execution"}
+                )
+                db.commit()
+                logger.info("Cleaned up %d orphaned agent run(s)", orphaned)
+        except Exception as e:
+            logger.error("Failed to clean up orphaned agent runs: %s", e)
+            db.rollback()
+        finally:
+            db.close()
+
     yield
 
     await file_watcher.stop()
