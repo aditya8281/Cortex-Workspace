@@ -13,11 +13,30 @@ from backend.app.models.user import User
 router = APIRouter()
 
 
+def _get_top_processes(n: int = 20) -> list[dict]:
+    """Return top N processes by CPU usage."""
+    procs = []
+    for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent", "status"]):
+        try:
+            info = p.info
+            procs.append({
+                "pid": info["pid"],
+                "name": info["name"],
+                "cpu": round(info["cpu_percent"] or 0.0, 1),
+                "memory": round(info["memory_percent"] or 0.0, 1),
+                "status": "running" if info["status"] == psutil.STATUS_RUNNING else "sleeping",
+            })
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    procs.sort(key=lambda x: x["cpu"], reverse=True)
+    return procs[:n]
+
+
 @router.get("/system/metrics")
 async def get_system_metrics(
     current_user: User = Depends(get_current_user),
 ):
-    """Return real-time system metrics: CPU, RAM, GPU, Disk."""
+    """Return real-time system metrics: CPU, RAM, GPU, Disk, Processes."""
     ram = get_ram_info()
     gpu = get_gpu_info()
     disk_path = current_user.storage_root if hasattr(current_user, 'storage_root') and current_user.storage_root else "."
@@ -37,6 +56,7 @@ async def get_system_metrics(
         "disk_total_gb": disk["total_gb"],
         "disk_used_gb": disk["used_gb"],
         "disk_percent": disk["percent"],
+        "processes": _get_top_processes(20),
     }
 
 

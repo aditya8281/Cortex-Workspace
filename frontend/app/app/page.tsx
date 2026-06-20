@@ -22,6 +22,8 @@ import { TabGroup, TabPanel } from "@/shared/ui/TabGroup";
 import NeuralNetwork from "@/shared/ui/NeuralNetwork";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { apiSystemMetrics, apiSystemLogs } from "@/shared/auth/cortexApi";
+import { memoryApi } from "@/shared/api";
+import { agentApi } from "@/shared/api";
 import Link from "next/link";
 import type { SystemMetrics, SystemLog } from "@/shared/types";
 
@@ -29,9 +31,12 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
-  const [processes] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<SystemLog[]>([]);
+  const [memoryCount, setMemoryCount] = useState<number | null>(null);
+  const [agentCount, setAgentCount] = useState<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+
+  const processes = metrics?.processes ?? [];
 
   useEffect(() => {
     if (!loading && !user) router.replace("/auth");
@@ -79,6 +84,12 @@ export default function DashboardPage() {
     ws.onclose = () => {};
 
     return () => { ws.close(); wsRef.current = null; };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    memoryApi.list({ limit: 1 }).then((data) => setMemoryCount(data.total ?? data.count ?? 0)).catch(() => {});
+    agentApi.list().then((data) => setAgentCount(Array.isArray(data) ? data.length : 0)).catch(() => {});
   }, [user]);
 
   if (loading || !user) return null;
@@ -247,7 +258,7 @@ export default function DashboardPage() {
                     </div>
                     <span className="micro-label">Memories</span>
                   </div>
-                  <p className="text-2xl font-semibold text-text">—</p>
+                  <p className="text-2xl font-semibold text-text">{memoryCount ?? "—"}</p>
                 </Card>
               </Link>
               <Card gradient className="p-5">
@@ -257,7 +268,7 @@ export default function DashboardPage() {
                   </div>
                   <span className="micro-label">Agents</span>
                 </div>
-                <p className="text-2xl font-semibold text-text">—</p>
+                <p className="text-2xl font-semibold text-text">{agentCount ?? "—"}</p>
               </Card>
               <Card gradient className="p-5">
                 <div className="flex items-center gap-3 mb-3">

@@ -138,6 +138,14 @@ export interface MemorySearchResponse {
 
 // ── System ──────────────────────────────────────────────────────
 
+export interface SystemProcess {
+  pid: number;
+  name: string;
+  cpu: number;
+  memory: number;
+  status: string;
+}
+
 export interface SystemMetrics {
   cpu_percent: number;
   ram_total_gb: number;
@@ -149,6 +157,7 @@ export interface SystemMetrics {
   disk_total_gb: number;
   disk_used_gb: number;
   disk_percent: number;
+  processes: SystemProcess[];
 }
 
 export interface SystemLog {
