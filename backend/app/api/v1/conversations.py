@@ -148,7 +148,7 @@ async def _stream_chat_response(
             full_response += chunk
             response_tokens = estimate_tokens(full_response)
             yield f"data: {json.dumps({'type': 'chunk', 'content': chunk, 'tokens': response_tokens})}\n\n"
-    except RuntimeError as e:
+    except RuntimeError:
         # LLM not available — return a fallback message
         fallback = "I need a local LLM to respond. Please download a model in Settings > Models."
         full_response = fallback
