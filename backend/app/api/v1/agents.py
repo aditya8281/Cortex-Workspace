@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.agents.run_manager import AgentRunManager
 from backend.app.core.db import get_current_user, get_db
+from backend.app.models.agent import AgentRun
 from backend.app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -175,6 +176,11 @@ def delete_agent(
     agent = manager.get_agent(agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
+    active_runs = db.query(AgentRun).filter(
+        AgentRun.agent_id == agent_id, AgentRun.status == "running"
+    ).all()
+    if active_runs:
+        raise HTTPException(status_code=409, detail="Cannot delete agent with active runs")
     db.delete(agent)
     db.commit()
     return {"status": "deleted"}

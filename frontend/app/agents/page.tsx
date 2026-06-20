@@ -95,8 +95,9 @@ export default function AgentsPage() {
       await agentApi.delete(agentId);
       setAgents((prev) => prev.filter((a) => a.id !== agentId));
       if (selectedAgent?.id === agentId) setSelectedAgent(null);
-    } catch {
-      // silently fail
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete agent";
+      alert(message);
     }
   }
 
