@@ -44,4 +44,16 @@ export const searchApi = {
   getNodeContext: (repoId: number, nodeId: number): Promise<NodeContext> => {
     return api.get(`/api/v1/repos/${repoId}/graph/node/${nodeId}`);
   },
+
+  /** Search and get an LLM-synthesized answer. */
+  answer: (
+    query: string,
+    params?: { repo_id?: number; max_results?: number },
+  ): Promise<{ query: string; answer: string; code_results: any[]; memory_results: any[] }> => {
+    return api.post("/api/v1/search/answer", {
+      query,
+      repo_id: params?.repo_id,
+      max_results: params?.max_results,
+    });
+  },
 };

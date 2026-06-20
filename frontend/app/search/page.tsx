@@ -24,15 +24,22 @@ export default function SearchPage() {
       try {
         const data = await searchApi.unified(q, { max_results: 20 });
         setResults(data.results || []);
-        // Synthesize AI answer from results
-        if (data.results?.length > 0) {
-          const sources = data.results
-            .slice(0, 5)
-            .map((r: any, i: number) => `[${i + 1}] ${r.title || r.file_path || "Result"}`)
-            .join("\n");
-          setAiAnswer(`Found ${data.results.length} relevant results across your codebase and memories.\n\nTop sources:\n${sources}`);
-        } else {
-          setAiAnswer("No results found for this query. Try rephrasing or checking your indexed repositories.");
+
+        // Fetch LLM-powered answer from backend
+        try {
+          const answerRes = await searchApi.answer(q, { max_results: 10 });
+          setAiAnswer(answerRes.answer || "No answer generated.");
+        } catch {
+          // Fallback to client-side synthesized answer
+          if (data.results?.length > 0) {
+            const sources = data.results
+              .slice(0, 5)
+              .map((r: any, i: number) => `[${i + 1}] ${r.title || r.file_path || "Result"}`)
+              .join("\n");
+            setAiAnswer(`Found ${data.results.length} relevant results across your codebase and memories.\n\nTop sources:\n${sources}`);
+          } else {
+            setAiAnswer("No results found for this query. Try rephrasing or checking your indexed repositories.");
+          }
         }
       } catch {
         setAiAnswer("Search failed. Please try again.");
