@@ -3,66 +3,34 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Lock, Brain, Shield, User, Server, Activity, Cpu, MemoryStick, HardDrive, Terminal } from "lucide-react";
-import { useAuth } from "../../src/shared/auth/AuthProvider";
-import { apiVaultStatus, apiListMemory, apiSystemMetrics, apiSystemLogs } from "../../src/shared/auth/cortexApi";
-import DashboardShell from "../../src/shared/layout/DashboardShell";
-import PageTransition from "../../src/shared/ui/PageTransition";
-import StaggerChildren from "../../src/shared/ui/StaggerChildren";
-import Card from "../../src/shared/ui/Card";
-import NeuralNetwork from "../../src/shared/ui/NeuralNetwork";
-import type { VaultStatus, SystemMetrics, SystemLog } from "../../src/shared/types";
-
-import type { LucideIcon } from "lucide-react";
-
-function MetricRing({ value, label, icon: Icon, unit = "%" }: { value: number; label: string; icon: LucideIcon; unit?: string }) {
-  const circumference = 2 * Math.PI * 36;
-  const strokeDashoffset = circumference - (value / 100) * circumference;
-
-  return (
-    <Card className="p-4 group">
-      <div className="flex items-center justify-between mb-3">
-        <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
-          <Icon className="h-4 w-4 text-accent" />
-        </div>
-        <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">{label}</span>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="relative w-20 h-20 shrink-0">
-          <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-            <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="4" />
-            <motion.circle
-              cx="40" cy="40" r="36" fill="none"               stroke="var(--accent)" strokeWidth="4"
-              strokeLinecap="round" strokeDasharray={circumference}
-              initial={{ strokeDashoffset: circumference }}
-              animate={{ strokeDashoffset }}
-              transition={{ duration: 1, ease: "easeOut" }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-lg font-semibold text-text font-display">
-              {Math.round(value)}<span className="text-xs text-text-muted">{unit}</span>
-            </span>
-          </div>
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs text-text-muted">Active</p>
-          <p className="text-xs text-text-secondary mt-0.5 truncate">
-            {label === "GPU" ? "NVIDIA" : "System"}
-          </p>
-        </div>
-      </div>
-    </Card>
-  );
-}
+import {
+  Activity,
+  Brain,
+  Bot,
+  Clock,
+  Cpu,
+  HardDrive,
+  MemoryStick,
+  Server,
+  Shield,
+  User,
+} from "lucide-react";
+import DashboardShell from "@/shared/layout/DashboardShell";
+import Card from "@/shared/ui/Card";
+import { MetricRing } from "@/shared/ui/MetricRing";
+import { TabGroup, TabPanel } from "@/shared/ui/TabGroup";
+import NeuralNetwork from "@/shared/ui/NeuralNetwork";
+import { useAuth } from "@/shared/auth/AuthProvider";
+import { apiSystemMetrics, apiSystemLogs } from "@/shared/auth/cortexApi";
+import Link from "next/link";
+import type { SystemMetrics, SystemLog } from "@/shared/types";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [vaultStatus, setVaultStatus] = useState<VaultStatus | null>(null);
-  const [memoryCount, setMemoryCount] = useState(0);
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
-  const [logs, setLogs] = useState<SystemLog[]>([]);
+  const [processes] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<SystemLog[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -71,14 +39,24 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
-    apiVaultStatus().then(setVaultStatus).catch(() => {});
-    apiListMemory({ limit: 1 }).then((data) => setMemoryCount(data.total ?? 0)).catch(() => {});
+    const fetchMetrics = async () => {
+      try {
+        const data = await apiSystemMetrics();
+        setMetrics(data);
+      } catch {}
+    };
+    fetchMetrics();
+    const interval = setInterval(fetchMetrics, 10000);
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
     if (!user) return;
-    apiSystemMetrics().then(setMetrics).catch(() => {});
-    apiSystemLogs(15).then((data) => setLogs(data.logs)).catch(() => {});
+    apiSystemLogs(15).then((data) => setRecentActivity(data.logs)).catch(() => {});
+    const interval = setInterval(() => {
+      apiSystemLogs(15).then((data) => setRecentActivity(data.logs)).catch(() => {});
+    }, 10000);
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
@@ -103,177 +81,201 @@ export default function DashboardPage() {
     return () => { ws.close(); wsRef.current = null; };
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(() => {
-      apiSystemLogs(15).then((data) => setLogs(data.logs)).catch(() => {});
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [user]);
-
   if (loading || !user) return null;
-
-  const initials = (user.full_name || user.username || "?").charAt(0).toUpperCase();
-  const memberSince = user.created_at
-    ? new Date(user.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-    : "—";
 
   return (
     <DashboardShell>
       <NeuralNetwork intensity="medium" />
-      <PageTransition className="max-w-5xl mx-auto space-y-8">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8">
         {/* Hero Welcome */}
-        <div className="flex items-center gap-5">
-          <motion.div whileHover={{ scale: 1.05 }} className="relative h-16 w-16 rounded-full bg-accent flex items-center justify-center text-xl font-bold text-void overflow-hidden shrink-0 cursor-default">
-            {user.profile_photo ? (
-              <img src={`/api/v1/me/profile/photo/${user.id}`} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-            ) : initials}
-          </motion.div>
-          <div>
-            <h1 className="text-2xl font-semibold text-text font-display tracking-tight">
-              Welcome back, {user.full_name?.split(" ")[0] || user.username}
-            </h1>
-            <p className="text-sm text-text-secondary mt-0.5 flex items-center gap-1.5">
-              {user.role === "admin" ? (
-                <span className="inline-flex items-center gap-1"><Shield className="h-3.5 w-3.5 text-accent" />Admin</span>
-              ) : "Member"} · @{user.username}
-            </p>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-4 mb-6">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full bg-bg-surface border border-border-subtle flex items-center justify-center overflow-hidden">
+                {user.profile_photo ? (
+                  <img
+                    src={`/api/v1/me/profile/photo/${user.id}`}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <User size={28} className="text-accent" />
+                )}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-success rounded-full border-2 border-bg" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-text">
+                Welcome back, {user.full_name?.split(" ")[0] || user.username}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="micro-label">
+                  {user.role === "admin" ? "Admin" : "Member"}
+                </span>
+                <span className="text-text-muted text-sm">@{user.username}</span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* System Metrics */}
-        <div>
-          <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-text-muted mb-4">System Metrics</h2>
-          <StaggerChildren className="grid grid-cols-2 sm:grid-cols-4 gap-4" staggerDelay={0.06}>
-            <MetricRing value={metrics?.cpu_percent ?? 0} label="CPU" icon={Cpu} />
-            <MetricRing value={metrics?.ram_percent ?? 0} label="RAM" icon={MemoryStick} />
-            <MetricRing value={metrics?.disk_percent ?? 0} label="Disk" icon={HardDrive} />
-            <Card className="p-4 group">
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-9 w-9 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center">
-                  <Activity className="h-4 w-4 text-accent" />
-                </div>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">GPU</span>
-              </div>
-              <p className="text-lg font-semibold text-text font-display truncate">{metrics?.gpu_name ?? "—"}</p>
-              <p className="text-xs text-text-muted mt-1">{metrics?.gpu_type || "No GPU"}</p>
+          {/* Premium Metric Rings */}
+          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
+            <MetricRing label="CPU" value={metrics?.cpu_percent ?? 0} color="#0ea5c9" />
+            <MetricRing label="RAM" value={metrics?.ram_percent ?? 0} color="#8b5cf6" />
+            <MetricRing label="Disk" value={metrics?.disk_percent ?? 0} color="#22c55e" />
+            <Card className="flex flex-col items-center justify-center gap-2 px-6 py-4" gradient>
+              <Cpu size={20} className="text-accent" />
+              <span className="micro-label">GPU</span>
+              <span className="text-sm text-text text-center">{metrics?.gpu_name ?? "N/A"}</span>
             </Card>
-          </StaggerChildren>
-        </div>
+          </div>
+        </motion.div>
 
-        {/* Quick Stats */}
-        <div>
-          <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-text-muted mb-4">Quick Stats</h2>
-          <StaggerChildren className="grid grid-cols-2 sm:grid-cols-4 gap-4" staggerDelay={0.06}>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <Lock className="h-4 w-4 text-accent" />
-                <div>
-                  <p className="text-lg font-semibold text-text font-display">{vaultStatus?.locked ? "Locked" : "Active"}</p>
-                  <p className="text-xs text-text-muted">Vault</p>
-                </div>
+        {/* Tabbed Content */}
+        <TabGroup
+          tabs={[
+            { id: "activity", label: "Activity", icon: <Activity size={16} /> },
+            { id: "processes", label: "Processes", icon: <Server size={16} />, count: processes.length },
+            { id: "insights", label: "Insights", icon: <Brain size={16} /> },
+          ]}
+        >
+          <TabPanel tabId="activity">
+            <Card className="p-6" gradient>
+              <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+                <Activity size={18} className="text-accent" />
+                Recent Activity
+              </h3>
+              <div className="space-y-3">
+                {recentActivity.length === 0 ? (
+                  <p className="text-text-secondary text-sm">
+                    No recent activity. Start by searching, creating agents, or adding memories.
+                  </p>
+                ) : (
+                  recentActivity.map((item: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-bg-surface/50">
+                      <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
+                        <Bot size={14} className="text-accent" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-text truncate">{item.message}</p>
+                        <p className="text-xs text-text-muted">{new Date(item.timestamp).toLocaleTimeString()}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <Brain className="h-4 w-4 text-accent" />
-                <div>
-                  <p className="text-lg font-semibold text-text font-display">{memoryCount}</p>
-                  <p className="text-xs text-text-muted">Memories</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <User className="h-4 w-4 text-accent" />
-                <div>
-                  <p className="text-lg font-semibold text-text font-display">{memberSince}</p>
-                  <p className="text-xs text-text-muted">Member since</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <Server className="h-4 w-4 text-accent" />
-                <div>
-                  <p className="text-lg font-semibold text-text font-display">Connected</p>
-                  <p className="text-xs text-text-muted">Server</p>
-                </div>
-              </div>
-            </Card>
-          </StaggerChildren>
-        </div>
+          </TabPanel>
 
-        {/* Live System Logs */}
-        <div>
-          <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-text-muted mb-4">System Logs</h2>
-          <Card className="p-4 overflow-hidden">
-            <div className="flex items-center gap-2 mb-3">
-              <Terminal className="h-4 w-4 text-accent" />
-              <span className="text-xs font-mono text-text-muted">Recent activity</span>
-              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-            </div>
-            <div className="h-48 overflow-y-auto font-mono text-xs space-y-1">
-              {logs.length === 0 ? (
-                <p className="text-text-muted">No logs yet...</p>
-              ) : (
-                logs.map((log, i) => (
-                  <div key={i} className="flex gap-2 py-0.5 hover:bg-bg-hover rounded px-2 -mx-2">
-                    <span className="text-text-muted shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                    <span className={`shrink-0 ${log.level === "ERROR" ? "text-error" : log.level === "WARNING" ? "text-warning" : "text-text-secondary"}`}>{log.level}</span>
-                    <span className="text-text-muted truncate">{log.message}</span>
+          <TabPanel tabId="processes">
+            <Card className="p-6" gradient>
+              <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+                <Server size={18} className="text-accent" />
+                System Processes
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border-subtle">
+                      <th className="text-left py-2 text-text-muted font-medium">Name</th>
+                      <th className="text-right py-2 text-text-muted font-medium">PID</th>
+                      <th className="text-right py-2 text-text-muted font-medium">CPU%</th>
+                      <th className="text-right py-2 text-text-muted font-medium">Memory%</th>
+                      <th className="text-right py-2 text-text-muted font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {processes.slice(0, 20).map((p: any, i: number) => (
+                      <tr
+                        key={i}
+                        className="border-b border-border-subtle/50 hover:bg-bg-hover/50 transition-colors"
+                      >
+                        <td className="py-2 text-text font-mono text-xs">{p.name}</td>
+                        <td className="py-2 text-text-secondary text-right font-mono text-xs">{p.pid}</td>
+                        <td className="py-2 text-right font-mono text-xs">
+                          <span className={p.cpu > 50 ? "text-warning" : "text-text-secondary"}>
+                            {p.cpu?.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="py-2 text-right font-mono text-xs text-text-secondary">
+                          {p.memory?.toFixed(1)}
+                        </td>
+                        <td className="py-2 text-right">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-xs ${
+                              p.status === "running"
+                                ? "bg-success/10 text-success"
+                                : "bg-bg-hover text-text-muted"
+                            }`}
+                          >
+                            {p.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </TabPanel>
+
+          <TabPanel tabId="insights">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Link href="/vault">
+                <Card hover gradient className="p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <HardDrive size={18} className="text-accent" />
+                    </div>
+                    <span className="micro-label">Vault</span>
                   </div>
-                ))
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <h2 className="text-xs font-mono tracking-[0.2em] uppercase text-text-muted mb-4">Quick Actions</h2>
-          <StaggerChildren className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" staggerDelay={0.06}>
-            <Card hover className="p-5 cursor-pointer" onClick={() => router.push("/vault")}>
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center shrink-0"><Lock className="h-5 w-5 text-accent" /></div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-text">Vault</h3>
-                  <p className="text-xs text-text-muted truncate">Manage encrypted files</p>
-                </div>
-              </div>
-            </Card>
-            <Card hover className="p-5 cursor-pointer" onClick={() => router.push("/memory")}>
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center shrink-0"><Brain className="h-5 w-5 text-accent" /></div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-text">Memory</h3>
-                  <p className="text-xs text-text-muted truncate">AI knowledge base</p>
-                </div>
-              </div>
-            </Card>
-            <Card hover className="p-5 cursor-pointer" onClick={() => router.push("/profile")}>
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center shrink-0"><User className="h-5 w-5 text-accent" /></div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-text">Profile</h3>
-                  <p className="text-xs text-text-muted truncate">Account settings</p>
-                </div>
-              </div>
-            </Card>
-            {user.role === "admin" && (
-              <Card hover className="p-5 cursor-pointer" onClick={() => router.push("/admin")}>
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-accent-faint border border-accent/10 flex items-center justify-center shrink-0"><Shield className="h-5 w-5 text-accent" /></div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-medium text-text">Admin</h3>
-                    <p className="text-xs text-text-muted truncate">User management</p>
+                  <p className="text-2xl font-semibold text-text">Active</p>
+                </Card>
+              </Link>
+              <Link href="/memory">
+                <Card hover gradient className="p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <Brain size={18} className="text-accent" />
+                    </div>
+                    <span className="micro-label">Memories</span>
                   </div>
+                  <p className="text-2xl font-semibold text-text">—</p>
+                </Card>
+              </Link>
+              <Card gradient className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <Bot size={18} className="text-accent" />
+                  </div>
+                  <span className="micro-label">Agents</span>
                 </div>
+                <p className="text-2xl font-semibold text-text">—</p>
               </Card>
-            )}
-          </StaggerChildren>
-        </div>
-      </PageTransition>
+              <Card gradient className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <Clock size={18} className="text-accent" />
+                  </div>
+                  <span className="micro-label">Member Since</span>
+                </div>
+                <p className="text-sm font-semibold text-text">
+                  {user?.created_at
+                    ? new Date(user.created_at).toLocaleDateString()
+                    : "—"}
+                </p>
+              </Card>
+            </div>
+          </TabPanel>
+        </TabGroup>
+      </div>
     </DashboardShell>
   );
 }
