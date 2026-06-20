@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Brain, Search, RefreshCw, Tag, LayoutGrid, Hash, FileText, Code2, StickyNote, Lightbulb } from "lucide-react";
+import { Plus, Brain, Search, RefreshCw, Hash, LayoutGrid, Network, List, ChevronDown, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../../src/shared/ui/Button";
 import PageTransition from "../../src/shared/ui/PageTransition";
+import DashboardShell from "../../src/shared/layout/DashboardShell";
 import type { MemoryEntry, MemorySearchResult } from "../../src/shared/types";
 import {
   apiListMemory,
@@ -16,16 +17,9 @@ import { cn } from "../../src/lib/utils";
 import MemorySearch from "./MemorySearch";
 import MemoryEditor from "./MemoryEditor";
 import MemoryDetail from "./MemoryDetail";
-import NeuralNetwork from "../../src/shared/ui/NeuralNetwork";
 
 type ViewMode = "list" | "search";
-
-const categoryIcons: Record<string, typeof Brain> = {
-  code: Code2,
-  document: FileText,
-  note: StickyNote,
-  idea: Lightbulb,
-};
+type DisplayView = "graph" | "list";
 
 const categoryColors: Record<string, string> = {
   code: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -35,11 +29,18 @@ const categoryColors: Record<string, string> = {
   default: "bg-accent/10 text-accent border-accent/20",
 };
 
-const categorySidebarColors: Record<string, string> = {
-  code: "text-blue-400",
-  document: "text-purple-400",
-  note: "text-amber-400",
-  idea: "text-emerald-400",
+const categoryNodeColors: Record<string, string> = {
+  code: "#3b82f6",
+  document: "#a855f7",
+  note: "#f59e0b",
+  idea: "#10b981",
+};
+
+const categoryChipColors: Record<string, string> = {
+  code: "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20",
+  document: "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20",
+  note: "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
+  idea: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20",
 };
 
 export default function MemoryPage() {
@@ -56,6 +57,9 @@ export default function MemoryPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchResults, setSearchResults] = useState<MemorySearchResult[]>([]);
+
+  const [displayView, setDisplayView] = useState<DisplayView>("graph");
+  const [detailPanelOpen, setDetailPanelOpen] = useState(true);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<MemoryEntry | null>(null);
@@ -164,6 +168,7 @@ export default function MemoryPage() {
   function openDetail(entry: MemoryEntry | MemorySearchResult) {
     setDetailEntry(entry as MemoryEntry);
     setDetailOpen(true);
+    setDetailPanelOpen(true);
   }
 
   function handleSaved() {
@@ -174,158 +179,146 @@ export default function MemoryPage() {
     fetchList(true);
   }
 
-  const displayEntries = viewMode === "search" 
+  const displayEntries = viewMode === "search"
     ? searchResults.map(r => r.entry).filter((e): e is MemoryEntry => e !== null)
     : entries;
   const hasMore = entries.length < total;
 
+  const categoryList = useMemo(() => Object.keys(categories), [categories]);
+
+  const graphNodes = useMemo(() => {
+    const nodes: { id: string; label: string; x: number; y: number; color: string; count: number; type: "category" }[] = [];
+    const catEntries = categoryList;
+    const cx = 400;
+    const cy = 250;
+    const radius = 160;
+    catEntries.forEach((cat, i) => {
+      const angle = (2 * Math.PI * i) / catEntries.length - Math.PI / 2;
+      nodes.push({
+        id: `cat-${cat}`,
+        label: cat,
+        x: cx + radius * Math.cos(angle),
+        y: cy + radius * Math.sin(angle),
+        color: categoryNodeColors[cat] || "#06b6d4",
+        count: categories[cat] || 0,
+        type: "category",
+      });
+    });
+    return nodes;
+  }, [categoryList, categories]);
+
+  const graphEdges = useMemo(() => {
+    const edges: { from: string; to: string; color: string }[] = [];
+    displayEntries.forEach((entry) => {
+      const catNode = graphNodes.find(n => n.id === `cat-${entry.category}`);
+      if (catNode) {
+        edges.push({
+          from: catNode.id,
+          to: String(entry.id),
+          color: catNode.color,
+        });
+      }
+    });
+    return edges;
+  }, [displayEntries, graphNodes]);
+
+  const graphEntryNodes = useMemo(() => {
+    const entryNodes: { id: string; label: string; x: number; y: number; color: string; entry: MemoryEntry }[] = [];
+    const catPositions: Record<string, { x: number; y: number }> = {};
+    graphNodes.forEach(n => { catPositions[n.id] = { x: n.x, y: n.y }; });
+
+    const grouped: Record<string, MemoryEntry[]> = {};
+    displayEntries.forEach(e => {
+      const catKey = `cat-${e.category}`;
+      if (!grouped[catKey]) grouped[catKey] = [];
+      grouped[catKey].push(e);
+    });
+
+    Object.entries(grouped).forEach(([catKey, catEntries]) => {
+      const catPos = catPositions[catKey];
+      if (!catPos) return;
+      const catColor = categoryNodeColors[catKey.replace("cat-", "")] || "#06b6d4";
+      catEntries.forEach((entry, i) => {
+        const angle = (2 * Math.PI * i) / catEntries.length + Math.PI / 6;
+        const dist = 100 + (i % 3) * 20;
+        entryNodes.push({
+          id: String(entry.id),
+          label: entry.title.length > 20 ? entry.title.slice(0, 20) + "…" : entry.title,
+          x: catPos.x + dist * Math.cos(angle),
+          y: catPos.y + dist * Math.sin(angle),
+          color: catColor,
+          entry,
+        });
+      });
+    });
+    return entryNodes;
+  }, [displayEntries, graphNodes]);
+
   return (
-    <PageTransition>
-      <NeuralNetwork intensity="low" />
-      <div className="flex h-[calc(100vh-4rem)] bg-transparent">
-        {/* Left Sidebar */}
-        <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border-subtle bg-bg-elevated/50">
-          {/* Sidebar Header */}
-          <div className="p-4 border-b border-border-subtle">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                <Brain className="h-4 w-4 text-accent" />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-text">Memory</h2>
-                <p className="text-[10px] font-mono text-text-muted">{total} entries</p>
-              </div>
-            </div>
-            <Button onClick={openNewEditor} className="w-full" size="sm">
-              <Plus className="h-3.5 w-3.5" />
-              New Memory
-            </Button>
-          </div>
-
-          {/* Categories */}
-          <div className="flex-1 overflow-y-auto p-3">
-            <p className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2 px-1">
-              Categories
-            </p>
-            <nav className="space-y-0.5">
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className={cn(
-                  "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-all duration-200",
-                  !selectedCategory
-                    ? "bg-accent-faint text-accent font-medium"
-                    : "text-text-secondary hover:bg-bg-hover hover:text-text"
-                )}
-              >
-                <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
-                <span className="flex-1 text-left">All Memories</span>
-                <span className={cn(
-                  "text-[10px] font-mono tabular-nums",
-                  !selectedCategory ? "text-accent" : "text-text-muted"
-                )}>
-                  {total}
-                </span>
-              </button>
-              {Object.entries(categories).map(([cat, count]) => {
-                const Icon = categoryIcons[cat] || Tag;
-                const isActive = selectedCategory === cat;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(isActive ? null : cat)}
-                    className={cn(
-                      "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-all duration-200",
-                      isActive
-                        ? "bg-accent-faint text-accent font-medium"
-                        : "text-text-secondary hover:bg-bg-hover hover:text-text"
-                    )}
-                  >
-                    <Icon className={cn("h-3.5 w-3.5 shrink-0", !isActive && (categorySidebarColors[cat] || "text-text-muted"))} />
-                    <span className="flex-1 text-left capitalize">{cat}</span>
-                    <span className={cn(
-                      "text-[10px] font-mono tabular-nums",
-                      isActive ? "text-accent" : "text-text-muted"
-                    )}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-
-            {/* All Tags */}
-            {(() => {
-              const allTags = new Map<string, number>();
-              entries.forEach(e => e.tags?.forEach(t => allTags.set(t, (allTags.get(t) || 0) + 1)));
-              if (allTags.size === 0) return null;
-              return (
-                <div className="mt-6">
-                  <p className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2 px-1">
-                    Tags
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 px-1">
-                    {Array.from(allTags.entries()).slice(0, 12).map(([tag, count]) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center gap-1 rounded-full bg-bg-surface px-2 py-0.5 text-[10px] font-mono text-text-muted border border-border-subtle"
-                      >
-                        <Hash className="h-2.5 w-2.5" />
-                        {tag}
-                        <span className="text-text-muted/50">({count})</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* Sidebar Footer */}
-          <div className="p-3 border-t border-border-subtle">
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-bg-surface">
-              <RefreshCw className="h-3 w-3 text-text-muted" />
-              <span className="text-[10px] font-mono text-text-muted uppercase tracking-wider">Auto-sync</span>
-              <span className="ml-auto h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_6px_rgba(34,197,94,0.4)]" />
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Top Bar */}
-          <div className="shrink-0 px-6 py-4 border-b border-border-subtle bg-bg-elevated/30">
-            <div className="flex items-center justify-between mb-3">
+    <DashboardShell>
+      <PageTransition>
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="shrink-0 border-b border-border-subtle">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                {/* Mobile sidebar trigger */}
-                <div className="md:hidden">
-                  <Button variant="ghost" size="sm" onClick={openNewEditor}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                <div className="h-9 w-9 rounded-xl bg-accent/10 flex items-center justify-center">
+                  <Brain className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-text flex items-center gap-2">
-                    <span className="hidden md:inline">
-                      {selectedCategory ? (
-                        <span className="capitalize">{selectedCategory}</span>
-                      ) : (
-                        "All Memories"
-                      )}
-                    </span>
-                    <span className="md:hidden">Memory</span>
+                  <h1 className="text-lg font-bold text-text">
+                    {selectedCategory ? (
+                      <span className="capitalize">{selectedCategory}</span>
+                    ) : (
+                      "Memory"
+                    )}
                   </h1>
                   <p className="text-xs text-text-muted">
-                    {total} {total === 1 ? "memory" : "memories"} stored
+                    {total} {total === 1 ? "entry" : "entries"} · Knowledge Graph
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center rounded-lg border border-border-subtle bg-bg-surface p-0.5">
+                  <button
+                    onClick={() => setDisplayView("graph")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      displayView === "graph"
+                        ? "bg-accent/10 text-accent"
+                        : "text-text-muted hover:text-text-secondary"
+                    )}
+                  >
+                    <Network className="h-3.5 w-3.5" />
+                    Graph
+                  </button>
+                  <button
+                    onClick={() => setDisplayView("list")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      displayView === "list"
+                        ? "bg-accent/10 text-accent"
+                        : "text-text-muted hover:text-text-secondary"
+                    )}
+                  >
+                    <List className="h-3.5 w-3.5" />
+                    List
+                  </button>
+                </div>
                 <Button variant="ghost" size="sm" onClick={() => fetchList(true)}>
                   <RefreshCw className="h-3.5 w-3.5" />
                 </Button>
-                <Button onClick={openNewEditor} className="md:hidden">
-                  <Plus className="h-4 w-4" />
-                  New
+                <Button onClick={openNewEditor} size="sm">
+                  <Plus className="h-3.5 w-3.5" />
+                  New Memory
                 </Button>
+                <button
+                  onClick={() => setDetailPanelOpen(!detailPanelOpen)}
+                  className="hidden lg:flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors"
+                >
+                  {detailPanelOpen ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  Detail
+                </button>
               </div>
             </div>
 
@@ -338,19 +331,50 @@ export default function MemoryPage() {
               selectedCategory={selectedCategory}
               onCategoryChange={setSelectedCategory}
             />
+
+            {/* Category Filter Chips */}
+            <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={cn(
+                  "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                  !selectedCategory
+                    ? "bg-accent/10 text-accent border-accent/30"
+                    : "bg-bg-surface text-text-muted border-border-subtle hover:border-border-accent hover:text-text-secondary"
+                )}
+              >
+                <LayoutGrid className="h-3 w-3" />
+                All
+                <span className="font-mono text-[10px]">{total}</span>
+              </button>
+              {categoryList.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                  className={cn(
+                    "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all capitalize",
+                    selectedCategory === cat
+                      ? (categoryChipColors[cat] || "bg-accent/10 text-accent border-accent/30")
+                      : "bg-bg-surface text-text-muted border-border-subtle hover:border-border-accent hover:text-text-secondary"
+                  )}
+                >
+                  {cat}
+                  <span className="font-mono text-[10px] opacity-60">{categories[cat] || 0}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Error */}
           {error && (
-            <div className="mx-6 mt-4 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
+            <div className="mx-0 mt-3 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
               {error}
             </div>
           )}
 
           {/* Content Area */}
-          <div className="flex-1 flex min-h-0">
-            {/* Entries List */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="flex-1 flex min-h-0 mt-3">
+            <div className="flex-1 overflow-y-auto min-w-0">
               {loading && entries.length === 0 ? (
                 <div className="space-y-3">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -380,64 +404,190 @@ export default function MemoryPage() {
                     </Button>
                   )}
                 </div>
+              ) : displayView === "graph" ? (
+                /* ── Graph View ── */
+                <div className="w-full h-full min-h-[500px] rounded-xl border border-border-subtle bg-bg-elevated/50 overflow-hidden">
+                  <svg
+                    viewBox="0 0 800 500"
+                    className="w-full h-full"
+                    preserveAspectRatio="xMidYMid meet"
+                  >
+                    <defs>
+                      <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                      {categoryList.map((cat) => (
+                        <radialGradient key={cat} id={`grad-${cat}`}>
+                          <stop offset="0%" stopColor={categoryNodeColors[cat] || "#06b6d4"} stopOpacity="0.3" />
+                          <stop offset="100%" stopColor={categoryNodeColors[cat] || "#06b6d4"} stopOpacity="0" />
+                        </radialGradient>
+                      ))}
+                    </defs>
+
+                    {/* Edges */}
+                    {graphEdges.map((edge, i) => {
+                      const entryNode = graphEntryNodes.find(n => n.id === edge.to);
+                      const catNode = graphNodes.find(n => n.id === edge.from);
+                      if (!entryNode || !catNode) return null;
+                      return (
+                        <line
+                          key={`edge-${i}`}
+                          x1={catNode.x}
+                          y1={catNode.y}
+                          x2={entryNode.x}
+                          y2={entryNode.y}
+                          stroke={edge.color}
+                          strokeOpacity="0.15"
+                          strokeWidth="1"
+                        />
+                      );
+                    })}
+
+                    {/* Category glow halos */}
+                    {graphNodes.map((node) => (
+                      <circle
+                        key={`halo-${node.id}`}
+                        cx={node.x}
+                        cy={node.y}
+                        r={50}
+                        fill={`url(#grad-${node.label})`}
+                      />
+                    ))}
+
+                    {/* Category nodes */}
+                    {graphNodes.map((node) => (
+                      <g
+                        key={node.id}
+                        className="cursor-pointer"
+                        onClick={() => setSelectedCategory(selectedCategory === node.label ? null : node.label)}
+                      >
+                        <circle
+                          cx={node.x}
+                          cy={node.y}
+                          r={28}
+                          fill="#0a0a0f"
+                          stroke={node.color}
+                          strokeWidth={selectedCategory === node.label ? 2.5 : 1.5}
+                          filter="url(#glow)"
+                          opacity={selectedCategory && selectedCategory !== node.label ? 0.4 : 1}
+                        />
+                        <text
+                          x={node.x}
+                          y={node.y - 2}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill={node.color}
+                          fontSize="11"
+                          fontWeight="600"
+                          fontFamily="Inter, sans-serif"
+                          className="capitalize"
+                        >
+                          {node.label}
+                        </text>
+                        <text
+                          x={node.x}
+                          y={node.y + 12}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fill="#555566"
+                          fontSize="9"
+                          fontFamily="JetBrains Mono, monospace"
+                        >
+                          {node.count}
+                        </text>
+                      </g>
+                    ))}
+
+                    {/* Entry nodes */}
+                    {graphEntryNodes.map((node) => (
+                      <g
+                        key={node.id}
+                        className="cursor-pointer"
+                        onClick={() => openDetail(node.entry)}
+                      >
+                        <circle
+                          cx={node.x}
+                          cy={node.y}
+                          r={5}
+                          fill={node.color}
+                          opacity={selectedCategory && selectedCategory !== node.entry.category ? 0.2 : 0.7}
+                          className="transition-opacity hover:opacity-100"
+                        />
+                        <title>{node.entry.title}</title>
+                      </g>
+                    ))}
+
+                    {graphNodes.length === 0 && (
+                      <text x="400" y="250" textAnchor="middle" fill="#555566" fontSize="13" fontFamily="Inter, sans-serif">
+                        No categories to display
+                      </text>
+                    )}
+                  </svg>
+                </div>
               ) : (
+                /* ── List View ── */
                 <div className="space-y-2">
                   <AnimatePresence mode="popLayout">
                     {displayEntries.map((entry) => {
-                      const searchResult = viewMode === "search" 
+                      const searchResult = viewMode === "search"
                         ? searchResults.find(r => r.entry?.id === entry.id)
                         : null;
                       return (
-                      <motion.button
-                        key={entry.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        onClick={() => openDetail(entry)}
-                        className={cn(
-                          "w-full rounded-xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.995]",
-                          detailEntry?.id === entry.id
-                            ? "border-accent/30 bg-accent-faint shadow-glow"
-                            : "border-border-subtle bg-bg-elevated hover:border-border-accent hover:shadow-glow"
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <h3 className="text-sm font-semibold text-text truncate">{entry.title}</h3>
-                            <p className="mt-1 text-xs text-text-muted line-clamp-2">{entry.content}</p>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 shrink-0">
-                            <span className={cn(
-                              "rounded-full px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider border",
-                              categoryColors[entry.category] || categoryColors.default
-                            )}>
-                              {entry.category}
-                            </span>
-                            {searchResult?.score !== undefined && (
-                              <span className="text-[10px] font-mono text-text-muted">
-                                {(searchResult.score * 100).toFixed(0)}%
+                        <motion.button
+                          key={entry.id}
+                          layout
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          onClick={() => openDetail(entry)}
+                          className={cn(
+                            "w-full rounded-xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.995]",
+                            detailEntry?.id === entry.id
+                              ? "border-accent/30 bg-accent-faint shadow-glow"
+                              : "border-border-subtle bg-bg-elevated hover:border-border-accent hover:shadow-glow"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-sm font-semibold text-text truncate">{entry.title}</h3>
+                              <p className="mt-1 text-xs text-text-muted line-clamp-2">{entry.content}</p>
+                            </div>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <span className={cn(
+                                "rounded-full px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider border",
+                                categoryColors[entry.category] || categoryColors.default
+                              )}>
+                                {entry.category}
                               </span>
-                            )}
+                              {searchResult?.score !== undefined && (
+                                <span className="text-[10px] font-mono text-text-muted">
+                                  {(searchResult.score * 100).toFixed(0)}%
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        {entry.tags && entry.tags.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {entry.tags.map((tag: string) => (
-                              <span key={tag} className="rounded-full bg-bg-surface px-2 py-0.5 text-[10px] font-mono text-text-muted border border-border-subtle">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </motion.button>
+                          {entry.tags && entry.tags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {entry.tags.map((tag: string) => (
+                                <span key={tag} className="rounded-full bg-bg-surface px-2 py-0.5 text-[10px] font-mono text-text-muted border border-border-subtle">
+                                  <Hash className="h-2.5 w-2.5 inline -mr-0.5" />
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </motion.button>
                       );
                     })}
                   </AnimatePresence>
                 </div>
               )}
 
-              {viewMode === "list" && hasMore && (
+              {viewMode === "list" && displayView === "list" && hasMore && (
                 <div className="mt-6 flex justify-center">
                   <Button variant="secondary" loading={loading} onClick={() => fetchList()}>
                     Load More
@@ -447,59 +597,69 @@ export default function MemoryPage() {
             </div>
 
             {/* Right Detail Panel */}
-            <div className="hidden lg:block w-96 shrink-0 border-l border-border-subtle bg-bg-elevated/30 overflow-y-auto">
-              <div className="sticky top-0 p-5">
-                <AnimatePresence mode="wait">
-                  {detailEntry ? (
-                    <motion.div
-                      key={detailEntry.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider border",
-                          categoryColors[detailEntry.category] || categoryColors.default
-                        )}>
-                          {detailEntry.category}
-                        </span>
-                        <div className="flex gap-2">
-                          <button onClick={() => openEditEditor(detailEntry)} className="text-xs text-text-muted hover:text-accent transition-colors">Edit</button>
-                          <button onClick={() => setDetailEntry(null)} className="text-xs text-text-muted hover:text-text transition-colors">Close</button>
-                        </div>
-                      </div>
-                      <h3 className="text-lg font-semibold text-text mb-2">{detailEntry.title}</h3>
-                      <p className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">{detailEntry.content}</p>
-                      {detailEntry.tags && detailEntry.tags.length > 0 && (
-                        <div className="mt-4 flex flex-wrap gap-1">
-                          {detailEntry.tags.map((tag) => (
-                            <span key={tag} className="rounded-full bg-bg-surface px-2 py-0.5 text-[10px] font-mono text-text-muted border border-border-subtle">{tag}</span>
-                          ))}
-                        </div>
+            <AnimatePresence>
+              {detailPanelOpen && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 384, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="hidden lg:block shrink-0 border-l border-border-subtle bg-bg-elevated/30 overflow-hidden"
+                >
+                  <div className="w-96 p-5">
+                    <AnimatePresence mode="wait">
+                      {detailEntry ? (
+                        <motion.div
+                          key={detailEntry.id}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <span className={cn(
+                              "rounded-full px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider border",
+                              categoryColors[detailEntry.category] || categoryColors.default
+                            )}>
+                              {detailEntry.category}
+                            </span>
+                            <div className="flex gap-2">
+                              <button onClick={() => openEditEditor(detailEntry)} className="text-xs text-text-muted hover:text-accent transition-colors">Edit</button>
+                              <button onClick={() => setDetailEntry(null)} className="text-xs text-text-muted hover:text-text transition-colors">Close</button>
+                            </div>
+                          </div>
+                          <h3 className="text-lg font-semibold text-text mb-2">{detailEntry.title}</h3>
+                          <p className="text-sm text-text-secondary whitespace-pre-wrap leading-relaxed">{detailEntry.content}</p>
+                          {detailEntry.tags && detailEntry.tags.length > 0 && (
+                            <div className="mt-4 flex flex-wrap gap-1">
+                              {detailEntry.tags.map((tag) => (
+                                <span key={tag} className="rounded-full bg-bg-surface px-2 py-0.5 text-[10px] font-mono text-text-muted border border-border-subtle">{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="mt-4 pt-3 border-t border-border-subtle">
+                            <p className="text-[10px] font-mono text-text-muted">
+                              {detailEntry.created_at ? new Date(detailEntry.created_at).toLocaleString() : "—"}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-dashed border-border-subtle p-8 text-center">
+                          <Search className="h-8 w-8 text-text-muted/30 mx-auto mb-3" />
+                          <p className="text-xs text-text-muted">Select a memory to view details</p>
+                        </motion.div>
                       )}
-                      <div className="mt-4 pt-3 border-t border-border-subtle">
-                        <p className="text-[10px] font-mono text-text-muted">
-                          {detailEntry.created_at ? new Date(detailEntry.created_at).toLocaleString() : "—"}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-dashed border-border-subtle p-8 text-center">
-                      <Search className="h-8 w-8 text-text-muted/30 mx-auto mb-3" />
-                      <p className="text-xs text-text-muted">Select a memory to view details</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
-      </div>
 
-      <MemoryEditor open={editorOpen} onOpenChange={setEditorOpen} onSaved={handleSaved} entry={editingEntry} />
-      <MemoryDetail open={detailOpen} onOpenChange={setDetailOpen} entry={detailEntry} onEdit={openEditEditor} onDeleted={handleDeleted} />
-    </PageTransition>
+        <MemoryEditor open={editorOpen} onOpenChange={setEditorOpen} onSaved={handleSaved} entry={editingEntry} />
+        <MemoryDetail open={detailOpen} onOpenChange={setDetailOpen} entry={detailEntry} onEdit={openEditEditor} onDeleted={handleDeleted} />
+      </PageTransition>
+    </DashboardShell>
   );
 }
