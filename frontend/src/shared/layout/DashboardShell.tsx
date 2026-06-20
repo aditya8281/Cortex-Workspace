@@ -19,6 +19,7 @@ import {
   Shield,
   Search,
   Bell,
+  Cpu,
 } from "lucide-react";
 import CommandPalette from "../ui/CommandPalette";
 
@@ -30,6 +31,7 @@ const workNavItems = [
   { label: "Dashboard", href: "/app", icon: LayoutDashboard },
   { label: "Search", href: "/search", icon: Search },
   { label: "Agents", href: "/agents", icon: Bot },
+  { label: "Models", href: "/models", icon: Cpu },
 ];
 
 const accountNavItems = [

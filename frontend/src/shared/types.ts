@@ -357,3 +357,58 @@ export interface RunDetailResponse {
   run: AgentRun;
   steps: AgentStep[];
 }
+
+// ── Models ────────────────────────────────────────────────────────
+
+export interface ModelInfo {
+  name: string;
+  display_name: string;
+  provider: string;
+  model_type: "chat" | "code" | "vision" | "embedding";
+  parameter_count: string;
+  context_length: number;
+  capabilities: string[];
+  description: string;
+  hardware_requirements: {
+    min_ram_gb: number;
+    recommended_ram_gb: number;
+  };
+  recommended?: boolean;
+  downloaded?: boolean;
+  size_bytes?: number;
+}
+
+export interface HardwareInfo {
+  ram_gb: number;
+  cpu_count: number;
+  gpu: {
+    available: boolean;
+    name: string | null;
+    vram_gb: number;
+  };
+}
+
+export interface ModelListResponse {
+  models: ModelInfo[];
+  available_from_providers: {
+    name: string;
+    size_bytes: number;
+    context_length: number;
+    capabilities: string[];
+  }[];
+}
+
+export interface RecommendedModelsResponse {
+  hardware: HardwareInfo;
+  recommended: ModelInfo[];
+}
+
+export interface DownloadProgressResponse {
+  model: string;
+  progress: number;
+}
+
+export interface DownloadResult {
+  status: "started" | "already_downloading" | "already_downloaded";
+  model: string;
+}
