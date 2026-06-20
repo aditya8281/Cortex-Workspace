@@ -1,0 +1,300 @@
+"use client";
+
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { Plus, MessageSquare, Trash2, Send } from "lucide-react";
+import DashboardShell from "@/shared/layout/DashboardShell";
+import Card from "@/shared/ui/Card";
+import { useAuth } from "@/shared/auth/AuthProvider";
+import { api } from "@/shared/api/client";
+
+interface Message {
+  role: string;
+  content: string;
+  tokens?: number;
+  created_at: string;
+}
+
+interface Conversation {
+  id: number;
+  title: string;
+  message_count: number;
+  total_tokens: number;
+  updated_at: string;
+}
+
+export default function ChatPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeId, setActiveId] = useState<number | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [streamingContent, setStreamingContent] = useState("");
+  const messagesEnd = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!loading && !user) router.replace("/auth");
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get<{ conversations: Conversation[] }>("/api/v1/conversations").then((data) => {
+      setConversations(data.conversations);
+      if (data.conversations.length > 0 && !activeId) {
+        setActiveId(data.conversations[0].id);
+      }
+    });
+  }, [user]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    api.get<{ messages: Message[] }>(`/api/v1/conversations/${activeId}`).then((data) => {
+      setMessages(data.messages);
+    });
+  }, [activeId]);
+
+  useEffect(() => {
+    messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, streamingContent]);
+
+  const createConversation = async () => {
+    const data = await api.post<{ id: number }>("/api/v1/conversations", {
+      title: "New Conversation",
+    });
+    setConversations((prev) => [
+      {
+        id: data.id,
+        title: "New Conversation",
+        message_count: 0,
+        total_tokens: 0,
+        updated_at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+    setActiveId(data.id);
+    setMessages([]);
+  };
+
+  const sendMessage = useCallback(async () => {
+    if (!input.trim() || !activeId || sending) return;
+
+    const userMsg: Message = {
+      role: "user",
+      content: input,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setSending(true);
+    setStreamingContent("");
+
+    try {
+      const res = await fetch(`/api/v1/conversations/${activeId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: userMsg.content }),
+        signal: abortRef.current?.signal,
+      });
+
+      if (!res.ok) throw new Error("Failed to send message");
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === "chunk") {
+              setStreamingContent((prev) => prev + event.content);
+            } else if (event.type === "done") {
+              setStreamingContent((prevContent) => {
+                const content = prevContent || event.content || "";
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    role: "assistant",
+                    content,
+                    tokens: event.total_tokens,
+                    created_at: new Date().toISOString(),
+                  },
+                ]);
+                return "";
+              });
+            }
+          } catch {
+            // skip malformed SSE lines
+          }
+        }
+      }
+    } catch (err: any) {
+      if (err.name === "AbortError") return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Failed to get response. Please try again.",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } finally {
+      setSending(false);
+      setStreamingContent("");
+    }
+  }, [input, activeId, sending]);
+
+  const deleteConversation = async (id: number) => {
+    await api.delete(`/api/v1/conversations/${id}`);
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (activeId === id) {
+      const next = conversations.find((c) => c.id !== id);
+      setActiveId(next?.id ?? null);
+      if (!next) setMessages([]);
+    }
+  };
+
+  if (loading || !user) return null;
+
+  return (
+    <DashboardShell>
+      <div className="relative z-10 flex h-[calc(100vh-4rem)]">
+        {/* Sidebar */}
+        <div className="w-64 border-r border-border-subtle p-4 flex flex-col">
+          <button
+            onClick={createConversation}
+            className="w-full py-2 rounded-lg bg-accent/10 text-accent text-sm font-medium hover:bg-accent/20 transition-colors flex items-center justify-center gap-2 mb-4"
+          >
+            <Plus size={14} /> New Chat
+          </button>
+          <div className="flex-1 overflow-y-auto space-y-1">
+            {conversations.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => setActiveId(c.id)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors group ${
+                  activeId === c.id
+                    ? "bg-bg-hover text-text"
+                    : "text-text-secondary hover:bg-bg-hover/50"
+                }`}
+              >
+                <MessageSquare size={14} />
+                <span className="flex-1 truncate text-sm">{c.title}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteConversation(c.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {messages.length === 0 && !streamingContent && (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-text-muted text-sm">
+                  Start a conversation with Cortex.
+                </p>
+              </div>
+            )}
+            {messages.map((msg, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex ${
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <Card
+                  className={`max-w-2xl px-4 py-3 text-sm ${
+                    msg.role === "user" ? "bg-accent/10 border-accent/20" : ""
+                  }`}
+                >
+                  <p className="text-text whitespace-pre-wrap">{msg.content}</p>
+                  {msg.tokens && (
+                    <p className="text-[10px] text-text-muted mt-1">
+                      {msg.tokens} tokens
+                    </p>
+                  )}
+                </Card>
+              </motion.div>
+            ))}
+            {sending && streamingContent && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-start"
+              >
+                <Card className="max-w-2xl px-4 py-3 text-sm">
+                  <p className="text-text whitespace-pre-wrap">{streamingContent}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+            {sending && !streamingContent && (
+              <div className="flex justify-start">
+                <Card className="px-4 py-3 text-sm">
+                  <div className="flex items-center gap-2 text-text-muted">
+                    <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                    Thinking...
+                  </div>
+                </Card>
+              </div>
+            )}
+            <div ref={messagesEnd} />
+          </div>
+
+          {/* Input */}
+          <div className="p-4 border-t border-border-subtle">
+            <div className="flex gap-2 max-w-3xl mx-auto">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder="Ask Cortex anything..."
+                className="flex-1 bg-bg-surface border border-border-subtle rounded-lg px-4 py-3 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+                disabled={sending}
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!input.trim() || sending}
+                className="px-4 py-3 rounded-lg bg-accent text-bg font-medium hover:bg-accent-bright transition-colors disabled:opacity-50"
+              >
+                <Send size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </DashboardShell>
+  );
+}

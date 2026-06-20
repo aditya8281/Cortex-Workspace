@@ -20,6 +20,7 @@ import {
   Search,
   Bell,
   Cpu,
+  MessageSquare,
 } from "lucide-react";
 import CommandPalette from "../ui/CommandPalette";
 
@@ -31,6 +32,7 @@ const workNavItems = [
   { label: "Dashboard", href: "/app", icon: LayoutDashboard },
   { label: "Search", href: "/search", icon: Search },
   { label: "Agents", href: "/agents", icon: Bot },
+  { label: "Chat", href: "/chat", icon: MessageSquare },
   { label: "Models", href: "/models", icon: Cpu },
 ];
 
