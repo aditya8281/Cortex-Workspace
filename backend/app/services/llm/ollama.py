@@ -102,19 +102,29 @@ class OllamaProvider(LLMProvider):
             data = resp.json()
             models = []
             for m in data.get("models", []):
+                name = m["name"]
+                quantization = self._parse_quantization(name)
                 models.append(
                     {
-                        "name": m["name"],
+                        "name": name,
                         "size_bytes": m.get("size", 0),
-                        "quantization": None,
+                        "quantization": quantization,
                         "context_length": 4096,
-                        "capabilities": self._infer_capabilities(m["name"]),
-                        "description": f"Ollama model: {m['name']}",
+                        "capabilities": self._infer_capabilities(name),
+                        "description": f"Ollama model: {name}",
                     }
                 )
             return models
         except Exception:
             return []
+
+    def _parse_quantization(self, name: str) -> str | None:
+        """Parse quantization from Ollama model tag."""
+        name_lower = name.lower()
+        for q in ["q4_k_m", "q5_k_m", "q8_0", "q4_k_s", "q5_k_s", "q6_k", "f16", "f32", "q4_0", "q3_k_m", "iq4_xs"]:
+            if q in name_lower:
+                return q.upper()
+        return None
 
     async def list_models_async(self) -> list[LLMModelInfo]:
         try:
@@ -123,14 +133,16 @@ class OllamaProvider(LLMProvider):
             data = resp.json()
             models = []
             for m in data.get("models", []):
+                name = m["name"]
+                quantization = self._parse_quantization(name)
                 models.append(
                     LLMModelInfo(
-                        name=m["name"],
+                        name=name,
                         size_bytes=m.get("size", 0),
-                        quantization=None,
+                        quantization=quantization,
                         context_length=4096,
-                        capabilities=self._infer_capabilities(m["name"]),
-                        description=f"Ollama model: {m['name']}",
+                        capabilities=self._infer_capabilities(name),
+                        description=f"Ollama model: {name}",
                     )
                 )
             return models
