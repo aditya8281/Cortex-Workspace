@@ -162,15 +162,18 @@ export default function AgentsPage() {
                         {agent.description || agent.system_prompt.slice(0, 60)}
                       </p>
                     </div>
-                    <button
+                    <span
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteAgent(agent.id);
                       }}
-                      className="text-text-muted/40 hover:text-error transition-colors p-1"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); handleDeleteAgent(agent.id); } }}
+                      className="text-text-muted/40 hover:text-error transition-colors p-1 cursor-pointer"
                     >
                       <Trash2 className="h-3 w-3" />
-                    </button>
+                    </span>
                   </div>
                 </button>
               ))
