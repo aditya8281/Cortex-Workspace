@@ -3,6 +3,7 @@
  */
 
 export { agentApi } from "./agent";
+export { indexingApi } from "./indexing";
 export { api } from "./client";
 export { memoryApi } from "./memory";
 export { modelsApi } from "./models";

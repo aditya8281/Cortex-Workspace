@@ -4,6 +4,7 @@ from backend.app.api.metrics import router as metrics_router
 from backend.app.api.v1.agents import router as agents_router
 from backend.app.api.v1.models import router as models_router
 from backend.app.api.v1.github import router as github_router
+from backend.app.api.v1.indexing import router as indexing_router
 from backend.app.api.v1.health import router as health_router
 from backend.app.api.v1.notifications import router as notifications_router
 from backend.app.api.v1.profile import router as profile_router
@@ -38,3 +39,5 @@ api_router.include_router(repository_router, tags=["Repository"])
 api_router.include_router(agents_router, tags=["Agents"])
 
 api_router.include_router(models_router, tags=["Models"])
+
+api_router.include_router(indexing_router, tags=["Indexing"])

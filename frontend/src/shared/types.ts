@@ -417,3 +417,40 @@ export interface DownloadResult {
   status: "started" | "already_downloading" | "already_downloaded";
   model: string;
 }
+
+// ── Indexing Config ───────────────────────────────────────────
+
+export interface IndexingConfig {
+  id: number;
+  name: string;
+  include_paths: string[];
+  exclude_paths: string[];
+  include_patterns: string[];
+  exclude_patterns: string[];
+  max_file_size_bytes: number;
+  follow_symlinks: boolean;
+  sync_enabled: boolean;
+  sync_interval_seconds: number;
+  priority: number;
+}
+
+export interface IndexingConfigPayload {
+  name?: string;
+  include_paths?: string[];
+  exclude_paths?: string[];
+  include_patterns?: string[];
+  exclude_patterns?: string[];
+  max_file_size_bytes?: number;
+  follow_symlinks?: boolean;
+  sync_enabled?: boolean;
+  sync_interval_seconds?: number;
+  priority?: number;
+}
+
+export interface IndexingPreview {
+  total_files: number;
+  will_index: number;
+  excluded_by_directory: number;
+  excluded_by_pattern: number;
+  excluded_by_size: number;
+}

@@ -9,6 +9,7 @@ import DashboardShell from "../../src/shared/layout/DashboardShell";
 import Button from "../../src/shared/ui/Button";
 import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
+import IndexingConfigForm from "./IndexingConfigForm";
 import { AlertTriangle, Trash2, User, Shield, Hash, HardDrive, ExternalLink } from "lucide-react";
 import { cn } from "../../src/lib/utils";
 
@@ -205,6 +206,8 @@ export default function SettingsPage() {
               </div>
             </Card>
           </motion.div>
+
+          <IndexingConfigForm />
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.08 }}>
             <Card gradient className="p-5 border-error/20 bg-error/[0.02]">
