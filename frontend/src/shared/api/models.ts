@@ -14,6 +14,9 @@ import type {
   DownloadQueueResponse,
   StorageUsage,
   ModelCatalogEntry,
+  ModelSearchResult,
+  ModelComparisonResult,
+  SyncJob,
 } from "../types";
 
 export const modelsApi = {
@@ -110,5 +113,31 @@ export const modelsApi = {
   /** Check for model updates. */
   checkUpdates: (): Promise<{ updates: Array<{ model_id: string; current: string; latest: string }> }> => {
     return api.get("/api/v1/models/updates");
+  },
+
+  /** Search models by query and optional filters. */
+  search: (query: string, filters?: Record<string, string>): Promise<ModelSearchResult> => {
+    const params = new URLSearchParams({ q: query, ...filters });
+    return api.get(`/api/v1/models/search?${params}`);
+  },
+
+  /** Compare multiple models side by side. */
+  compare: (modelIds: string[]): Promise<ModelComparisonResult> => {
+    return api.post("/api/v1/models/compare", modelIds);
+  },
+
+  /** Trigger a sync of models from providers. */
+  sync: (provider?: string): Promise<{ job_id: number; status: string }> => {
+    return api.post(`/api/v1/models/sync${provider ? `?provider=${provider}` : ""}`);
+  },
+
+  /** Get sync job status history. */
+  syncStatus: (): Promise<{ jobs: SyncJob[] }> => {
+    return api.get("/api/v1/models/sync/status");
+  },
+
+  /** Get autocomplete suggestions for model search. */
+  autocomplete: (query: string): Promise<{ suggestions: string[] }> => {
+    return api.get(`/api/v1/models/autocomplete?q=${encodeURIComponent(query)}`);
   },
 };

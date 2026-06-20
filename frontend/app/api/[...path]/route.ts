@@ -5,12 +5,7 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
-
-function getBackendBase(): string {
-  const env = process.env.CORTEX_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (env && /^https?:\/\//.test(env)) return env.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "");
-  return "http://localhost:8000";
-}
+import { getBackendBase } from "@/shared/backend-url";
 
 async function proxyRequest(request: NextRequest, path: string): Promise<NextResponse> {
   const bases = [getBackendBase(), "http://backend:8000", "http://localhost:8000"];
@@ -41,9 +36,6 @@ async function proxyRequest(request: NextRequest, path: string): Promise<NextRes
       const responseHeaders = new Headers();
       const contentType = res.headers.get("content-type") || "";
       responseHeaders.set("Content-Type", contentType);
-
-      const contentLength = res.headers.get("content-length");
-      if (contentLength) responseHeaders.set("Content-Length", contentLength);
 
       // Forward Set-Cookie headers from backend so auth cookies persist
       const setCookies = res.headers.getSetCookie?.() ?? [];

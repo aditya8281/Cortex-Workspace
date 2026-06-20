@@ -559,6 +559,31 @@ export interface ModelVariantInfo {
   ollama_tag: string | null;
 }
 
+// ── Model Search / Comparison / Sync ───────────────────────
+
+export interface ModelSearchResult {
+  models: ModelInfo[];
+  count: number;
+}
+
+export interface ModelComparisonResult {
+  models: { model_id: string; display_name: string }[];
+  dimensions: string[];
+  scores: Record<string, Record<string, number>>;
+  winner: Record<string, string>;
+  recommendation: string;
+}
+
+export interface SyncJob {
+  id: number;
+  sync_type: string;
+  status: string;
+  models_discovered: number;
+  models_added: number;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
 // ── Indexing Config ───────────────────────────────────────────
 
 export interface IndexingConfig {

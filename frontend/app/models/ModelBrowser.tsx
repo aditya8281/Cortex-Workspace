@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Search, Filter } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Search, Filter, Loader2 } from "lucide-react";
 import ModelCard from "./ModelCard";
 import Skeleton from "@/shared/ui/Skeleton";
 import { modelsApi } from "@/shared/api";
@@ -45,6 +45,11 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
   const [sizeFilter, setSizeFilter] = useState<SizeFilter>("all");
   const [downloadingModels, setDownloadingModels] = useState<Set<string>>(new Set());
   const [downloadProgress, setDownloadProgress] = useState<Map<string, number>>(new Map());
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const autocompleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -64,6 +69,53 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const handleAutocomplete = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (autocompleteTimer.current) clearTimeout(autocompleteTimer.current);
+    if (value.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    autocompleteTimer.current = setTimeout(async () => {
+      try {
+        const res = await modelsApi.autocomplete(value.trim());
+        setSuggestions(res.suggestions);
+        setShowSuggestions(res.suggestions.length > 0);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 250);
+  }, []);
+
+  const handleSearchSubmit = useCallback(async (query?: string) => {
+    const q = (query ?? searchQuery).trim();
+    if (!q) return;
+    setSearching(true);
+    setShowSuggestions(false);
+    try {
+      const res = await modelsApi.search(q, {
+        ...(activeFilter !== "all" ? { model_type: activeFilter } : {}),
+      });
+      setModels(res.models);
+    } catch {
+      // Fall back to client-side filter on existing list
+    } finally {
+      setSearching(false);
+    }
+  }, [searchQuery, activeFilter]);
 
   // Live download progress via WebSocket
   useSystemWebSocket({
@@ -167,19 +219,48 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
     <div className="space-y-6">
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Search */}
-        <div className="relative flex-1">
+        {/* Search with autocomplete */}
+        <div className="relative flex-1" ref={searchRef}>
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             type="text"
             placeholder="Search models..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-xl bg-bg-surface border border-border-subtle
+            onChange={(e) => handleAutocomplete(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSearchSubmit();
+              }
+            }}
+            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            className="w-full h-10 pl-10 pr-10 rounded-xl bg-bg-surface border border-border-subtle
                        text-sm text-text placeholder:text-text-muted
                        focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20
                        transition-colors"
           />
+          {searching && (
+            <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted animate-spin" />
+          )}
+          {showSuggestions && suggestions.length > 0 && (
+            <ul className="absolute z-20 top-full mt-1 w-full rounded-xl bg-bg-surface border border-border-subtle shadow-lg max-h-48 overflow-y-auto">
+              {suggestions.map((s) => (
+                <li key={s}>
+                  <button
+                    type="button"
+                    className="w-full text-left px-4 py-2 text-sm text-text hover:bg-bg-hover transition-colors"
+                    onMouseDown={() => {
+                      setSearchQuery(s);
+                      setShowSuggestions(false);
+                      handleSearchSubmit(s);
+                    }}
+                  >
+                    {s}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Filter tabs */}

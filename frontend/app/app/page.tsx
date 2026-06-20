@@ -24,6 +24,7 @@ import { useAuth } from "@/shared/auth/AuthProvider";
 import { apiSystemMetrics, apiSystemLogs } from "@/shared/auth/cortexApi";
 import { memoryApi } from "@/shared/api";
 import { agentApi } from "@/shared/api";
+import { useSystemWebSocket, type WebSocketStatus } from "@/shared/hooks/useSystemWebSocket";
 import Link from "next/link";
 import type { SystemMetrics, SystemLog } from "@/shared/types";
 import SyncStatus from "@/shared/components/SyncStatus";
@@ -35,7 +36,8 @@ export default function DashboardPage() {
   const [recentActivity, setRecentActivity] = useState<SystemLog[]>([]);
   const [memoryCount, setMemoryCount] = useState<number | null>(null);
   const [agentCount, setAgentCount] = useState<number | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const [wsStatus, setWsStatus] = useState<WebSocketStatus>("disconnected");
+  const httpFallbackRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const processes = metrics?.processes ?? [];
 
@@ -43,61 +45,68 @@ export default function DashboardPage() {
     if (!loading && !user) router.replace("/auth");
   }, [user, loading, router]);
 
-  useEffect(() => {
-    if (!user) return;
-    let retryCount = 0;
-    const maxRetries = 3;
-    const fetchMetrics = async () => {
+  // ── WebSocket for live metrics + logs ──
+  useSystemWebSocket({
+    path: "/ws/system",
+    enabled: !!user,
+    onStatusChange: setWsStatus,
+    onMessage(event) {
       try {
-        const data = await apiSystemMetrics();
-        setMetrics((prev) => ({ ...prev, ...data }));
-        retryCount = 0;
-      } catch (err) {
-        retryCount++;
-        if (retryCount <= maxRetries) {
-          console.warn(`[Dashboard] Metrics fetch attempt ${retryCount} failed`);
-        }
-      }
-    };
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 10000);
-    return () => clearInterval(interval);
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    apiSystemLogs(15).then((data) => setRecentActivity(data.logs)).catch(() => {/* HTTP polling fallback */});
-    const interval = setInterval(() => {
-      apiSystemLogs(15).then((data) => setRecentActivity(data.logs)).catch(() => {/* HTTP polling fallback */});
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    // Connect directly to the backend WebSocket (port 8000), not through the
-    // Next.js dev server which does not proxy WebSocket connections.
-    const backendHost = window.location.hostname + ":8000";
-    const wsUrl = `${protocol}//${backendHost}/ws/system`;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "metrics") {
-          setMetrics((prev) => ({ ...prev, ...data }));
+        const { type: _type, ...payload } = JSON.parse(event.data);
+        if (_type === "metrics") {
+          setMetrics((prev) => ({ ...prev, ...payload }));
+        } else if (_type === "logs" && Array.isArray(payload.logs)) {
+          setRecentActivity(payload.logs);
         }
       } catch {}
+    },
+  });
+
+  // ── Cold-start HTTP fetch + fallback when WS is down ──
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    // Cold-start: fetch immediately so UI isn't empty
+    apiSystemMetrics()
+      .then((data) => { if (!cancelled) setMetrics(data); })
+      .catch(() => {});
+    apiSystemLogs(15)
+      .then((data) => { if (!cancelled) setRecentActivity(data.logs); })
+      .catch(() => {});
+
+    // Slow HTTP fallback when WebSocket is disconnected
+    const startFallback = () => {
+      if (httpFallbackRef.current) clearInterval(httpFallbackRef.current);
+      httpFallbackRef.current = setInterval(() => {
+        apiSystemMetrics()
+          .then((data) => { if (!cancelled) setMetrics(data); })
+          .catch(() => {});
+        apiSystemLogs(15)
+          .then((data) => { if (!cancelled) setRecentActivity(data.logs); })
+          .catch(() => {});
+      }, 30000);
     };
 
-    // WebSocket is best-effort — HTTP polling provides the primary fallback
-    ws.onerror = () => {};
-    ws.onclose = () => {};
+    const stopFallback = () => {
+      if (httpFallbackRef.current) {
+        clearInterval(httpFallbackRef.current);
+        httpFallbackRef.current = null;
+      }
+    };
 
-    return () => { ws.close(); wsRef.current = null; };
-  }, [user]);
+    // Watch wsStatus to toggle fallback
+    if (wsStatus === "disconnected") {
+      startFallback();
+    } else {
+      stopFallback();
+    }
+
+    return () => {
+      cancelled = true;
+      stopFallback();
+    };
+  }, [user, wsStatus]);
 
   useEffect(() => {
     if (!user) return;
