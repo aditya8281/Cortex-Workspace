@@ -24,9 +24,7 @@ class ModelSearchService:
         "small model": {"max_params": 4.0},
         "large model": {"min_params": 30.0},
         "fast model": {"sort": "speed"},
-        "high quality": {"min_quality": 90},
-        "under 8gb": {"max_vram": 8.0},
-        "under 4gb": {"max_vram": 4.0},
+
         "lightweight": {"max_params": 4.0},
         "embedding": {"capabilities": ["embedding"]},
         "reasoning": {"capabilities": ["reasoning"]},
@@ -50,9 +48,6 @@ class ModelSearchService:
         capabilities: list[str] | None = None,
         min_params: float | None = None,
         max_params: float | None = None,
-        min_vram: float | None = None,
-        max_vram: float | None = None,
-        min_quality: float | None = None,
         provider: str | None = None,
         family: str | None = None,
         sort: str = "relevance",
@@ -90,7 +85,7 @@ class ModelSearchService:
         """Autocomplete model names."""
         models = (
             self._db.query(ModelCatalog.display_name)
-            .filter(ModelCatalog.display_name.ilike(f"%{prefix}%"))
+            .filter(ModelCatalog.display_name.ilike(f"{prefix}%"))
             .limit(limit)
             .all()
         )
@@ -127,8 +122,6 @@ class ModelSearchService:
             capabilities=filters.get("capabilities"),
             min_params=filters.get("min_params"),
             max_params=filters.get("max_params"),
-            max_vram=filters.get("max_vram"),
-            min_quality=filters.get("min_quality"),
             sort=filters.get("sort", "relevance"),
             limit=limit,
         )

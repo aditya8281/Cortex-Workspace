@@ -108,7 +108,7 @@ def test_autocomplete(_db_session):
     svc = ModelSearchService(_db_session)
     suggestions = svc.autocomplete("ll")
     assert len(suggestions) > 0
-    assert all("ll" in s.lower() for s in suggestions)
+    assert all(s.lower().startswith("ll") for s in suggestions)
 
 
 def test_autocomplete_no_match(_db_session):
