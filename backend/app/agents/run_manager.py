@@ -5,13 +5,13 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any
 
 from sqlalchemy.orm import Session
 
 from backend.app.agents.executor import ExecutorAgent
 from backend.app.agents.planner import PlannerAgent
 from backend.app.models.agent import Agent, AgentFeedback, AgentRun, AgentStep
+from backend.app.services.llm.manager import llm_manager
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class AgentRunManager:
         executor: ExecutorAgent | None = None,
     ):
         self.db = db
-        self.planner = planner or PlannerAgent()
+        self.planner = planner or PlannerAgent(llm_chat=llm_manager.chat)
         self.executor = executor or ExecutorAgent()
 
     def create_agent(
@@ -84,6 +84,9 @@ class AgentRunManager:
         self.db.refresh(run)
 
         try:
+            # Attach agent model to executor for model_id/tools_json access
+            self.executor._agent = agent
+
             # Plan the task
             plan = await self.planner.plan(input_text)
             logger.info("Agent %d planned %d steps for run %d", agent_id, len(plan), run.id)

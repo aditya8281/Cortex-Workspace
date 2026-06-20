@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -24,10 +25,16 @@ Always explain what you did and what you found."""
 class ExecutorAgent(BaseAgent):
     """Executes tasks using available tools."""
 
-    def __init__(self, search_fn: Any | None = None, llm_chat: Any | None = None):
+    def __init__(
+        self,
+        search_fn: Any | None = None,
+        llm_chat: Any | None = None,
+        agent: Any | None = None,
+    ):
         super().__init__(system_prompt=EXECUTOR_SYSTEM_PROMPT)
         self._search_fn = search_fn
         self._llm_chat = llm_chat
+        self._agent = agent
 
         # Register built-in tools
         self.register_tool("search", self._search_tool)
@@ -57,10 +64,24 @@ class ExecutorAgent(BaseAgent):
                 "content": f"Context from previous steps:\n{context}",
             })
 
+        # Filter tools based on agent's allowed tools_json
+        all_schemas = self.get_tool_schemas()
+        allowed_tools = None
+        if self._agent and getattr(self._agent, "tools_json", None):
+            try:
+                allowed_tools = json.loads(self._agent.tools_json)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if allowed_tools:
+            all_schemas = [
+                s for s in all_schemas
+                if s["function"]["name"] in allowed_tools
+            ]
+
         max_iterations = 10
         for _ in range(max_iterations):
             try:
-                result = await self._llm_chat(messages, self.get_tool_schemas())
+                result = await self._llm_chat(messages, all_schemas)
                 text = result[0] if isinstance(result, tuple) else str(result)
 
                 # Check for tool calls
@@ -98,7 +119,8 @@ class ExecutorAgent(BaseAgent):
                 LLMMessage(role="system", content=system_prompt),
                 LLMMessage(role="user", content=task),
             ]
-            response = await llm_manager.chat(messages, max_tokens=2048, temperature=0.3)
+            model_id = getattr(self._agent, "model_id", None) if self._agent else None
+            response = await llm_manager.chat(messages, model=model_id, max_tokens=2048, temperature=0.3)
             return response.content
         except (RuntimeError, Exception):
             # No LLM available, fall back to keyword routing
