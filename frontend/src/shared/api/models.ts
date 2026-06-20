@@ -6,9 +6,14 @@ import { api } from "./client";
 import type {
   ModelListResponse,
   RecommendedModelsResponse,
+  RecommendedModelsResponseEnhanced,
   HardwareInfo,
   DownloadProgressResponse,
   DownloadResult,
+  DownloadJob,
+  DownloadQueueResponse,
+  StorageUsage,
+  ModelCatalogEntry,
 } from "../types";
 
 export const modelsApi = {
@@ -58,5 +63,52 @@ export const modelsApi = {
   /** Cancel an active download. */
   cancel: (modelName: string): Promise<{ cancelled: boolean }> => {
     return api.post(`/api/v1/models/${encodeURIComponent(modelName)}/cancel`);
+  },
+
+  /** Get per-workload recommendations. */
+  recommendedEnhanced: (workload?: string): Promise<RecommendedModelsResponseEnhanced> => {
+    const qs = workload ? `?workload=${encodeURIComponent(workload)}` : "";
+    return api.get(`/api/v1/models/recommended${qs}`);
+  },
+
+  /** Get installed models with status. */
+  installed: (): Promise<{ models: ModelCatalogEntry[]; installed_count: number }> => {
+    return api.get("/api/v1/models/installed");
+  },
+
+  /** Get download queue. */
+  downloadQueue: (): Promise<DownloadQueueResponse> => {
+    return api.get("/api/v1/models/downloads/queue");
+  },
+
+  /** Get download history. */
+  downloadHistory: (limit?: number): Promise<{ history: DownloadJob[] }> => {
+    const qs = limit ? `?limit=${limit}` : "";
+    return api.get(`/api/v1/models/downloads/history${qs}`);
+  },
+
+  /** Get storage usage. */
+  storage: (): Promise<StorageUsage> => {
+    return api.get("/api/v1/models/storage");
+  },
+
+  /** Refresh catalogue. */
+  refreshCatalogue: (): Promise<{ status: string; models_added: number }> => {
+    return api.post("/api/v1/models/catalogue/refresh");
+  },
+
+  /** Get model detail with variants. */
+  detail: (modelId: string): Promise<ModelCatalogEntry> => {
+    return api.get(`/api/v1/models/${encodeURIComponent(modelId)}`);
+  },
+
+  /** Get inference config for a model. */
+  inferenceConfig: (modelId: string): Promise<Record<string, unknown>> => {
+    return api.get(`/api/v1/models/${encodeURIComponent(modelId)}/inference-config`);
+  },
+
+  /** Check for model updates. */
+  checkUpdates: (): Promise<{ updates: Array<{ model_id: string; current: string; latest: string }> }> => {
+    return api.get("/api/v1/models/updates");
   },
 };

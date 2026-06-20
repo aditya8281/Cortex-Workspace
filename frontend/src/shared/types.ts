@@ -419,6 +419,146 @@ export interface DownloadResult {
   model: string;
 }
 
+// ── Enhanced Models ──────────────────────────────────────────────
+
+export interface HardwareProfile {
+  ram_gb: number;
+  ram_available_gb: number;
+  ram_percent: number;
+  cpu_count: number;
+  cpu_threads: number;
+  cpu_freq_mhz: number;
+  cpu_arch: string;
+  gpu: {
+    available: boolean;
+    name: string | null;
+    type: string;
+    vram_gb: number;
+    vram_available_gb: number;
+    memory_bandwidth_gbps: number | null;
+    compute_capability: string | null;
+    arch: string | null;
+  };
+  disk_free_gb: number;
+  supports_cuda: boolean;
+  supports_metal: boolean;
+}
+
+export interface PerformanceEstimate {
+  tokens_per_second: number | null;
+  prompt_eval_tps: number | null;
+  memory_usage_gb: number;
+  vram_usage_gb: number;
+  quantization_quality: string;
+  quality_notes: string;
+  speed_rating: string;
+  fit_rating: string;
+  context_length_max: number;
+}
+
+export interface ModelRecommendation {
+  model_id: string;
+  display_name: string;
+  family: string;
+  parameter_count: number;
+  capabilities: string[];
+  description: string;
+  score: number;
+  variant: {
+    quantization: string;
+    size_gb: number;
+    vram_required_gb: number;
+    quality_score: number;
+  } | null;
+  performance: PerformanceEstimate | null;
+  explanation: {
+    why: string;
+    tradeoff: string;
+    suitability: string;
+  };
+}
+
+export interface WorkloadRecommendations {
+  label: string;
+  description: string;
+  recommendations: ModelRecommendation[];
+}
+
+export interface RecommendedModelsResponseEnhanced {
+  hardware: HardwareProfile;
+  workloads: Record<string, WorkloadRecommendations>;
+}
+
+export interface DownloadJob {
+  job_id: string;
+  model_id: string;
+  status: "queued" | "downloading" | "completed" | "failed" | "cancelled" | "paused";
+  progress: number;
+  speed_bytes_sec: number | null;
+  downloaded_bytes: number;
+  total_bytes: number;
+  eta_seconds: number | null;
+  queue_position: number | null;
+  error: string | null;
+}
+
+export interface DownloadQueueResponse {
+  active: DownloadJob[];
+  queued: DownloadJob[];
+  completed: DownloadJob[];
+  failed: DownloadJob[];
+}
+
+export interface StorageUsage {
+  total_disk_gb: number;
+  used_disk_gb: number;
+  free_disk_gb: number;
+  models_total_gb: number;
+  models: ModelStorageEntry[];
+  cache_gb: number;
+}
+
+export interface ModelStorageEntry {
+  model_id: string;
+  variant_id: string;
+  size_gb: number;
+  last_used: string | null;
+  usage_count: number;
+}
+
+export interface ModelCatalogEntry {
+  id: number;
+  model_id: string;
+  family: string;
+  display_name: string;
+  provider: string;
+  parameter_count: number;
+  architecture: string | null;
+  context_length_default: number;
+  context_length_max: number | null;
+  capabilities: string[];
+  license: string | null;
+  recommended_use_cases: string[];
+  description: string;
+  tags: string[];
+  variants: ModelVariantInfo[];
+}
+
+export interface ModelVariantInfo {
+  id: number;
+  variant_id: string;
+  quantization: string;
+  quantization_level: string;
+  parameter_count: number;
+  size_bytes: number;
+  size_gb: number;
+  vram_required_gb: number;
+  ram_required_gb: number;
+  quality_score: number;
+  downloaded: boolean;
+  ollama_tag: string | null;
+}
+
 // ── Indexing Config ───────────────────────────────────────────
 
 export interface IndexingConfig {
