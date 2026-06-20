@@ -11,10 +11,10 @@ interface PageTransitionProps {
 export default function PageTransition({ children, className }: PageTransitionProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ type: "spring", damping: 30, stiffness: 200 }}
       className={className}
     >
       {children}
