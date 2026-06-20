@@ -93,7 +93,11 @@ def get_gpu_info() -> dict[str, Any]:
     try:
         # Try NVIDIA GPU
         result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,driver_version,memory.total,memory.used,utilization.gpu", "--format=csv,noheader,nounits"],
+            [
+                "nvidia-smi",
+                "--query-gpu=name,driver_version,memory.total,memory.used,utilization.gpu",
+                "--format=csv,noheader,nounits",
+            ],
             capture_output=True,
             text=True,
             timeout=3,
@@ -114,18 +118,39 @@ def get_gpu_info() -> dict[str, Any]:
         pass
 
     try:
-        # Try Apple Metal GPU
+        # Apple Metal GPU detection
         if platform.system() == "Darwin":
             result = subprocess.run(
-                ["system_profiler", "SPDisplaysDataType"], capture_output=True, text=True, timeout=5
+                ["system_profiler", "SPDisplaysDataType"],
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
-            if result.returncode == 0 and "GPU" in result.stdout:
+            if result.returncode == 0:
+                # Parse chipset model from output
+                for line in result.stdout.split("\n"):
+                    if "Chipset Model:" in line:
+                        gpu_name = line.split(":", 1)[1].strip()
+                        return {
+                            "detected": True,
+                            "name": gpu_name,
+                            "type": "Apple Metal",
+                            # Apple does not expose GPU utilization via CLI
+                            "utilization_gpu": None,
+                        }
                 return {
-                    "type": "Apple Metal",
                     "detected": True,
+                    "name": "Apple GPU",
+                    "type": "Apple Metal",
+                    "utilization_gpu": None,
                 }
     except Exception:
-        pass
+        return {
+            "detected": True,
+            "name": "Apple GPU",
+            "type": "Apple Metal",
+            "utilization_gpu": None,
+        }
 
     return {}
 
