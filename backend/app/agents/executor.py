@@ -88,10 +88,33 @@ class ExecutorAgent(BaseAgent):
         return "Task completed with maximum iterations"
 
     async def _execute_direct(self, task: str, context: dict | None = None) -> str:
-        """Execute a task directly without LLM (deterministic)."""
+        """Execute task using LLM for real reasoning (with keyword fallback)."""
+        try:
+            from backend.app.services.llm.manager import llm_manager
+            from backend.app.services.llm.provider import LLMMessage
+
+            system_prompt = self._build_system_prompt(context)
+            messages = [
+                LLMMessage(role="system", content=system_prompt),
+                LLMMessage(role="user", content=task),
+            ]
+            response = await llm_manager.chat(messages, max_tokens=2048, temperature=0.3)
+            return response.content
+        except (RuntimeError, Exception):
+            # No LLM available, fall back to keyword routing
+            return await self._keyword_fallback(task)
+
+    def _build_system_prompt(self, context: dict | None = None) -> str:
+        """Build system prompt with optional context."""
+        prompt = EXECUTOR_SYSTEM_PROMPT
+        if context:
+            prompt += f"\n\nContext:\n{context}"
+        return prompt
+
+    async def _keyword_fallback(self, task: str) -> str:
+        """Fallback keyword-based routing when no LLM is available."""
         task_lower = task.lower()
 
-        # Simple keyword-based routing
         if any(kw in task_lower for kw in ["search", "find", "look for"]):
             query = self._extract_search_query(task)
             results = await self._search_tool(query)
@@ -107,7 +130,6 @@ class ExecutorAgent(BaseAgent):
             path = self._extract_path(task) or "."
             return await self._list_files_tool(path)
 
-        # Default: provide a helpful response
         return (
             f"Task received: {task}\n\n"
             "I can help with:\n"
