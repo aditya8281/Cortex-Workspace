@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     ]
 
     EMBEDDING_DIM: int = 768
+    EMBEDDING_MODEL_PATH: str = ""
+    EMBEDDING_MODEL_NAME: str = "nomic-embed-text"
 
     # LLM Settings
     LLM_PROVIDER: str = "auto"  # "auto", "llama_cpp", "ollama", "none"

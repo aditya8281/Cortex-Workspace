@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from typing import Any
 
 from backend.app.core.config import settings
@@ -11,47 +12,119 @@ EMBEDDING_DIM = settings.EMBEDDING_DIM
 
 
 class EmbeddingService:
-    """Generate embeddings using ONNX model with mock fallback."""
+    """Generate embeddings using ONNX model, Ollama, or mock fallback."""
 
     def __init__(self, model_path: str | None = None):
-        self.model_path = model_path
+        self.model_path = model_path or settings.EMBEDDING_MODEL_PATH
         self._model = None
         self._tokenizer = None
         self._load_failed = False
+        self._backend: str | None = None  # "onnx" | "ollama" | "mock"
 
     def _load_model(self) -> None:
-        if self._model is not None or self._load_failed:
+        if self._backend is not None:
             return
-        if self.model_path:
+
+        # Try ONNX first
+        model_path = self.model_path
+        if model_path:
             try:
                 import onnxruntime as ort  # type: ignore[import-untyped]
 
-                self._model = ort.InferenceSession(self.model_path)
-                logger.info("Loaded ONNX model from %s", self.model_path)
+                self._model = ort.InferenceSession(model_path)
+                self._backend = "onnx"
+                logger.info("Loaded ONNX model from %s", model_path)
                 return
             except ImportError:
                 logger.warning("onnxruntime not installed — install with: pip install 'cortex-workspace[embeddings]'")
-                self._load_failed = True
-                return
             except Exception as e:
                 logger.warning("Failed to load ONNX model: %s", e)
-                self._load_failed = True
-        logger.info("Using mock embeddings (no model loaded)")
-        self._load_failed = True
+
+        # Try Ollama next
+        try:
+            import httpx  # noqa: F401
+
+            self._backend = "ollama"
+            logger.info(
+                "Using Ollama embeddings (model=%s, base_url=%s)",
+                settings.EMBEDDING_MODEL_NAME,
+                settings.OLLAMA_BASE_URL,
+            )
+            return
+        except ImportError:
+            logger.warning("httpx not installed — install with: pip install httpx")
+
+        # Mock fallback — last resort
+        self._backend = "mock"
+        warnings.warn(
+            "No embedding backend available (ONNX missing, httpx missing). "
+            "Using deterministic mock embeddings — these are NOT semantically meaningful. "
+            "Install httpx for Ollama embeddings or cortex-workspace[embeddings] for ONNX.",
+            UserWarning,
+            stacklevel=2,
+        )
+        logger.warning("Using mock embeddings (no real backend available)")
 
     def embed(self, text: str) -> list[float]:
         self._load_model()
-        if self._model:
+        if self._backend == "onnx" and self._model:
             try:
                 inputs = self._tokenize(text)
                 result = self._model.run(None, inputs)
                 return result[0][0].tolist()
             except Exception as e:
-                logger.warning("Embedding failed: %s, using mock", e)
+                logger.warning("ONNX embedding failed: %s, falling back to mock", e)
+                return self._mock_embed(text)
+        if self._backend == "ollama":
+            try:
+                import asyncio
+
+                return asyncio.get_event_loop().run_until_complete(
+                    self._embed_via_ollama([text])
+                )[0]
+            except Exception as e:
+                logger.warning("Ollama embedding failed: %s, falling back to mock", e)
+                return self._mock_embed(text)
         return self._mock_embed(text)
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        return [self.embed(t) for t in texts]
+        self._load_model()
+        if self._backend == "onnx" and self._model:
+            try:
+                return [self.embed(t) for t in texts]
+            except Exception as e:
+                logger.warning("ONNX batch embedding failed: %s, falling back to mock", e)
+                return [self._mock_embed(t) for t in texts]
+        if self._backend == "ollama":
+            try:
+                import asyncio
+
+                return asyncio.get_event_loop().run_until_complete(
+                    self._embed_via_ollama(texts)
+                )
+            except Exception as e:
+                logger.warning("Ollama batch embedding failed: %s, falling back to mock", e)
+                return [self._mock_embed(t) for t in texts]
+        return [self._mock_embed(t) for t in texts]
+
+    async def _embed_via_ollama(self, texts: list[str]) -> list[list[float]]:
+        import httpx
+
+        vectors = []
+        async with httpx.AsyncClient(
+            base_url=settings.OLLAMA_BASE_URL, timeout=30.0
+        ) as client:
+            for text in texts:
+                resp = await client.post(
+                    "/api/embeddings",
+                    json={
+                        "model": settings.EMBEDDING_MODEL_NAME,
+                        "prompt": text,
+                    },
+                )
+                resp.raise_for_status()
+                vectors.append(resp.json()["embedding"])
+        return vectors
 
     def _tokenize(self, text: str) -> dict[str, Any]:
         return {"input_ids": [[0]], "attention_mask": [[1]]}
