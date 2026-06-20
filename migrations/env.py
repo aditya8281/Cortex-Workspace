@@ -43,6 +43,8 @@ from backend.app.models.notification import Notification  # noqa: F401, E402
 from backend.app.models.indexing_config import IndexingConfig  # noqa: F401, E402
 from backend.app.models.storage_registry import StorageRegistry  # noqa: F401, E402
 from backend.app.models.user import User  # noqa: F401, E402
+from backend.app.models.document import Document, DocumentChunk  # noqa: F401, E402
+from backend.app.models.embedding_cache import EmbeddingCache  # noqa: F401, E402
 
 target_metadata = Base.metadata
 
