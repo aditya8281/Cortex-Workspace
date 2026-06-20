@@ -61,6 +61,19 @@ class AgentRunManager:
             query = query.filter(Agent.is_active.is_(True))
         return query.order_by(Agent.name).all()
 
+    def create_run(self, agent_id: int, user_id: int, input_text: str) -> AgentRun:
+        """Create a run record (status=pending) without executing."""
+        run = AgentRun(
+            agent_id=agent_id,
+            user_id=user_id,
+            input_text=input_text,
+            status="pending",
+        )
+        self.db.add(run)
+        self.db.commit()
+        self.db.refresh(run)
+        return run
+
     async def run_agent(
         self,
         agent_id: int,
@@ -73,15 +86,9 @@ class AgentRunManager:
             raise ValueError(f"Agent {agent_id} not found")
 
         # Create run record
-        run = AgentRun(
-            agent_id=agent_id,
-            user_id=user_id,
-            input_text=input_text,
-            status="running",
-        )
-        self.db.add(run)
+        run = self.create_run(agent_id, user_id, input_text)
+        run.status = "running"
         self.db.commit()
-        self.db.refresh(run)
 
         try:
             # Attach agent model to executor for model_id/tools_json access

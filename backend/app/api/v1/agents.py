@@ -189,15 +189,18 @@ async def create_run(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Create and execute an agent run."""
+    """Start an agent run in the background and return immediately."""
+    import asyncio
+
+    from backend.app.agents.background import run_agent_background
+
     manager = AgentRunManager(db)
     try:
-        run = await manager.run_agent(
-            agent_id=payload.agent_id,
-            user_id=current_user.id,
-            input_text=payload.input,
+        run = manager.create_run(payload.agent_id, current_user.id, payload.input)
+        asyncio.create_task(
+            run_agent_background(run.id, payload.agent_id, current_user.id, payload.input)
         )
-        return {"status": "completed", "run": manager.serialize_run(run)}
+        return {"status": "started", "run_id": run.id}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -240,6 +243,17 @@ def get_run(
         "run": manager.serialize_run(run),
         "steps": [manager.serialize_step(s) for s in steps],
     }
+
+
+@router.get("/agents/runs/{run_id}/status")
+async def get_run_status_endpoint(
+    run_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    """Get the status of a background agent run."""
+    from backend.app.agents.background import get_run_status
+
+    return {"run_id": run_id, "status": get_run_status(run_id)}
 
 
 @router.get("/agents/runs/{run_id}/steps")

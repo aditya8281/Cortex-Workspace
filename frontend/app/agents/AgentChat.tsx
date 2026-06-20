@@ -70,15 +70,26 @@ export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
 
     try {
       const result = await agentApi.run({ agent_id: agent.id, input: userMessage.content });
-      const run = result.run;
+      const runId = result.run_id;
 
-      let steps: AgentStep[] = [];
-      try {
-        const detail = await agentApi.getRun(run.id);
-        steps = detail.steps;
-      } catch {
-        // Steps fetch failed, continue without them
+      // Poll for completion
+      let runData: { run: AgentRun; steps: AgentStep[] } | null = null;
+      for (let attempts = 0; attempts < 120; attempts++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const statusRes = await agentApi.getRunStatus(runId);
+        if (statusRes.status === "completed" || statusRes.status === "failed" || statusRes.status === "unknown") {
+          // Fetch full run details
+          runData = await agentApi.getRun(runId);
+          break;
+        }
       }
+
+      if (!runData) {
+        throw new Error("Timed out waiting for agent run");
+      }
+
+      const run = runData.run;
+      const steps = runData.steps || [];
 
       const assistantMessage: Message = {
         role: "assistant",

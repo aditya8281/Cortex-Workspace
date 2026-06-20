@@ -46,12 +46,17 @@ export const agentApi = {
     return api.delete(`/api/v1/agents/${agentId}`);
   },
 
-  /** Run an agent. */
+  /** Run an agent (starts in background, returns run_id). */
   run: (body: {
     agent_id: number;
     input: string;
-  }): Promise<{ status: string; run: AgentRun }> => {
+  }): Promise<{ status: string; run_id: number }> => {
     return api.post("/api/v1/agents/runs", body);
+  },
+
+  /** Get status of a background run. */
+  getRunStatus: (runId: number): Promise<{ run_id: number; status: string }> => {
+    return api.get(`/api/v1/agents/runs/${runId}/status`);
   },
 
   /** List runs. */
