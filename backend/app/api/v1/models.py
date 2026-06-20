@@ -1,13 +1,15 @@
 from __future__ import annotations
+
 import logging
 
 import psutil
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
-from backend.app.services.llm.manager import llm_manager, MODEL_CATALOG
+from backend.app.services.llm.manager import MODEL_CATALOG, llm_manager
 from backend.app.services.model_downloader import model_downloader
 
 logger = logging.getLogger(__name__)
@@ -34,6 +36,26 @@ async def list_models(
     # Enrich catalog entries with provider status
     for entry in catalog:
         entry["downloaded"] = entry["name"] in available_names
+
+    # Merge in dynamic Ollama models not already in static catalog
+    dynamic = await llm_manager.fetch_ollama_catalog()
+    static_names = {m["name"] for m in catalog}
+    for dm in dynamic:
+        if dm.name not in static_names:
+            catalog.append(
+                {
+                    "name": dm.name,
+                    "display_name": dm.name,
+                    "provider": "ollama",
+                    "model_type": "chat",
+                    "parameter_count": None,
+                    "size_bytes": dm.size_bytes,
+                    "context_length": dm.context_length,
+                    "capabilities": dm.capabilities,
+                    "description": dm.description,
+                    "downloaded": dm.name in available_names,
+                }
+            )
 
     return {
         "models": catalog,
@@ -121,6 +143,20 @@ async def cancel_download(
     """Cancel an active download."""
     cancelled = await model_downloader.cancel_download(model_name)
     return {"cancelled": cancelled}
+
+
+@router.delete("/models/{model_name}")
+async def delete_model(
+    model_name: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Delete an Ollama model."""
+    import httpx
+
+    async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL) as client:
+        resp = await client.delete("/api/delete", json={"name": model_name})
+        resp.raise_for_status()
+    return {"status": "deleted", "model": model_name}
 
 
 def _detect_hardware() -> dict:

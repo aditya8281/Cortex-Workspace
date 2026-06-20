@@ -198,6 +198,29 @@ class LLMManager:
         ):
             yield token
 
+    async def fetch_ollama_catalog(self) -> list[LLMModelInfo]:
+        import httpx
+
+        try:
+            async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=10.0) as client:
+                resp = await client.get("/api/tags")
+                resp.raise_for_status()
+                data = resp.json()
+                models = []
+                for m in data.get("models", []):
+                    models.append(
+                        LLMModelInfo(
+                            name=m["name"],
+                            size_bytes=m.get("size", 0),
+                            context_length=4096,
+                            capabilities=["chat"],
+                            description=f"Ollama model: {m['name']}",
+                        )
+                    )
+                return models
+        except Exception:
+            return []
+
     async def list_all_models(self) -> list[LLMModelInfo]:
         all_models: list[LLMModelInfo] = []
         for p in self._providers:
