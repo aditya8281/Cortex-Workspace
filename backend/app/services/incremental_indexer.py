@@ -15,6 +15,7 @@ from backend.app.models.file_index import IndexedFile
 from backend.app.models.repo_index import CodeChunk, RepoIndex
 from backend.app.services.chunker import SKIP_DIRS, Chunk, chunk_code, chunk_text, detect_language
 from backend.app.services.embedding_service import get_embedding_service
+from backend.app.services.indexing_rules import IndexingRules
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class IncrementalIndexer:
     def __init__(self, db: Session):
         self.db = db
 
-    def index_repo(self, repo_id: int, force: bool = False) -> IndexResult:
+    def index_repo(self, repo_id: int, force: bool = False, rules: IndexingRules | None = None) -> IndexResult:
         """Index only changed files in a repository.
 
         Args:
@@ -65,7 +66,7 @@ class IncrementalIndexer:
             for f in self.db.query(IndexedFile).filter(IndexedFile.repo_id == repo_id).all()
         }
 
-        all_files = self._walk_repository(path)
+        all_files = self._walk_repository(path, rules=rules)
         languages: dict[str, int] = {}
         result = IndexResult(repo_id=repo_id)
 
@@ -127,14 +128,19 @@ class IncrementalIndexer:
         )
         return result
 
-    def _walk_repository(self, path: Path) -> list[Path]:
-        """Walk repository files, skipping ignored directories."""
+    def _walk_repository(self, path: Path, rules: IndexingRules | None = None) -> list[Path]:
+        """Walk repository files, skipping ignored directories.
+
+        If rules is provided, applies additional IndexingRules filtering.
+        """
         files: list[Path] = []
         for root, dirs, filenames in path.walk():
             dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
             for filename in filenames:
                 file_path = Path(root) / filename
                 if file_path.is_file() and file_path.suffix in TRACKED_EXTENSIONS:
+                    if rules and not rules.should_index(str(file_path), str(path)):
+                        continue
                     files.append(file_path)
         return sorted(files)
 

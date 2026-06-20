@@ -40,6 +40,7 @@ from backend.app.models.file_index import IndexedFile  # noqa: F401, E402
 from backend.app.models.graph import GraphEdge, GraphNode  # noqa: F401, E402
 from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401, E402
 from backend.app.models.notification import Notification  # noqa: F401, E402
+from backend.app.models.indexing_config import IndexingConfig  # noqa: F401, E402
 from backend.app.models.storage_registry import StorageRegistry  # noqa: F401, E402
 from backend.app.models.user import User  # noqa: F401, E402
 
