@@ -134,6 +134,12 @@ class CrossFileSearch:
             ],
         }
 
+    async def hybrid_search(self, query: str, repo_id: int | None = None, max_results: int = 20):
+        """Use hybrid retrieval for better results."""
+        from backend.app.services.hybrid_retrieval import HybridRetrieval
+        retrieval = HybridRetrieval(self.db)
+        return await retrieval.retrieve(query, repo_id, max_results)
+
     def get_file_graph(self, file_path: str, repo_id: int | None = None) -> dict:
         """Get the graph for a specific file."""
         query = self.db.query(GraphNode).filter(GraphNode.file_path == file_path)
