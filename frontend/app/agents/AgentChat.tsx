@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, Bot, User, Loader2, ChevronDown, ChevronUp, Clock, Play, CheckCircle, XCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../src/lib/utils";
 import type { Agent, AgentRun, AgentStep } from "../../src/shared/types";
 import { agentApi } from "../../src/shared/api/agent";
@@ -18,22 +19,43 @@ interface Message {
   timestamp?: string;
 }
 
+const stepStatusIcons: Record<string, typeof Clock> = {
+  pending: Clock,
+  running: Play,
+  completed: CheckCircle,
+  failed: XCircle,
+};
+
+const stepStatusColors: Record<string, string> = {
+  pending: "text-text-muted",
+  running: "text-accent",
+  completed: "text-success",
+  failed: "text-error",
+};
+
+const stepStatusBg: Record<string, string> = {
+  pending: "bg-bg-surface text-text-muted",
+  running: "bg-accent/10 text-accent",
+  completed: "bg-success/10 text-success",
+  failed: "bg-error/10 text-error",
+};
+
 export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
+  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  function toggleSteps(index: number) {
+  function toggleStep(key: string) {
     setExpandedSteps((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -50,7 +72,6 @@ export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
       const result = await agentApi.run({ agent_id: agent.id, input: userMessage.content });
       const run = result.run;
 
-      // Fetch steps for detail
       let steps: AgentStep[] = [];
       try {
         const detail = await agentApi.getRun(run.id);
@@ -121,14 +142,14 @@ export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
               <div className="min-w-0 flex-1">
                 <p className="text-text whitespace-pre-wrap">{msg.content}</p>
 
-                {/* Steps toggle */}
+                {/* Structured Steps */}
                 {msg.steps && msg.steps.length > 0 && (
-                  <div className="mt-2">
+                  <div className="mt-3">
                     <button
-                      onClick={() => toggleSteps(i)}
-                      className="flex items-center gap-1 text-xs text-text-muted hover:text-accent transition-colors"
+                      onClick={() => toggleStep(`msg-${i}`)}
+                      className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors mb-2"
                     >
-                      {expandedSteps.has(i) ? (
+                      {expandedSteps.has(`msg-${i}`) ? (
                         <ChevronUp className="h-3 w-3" />
                       ) : (
                         <ChevronDown className="h-3 w-3" />
@@ -136,39 +157,83 @@ export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
                       {msg.steps.length} step{msg.steps.length > 1 ? "s" : ""}
                     </button>
 
-                    {expandedSteps.has(i) && (
-                      <div className="mt-2 space-y-2 pl-2 border-l border-border-subtle">
-                        {msg.steps.map((step) => (
-                          <div key={step.id} className="text-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-accent">#{step.step_number}</span>
-                              <span className="text-text-muted">{step.action}</span>
-                              <span
-                                className={cn(
-                                  "px-1.5 py-0.5 rounded text-[10px] font-mono",
-                                  step.status === "completed"
-                                    ? "bg-success/10 text-success"
-                                    : step.status === "failed"
-                                      ? "bg-error/10 text-error"
-                                      : "bg-bg-surface text-text-muted",
-                                )}
-                              >
-                                {step.status}
-                              </span>
-                            </div>
-                            {step.thought && (
-                              <p className="text-text-muted/60 mt-0.5">{step.thought}</p>
-                            )}
-                            {step.observation && (
-                              <p className="text-text-secondary mt-0.5 font-mono text-[11px]">
-                                {step.observation.slice(0, 200)}
-                                {step.observation.length > 200 && "..."}
-                              </p>
-                            )}
+                    <AnimatePresence>
+                      {expandedSteps.has(`msg-${i}`) && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-1.5 pl-1">
+                            {msg.steps.map((step) => {
+                              const StepIcon = stepStatusIcons[step.status] || Clock;
+                              const stepKey = `msg-${i}-step-${step.id}`;
+                              const isExpanded = expandedSteps.has(stepKey);
+
+                              return (
+                                <div key={step.id} className="rounded-lg border border-border-subtle bg-bg-surface/50 overflow-hidden">
+                                  <button
+                                    onClick={() => toggleStep(stepKey)}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-bg-hover/50 transition-colors"
+                                  >
+                                    <span className="font-mono text-text-muted w-5 text-right shrink-0">
+                                      {step.step_number}.
+                                    </span>
+                                    <StepIcon className={cn("h-3.5 w-3.5 shrink-0", stepStatusColors[step.status])} />
+                                    <span className="font-medium text-text truncate flex-1 text-left">
+                                      {step.action}
+                                    </span>
+                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0", stepStatusBg[step.status])}>
+                                      {step.status}
+                                    </span>
+                                    {isExpanded ? (
+                                      <ChevronUp className="h-3 w-3 text-text-muted shrink-0" />
+                                    ) : (
+                                      <ChevronDown className="h-3 w-3 text-text-muted shrink-0" />
+                                    )}
+                                  </button>
+
+                                  <AnimatePresence>
+                                    {isExpanded && (
+                                      <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="px-3 pb-2.5 pt-0.5 space-y-1.5">
+                                          {step.thought && (
+                                            <div className="flex items-start gap-2">
+                                              <span className="text-[10px] font-mono text-text-muted uppercase shrink-0 mt-0.5">thought</span>
+                                              <p className="text-text-muted/70 text-[11px] leading-relaxed">{step.thought}</p>
+                                            </div>
+                                          )}
+                                          {step.observation && (
+                                            <div className="flex items-start gap-2">
+                                              <span className="text-[10px] font-mono text-text-muted uppercase shrink-0 mt-0.5">output</span>
+                                              <p className="text-text-secondary font-mono text-[11px] leading-relaxed">
+                                                {step.observation.slice(0, 300)}
+                                                {step.observation.length > 300 && "..."}
+                                              </p>
+                                            </div>
+                                          )}
+                                          {!step.thought && !step.observation && (
+                                            <p className="text-text-muted/50 text-[11px] italic">No additional details</p>
+                                          )}
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              );
+                            })}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
 

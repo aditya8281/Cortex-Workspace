@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Plus, Play, Trash2, MessageSquare, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Bot, Plus, Trash2, Clock, Play, CheckCircle, XCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../../src/shared/ui/Button";
-import PageTransition from "../../src/shared/ui/PageTransition";
+import DashboardShell from "../../src/shared/layout/DashboardShell";
+import { CollapsiblePanel } from "../../src/shared/ui/CollapsiblePanel";
 import type { Agent, AgentRun } from "../../src/shared/types";
 import { agentApi } from "../../src/shared/api/agent";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
@@ -36,7 +37,6 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Create agent form
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -105,33 +105,35 @@ export default function AgentsPage() {
   }
 
   return (
-    <PageTransition>
+    <DashboardShell>
       <NeuralNetwork intensity="low" />
-      <div className="flex h-[calc(100vh-4rem)] bg-transparent">
-        {/* Left Sidebar — Agents */}
-        <aside className="hidden md:flex w-72 shrink-0 flex-col border-r border-border-subtle bg-bg-elevated/50">
-          <div className="p-4 border-b border-border-subtle">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-accent" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-text">Agents</h2>
-                  <p className="text-[10px] font-mono text-text-muted">{agents.length} agents</p>
-                </div>
+      <div className="flex h-full bg-transparent">
+        <CollapsiblePanel
+          header={
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                <Bot className="h-4 w-4 text-accent" />
               </div>
+              <div>
+                <h2 className="text-sm font-semibold text-text">Agents</h2>
+                <p className="text-[10px] font-mono text-text-muted">{agents.length} agents</p>
+              </div>
+            </div>
+          }
+        >
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider px-1">
+                Agent List
+              </span>
               <Button onClick={() => setShowCreate(true)} size="sm">
                 <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
-          </div>
 
-          {/* Agent List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-1">
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-16 animate-pulse rounded-xl bg-bg-elevated border border-border-subtle" />
+                <div key={i} className="h-16 animate-pulse rounded-xl bg-bg-elevated border border-border-subtle mb-1" />
               ))
             ) : agents.length === 0 ? (
               <div className="text-center py-8">
@@ -147,7 +149,7 @@ export default function AgentsPage() {
                   key={agent.id}
                   onClick={() => setSelectedAgent(agent)}
                   className={cn(
-                    "w-full rounded-xl border p-3 text-left transition-all duration-200",
+                    "w-full rounded-xl border p-3 text-left transition-all duration-200 mb-1",
                     selectedAgent?.id === agent.id
                       ? "border-accent/30 bg-accent-faint"
                       : "border-border-subtle bg-bg-elevated hover:border-border-accent",
@@ -173,27 +175,27 @@ export default function AgentsPage() {
                 </button>
               ))
             )}
-          </div>
 
-          {/* Recent Runs */}
-          <div className="p-3 border-t border-border-subtle">
-            <p className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2 px-1">
-              Recent Runs
-            </p>
-            <div className="space-y-1 max-h-40 overflow-y-auto">
-              {runs.slice(0, 5).map((run) => {
-                const StatusIcon = statusIcons[run.status] || Clock;
-                return (
-                  <div key={run.id} className="flex items-center gap-2 text-xs px-2 py-1 rounded-lg bg-bg-surface">
-                    <StatusIcon className={cn("h-3 w-3", statusColors[run.status])} />
-                    <span className="text-text-secondary truncate flex-1">{run.input.slice(0, 30)}</span>
-                    <span className="text-[10px] text-text-muted">{run.status}</span>
-                  </div>
-                );
-              })}
+            {/* Recent Runs */}
+            <div className="mt-auto pt-3 border-t border-border-subtle">
+              <p className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-2 px-1">
+                Recent Runs
+              </p>
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {runs.slice(0, 5).map((run) => {
+                  const StatusIcon = statusIcons[run.status] || Clock;
+                  return (
+                    <div key={run.id} className="flex items-center gap-2 text-xs px-2 py-1 rounded-lg bg-bg-surface">
+                      <StatusIcon className={cn("h-3 w-3", statusColors[run.status])} />
+                      <span className="text-text-secondary truncate flex-1">{run.input.slice(0, 30)}</span>
+                      <span className="text-[10px] text-text-muted">{run.status}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </aside>
+        </CollapsiblePanel>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -286,6 +288,6 @@ export default function AgentsPage() {
           )}
         </AnimatePresence>
       </div>
-    </PageTransition>
+    </DashboardShell>
   );
 }
