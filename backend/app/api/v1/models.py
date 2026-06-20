@@ -288,40 +288,46 @@ async def search_models(
     db: Session = Depends(get_db),
 ):
     """Search models by query and filters."""
-    service = ModelSearchService(db)
-    cap_list = [c.strip() for c in capabilities.split(",")] if capabilities else None
+    try:
+        service = ModelSearchService(db)
+        cap_list = [c.strip() for c in capabilities.split(",")] if capabilities else None
 
-    if q:
-        models = service.search(q, limit=limit)
-    else:
-        models = service.filter(
-            capabilities=cap_list,
-            min_params=min_params,
-            max_params=max_params,
-            provider=provider,
-            family=family,
-            sort=sort,
-            limit=limit,
-        )
+        if q:
+            models = service.search(q, limit=limit)
+        else:
+            models = service.filter(
+                capabilities=cap_list,
+                min_params=min_params,
+                max_params=max_params,
+                provider=provider,
+                family=family,
+                sort=sort,
+                limit=limit,
+            )
 
-    return {
-        "models": [
-            {
-                "model_id": m.model_id,
-                "display_name": m.display_name,
-                "family": m.family,
-                "provider": m.provider,
-                "parameter_count": m.parameter_count,
-                "architecture": m.architecture,
-                "context_length": m.context_length_default,
-                "capabilities": m.capabilities or [],
-                "description": m.description,
-                "tags": m.tags or [],
-            }
-            for m in models
-        ],
-        "total_count": len(models),
-    }
+        return {
+            "models": [
+                {
+                    "model_id": m.model_id,
+                    "display_name": m.display_name,
+                    "family": m.family,
+                    "provider": m.provider,
+                    "parameter_count": m.parameter_count,
+                    "architecture": m.architecture,
+                    "context_length": m.context_length_default,
+                    "capabilities": m.capabilities or [],
+                    "description": m.description,
+                    "tags": m.tags or [],
+                }
+                for m in models
+            ],
+            "total_count": len(models),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("search_failed", error=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/models/compare")
@@ -331,37 +337,43 @@ async def compare_models(
     db: Session = Depends(get_db),
 ):
     """Compare 2-5 models side-by-side."""
-    if len(model_ids) < 2:
-        raise HTTPException(status_code=400, detail="At least 2 model IDs required")
-    if len(model_ids) > 5:
-        raise HTTPException(status_code=400, detail="At most 5 model IDs allowed")
+    try:
+        if len(model_ids) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 model IDs required")
+        if len(model_ids) > 5:
+            raise HTTPException(status_code=400, detail="At most 5 model IDs allowed")
 
-    models = []
-    for mid in model_ids:
-        m = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == mid)).scalar_one_or_none()
-        if not m:
-            raise HTTPException(status_code=404, detail=f"Model {mid} not found")
-        models.append(m)
+        models = []
+        for mid in model_ids:
+            m = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == mid)).scalar_one_or_none()
+            if not m:
+                raise HTTPException(status_code=404, detail=f"Model {mid} not found")
+            models.append(m)
 
-    service = ModelComparisonService()
-    result = service.compare(models)
+        service = ModelComparisonService()
+        result = service.compare(models)
 
-    return {
-        "models": result.models,
-        "winner_model": result.winner_model,
-        "dimension_wins": result.dimension_wins,
-        "dimensions": [
-            {
-                "dimension": d.dimension,
-                "display_name": d.display_name,
-                "values": d.values,
-                "winner": d.winner,
-                "higher_is_better": d.higher_is_better,
-            }
-            for d in result.dimensions
-        ],
-        "summary": result.summary,
-    }
+        return {
+            "models": result.models,
+            "winner_model": result.winner_model,
+            "dimension_wins": result.dimension_wins,
+            "dimensions": [
+                {
+                    "dimension": d.dimension,
+                    "display_name": d.display_name,
+                    "values": d.values,
+                    "winner": d.winner,
+                    "higher_is_better": d.higher_is_better,
+                }
+                for d in result.dimensions
+            ],
+            "summary": result.summary,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("compare_failed", error=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/models/sync")
@@ -371,16 +383,22 @@ async def trigger_sync(
     db: Session = Depends(get_db),
 ):
     """Trigger a sync from providers."""
-    service = SyncService(db)
-    job = await service.sync_library(provider_name=provider)
-    return {
-        "job_id": job.id,
-        "status": job.status,
-        "models_discovered": job.models_discovered,
-        "models_added": job.models_added,
-        "models_updated": job.models_updated,
-        "error_message": job.error_message,
-    }
+    try:
+        service = SyncService(db)
+        job = await service.sync_library(provider_name=provider)
+        return {
+            "job_id": job.id,
+            "status": job.status,
+            "models_discovered": job.models_discovered,
+            "models_added": job.models_added,
+            "models_updated": job.models_updated,
+            "error_message": job.error_message,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("sync_failed", error=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/models/sync/status")
@@ -389,8 +407,12 @@ async def sync_status(
     db: Session = Depends(get_db),
 ):
     """Get sync job history."""
-    service = SyncService(db)
-    return {"jobs": service.get_sync_status()}
+    try:
+        service = SyncService(db)
+        return {"jobs": service.get_sync_status()}
+    except Exception as e:
+        logger.error("sync_status_failed", error=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/models/autocomplete")
@@ -401,9 +423,13 @@ async def autocomplete_models(
     db: Session = Depends(get_db),
 ):
     """Autocomplete model names."""
-    service = ModelSearchService(db)
-    suggestions = service.autocomplete(q, limit=limit)
-    return {"suggestions": suggestions}
+    try:
+        service = ModelSearchService(db)
+        suggestions = service.autocomplete(q, limit=limit)
+        return {"suggestions": suggestions}
+    except Exception as e:
+        logger.error("autocomplete_failed", error=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 def _guess_quant_from_tag(tag: str) -> str:
