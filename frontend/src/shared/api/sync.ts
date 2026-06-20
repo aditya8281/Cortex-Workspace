@@ -58,9 +58,19 @@ export interface SyncDefaults {
   embedding_models: EmbeddingModelOption[];
 }
 
+export interface PathValidation {
+  path: string;
+  resolved_path: string;
+  exists: boolean;
+}
+
 export const syncApi = {
   defaults: (): Promise<SyncDefaults> => {
     return api.get("/api/v1/sync/defaults");
+  },
+
+  validatePath: (path: string): Promise<PathValidation> => {
+    return api.post("/api/v1/sync/validate-path", { path });
   },
 
   start: (repoPath: string, embeddingModel?: string, excludeDirs?: string[]): Promise<{

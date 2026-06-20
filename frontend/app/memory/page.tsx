@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Brain, Search, RefreshCw, Hash, LayoutGrid, Network, List, ChevronDown, ChevronRight, FolderSync, Loader2 } from "lucide-react";
+import { Plus, Brain, Search, RefreshCw, Hash, LayoutGrid, Network, List, ChevronDown, ChevronRight, FolderSync, Loader2, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../../src/shared/ui/Button";
 import PageTransition from "../../src/shared/ui/PageTransition";
@@ -110,6 +110,9 @@ export default function MemoryPage() {
   const [showSyncPrompt, setShowSyncPrompt] = useState(false);
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [syncRepoPath, setSyncRepoPath] = useState("");
+  const [syncRepoPathValid, setSyncRepoPathValid] = useState<boolean | null>(null);
+  const [syncRepoPathChecking, setSyncRepoPathChecking] = useState(false);
+  const [syncRepoPathResolved, setSyncRepoPathResolved] = useState("");
   const [syncEmbeddingModel, setSyncEmbeddingModel] = useState("nomic-embed-text");
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncError, setSyncError] = useState("");
@@ -165,6 +168,29 @@ export default function MemoryPage() {
       setSyncEmbeddingModel(data.embedding_models[0]?.value ?? "nomic-embed-text");
     }).catch(() => {});
   }, [syncModalOpen]);
+
+  // Debounced custom path validation
+  useEffect(() => {
+    if (!syncRepoPath.trim()) {
+      setSyncRepoPathValid(null);
+      setSyncRepoPathChecking(false);
+      setSyncRepoPathResolved("");
+      return;
+    }
+    setSyncRepoPathChecking(true);
+    const timer = setTimeout(async () => {
+      try {
+        const result = await syncApi.validatePath(syncRepoPath.trim());
+        setSyncRepoPathValid(result.exists);
+        setSyncRepoPathResolved(result.resolved_path);
+      } catch {
+        setSyncRepoPathValid(false);
+      } finally {
+        setSyncRepoPathChecking(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [syncRepoPath]);
 
   const handleStartSync = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -931,13 +957,42 @@ export default function MemoryPage() {
                   <label className="block text-xs font-medium text-text-muted mb-1.5">
                     Custom Directory
                   </label>
-                  <input
-                    type="text"
-                    value={syncRepoPath}
-                    onChange={(e) => setSyncRepoPath(e.target.value)}
-                    placeholder="/path/to/your/project"
-                    className="w-full px-3 py-2 rounded-lg bg-bg-surface border border-border-subtle text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={syncRepoPath}
+                      onChange={(e) => setSyncRepoPath(e.target.value)}
+                      placeholder="/path/to/your/project"
+                      className={cn(
+                        "w-full px-3 py-2 rounded-lg bg-bg-surface border text-sm text-text placeholder:text-text-muted focus:outline-none transition-colors pr-8",
+                        syncRepoPath.trim() && syncRepoPathValid === true
+                          ? "border-success/50 focus:border-success"
+                          : syncRepoPath.trim() && syncRepoPathValid === false
+                          ? "border-error/50 focus:border-error"
+                          : "border-border-subtle focus:border-accent"
+                      )}
+                    />
+                    {/* Validation indicator */}
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                      {syncRepoPathChecking ? (
+                        <Loader2 size={14} className="animate-spin text-text-muted" />
+                      ) : syncRepoPath.trim() && syncRepoPathValid === true ? (
+                        <Check size={14} className="text-success" />
+                      ) : syncRepoPath.trim() && syncRepoPathValid === false ? (
+                        <X size={14} className="text-error" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {/* Resolved path hint */}
+                  {syncRepoPath.trim() && !syncRepoPathChecking && (
+                    <p className={cn(
+                      "mt-1 text-[10px] font-mono",
+                      syncRepoPathValid === true ? "text-success/70" : "text-error/70"
+                    )}>
+                      {syncRepoPathResolved || "..."}
+                      {syncRepoPathValid === true ? " — exists" : syncRepoPathValid === false ? " — directory not found" : ""}
+                    </p>
+                  )}
                 </div>
 
                 {/* Embedding Model with Technique Descriptions */}

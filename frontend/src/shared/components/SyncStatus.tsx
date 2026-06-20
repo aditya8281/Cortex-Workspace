@@ -72,6 +72,9 @@ function SyncSettingsModal({
 
   const [selectedPaths, setSelectedPaths] = useState<Record<string, boolean>>({});
   const [customPath, setCustomPath] = useState("");
+  const [customPathValid, setCustomPathValid] = useState<boolean | null>(null);
+  const [customPathChecking, setCustomPathChecking] = useState(false);
+  const [customPathResolved, setCustomPathResolved] = useState("");
   const [embeddingModel, setEmbeddingModel] = useState("nomic-embed-text");
   const [excludeDirs, setExcludeDirs] = useState<string[]>([]);
   const [newExcludeDir, setNewExcludeDir] = useState("");
@@ -98,6 +101,29 @@ function SyncSettingsModal({
       setLoadingDefaults(false);
     }).catch(() => setLoadingDefaults(false));
   }, [open]);
+
+  // Debounced custom path validation
+  useEffect(() => {
+    if (!customPath.trim()) {
+      setCustomPathValid(null);
+      setCustomPathChecking(false);
+      setCustomPathResolved("");
+      return;
+    }
+    setCustomPathChecking(true);
+    const timer = setTimeout(async () => {
+      try {
+        const result = await syncApi.validatePath(customPath.trim());
+        setCustomPathValid(result.exists);
+        setCustomPathResolved(result.resolved_path);
+      } catch {
+        setCustomPathValid(false);
+      } finally {
+        setCustomPathChecking(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [customPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,14 +239,45 @@ function SyncSettingsModal({
               <label className="block text-xs font-medium text-text-muted mb-1.5">
                 Custom Directory
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={customPath}
-                  onChange={(e) => setCustomPath(e.target.value)}
-                  placeholder="/path/to/your/project"
-                  className="flex-1 px-3 py-2 rounded-lg bg-bg-surface border border-border-subtle text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
-                />
+              <div className="relative">
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={customPath}
+                      onChange={(e) => setCustomPath(e.target.value)}
+                      placeholder="/path/to/your/project"
+                      className={cn(
+                        "w-full px-3 py-2 rounded-lg bg-bg-surface border text-sm text-text placeholder:text-text-muted focus:outline-none transition-colors pr-8",
+                        customPath.trim() && customPathValid === true
+                          ? "border-success/50 focus:border-success"
+                          : customPath.trim() && customPathValid === false
+                          ? "border-error/50 focus:border-error"
+                          : "border-border-subtle focus:border-accent"
+                      )}
+                    />
+                    {/* Validation indicator */}
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                      {customPathChecking ? (
+                        <Loader2 size={14} className="animate-spin text-text-muted" />
+                      ) : customPath.trim() && customPathValid === true ? (
+                        <Check size={14} className="text-success" />
+                      ) : customPath.trim() && customPathValid === false ? (
+                        <X size={14} className="text-error" />
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+                {/* Resolved path hint */}
+                {customPath.trim() && !customPathChecking && (
+                  <p className={cn(
+                    "mt-1 text-[10px] font-mono",
+                    customPathValid === true ? "text-success/70" : "text-error/70"
+                  )}>
+                    {customPathResolved || "..."}
+                    {customPathValid === true ? " — exists" : customPathValid === false ? " — directory not found" : ""}
+                  </p>
+                )}
               </div>
             </div>
 

@@ -151,6 +151,10 @@ class SyncStartPayload(BaseModel):
     exclude_patterns: list[str] = Field(default_factory=list)
 
 
+class SyncValidatePathPayload(BaseModel):
+    path: str = Field(min_length=1, max_length=4096)
+
+
 class SyncStopPayload(BaseModel):
     repo_path: str = Field(min_length=1, max_length=4096)
 
@@ -239,6 +243,22 @@ async def start_sync(
         )
     finally:
         db.close()
+
+
+@router.post("/sync/validate-path")
+async def validate_sync_path(
+    payload: SyncValidatePathPayload,
+    current_user: User = Depends(get_current_user),
+):
+    """Check if a path exists and is a directory. Returns resolved path info."""
+    del current_user
+    resolved_path = str(Path(payload.path).expanduser().resolve())
+    exists = Path(resolved_path).is_dir()
+    return {
+        "path": payload.path,
+        "resolved_path": resolved_path,
+        "exists": exists,
+    }
 
 
 @router.post("/sync/stop")
