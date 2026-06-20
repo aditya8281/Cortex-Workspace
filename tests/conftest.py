@@ -3,6 +3,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import sessionmaker
 
 from backend.app.api.deps import get_current_user, get_db
@@ -10,9 +12,15 @@ from backend.app.db.base import Base
 from backend.app.intelligence.models import KnowledgeEntry  # noqa: F401
 from backend.app.main import app
 from backend.app.models.auth_event import AuthEvent  # noqa: F401
+from backend.app.models.model_catalog import ModelCatalog, ModelVariant  # noqa: F401
 from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401
 from backend.app.models.storage_registry import StorageRegistry  # noqa: F401
 from backend.app.models.user import User  # noqa: F401
+
+
+@compiles(JSONB, "sqlite")
+def _compile_jsonb_sqlite(type_, compiler, **kw):
+    return "JSON"
 
 
 @pytest.fixture(scope="session")
