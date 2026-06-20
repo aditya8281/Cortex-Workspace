@@ -115,35 +115,6 @@ EMBEDDING_MODELS = [
 ]
 
 
-def _get_default_sync_paths() -> list[dict[str, Any]]:
-    """Return default sync paths with resolved absolute paths."""
-    home = os.path.expanduser("~")
-    resolved = []
-    for p in DEFAULT_SYNC_PATHS:
-        resolved_path = os.path.expanduser(p["path"])
-        exists = os.path.isdir(resolved_path)
-        resolved.append({
-            "label": p["label"],
-            "path": resolved_path,
-            "enabled": p["enabled"] and exists,
-            "exists": exists,
-        })
-    return resolved
-
-
-@router.get("/sync/defaults", response_model=SyncDefaultsResponse)
-async def get_sync_defaults(
-    current_user: User = Depends(get_current_user),
-):
-    """Return default sync paths, exclude dirs, and available embedding models."""
-    del current_user
-    return SyncDefaultsResponse(
-        default_paths=_get_default_sync_paths(),
-        exclude_dirs=DEFAULT_EXCLUDE_DIRS,
-        embedding_models=EMBEDDING_MODELS,
-    )
-
-
 class SyncStartPayload(BaseModel):
     repo_path: str = Field(min_length=1, max_length=4096)
     embedding_model: str | None = None
@@ -193,6 +164,35 @@ class SyncJobResponse(BaseModel):
     error: str | None
     created_at: str
     updated_at: str
+
+
+def _get_default_sync_paths() -> list[dict[str, Any]]:
+    """Return default sync paths with resolved absolute paths."""
+    home = os.path.expanduser("~")
+    resolved = []
+    for p in DEFAULT_SYNC_PATHS:
+        resolved_path = os.path.expanduser(p["path"])
+        exists = os.path.isdir(resolved_path)
+        resolved.append({
+            "label": p["label"],
+            "path": resolved_path,
+            "enabled": p["enabled"] and exists,
+            "exists": exists,
+        })
+    return resolved
+
+
+@router.get("/sync/defaults", response_model=SyncDefaultsResponse)
+async def get_sync_defaults(
+    current_user: User = Depends(get_current_user),
+):
+    """Return default sync paths, exclude dirs, and available embedding models."""
+    del current_user
+    return SyncDefaultsResponse(
+        default_paths=_get_default_sync_paths(),
+        exclude_dirs=DEFAULT_EXCLUDE_DIRS,
+        embedding_models=EMBEDDING_MODELS,
+    )
 
 
 @router.post("/sync/start", response_model=SyncStartResponse)
