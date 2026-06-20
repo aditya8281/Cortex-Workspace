@@ -141,6 +141,9 @@ class FileWatcher:
                 self._sync_state["errors"] += 1
 
         self._sync_state["status"] = "watching" if self._watched else "idle"
+        self._sync_state["indexed"] = 0
+        self._sync_state["errors"] = 0
+        self._sync_state["last_reset"] = datetime.now(timezone.utc).isoformat()
 
     @property
     def watched_count(self) -> int:
