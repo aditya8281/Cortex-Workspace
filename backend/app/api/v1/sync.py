@@ -14,8 +14,12 @@ async def get_sync_status(
 ):
     from backend.app.services.file_watcher import file_watcher
 
+    state = file_watcher.sync_state
     return {
-        "watching": file_watcher.watched_count,
-        "pending_changes": file_watcher.pending_count,
-        "status": "syncing" if file_watcher.pending_count > 0 else "idle",
+        "watching": state["watching"],
+        "pending_changes": state["pending"],
+        "indexed_files": state["indexed"],
+        "errors": state["errors"],
+        "status": state["status"],
+        "last_sync": state["last_sync"],
     }

@@ -4,6 +4,7 @@ import asyncio
 import logging
 import os
 from collections import defaultdict
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +19,21 @@ class FileWatcher:
         self._poll_interval = poll_interval
         self._debounce_task: asyncio.Task | None = None
         self._running = False
+        self._sync_state: dict = {
+            "status": "idle",
+            "watching": 0,
+            "pending": 0,
+            "indexed": 0,
+            "errors": 0,
+            "last_sync": None,
+        }
 
     def watch(self, repo_path: str, repo_id: int) -> None:
         """Start watching a directory. Takes initial mtime snapshot."""
         self._watched[repo_path] = {"repo_id": repo_id}
         self._snapshots[repo_path] = self._take_snapshot(repo_path)
+        self._sync_state["watching"] = len(self._watched)
+        self._sync_state["status"] = "watching"
         logger.info("Watching %s for changes (repo %d)", repo_path, repo_id)
 
     def unwatch(self, repo_path: str) -> None:
@@ -30,6 +41,9 @@ class FileWatcher:
         self._watched.pop(repo_path, None)
         self._snapshots.pop(repo_path, None)
         self._pending_changes.pop(repo_path, None)
+        self._sync_state["watching"] = len(self._watched)
+        if not self._watched:
+            self._sync_state["status"] = "idle"
 
     def _take_snapshot(self, repo_path: str) -> dict[str, float]:
         """Build a {filepath: mtime} snapshot, respecting SKIP_DIRS."""
@@ -95,10 +109,15 @@ class FileWatcher:
             # Update snapshot
             self._snapshots[repo_path] = new_snapshot
 
+        self._sync_state["pending"] = self.pending_count
+
     async def _process_changes(self) -> None:
         """Process accumulated file changes by triggering incremental re-index."""
         changes = dict(self._pending_changes)
         self._pending_changes.clear()
+
+        self._sync_state["status"] = "indexing"
+        self._sync_state["pending"] = 0
 
         for repo_path, files in changes.items():
             config = self._watched.get(repo_path)
@@ -115,8 +134,13 @@ class FileWatcher:
             try:
                 from backend.app.tasks.worker import enqueue_task
                 await enqueue_task("index_repo_task", config["repo_id"])
+                self._sync_state["indexed"] += len(files)
+                self._sync_state["last_sync"] = datetime.now(timezone.utc).isoformat()
             except Exception as e:
                 logger.error("Failed to trigger re-index for %s: %s", repo_path, e)
+                self._sync_state["errors"] += 1
+
+        self._sync_state["status"] = "watching" if self._watched else "idle"
 
     @property
     def watched_count(self) -> int:
@@ -125,6 +149,10 @@ class FileWatcher:
     @property
     def pending_count(self) -> int:
         return sum(len(v) for v in self._pending_changes.values())
+
+    @property
+    def sync_state(self) -> dict:
+        return dict(self._sync_state)
 
 
 # Singleton
