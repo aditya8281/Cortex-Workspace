@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
 from backend.app.services.llm.manager import llm_manager, MODEL_CATALOG
+from backend.app.services.model_downloader import model_downloader
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,39 @@ async def llm_metrics(
 ):
     """Return token usage and request metrics."""
     return llm_manager.get_metrics()
+
+
+@router.post("/models/{model_name}/download")
+async def download_model(
+    model_name: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Start downloading a model."""
+    try:
+        result = await model_downloader.download_model(model_name, MODEL_CATALOG)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/models/{model_name}/progress")
+async def download_progress(
+    model_name: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Get download progress for a model."""
+    progress = model_downloader.get_progress(model_name)
+    return {"model": model_name, "progress": progress}
+
+
+@router.post("/models/{model_name}/cancel")
+async def cancel_download(
+    model_name: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Cancel an active download."""
+    cancelled = await model_downloader.cancel_download(model_name)
+    return {"cancelled": cancelled}
 
 
 def _detect_hardware() -> dict:
