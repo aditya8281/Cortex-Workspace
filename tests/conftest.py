@@ -15,6 +15,7 @@ from backend.app.models.auth_event import AuthEvent  # noqa: F401
 from backend.app.models.model_catalog import ModelCatalog, ModelVariant  # noqa: F401
 from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401
 from backend.app.models.storage_registry import StorageRegistry  # noqa: F401
+from backend.app.models.embedding_cache import EmbeddingCache  # noqa: F401
 from backend.app.models.user import User  # noqa: F401
 
 
