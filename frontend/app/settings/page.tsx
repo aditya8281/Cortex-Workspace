@@ -76,15 +76,20 @@ export default function SettingsPage() {
 
   return (
     <DashboardShell>
-      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-        <div className="page-header">
-          <h1 className="text-xl font-semibold text-text">Settings</h1>
-          <p className="text-sm text-text-muted mt-1">Manage your account.</p>
-        </div>
+      <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="mb-8"
+        >
+          <h1 className="text-2xl font-semibold text-text">Settings</h1>
+          <p className="text-sm text-text-secondary mt-1">Manage your account.</p>
+        </motion.div>
 
         <div className="space-y-6">
           <motion.div {...fadeUp}>
-            <Card className="p-5">
+            <Card gradient className="p-5">
               <h2 className="text-sm font-medium text-text mb-4">Account Information</h2>
               <div className="grid gap-0">
                 <div className="flex items-center justify-between py-2.5 border-b border-border-subtle">
@@ -128,7 +133,7 @@ export default function SettingsPage() {
           </motion.div>
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.08 }}>
-            <Card className="p-5">
+            <Card gradient className="p-5">
               <h2 className="text-sm font-medium text-text mb-4">Preferences</h2>
               
               {/* Accent Color */}
@@ -202,7 +207,7 @@ export default function SettingsPage() {
           </motion.div>
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.08 }}>
-            <Card className="p-5 border-error/20 bg-error/[0.02]">
+            <Card gradient className="p-5 border-error/20 bg-error/[0.02]">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-9 w-9 rounded-lg bg-error/10 border border-error/15 flex items-center justify-center shrink-0">
                   <AlertTriangle className="h-4.5 w-4.5 text-error" />

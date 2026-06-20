@@ -115,11 +115,16 @@ export default function ProfilePage() {
 
   return (
     <DashboardShell>
-      <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-        <div className="page-header">
-          <h1 className="text-xl font-semibold text-text">Profile</h1>
-          <p className="text-sm text-text-muted mt-1">Manage your account settings and connected services.</p>
-        </div>
+      <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="mb-8"
+        >
+          <h1 className="text-2xl font-semibold text-text">Your profile</h1>
+          <p className="text-sm text-text-secondary mt-1">Manage your account settings and connected services.</p>
+        </motion.div>
 
         <div className="space-y-6">
           <motion.div {...fadeUp}>
@@ -162,7 +167,7 @@ export default function ProfilePage() {
           </motion.div>
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.08 }}>
-            <Card className="p-5">
+            <Card gradient className="p-5">
               <h2 className="text-sm font-medium text-text mb-4">Personal Information</h2>
               <div className="grid gap-3">
                 <Input label="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Ada Lovelace" />
@@ -197,7 +202,7 @@ export default function ProfilePage() {
           </motion.div>
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.16 }}>
-            <Card hover className="p-5">
+            <Card hover gradient className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-md bg-bg-surface border border-border-subtle flex items-center justify-center">
@@ -243,7 +248,7 @@ export default function ProfilePage() {
 
           {/* Developer Info */}
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.16 }}>
-            <Card className="p-5">
+            <Card gradient className="p-5">
               <h2 className="text-sm font-medium text-text mb-4">Developer Profile</h2>
 
               {/* Programming Languages */}
@@ -353,7 +358,7 @@ export default function ProfilePage() {
 
           {/* Social Links */}
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.2 }}>
-            <Card className="p-5">
+            <Card gradient className="p-5">
               <h2 className="text-sm font-medium text-text mb-4">Social Links</h2>
               <div className="grid gap-3">
                 <Input
@@ -379,7 +384,7 @@ export default function ProfilePage() {
           </motion.div>
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.24 }}>
-            <Card className="p-5">
+            <Card gradient className="p-5">
               <h2 className="text-sm font-medium text-text mb-4">Account</h2>
               <div className="grid gap-0">
                 <div className="flex items-center justify-between py-2.5 border-b border-border-subtle">
