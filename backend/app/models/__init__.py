@@ -10,5 +10,38 @@ from backend.app.models.model_catalog import (
 from backend.app.models.model_catalog import (
     ModelVariant as ModelVariant,
 )
+from backend.app.models.model_catalog import (
+    Provider as Provider,
+)
+from backend.app.models.model_catalog import (
+    ProviderModel as ProviderModel,
+)
+from backend.app.models.model_catalog import (
+    Capability as Capability,
+)
+from backend.app.models.model_catalog import (
+    Quantization as Quantization,
+)
+from backend.app.models.model_catalog import (
+    HardwareProfile as HardwareProfile,
+)
+from backend.app.models.model_catalog import (
+    ModelStatistics as ModelStatistics,
+)
+from backend.app.models.model_catalog import (
+    SyncJob as SyncJob,
+)
 
-__all__ = ["ModelCatalog", "ModelVariant", "ModelDownload", "ModelUsage"]
+__all__ = [
+    "ModelCatalog",
+    "ModelVariant",
+    "ModelDownload",
+    "ModelUsage",
+    "Provider",
+    "ProviderModel",
+    "Capability",
+    "Quantization",
+    "HardwareProfile",
+    "ModelStatistics",
+    "SyncJob",
+]
