@@ -48,7 +48,7 @@ export default function DashboardPage() {
     const fetchMetrics = async () => {
       try {
         const data = await apiSystemMetrics();
-        setMetrics(data);
+        setMetrics((prev) => ({ ...prev, ...data }));
       } catch {}
     };
     fetchMetrics();
@@ -76,7 +76,7 @@ export default function DashboardPage() {
       try {
         const data = JSON.parse(event.data);
         if (data.type === "metrics") {
-          setMetrics(data);
+          setMetrics((prev) => ({ ...prev, ...data }));
         }
       } catch {}
     };
