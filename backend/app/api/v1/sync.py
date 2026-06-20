@@ -15,13 +15,94 @@ from backend.app.tasks.worker import enqueue_task
 
 router = APIRouter()
 
-# Default home directories to sync
-DEFAULT_SYNC_PATHS = [
-    {"label": "Home Directory", "path": "~", "enabled": True},
-    {"label": "Desktop", "path": "~/Desktop", "enabled": True},
-    {"label": "Downloads", "path": "~/Downloads", "enabled": True},
-    {"label": "Documents", "path": "~/Documents", "enabled": True},
-]
+# ── Platform-aware default sync paths ─────────────────────────────────
+# These are the standard Linux XDG user directories. On other platforms
+# (macOS, Windows) different paths are used. Only paths that actually
+# exist on disk will be enabled by default.
+
+def _get_platform_default_paths() -> list[dict[str, Any]]:
+    """Return default sync paths appropriate for the current OS."""
+    import sys
+
+    paths = []
+
+    # Home directory — always first, always enabled if exists
+    paths.append({"label": "Home Directory", "path": "~", "enabled": True})
+
+    if sys.platform == "linux" or sys.platform.startswith("linux"):
+        # Linux XDG user directories
+        paths += [
+            {"label": "Desktop", "path": "~/Desktop", "enabled": True},
+            {"label": "Downloads", "path": "~/Downloads", "enabled": True},
+            {"label": "Documents", "path": "~/Documents", "enabled": True},
+            {"label": "Music", "path": "~/Music", "enabled": False},
+            {"label": "Pictures", "path": "~/Pictures", "enabled": False},
+            {"label": "Videos", "path": "~/Videos", "enabled": False},
+            {"label": "Public", "path": "~/Public", "enabled": False},
+            {"label": "Templates", "path": "~/Templates", "enabled": False},
+            # Common Linux dev directories (auto-enabled if they exist)
+            {"label": "Projects", "path": "~/Projects", "enabled": True},
+            {"label": "Workspace", "path": "~/workspace", "enabled": True},
+            {"label": "Source", "path": "~/src", "enabled": True},
+            {"label": "Dev", "path": "~/dev", "enabled": True},
+            {"label": "Code", "path": "~/code", "enabled": True},
+        ]
+    elif sys.platform == "darwin":
+        # macOS standard directories
+        paths += [
+            {"label": "Desktop", "path": "~/Desktop", "enabled": True},
+            {"label": "Downloads", "path": "~/Downloads", "enabled": True},
+            {"label": "Documents", "path": "~/Documents", "enabled": True},
+            {"label": "Music", "path": "~/Music", "enabled": False},
+            {"label": "Pictures", "path": "~/Pictures", "enabled": False},
+            {"label": "Movies", "path": "~/Movies", "enabled": False},
+            {"label": "Applications", "path": "~/Applications", "enabled": False},
+            {"label": "Projects", "path": "~/Projects", "enabled": True},
+            {"label": "Workspace", "path": "~/workspace", "enabled": True},
+        ]
+    elif sys.platform == "win32" or sys.platform == "cygwin":
+        # Windows standard directories
+        userprofile = os.environ.get("USERPROFILE", os.path.expanduser("~"))
+        paths += [
+            {"label": "Desktop", "path": os.path.join(userprofile, "Desktop"), "enabled": True},
+            {"label": "Downloads", "path": os.path.join(userprofile, "Downloads"), "enabled": True},
+            {"label": "Documents", "path": os.path.join(userprofile, "Documents"), "enabled": True},
+            {"label": "Music", "path": os.path.join(userprofile, "Music"), "enabled": False},
+            {"label": "Pictures", "path": os.path.join(userprofile, "Pictures"), "enabled": False},
+            {"label": "Videos", "path": os.path.join(userprofile, "Videos"), "enabled": False},
+            {"label": "Projects", "path": os.path.join(userprofile, "Projects"), "enabled": True},
+            {"label": "Source", "path": os.path.join(userprofile, "source"), "enabled": True},
+        ]
+    else:
+        # Fallback for unknown platforms (still try common dirs)
+        paths += [
+            {"label": "Desktop", "path": "~/Desktop", "enabled": True},
+            {"label": "Downloads", "path": "~/Downloads", "enabled": True},
+            {"label": "Documents", "path": "~/Documents", "enabled": True},
+        ]
+
+    return paths
+
+
+def _get_default_sync_paths() -> list[dict[str, Any]]:
+    """Return default sync paths with resolved absolute paths.
+
+    Only directories that actually exist on disk will be enabled.
+    Platform-specific paths are auto-detected.
+    """
+    default_paths = _get_platform_default_paths()
+    resolved = []
+    for p in default_paths:
+        resolved_path = os.path.expanduser(p["path"])
+        exists = os.path.isdir(resolved_path)
+        # Only enable if it exists AND is marked as enabled
+        resolved.append({
+            "label": p["label"],
+            "path": resolved_path,
+            "enabled": p["enabled"] and exists,
+            "exists": exists,
+        })
+    return resolved
 
 # Directories to exclude from sync by default
 DEFAULT_EXCLUDE_DIRS = [
