@@ -28,6 +28,8 @@ async function proxyRequest(request: NextRequest, path: string): Promise<NextRes
       if (authHeader) proxyHeaders["Authorization"] = authHeader;
       const cookieHeader = request.headers.get("cookie");
       if (cookieHeader) proxyHeaders["Cookie"] = cookieHeader;
+      const csrfHeader = request.headers.get("x-csrf-token");
+      if (csrfHeader) proxyHeaders["x-csrf-token"] = csrfHeader;
 
       const res = await fetch(`${base}${path}${search}`, {
         method: request.method,
