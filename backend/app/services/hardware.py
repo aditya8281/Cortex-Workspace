@@ -284,3 +284,75 @@ def _infer_gpu_arch(gpu_name: str) -> str | None:
     if "v100" in name_lower:
         return "volta"
     return None
+
+
+# Architecture-specific VRAM overhead multipliers (relative to baseline 1.0).
+# Newer architectures have more efficient memory usage (compression, cache).
+# Apple Silicon uses unified memory with different allocation patterns.
+_ARCH_VRAM_MULTIPLIER: dict[str, float] = {
+    "hopper": 0.92,
+    "ada_lovelace": 0.95,
+    "ampere": 1.0,
+    "turing": 1.03,
+    "volta": 1.06,
+    "apple_silicon": 0.90,
+}
+
+# Architecture-specific overhead adjustments in GB.
+# Unified memory on Apple Silicon avoids some duplication.
+_ARCH_OVERHEAD_GB: dict[str, float] = {
+    "apple_silicon": 0.15,
+}
+
+
+def _resolve_arch(gpu_arch: str | None, gpu_type: str) -> str:
+    """Map hardware profile to architecture key for overhead lookups."""
+    if gpu_type == "apple_metal":
+        return "apple_silicon"
+    if gpu_arch:
+        return gpu_arch
+    return "unknown"
+
+
+def estimate_vram_for_gpu(
+    parameter_count: float,
+    quantization: str,
+    gpu_arch: str | None = None,
+    gpu_type: str = "none",
+    vram_available_gb: float | None = None,
+    context_length: int = 4096,
+) -> dict[str, float | str | None]:
+    """Estimate VRAM with architecture-aware overhead and efficiency.
+
+    Returns a dict with keys:
+        - base_vram_gb: model + generic overhead before arch adjustment
+        - arch_multiplier: architecture efficiency multiplier applied
+        - adjusted_vram_gb: final adjusted estimate
+        - fits: whether the model fits in available VRAM (None if unknown)
+        - arch: resolved architecture key used
+    """
+    from backend.app.services.quantization_db import QuantizationService
+
+    svc = QuantizationService()
+    base_vram = svc.estimate_vram_gb(parameter_count, quantization, context_length)
+
+    arch_key = _resolve_arch(gpu_arch, gpu_type)
+    multiplier = _ARCH_VRAM_MULTIPLIER.get(arch_key, 1.0)
+
+    adjusted = base_vram * multiplier
+
+    # Apply architecture-specific fixed overhead (e.g., Apple unified memory)
+    arch_overhead = _ARCH_OVERHEAD_GB.get(arch_key, 0.0)
+    adjusted += arch_overhead
+
+    fits: bool | None = None
+    if vram_available_gb is not None and vram_available_gb > 0:
+        fits = adjusted <= vram_available_gb
+
+    return {
+        "base_vram_gb": round(base_vram, 3),
+        "arch_multiplier": multiplier,
+        "adjusted_vram_gb": round(adjusted, 3),
+        "fits": fits,
+        "arch": arch_key,
+    }
