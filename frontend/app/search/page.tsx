@@ -1,213 +1,190 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Search, Brain, Code2, RefreshCw, GitBranch } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import Button from "../../src/shared/ui/Button";
-import PageTransition from "../../src/shared/ui/PageTransition";
-import type { SearchResult, Repository, GraphNode } from "../../src/shared/types";
-import { searchApi } from "../../src/shared/api/search";
-import { repoApi } from "../../src/shared/api/repo";
-import { useAuth } from "../../src/shared/auth/AuthProvider";
-import { cn } from "../../src/lib/utils";
-import SearchFilters from "./SearchFilters";
-import SearchResults from "./SearchResults";
-import GraphView from "./GraphView";
-import NeuralNetwork from "../../src/shared/ui/NeuralNetwork";
-
-type Tab = "search" | "graph";
+import { useState, useCallback } from "react";
+import { motion } from "framer-motion";
+import { Search, Sparkles, ExternalLink, Code, Brain, FileText } from "lucide-react";
+import DashboardShell from "@/shared/layout/DashboardShell";
+import { Card } from "@/shared/ui/Card";
+import NeuralNetwork from "@/shared/ui/NeuralNetwork";
+import { searchApi } from "@/shared/api";
+import { cn } from "@/lib/utils";
 
 export default function SearchPage() {
-  const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [repos, setRepos] = useState<Repository[]>([]);
+  const [results, setResults] = useState<any[]>([]);
+  const [aiAnswer, setAiAnswer] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("search");
-  const [selectedRepoId, setSelectedRepoId] = useState<number | undefined>(undefined);
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!authLoading && !user) router.replace("/auth");
-  }, [authLoading, user, router]);
-
-  // Load repos on mount
-  useEffect(() => {
-    repoApi
-      .list()
-      .then((data) => setRepos(data.repos))
-      .catch(() => {});
-  }, []);
-
-  const executeSearch = useCallback(
-    async (searchQuery: string, filters?: { repo_id?: number; node_type?: string; language?: string; max_results?: number }) => {
-      if (!searchQuery.trim()) {
-        setResults([]);
-        return;
-      }
+  const handleSearch = useCallback(
+    async (q: string) => {
+      if (!q.trim()) return;
       setLoading(true);
-      setError(null);
+      setHasSearched(true);
       try {
-        const data = await searchApi.unified(searchQuery, filters);
-        setResults(data.results);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Search failed");
+        const data = await searchApi.unified(q, { max_results: 20 });
+        setResults(data.results || []);
+        // Synthesize AI answer from results
+        if (data.results?.length > 0) {
+          const sources = data.results
+            .slice(0, 5)
+            .map((r: any, i: number) => `[${i + 1}] ${r.title || r.file_path || "Result"}`)
+            .join("\n");
+          setAiAnswer(`Found ${data.results.length} relevant results across your codebase and memories.\n\nTop sources:\n${sources}`);
+        } else {
+          setAiAnswer("No results found for this query. Try rephrasing or checking your indexed repositories.");
+        }
+      } catch {
+        setAiAnswer("Search failed. Please try again.");
       } finally {
         setLoading(false);
       }
     },
-    [],
+    []
   );
 
-  // Debounced search
-  useEffect(() => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    if (query.trim()) {
-      searchTimerRef.current = setTimeout(() => executeSearch(query), 300);
-    } else {
-      setResults([]);
-    }
-    return () => {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    };
-  }, [query, executeSearch]);
-
-  function handleFilterChange(filters: { repo_id?: number; node_type?: string; language?: string; max_results: number }) {
-    setSelectedRepoId(filters.repo_id);
-    if (query.trim()) {
-      executeSearch(query, filters);
-    }
-  }
-
   return (
-    <PageTransition>
+    <DashboardShell>
       <NeuralNetwork intensity="low" />
-      <div className="flex flex-col h-[calc(100vh-4rem)] bg-transparent">
-        {/* Header */}
-        <div className="shrink-0 px-6 py-4 border-b border-border-subtle bg-bg-elevated/30">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h1 className="text-lg font-bold text-text flex items-center gap-2">
-                <Search className="h-5 w-5 text-accent" />
-                Unified Search
-              </h1>
-              <p className="text-xs text-text-muted">
-                Search across code and memories
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Tab toggle */}
-              <div className="flex rounded-lg border border-border-subtle bg-bg-surface p-0.5">
-                <button
-                  onClick={() => setTab("search")}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                    tab === "search"
-                      ? "bg-accent/15 text-accent"
-                      : "text-text-muted hover:text-text-secondary",
-                  )}
-                >
-                  <Search className="h-3 w-3" />
-                  Search
-                </button>
-                <button
-                  onClick={() => setTab("graph")}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                    tab === "graph"
-                      ? "bg-accent/15 text-accent"
-                      : "text-text-muted hover:text-text-secondary",
-                  )}
-                >
-                  <GitBranch className="h-3 w-3" />
-                  Graph
-                </button>
-              </div>
-            </div>
-          </div>
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 py-8">
+        {/* Hero Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <h1 className="text-3xl font-semibold text-text mb-2">Search your workspace</h1>
+          <p className="text-text-secondary">
+            Ask anything about your code, memories, or files
+          </p>
+        </motion.div>
 
-          {/* Search input */}
-          <div className="relative mb-3">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+        {/* Conversational Search Input */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-8"
+        >
+          <div className="relative">
+            <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search code, functions, classes, memories..."
-              className="w-full rounded-xl bg-bg-surface border border-border-subtle pl-10 pr-4 py-2.5 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10 focus:shadow-glow"
+              onKeyDown={(e) => e.key === "Enter" && handleSearch(query)}
+              placeholder="Ask anything about your code, memories, or files..."
+              className="w-full h-14 pl-12 pr-24 rounded-2xl border border-border-subtle bg-bg-elevated text-text placeholder:text-text-muted text-lg focus:outline-none focus:border-accent/30 focus:shadow-glow transition-all"
             />
-            {loading && (
-              <RefreshCw className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted animate-spin" />
-            )}
+            <button
+              onClick={() => handleSearch(query)}
+              disabled={loading || !query.trim()}
+              className={cn(
+                "absolute right-2 top-1/2 -translate-y-1/2",
+                "px-4 py-2 rounded-xl font-medium text-sm",
+                "bg-accent text-void hover:bg-accent-hover",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "transition-colors"
+              )}
+            >
+              {loading ? "Searching..." : "Search"}
+            </button>
           </div>
+        </motion.div>
 
-          {/* Filters */}
-          <SearchFilters repos={repos} onFilterChange={handleFilterChange} />
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="mx-6 mt-4 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
-            {error}
-          </div>
+        {/* AI Answer Panel */}
+        {hasSearched && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <Card className="p-6" gradient>
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={18} className="text-accent" />
+                <span className="text-sm font-semibold text-text">AI Answer</span>
+              </div>
+              <div className="text-text-secondary whitespace-pre-wrap leading-relaxed">
+                {aiAnswer}
+              </div>
+            </Card>
+          </motion.div>
         )}
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <AnimatePresence mode="wait">
-            {tab === "search" ? (
-              <motion.div
-                key="search"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                {!query.trim() && results.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <motion.div
-                      animate={{ y: [0, -8, 0] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <Brain className="h-16 w-16 text-accent/30 mb-4" />
-                    </motion.div>
-                    <p className="text-sm font-medium text-text mb-1">Search your codebase</p>
-                    <p className="text-xs text-text-muted max-w-xs">
-                      Type a query to search across indexed code and memory entries.
-                      Results are enriched with graph relationships.
-                    </p>
+        {/* Sources */}
+        {hasSearched && results.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <h3 className="text-sm font-semibold text-text mb-3 flex items-center gap-2">
+              <span>Sources</span>
+              <span className="text-xs text-text-muted bg-bg-surface px-2 py-0.5 rounded-full">
+                {results.length}
+              </span>
+            </h3>
+            <div className="space-y-2">
+              {results.map((result: any, i: number) => (
+                <Card key={i} hover className="p-4" gradient>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                      {result.type === "code" ? (
+                        <Code size={14} className="text-accent" />
+                      ) : result.type === "memory" ? (
+                        <Brain size={14} className="text-accent" />
+                      ) : (
+                        <FileText size={14} className="text-accent" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-medium text-text truncate">
+                          {result.title || result.file_path || "Result"}
+                        </span>
+                        <span className="text-xs text-text-muted shrink-0">
+                          [{i + 1}]
+                        </span>
+                      </div>
+                      {result.preview && (
+                        <p className="text-xs text-text-secondary line-clamp-2">
+                          {result.preview}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-text-muted">
+                          {result.type}
+                        </span>
+                        {result.score && (
+                          <span className="text-xs text-accent">
+                            {(result.score * 100).toFixed(0)}% match
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <ExternalLink size={14} className="text-text-muted shrink-0 mt-1" />
                   </div>
-                ) : (
-                  <SearchResults results={results} onSelect={(r) => setSelectedNode(r as any)} />
-                )}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="graph"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                {selectedRepoId ? (
-                  <GraphView repoId={selectedRepoId} onSelectNode={setSelectedNode} />
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <GitBranch className="h-16 w-16 text-accent/30 mb-4" />
-                    <p className="text-sm font-medium text-text mb-1">Select a repository</p>
-                    <p className="text-xs text-text-muted max-w-xs">
-                      Choose a repository from the filters to view its knowledge graph.
-                    </p>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                </Card>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Empty State */}
+        {!hasSearched && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="text-center py-16"
+          >
+            <Search size={48} className="mx-auto text-text-muted mb-4" />
+            <p className="text-text-secondary">
+              Type a question above to search across your codebase and memories
+            </p>
+          </motion.div>
+        )}
       </div>
-    </PageTransition>
+    </DashboardShell>
   );
 }
