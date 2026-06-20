@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 
-import psutil
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
+from backend.app.services.hardware import detect_hardware as _detect_hardware_full
 from backend.app.services.llm.manager import MODEL_CATALOG, LLMManager, llm_manager
 from backend.app.services.model_downloader import model_downloader
 
@@ -240,41 +240,6 @@ def _estimate_hardware(size_bytes: int) -> dict:
 
 
 def _detect_hardware() -> dict:
-    """Detect system hardware (sync — called from sync endpoint)."""
-    ram = psutil.virtual_memory()
-    ram_gb = ram.total / (1024**3)
-    ram_used_gb = ram.used / (1024**3)
-    ram_percent = ram.percent
-    cpu_count = psutil.cpu_count() or 1
-    cpu_percent = psutil.cpu_percent(interval=0.1)
-
-    gpu_info: dict = {"available": False, "name": None, "vram_gb": 0, "vram_used_gb": 0, "gpu_percent": 0}
-    try:
-        import subprocess
-
-        result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,memory.total,memory.used,utilization.gpu", "--format=csv,noheader,nounits"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            parts = result.stdout.strip().split(", ")
-            gpu_info = {
-                "available": True,
-                "name": parts[0],
-                "vram_gb": float(parts[1]) / 1024,
-                "vram_used_gb": float(parts[2]) / 1024,
-                "gpu_percent": float(parts[3]),
-            }
-    except Exception:
-        pass
-
-    return {
-        "ram_gb": round(ram_gb, 1),
-        "ram_used_gb": round(ram_used_gb, 1),
-        "ram_percent": ram_percent,
-        "cpu_count": cpu_count,
-        "cpu_percent": cpu_percent,
-        "gpu": gpu_info,
-    }
+    """Detect system hardware — delegates to hardware service."""
+    profile = _detect_hardware_full()
+    return profile.to_dict()
