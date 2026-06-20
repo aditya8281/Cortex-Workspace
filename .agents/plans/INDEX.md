@@ -2,126 +2,121 @@
 
 > **For agentic workers:** This is the master index. Read prerequisite.md first, then follow the execution order below.
 
-**Goal:** Build Cortex — a local-first, autonomous AI workspace with reasoning, planning, and multi-agent intelligence — from architecture alignment to Desktop V1.
+**Goal:** Build Cortex — a local-first, autonomous AI operating system with reasoning, planning, and multi-agent intelligence — from architecture alignment to production-ready desktop app.
 
-**Architecture:** FastAPI + PostgreSQL backend, Next.js 15 + React 19 frontend, Qdrant for vectors, Tauri v2 for desktop. All data local, zero telemetry. Rust for code intelligence and file watching.
+**Architecture:** FastAPI + PostgreSQL backend, Next.js 15 + React 19 frontend, Qdrant for vectors, Tauri v2 for desktop. All data local, zero telemetry. Rust for code intelligence and file watching. llama.cpp/Ollama for local LLM inference.
 
-**Status:** Phase 0-A (Prerequisites) complete. Phase 0-B (Architecture Alignment) complete. Phase 1 (Memory) complete. Phase 2 (Indexing & Knowledge Graph) complete. Phase 3 (Unified Search & Agents) complete. Phase 4 (Intelligence) ready to start.
-
----
-
-## Prerequisites — COMPLETE
-
-All items in `prerequisite.md` have been completed. See [prerequisite.md](../prerequisite.md).
+**Status:** Phases 0-A through 3 + UI Refactor complete. Phase 4A (LLM Integration) is next.
 
 ---
 
-## Plan Files
+## Completed Phases
 
 | Phase | File | Focus | Status |
 |-------|------|-------|--------|
-| 0-A | `prerequisite.md` | Repository alignment | COMPLETE |
-| 0-B | [01-PHASE-0B-ARCHITECTURE.md](./01-PHASE-0B-ARCHITECTURE.md) | Bug fixes, architecture, Rust setup | COMPLETE |
-| 1 | [02-PHASE-1-MEMORY.md](./02-PHASE-1-MEMORY.md) | Memory system, embeddings, repo scanner | COMPLETE |
-| 2 | [03-PHASE-2-INDEXING.md](./03-PHASE-2-INDEXING.md) | Indexing, knowledge graph, graph search | COMPLETE |
-| 3 | [04-PHASE-3-AGENTS.md](./04-PHASE-3-AGENTS.md) | Unified search, agent runtime | COMPLETE |
-| 4 | [05-PHASE-4-INTELLIGENCE.md](./05-PHASE-4-INTELLIGENCE.md) | Context, learning, workspace understanding | NOT STARTED |
-| 5 | [06-PHASE-5-DESKTOP.md](./06-PHASE-5-DESKTOP.md) | Tauri v2, sidecar, offline, file system | NOT STARTED |
-| 6 | [07-PHASE-6-LEARNING.md](./07-PHASE-6-LEARNING.md) | Long-term memory, patterns, proactive assist | NOT STARTED |
+| 0-A | `prerequisite.md` | Repository alignment | ✅ COMPLETE |
+| 0-B | `01-PHASE-0B-ARCHITECTURE.md` | Bug fixes, architecture, Rust setup | ✅ COMPLETE |
+| 1 | `02-PHASE-1-MEMORY.md` | Memory system, embeddings, repo scanner | ✅ COMPLETE |
+| 2 | `03-PHASE-2-INDEXING.md` | Indexing, knowledge graph, graph search | ✅ COMPLETE |
+| 3 | `04-PHASE-3-AGENTS.md` | Unified search, agent runtime | ✅ COMPLETE |
+| UI | `docs/superpowers/plans/2026-06-20-ui-refactor.md` | UI redesign, DashboardShell, warm dark theme | ✅ COMPLETE |
+
+---
+
+## Active Phases
+
+| Phase | File | Focus | Status |
+|-------|------|-------|--------|
+| 4A | `08-PHASE-4A-LLM-INTEGRATION.md` | LLM providers, local models, model management | ⬜ NOT STARTED |
+| 4B | `09-PHASE-4B-SMART-INDEXING.md` | Intelligent indexing, sync, retrieval quality | ⬜ NOT STARTED |
+
+---
+
+## Future Phases
+
+| Phase | File | Focus | Status |
+|-------|------|-------|--------|
+| 5 | `10-PHASE-5-CONVERSATION.md` | Conversation memory, SSE streaming, chat experience | ⬜ NOT STARTED |
+| 6 | `11-PHASE-6-AGENT-INTELLIGENCE.md` | Tool registry, SSE streaming, agent metrics, dashboard | ⬜ NOT STARTED |
+| 7 | `12-PHASE-7-DESKTOP-PREPARATION.md` | StorageResolver fix, service abstraction, native hooks | ⬜ NOT STARTED |
+| 8 | `13-PHASE-8-LEARNING-LOOP.md` | Long-term memory, patterns, corrections, proactive assist | ⬜ NOT STARTED |
+| 9 | `14-PHASE-9-OBSERVABILITY.md` | Metrics collector, health API, health dashboard | ⬜ NOT STARTED |
+| 10 | `15-PHASE-10-PRODUCTION.md` | Tests, security, performance, Docker, CI/CD | ⬜ NOT STARTED |
 
 ---
 
 ## Execution Order
 
 ```
-Phase 0-A: Prerequisites
-    ├── All items in prerequisite.md
-    └── Status: COMPLETE ✓
-
-Phase 0-B: Architecture Alignment
-    ├── Depends on: Phase 0-A
-    ├── Bug fixes (memory search, profile photo, FK constraints)
-    ├── Architecture standardization (API versioning, service abstraction)
-    ├── Code quality (VECTOR_SIZE, test consolidation)
-    ├── Rust infrastructure setup
-    └── Status: COMPLETE ✓
-
-Phase 1: Memory System
-    ├── Depends on: Phase 0-A
-    ├── Status: COMPLETE ✓
-    └── (Note: Phase 0-B fixes bugs found in this phase)
-
-Phase 2: Indexing & Knowledge Graph
-    ├── Depends on: Phase 0-B, Phase 1
-    ├── Database schema (graph nodes, edges, file tracking)
-    ├── Incremental indexer (hash-based change detection)
-    ├── Graph builder (nodes + edges from code analysis)
-    ├── Cross-file search (vector + graph enrichment)
-    ├── Unified search API
-    ├── Repository management API
-    ├── Frontend (SearchFilters, SearchResults, GraphView)
-    └── Status: COMPLETE ✓
-
-Phase 3: Unified Search & Agents
-    ├── Depends on: Phase 2, Phase 0-B
-    ├── Agent database schema
-    ├── Base agent class
-    ├── Planner agent (task decomposition)
-    ├── Executor agent (tool-use loop)
-    ├── Agent run manager
-    ├── Agent API (CRUD, runs, steps, feedback)
-    ├── Frontend (AgentChat, Agents page)
-    └── Status: COMPLETE ✓
-
-Phase 4: Intelligence
-    ├── Depends on: Phase 3, Phase 2
-    ├── Context builder (workspace state + past conversations)
-    ├── Conversation memory (semantic search over history)
-    ├── Learning loop (feedback processing)
-    ├── Workspace understanding (call graphs, summaries)
-    ├── Enhanced executor with context
-    ├── Conversation history API
-    └── Frontend (ContextPanel, MemoryTimeline)
-
-Phase 5: Desktop V1 (Tauri v2)
-    ├── Depends on: Phase 0-B, Phase 4, Phase 3
-    ├── Tauri v2 project setup
-    ├── Backend sidecar
-    ├── Tauri Rust plugins (tray, window, fs, dialog, updater)
-    ├── Frontend Tauri adapter
-    ├── Offline capabilities (IndexedDB, service worker)
-    ├── File system integration
-    └── Auto-updates
-
-Phase 6: System Understanding & Learning
-    ├── Depends on: Phase 4, Phase 5, Phase 2
-    ├── Long-term memory (semantic + decay)
-    ├── Pattern recognition (coding style, workflow)
-    ├── Correction tracker
-    ├── Proactive assistant (suggestions)
-    ├── Learning API
-    └── Frontend (LearningDashboard, ProactiveSuggestions)
+Phase 0-A: Prerequisites ──────────────────── ✅ COMPLETE
+    │
+Phase 0-B: Architecture Alignment ─────────── ✅ COMPLETE
+    │
+Phase 1: Memory System ────────────────────── ✅ COMPLETE
+    │
+Phase 2: Indexing & Knowledge Graph ───────── ✅ COMPLETE
+    │
+Phase 3: Unified Search & Agents ──────────── ✅ COMPLETE
+    │
+    ├──► Phase 4A: LLM Integration & Local Models + Basic Metrics
+    │        │
+    │        ├──► Phase 4B: Smart Indexing & Retrieval
+    │        │        │                     │
+    │        │        │                     ├──► Phase 5: Conversation (parallel with 4B)
+    │        │        │                     │
+    │        │        ├──► Phase 6: Agent Intelligence
+    │        │        │        │
+    │        │        │        ├──► Phase 8: Learning Loop
+    │        │        │        │        │
+    │        │        │        │        ├──► Phase 7: Desktop Preparation
+    │        │        │        │        │        │
+    │        │        │        │        │        ├──► Phase 9: Observability Dashboards
+    │        │        │        │        │        │        │
+    │        │        │        │        │        │        ├──► Phase 10: Production
+    │        │        │        │        │        │
+    │        │        │        │        │        └──► (can run parallel)
+    │        │        │        │        └──►
+    │        │        │        └──►
+    │        │        └──►
+    │        └──►
+    └──► (Phase 4A begins immediately after Phase 3)
 ```
+
+**Sequencing rationale:**
+- Phase 4A includes basic metrics (token tracking, latency) — observability from day one
+- Phase 5 (Conversation) is independent of 4B — can run in parallel
+- Phase 7 (Desktop Prep) moved later — premature abstractions get rewritten anyway
+- Phase 9 is dashboards only — data collection happens in earlier phases
+- Each phase includes: code → compile check → integration test → git commit
 
 ---
 
 ## Dependency Graph
 
 ```
-Phase 0-A (Prerequisites) ──┐
-                             ├──► Phase 0-B ──┐
-Phase 1 (Memory) ────────────┘                │
-                                               ├──► Phase 2 ──┐
-                                               │              │
-                                               │              ├──► Phase 3 ──┐
-                                               │              │              │
-                                               │              │              ├──► Phase 4 ──┐
-                                               │              │              │              │
-                                               │              │              │              ├──► Phase 5
-                                               │              │              │              │
-                                               │              │              │              └──► Phase 6
-                                               │              │              │
-                                               └──────────────┴──────────────┘
+Phase 0-A ─┐
+            ├──► Phase 0-B ──┐
+Phase 1 ────┘                │
+                             ├──► Phase 2 ──┐
+                             │              │
+                             │              ├──► Phase 3 ──┐
+                             │              │              │
+                             │              │              ├──► Phase 4A ──┐
+                             │              │              │               │
+                             │              │              │               ├──► Phase 4B ──┐
+                             │              │              │               │               │
+                             │              │              │               │               ├──► Phase 5 (parallel with 4B)
+                             │              │              │               │               │
+                             │              │              │               │               ├──► Phase 6 ──┐
+                             │              │              │               │               │              │
+                             │              │              │               │               │              ├──► Phase 8 ──┐
+                             │              │              │               │               │              │              │
+                             │              │              │               │               │              │              ├──► Phase 7 ──┐
+                             │              │              │               │               │              │              │              │
+                             │              │              │               │               │              │              │              ├──► Phase 9 ──┐
+                             │              │              │               │               │              │              │              │              │
+                             │              │              │               │               │              │              │              │              ├──► Phase 10
+                             └──────────────┴──────────────┴───────────────┴───────────────┴──────────────┴──────────────┴──────────────┘
 ```
 
 ---
@@ -140,6 +135,7 @@ Phase 1 (Memory) ────────────┘                │
 | **Language** | TypeScript | 5.3+ |
 | **Styling** | Tailwind CSS | 3.4+ |
 | **Embeddings** | ONNX Runtime | BGE-M3 |
+| **LLM** | llama.cpp / Ollama | latest |
 | **Task Queue** | arq | Redis-based |
 | **Code Intel** | Rust | tree-sitter |
 | **File Watcher** | Rust | notify crate |
@@ -155,6 +151,7 @@ Phase 1 (Memory) ────────────┘                │
 - No external API calls for embeddings/inference (100% local)
 - Zero telemetry, no cloud sync
 - Desktop: Windows 10+, macOS 12+, Ubuntu 20.04+
+- Every phase includes frontend + backend + integration + validation
 
 ---
 
@@ -168,6 +165,10 @@ Phase 1 (Memory) ────────────┘                │
 6. **Mock embeddings fallback**: ONNX model download on first run, deterministic hash-based mock for testing
 7. **Service abstraction layer**: All services implement protocol for HTTP/Tauri dual consumption
 8. **Single storage resolver**: Replaces hardcoded paths for Tauri portability
+9. **llama.cpp as primary LLM backend**: Local CPU/GPU inference, no external API dependency
+10. **Ollama as optional frontend**: Model management UI, pull/run/stop, hardware detection
+11. **Intelligent indexing with exclusion rules**: Skip node_modules, .git, build artifacts, caches
+12. **Hybrid retrieval**: Vector + keyword + graph combined, with reranking
 
 ---
 
@@ -176,11 +177,14 @@ Phase 1 (Memory) ────────────┘                │
 | Metric | Target |
 |--------|--------|
 | Cold start | < 2s |
-| Binary size | < 50MB |
+| Binary size | < 50MB (web app), < 200MB (desktop with bundled models) |
 | Test coverage | > 80% |
 | Vector search latency | < 100ms |
 | Agent execution | < 30s per task |
 | Memory usage | < 500MB idle |
+| LLM inference (local) | < 2s first token, > 30 tokens/s |
+| Indexing speed | > 1000 files/second |
+| File sync latency | < 500ms |
 
 ---
 

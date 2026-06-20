@@ -33,4 +33,5 @@
 ## UI DESIGN
 
 - Always follow the UI design system when creating or reviewing components or pages.
+- When doing update or new Design integration always brainstorm and ask relevant question about design choices if needed.
 - Design System: @DESIGN.md

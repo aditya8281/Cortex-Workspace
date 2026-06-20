@@ -1,6 +1,6 @@
-# Design System — Neural Dark
+# Design System — Warm Neural Dark
 
-A monochrome dark canvas with a single electric cyan pulse as the living accent. The interface should feel like a living intelligence — responsive, fluid, and alive. AI-native operating system aesthetic.
+A warm dark canvas with a soft cyan accent. The interface should feel like a calm AI companion — refined, approachable, and alive. Evolved from the original Neural Dark (OLED black) to a warmer, more human-friendly palette.
 
 ---
 
@@ -10,7 +10,7 @@ A monochrome dark canvas with a single electric cyan pulse as the living accent.
 - **Styling:** Tailwind CSS v3.4 with custom design tokens
 - **Components:** Custom component library built on Radix UI primitives
 - **Icons:** Lucide React
-- **Animations:** framer-motion
+- **Animations:** framer-motion (spring physics, Apple-level subtlety)
 - **Fonts:** Inter (body), JetBrains Mono (mono)
 - **Dark mode:** Class-based, hardcoded dark
 - **Utilities:** `cn()` from `@/lib/utils` (clsx + tailwind-merge)
@@ -23,22 +23,23 @@ All semantic tokens live in `app/globals.css` and are bridged to Tailwind with `
 
 | Token | Value | Usage |
 | --- | --- | --- |
-| `--bg-void` | `#000000` | Pure black canvas background |
-| `--bg-base` | `#000000` | Page surface — OLED black |
-| `--bg-elevated` | `#040406` | Cards, panels — barely above black |
-| `--bg-surface` | `#0a0a0f` | Interactive surfaces |
-| `--bg-hover` | `#111118` | Hover states |
+| `--bg-void` | `#0a0a0f` | Base canvas — warm dark |
+| `--bg-base` | `#0a0a0f` | Page surface |
+| `--bg-elevated` | `#111118` | Cards, panels |
+| `--bg-surface` | `#16161f` | Interactive surfaces |
+| `--bg-hover` | `#1c1c28` | Hover states |
 | `--border-subtle` | `rgba(255,255,255,0.06)` | Hairline borders |
 | `--border-default` | `rgba(255,255,255,0.10)` | Standard borders |
-| `--border-accent` | `rgba(6,182,212,0.3)` | Accent borders |
+| `--border-accent` | `rgba(14,165,201,0.3)` | Accent borders |
 | `--text-primary` | `#f0f0f5` | Primary text |
 | `--text-secondary` | `#8a8a9a` | Supporting text |
 | `--text-muted` | `#555566` | Hints, labels |
-| `--accent` | `#06b6d4` | Primary accent — the pulse |
-| `--accent-glow` | `rgba(6,182,212,0.15)` | Glow effects |
+| `--accent` | `#0ea5c9` | Primary accent — soft cyan |
+| `--accent-glow` | `rgba(14,165,201,0.15)` | Glow effects |
 | `--accent-bright` | `#22d3ee` | Hover accent |
 | `--danger` | `#ef4444` | Destructive actions |
 | `--success` | `#22c55e` | Positive states |
+| `--warning` | `#f59e0b` | Warning states |
 
 ---
 
@@ -108,11 +109,13 @@ Badges are mono, uppercase, rounded-full pills with semantic colors.
 
 ## Layout
 
-Wide planning workspace with adaptive navigation:
+DashboardShell wraps all authenticated pages with a floating glass sidebar:
 
-- **Desktop:** Fixed 240px sidebar with Neural Pulse design (pulsing active indicator, glow effects, status bar)
+- **Desktop:** Fixed 240px floating sidebar with glass morphism, Work/You nav groups
 - **Tablet:** Overlay sidebar with backdrop blur
 - **Mobile:** Bottom tab bar
+- **Header:** Minimal — logo, search button, notifications bell, user avatar dropdown
+- **Command Palette:** Cmd+K for quick navigation
 
 ---
 
@@ -128,21 +131,55 @@ All pages share a unified neural network canvas background (`NeuralNetwork.tsx`)
 | Memory (`/memory`) | `low` | Subtle, 30 neurons |
 | Vault/Settings/Profile/Admin | `medium` | Inherited through transparent DashboardShell |
 
-**Page wrappers use `bg-transparent`** to let the canvas show through. Cards and panels use `bg-bg-elevated` (#040406) for layering depth against the OLED black base. The `html` element uses `background: #000000` to ensure OLED black across all pages.
+**Page wrappers use `bg-transparent`** to let the canvas show through. Cards and panels use `bg-bg-elevated` (#111118) for layering depth against the warm dark base.
 
 ---
 
-## Sidebar Design (Neural Pulse)
+## Component Library
 
-The desktop sidebar uses the Neural Pulse design system:
+### Primitives
+- **Button**: primary/secondary/ghost/danger variants, sm/md/lg sizes, loading spinner
+- **Input**: label, error state, password toggle
+- **Card**: hover/glass/gradient/glow variants with micro-interactions
+- **Badge**: default/accent/success/warning/danger
+- **Skeleton**: shimmer loading placeholder
+- **Tooltip**: Radix wrapper
+- **Dropdown**: Radix dropdown menu
+- **Modal**: Radix Dialog wrapper
 
-- **Active indicator:** 3px pulsing cyan dot on the left edge with `pulse-dot` keyframe animation (2s cycle, opacity 0.6-1.0)
-- **Active item glow:** Subtle accent box-shadow (`0 0 20px rgba(6,182,212,0.08)`)
-- **Hover glow:** Soft accent shadow on hover (`0 0 15px rgba(6,182,212,0.04)`)
-- **Section dividers:** Neon gradient lines (`transparent -> accent/15 -> transparent`)
-- **Status bar:** Vault lock state (red/green dot) + memory count at bottom
-- **User card:** Avatar with accent glow ring + online status dot
-- `prefers-reduced-motion` disables all pulse animations
+### Data Display
+- **MetricRing**: Animated SVG ring chart with counter (CPU/RAM/Disk)
+- **TabGroup**: Tabs with animated indicator + TabPanel context
+- **CollapsiblePanel**: Animated collapsible sidebar panel
+
+### Feedback
+- **Toast**: Sonner notifications
+- **ErrorBoundary**: Class-based React error boundary
+- **PasswordStrength**: Visual strength meter (4 bars)
+
+### Animation
+- **PageTransition**: Framer Motion page enter/exit (y:8, damping:30)
+- **StaggerChildren**: Framer Motion stagger animation
+- **NeuralNetwork**: Full canvas-based neural network visualization
+
+### Overlay
+- **CommandPalette**: Cmd+K palette using cmdk for page navigation
+
+---
+
+## Sidebar Design (Glass Floating)
+
+The desktop sidebar uses a glass morphism floating design:
+
+- **Background:** `bg-bg-surface/80` with `backdrop-blur-xl` — frosted glass effect
+- **Border:** `border-border-subtle` — subtle separation from content
+- **Shadow:** `shadow-[0_8px_32px_rgba(0,0,0,0.4)]` — floating depth
+- **Border radius:** `rounded-2xl` — soft, modern feel
+- **Nav groups:** "Work" (Dashboard, Search, Agents, Chat, Models) and "You" (Vault, Memory, Profile, Settings)
+- **Active state:** Accent background tint with accent text
+- **Hover state:** Subtle background shift
+- **Status bar:** Vault lock state + memory count at bottom
+- **User card:** Avatar with online status dot
 
 ---
 

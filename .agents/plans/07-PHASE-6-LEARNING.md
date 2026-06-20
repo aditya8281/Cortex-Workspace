@@ -1,5 +1,7 @@
 # Phase 6: System Understanding & Learning Loop
 
+> **⚠️ SUPERSEDED:** This plan has been restructured. See `13-PHASE-8-LEARNING-LOOP.md` for the updated plan.
+
 **Goal:** The system develops genuine understanding of your codebase and projects. Long-term memory, learning from corrections, pattern recognition, and proactive assistance.
 
 **Depends on:** Phase 4 (intelligence), Phase 5 (desktop), Phase 2 (knowledge graph)

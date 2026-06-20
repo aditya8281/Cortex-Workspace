@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
-from backend.app.services.llm.manager import MODEL_CATALOG, llm_manager
+from backend.app.services.llm.manager import MODEL_CATALOG, LLMManager, llm_manager
 from backend.app.services.model_downloader import model_downloader
 
 logger = logging.getLogger(__name__)
@@ -41,24 +41,37 @@ async def list_models(
     dynamic = await llm_manager.fetch_ollama_catalog()
     static_names = {m["name"] for m in catalog}
     for dm in dynamic:
-        if dm.name not in static_names:
+        if dm.name and dm.name not in static_names:
+            # Infer model_type from capabilities
+            inferred_type = "chat"
+            if "code" in dm.capabilities and "chat" not in dm.capabilities:
+                inferred_type = "code"
+            elif "vision" in dm.capabilities:
+                inferred_type = "vision"
+            elif "embedding" in dm.capabilities:
+                inferred_type = "embedding"
+
             catalog.append(
                 {
                     "name": dm.name,
-                    "display_name": dm.name,
+                    "display_name": dm.name.split(":")[0].replace("-", " ").title(),
                     "provider": "ollama",
-                    "model_type": "chat",
-                    "parameter_count": None,
+                    "model_type": inferred_type,
+                    "parameter_count": _guess_param_count(dm.name),
                     "size_bytes": dm.size_bytes,
                     "context_length": dm.context_length,
                     "capabilities": dm.capabilities,
                     "description": dm.description,
                     "downloaded": dm.name in available_names,
+                    "variants": _extract_variants(dm.name, catalog),
+                    "hardware_requirements": _estimate_hardware(dm.size_bytes),
                 }
             )
 
     return {
         "models": catalog,
+        "total_count": len(catalog),
+        "downloaded_count": sum(1 for m in catalog if m.get("downloaded")),
         "available_from_providers": [
             {
                 "name": m.name,
@@ -77,11 +90,49 @@ async def recommended_models(
 ):
     """Return hardware-appropriate model recommendations."""
     hardware = _detect_hardware()
-    recommended = [
-        m for m in MODEL_CATALOG
-        if m.get("recommended")
-        and hardware["ram_gb"] >= m.get("hardware_requirements", {}).get("min_ram_gb", 0)
-    ]
+
+    available_models = await llm_manager.list_all_models()
+    available_names = {m.name for m in available_models}
+
+    recommended = []
+    seen_names = set()
+
+    for m in MODEL_CATALOG:
+        if m.get("recommended") and hardware["ram_gb"] >= m.get("hardware_requirements", {}).get("min_ram_gb", 0):
+            model_dict = dict(m)
+            model_dict["source"] = "catalog"
+            model_dict["downloaded"] = m["name"] in available_names
+            recommended.append(model_dict)
+            seen_names.add(m["name"])
+
+    dynamic_models = await llm_manager.fetch_ollama_catalog()
+    for dm in dynamic_models:
+        if dm.name and dm.name not in seen_names and dm.name in available_names:
+            if hardware["ram_gb"] >= 4:
+                # Infer type from capabilities
+                inferred_type = "chat"
+                if "code" in dm.capabilities and "chat" not in dm.capabilities:
+                    inferred_type = "code"
+                elif "vision" in dm.capabilities:
+                    inferred_type = "vision"
+                elif "embedding" in dm.capabilities:
+                    inferred_type = "embedding"
+                model_dict = {
+                    "name": dm.name,
+                    "display_name": dm.name.split(":")[0].replace("-", " ").title(),
+                    "provider": "ollama",
+                    "model_type": inferred_type,
+                    "parameter_count": _guess_param_count(dm.name),
+                    "size_bytes": dm.size_bytes,
+                    "context_length": dm.context_length,
+                    "capabilities": dm.capabilities,
+                    "description": dm.description,
+                    "hardware_requirements": _estimate_hardware(dm.size_bytes),
+                    "source": "system",
+                    "downloaded": True,
+                }
+                recommended.append(model_dict)
+
     return {
         "hardware": hardware,
         "recommended": recommended,
@@ -115,11 +166,12 @@ async def llm_metrics(
 @router.post("/models/{model_name}/download")
 async def download_model(
     model_name: str,
+    variant: str | None = None,
     current_user: User = Depends(get_current_user),
 ):
     """Start downloading a model."""
     try:
-        result = await model_downloader.download_model(model_name, MODEL_CATALOG)
+        result = await model_downloader.download_model(model_name, MODEL_CATALOG, variant=variant)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -157,6 +209,34 @@ async def delete_model(
         resp = await client.delete("/api/delete", json={"name": model_name})
         resp.raise_for_status()
     return {"status": "deleted", "model": model_name}
+
+
+def _guess_param_count(name: str) -> str | None:
+    """Extract parameter count from model name. Delegates to LLMManager helper."""
+    return LLMManager._guess_parameter_count(name)
+
+
+def _extract_variants(model_name: str, existing_catalog: list[dict]) -> list[str]:
+    """Find sibling variants of a model already present in the catalog."""
+    base = model_name.split(":")[0]
+    variants: list[str] = []
+    for entry in existing_catalog:
+        if entry["name"].split(":")[0] == base:
+            variants.append(entry["name"])
+    if model_name not in variants:
+        variants.append(model_name)
+    return sorted(set(variants))
+
+
+def _estimate_hardware(size_bytes: int) -> dict:
+    """Rough RAM requirements based on model size in bytes."""
+    if not size_bytes:
+        return {"min_ram_gb": 4, "recommended_ram_gb": 8}
+    ram_gb = (size_bytes / (1024**3)) * 1.2  # ~20% overhead for inference
+    return {
+        "min_ram_gb": max(2, int(ram_gb)),
+        "recommended_ram_gb": max(4, int(ram_gb * 1.5)),
+    }
 
 
 def _detect_hardware() -> dict:

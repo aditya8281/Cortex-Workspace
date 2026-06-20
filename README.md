@@ -178,18 +178,37 @@ Think of Cortex as a person — a friend to its users.
 | Metrics endpoint | ✅ |
 | Frontend test framework (Vitest) | ✅ |
 
-### Phase 2: Memory & Indexing (In Progress)
+### UI Refactor (Implemented)
 
 | Feature | Status |
 |---------|--------|
-| AST-based code parsing (tree-sitter) | ⏳ |
-| Symbol extraction + call graphs | ⏳ |
-| Knowledge graph (entities, relations, BFS) | ⏳ |
-| Graph visualization frontend (Cytoscape) | ⏳ |
-| Incremental re-indexing (file watcher) | ⏳ |
-| Hybrid search (BM25 + vector) | ⏳ |
-| Cross-encoder reranking | ⏳ |
-| ColBERT late-interaction embeddings | ⏳ |
+| Warmer dark theme (#0a0a0f, #0ea5c9 accent) | ✅ |
+| DashboardShell on all pages (Work/You nav groups) | ✅ |
+| Dashboard with hero, MetricRing, tabbed content | ✅ |
+| Conversational search (AI-first with citations) | ✅ |
+| Hybrid agent chat with CollapsiblePanel | ✅ |
+| Memory graph-first view with list toggle | ✅ |
+| Glass panels, micro-interactions, organic animations | ✅ |
+| MetricRing, TabGroup, CollapsiblePanel components | ✅ |
+| Profile/Settings with hero headers | ✅ |
+| System metrics with real-time processes | ✅ |
+
+---
+
+## Roadmap
+
+### Upcoming Phases
+
+| Phase | Name | Focus | Status |
+|-------|------|-------|--------|
+| 4A | LLM Integration & Local Models | Local LLM inference, model management, hardware detection | ⬜ Next |
+| 4B | Smart Indexing & Retrieval | Intelligent exclusion, file watching, hybrid retrieval | ⬜ |
+| 5 | Conversation & Context | Persistent chat, context builder, conversation history | ⬜ |
+| 6 | Agent Intelligence | Multi-step reasoning, tool chaining, workflows, SSE streaming | ⬜ |
+| 7 | Desktop Preparation | Service abstraction, filesystem abstraction, Tauri readiness | ⬜ |
+| 8 | Learning Loop | Pattern recognition, correction tracking, proactive assistant | ⬜ |
+| 9 | Observability & Monitoring | Dashboards, metrics, health monitoring | ⬜ |
+| 10 | Production Hardening | Test coverage, security, performance, Docker, CI/CD | ⬜ |
 
 ---
 

@@ -49,147 +49,6 @@ class FeedbackPayload(BaseModel):
     comment: str | None = Field(default=None, max_length=2000)
 
 
-# ── Agent CRUD ──────────────────────────────────────────────────
-
-
-@router.get("/agents")
-def list_agents(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """List all agents."""
-    manager = AgentRunManager(db)
-    agents = manager.list_agents()
-    return {
-        "agents": [
-            {
-                "id": a.id,
-                "name": a.name,
-                "description": a.description,
-                "system_prompt": a.system_prompt,
-                "model_id": a.model_id,
-                "tools": a.tools_json,
-                "is_active": a.is_active,
-                "created_at": a.created_at.isoformat() if a.created_at else None,
-                "updated_at": a.updated_at.isoformat() if a.updated_at else None,
-            }
-            for a in agents
-        ]
-    }
-
-
-@router.post("/agents")
-def create_agent(
-    payload: AgentCreatePayload,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Create a new agent."""
-    manager = AgentRunManager(db)
-    try:
-        agent = manager.create_agent(
-            name=payload.name,
-            description=payload.description,
-            system_prompt=payload.system_prompt,
-            model_id=payload.model_id,
-            tools=payload.tools,
-        )
-        return {
-            "status": "created",
-            "agent": {
-                "id": agent.id,
-                "name": agent.name,
-                "description": agent.description,
-                "system_prompt": agent.system_prompt,
-                "model_id": agent.model_id,
-                "tools": agent.tools_json,
-                "is_active": agent.is_active,
-                "created_at": agent.created_at.isoformat() if agent.created_at else None,
-                "updated_at": agent.updated_at.isoformat() if agent.updated_at else None,
-            },
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/agents/{agent_id}")
-def get_agent(
-    agent_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Get a specific agent."""
-    manager = AgentRunManager(db)
-    agent = manager.get_agent(agent_id)
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    return {
-        "agent": {
-            "id": agent.id,
-            "name": agent.name,
-            "description": agent.description,
-            "system_prompt": agent.system_prompt,
-            "model_id": agent.model_id,
-            "tools": agent.tools_json,
-            "is_active": agent.is_active,
-            "created_at": agent.created_at.isoformat() if agent.created_at else None,
-            "updated_at": agent.updated_at.isoformat() if agent.updated_at else None,
-        }
-    }
-
-
-@router.put("/agents/{agent_id}")
-def update_agent(
-    agent_id: int,
-    payload: AgentUpdatePayload,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Update an agent."""
-    manager = AgentRunManager(db)
-    agent = manager.get_agent(agent_id)
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
-
-    if payload.name is not None:
-        agent.name = payload.name
-    if payload.description is not None:
-        agent.description = payload.description
-    if payload.system_prompt is not None:
-        agent.system_prompt = payload.system_prompt
-    if payload.model_id is not None:
-        agent.model_id = payload.model_id
-    if payload.is_active is not None:
-        agent.is_active = payload.is_active
-    if payload.tools is not None:
-        agent.tools_json = json.dumps(payload.tools) if payload.tools else None
-
-    db.commit()
-    db.refresh(agent)
-    return {"status": "updated"}
-
-
-@router.delete("/agents/{agent_id}")
-def delete_agent(
-    agent_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """Delete an agent."""
-    manager = AgentRunManager(db)
-    agent = manager.get_agent(agent_id)
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    active_runs = db.query(AgentRun).filter(
-        AgentRun.agent_id == agent_id, AgentRun.status == "running"
-    ).all()
-    if active_runs:
-        raise HTTPException(status_code=409, detail="Cannot delete agent with active runs")
-    db.delete(agent)
-    db.commit()
-    return {"status": "deleted"}
-
-
 # ── Runs ────────────────────────────────────────────────────────
 
 
@@ -341,3 +200,143 @@ def get_feedback(
             for f in feedback_list
         ]
     }
+
+
+# ── Agent CRUD ──────────────────────────────────────────────────
+
+
+@router.get("/agents")
+def list_agents(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List all agents."""
+    manager = AgentRunManager(db)
+    agents = manager.list_agents()
+    return {
+        "agents": [
+            {
+                "id": a.id,
+                "name": a.name,
+                "description": a.description,
+                "system_prompt": a.system_prompt,
+                "model_id": a.model_id,
+                "tools": a.tools_json,
+                "is_active": a.is_active,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "updated_at": a.updated_at.isoformat() if a.updated_at else None,
+            }
+            for a in agents
+        ]
+    }
+
+
+@router.post("/agents")
+def create_agent(
+    payload: AgentCreatePayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create a new agent."""
+    manager = AgentRunManager(db)
+    try:
+        agent = manager.create_agent(
+            name=payload.name,
+            description=payload.description,
+            system_prompt=payload.system_prompt,
+            model_id=payload.model_id,
+            tools=payload.tools,
+        )
+        return {
+            "status": "created",
+            "agent": {
+                "id": agent.id,
+                "name": agent.name,
+                "description": agent.description,
+                "system_prompt": agent.system_prompt,
+                "model_id": agent.model_id,
+                "tools": agent.tools_json,
+                "is_active": agent.is_active,
+                "created_at": agent.created_at.isoformat() if agent.created_at else None,
+                "updated_at": agent.updated_at.isoformat() if agent.updated_at else None,
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/agents/{agent_id}")
+def get_agent(
+    agent_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a specific agent."""
+    manager = AgentRunManager(db)
+    agent = manager.get_agent(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return {
+        "agent": {
+            "id": agent.id,
+            "name": agent.name,
+            "description": agent.description,
+            "system_prompt": agent.system_prompt,
+            "model_id": agent.model_id,
+            "tools": agent.tools_json,
+            "is_active": agent.is_active,
+            "created_at": agent.created_at.isoformat() if agent.created_at else None,
+            "updated_at": agent.updated_at.isoformat() if agent.updated_at else None,
+        }
+    }
+
+
+@router.put("/agents/{agent_id}")
+def update_agent(
+    agent_id: int,
+    payload: AgentUpdatePayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update an agent."""
+    manager = AgentRunManager(db)
+    agent = manager.get_agent(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    if payload.name is not None:
+        agent.name = payload.name
+    if payload.description is not None:
+        agent.description = payload.description
+    if payload.system_prompt is not None:
+        agent.system_prompt = payload.system_prompt
+    if payload.model_id is not None:
+        agent.model_id = payload.model_id
+    if payload.is_active is not None:
+        agent.is_active = payload.is_active
+    if payload.tools is not None:
+        agent.tools_json = json.dumps(payload.tools) if payload.tools else None
+
+    db.commit()
+    db.refresh(agent)
+    return {"status": "updated"}
+
+
+@router.delete("/agents/{agent_id}")
+def delete_agent(
+    agent_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete an agent."""
+    manager = AgentRunManager(db)
+    agent = manager.get_agent(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    active_runs = db.query(AgentRun).filter(
+        AgentRun.agent_id == agent_id, AgentRun.status == "running"
+    ).all()
+    if active_runs:
+        raise HTTPException(status_code=409, detail="Cannot delete agent with active runs")
+    db.delete(agent)
+    db.commit()

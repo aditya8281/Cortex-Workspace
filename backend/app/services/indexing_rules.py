@@ -58,23 +58,16 @@ class IndexingRules:
         except OSError:
             return False
 
-        if self._config and self._config.include_paths:
-            if not any(rel_path.startswith(p) for p in self._config.include_paths):
-                return False
+        if self._config and self._config.include_paths and not any(rel_path.startswith(p) for p in self._config.include_paths):
+            return False
 
-        if self._config and self._config.exclude_paths:
-            if any(rel_path.startswith(p) for p in self._config.exclude_paths):
-                return False
+        if self._config and self._config.exclude_paths and any(rel_path.startswith(p) for p in self._config.exclude_paths):
+            return False
 
-        if self._config and self._config.include_patterns:
-            if not any(fnmatch.fnmatch(file_path, p) for p in self._config.include_patterns):
-                return False
+        if self._config and self._config.include_patterns and not any(fnmatch.fnmatch(file_path, p) for p in self._config.include_patterns):
+            return False
 
-        if self._config and self._config.exclude_patterns:
-            if any(fnmatch.fnmatch(file_path, p) for p in self._config.exclude_patterns):
-                return False
-
-        return True
+        return not (self._config and self._config.exclude_patterns and any(fnmatch.fnmatch(file_path, p) for p in self._config.exclude_patterns))
 
     def _is_excluded_directory(self, parts: tuple[str, ...]) -> bool:
         excluded = DEFAULT_EXCLUSIONS["directories"]
@@ -96,7 +89,7 @@ class IndexingRules:
         excluded_by_pattern = 0
         excluded_by_directory = 0
 
-        for root, dirs, files in os.walk(base_dir):
+        for root, _dirs, files in os.walk(base_dir):
             for f in files:
                 total += 1
                 fp = os.path.join(root, f)

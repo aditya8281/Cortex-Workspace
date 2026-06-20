@@ -376,6 +376,7 @@ export interface ModelInfo {
   recommended?: boolean;
   downloaded?: boolean;
   size_bytes?: number;
+  variants?: string[];
 }
 
 export interface HardwareInfo {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Brain, Search, RefreshCw, Hash, LayoutGrid, Network, List, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Brain, Search, RefreshCw, Hash, LayoutGrid, Network, List, ChevronDown, ChevronRight, FolderSync, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../../src/shared/ui/Button";
 import PageTransition from "../../src/shared/ui/PageTransition";
@@ -14,12 +14,52 @@ import {
 } from "../../src/shared/auth/cortexApi";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
 import { cn } from "../../src/lib/utils";
+import { api } from "@/shared/api/client";
 import MemorySearch from "./MemorySearch";
 import MemoryEditor from "./MemoryEditor";
 import MemoryDetail from "./MemoryDetail";
 
 type ViewMode = "list" | "search";
 type DisplayView = "graph" | "list";
+
+interface WatchedPath {
+  path: string;
+  repo_id: number | null;
+  embedding_model: string;
+  sync_enabled: boolean;
+  initial_scan_job_id: string | null;
+  initial_scan_status: string | null;
+}
+
+interface SyncStatusData {
+  watching: number;
+  pending_changes: number;
+  indexed_files: number;
+  errors: number;
+  status: string;
+  last_sync: string | null;
+  watched_paths: WatchedPath[];
+}
+
+interface SyncJobData {
+  job_id: string;
+  repo_path: string;
+  job_type: string;
+  status: string;
+  progress: number;
+  total: number | null;
+  result: { files_scanned?: number; chunks_created?: number } | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const EMBEDDING_MODELS = [
+  { value: "nomic-embed-text", label: "nomic-embed-text" },
+  { value: "mxbai-embed-large", label: "mxbai-embed-large" },
+  { value: "thenomic-embed-text-v1.5", label: "thenomic-embed-text-v1.5" },
+  { value: "embed-models", label: "embed-models (all-in-one)" },
+];
 
 const categoryColors: Record<string, string> = {
   code: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -68,6 +108,77 @@ export default function MemoryPage() {
 
   const [offset, setOffset] = useState(0);
   const limit = 20;
+
+  const [syncStatus, setSyncStatus] = useState<SyncStatusData | null>(null);
+  const [syncJobs, setSyncJobs] = useState<SyncJobData[]>([]);
+  const [showSyncPrompt, setShowSyncPrompt] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
+  const [syncRepoPath, setSyncRepoPath] = useState("");
+  const [syncEmbeddingModel, setSyncEmbeddingModel] = useState("nomic-embed-text");
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncError, setSyncError] = useState("");
+
+  const fetchSyncStatus = useCallback(async () => {
+    try {
+      const data = await api.get<SyncStatusData>("/api/v1/sync/status");
+      setSyncStatus(data);
+      if (data.watched_paths.length === 0) {
+        setShowSyncPrompt(true);
+      }
+    } catch {}
+  }, []);
+
+  const fetchSyncJobs = useCallback(async () => {
+    try {
+      const data = await api.get<SyncJobData[]>("/api/v1/sync/jobs");
+      setSyncJobs(data);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchSyncStatus();
+    fetchSyncJobs();
+    const interval = setInterval(() => {
+      fetchSyncStatus();
+      fetchSyncJobs();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fetchSyncStatus, fetchSyncJobs]);
+
+  const handleStartSync = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!syncRepoPath.trim()) return;
+    setSyncLoading(true);
+    setSyncError("");
+    try {
+      await api.post("/api/v1/sync/start", {
+        repo_path: syncRepoPath.trim(),
+        embedding_model: syncEmbeddingModel,
+      });
+      setSyncRepoPath("");
+      setSyncModalOpen(false);
+      setShowSyncPrompt(false);
+      await fetchSyncStatus();
+      await fetchSyncJobs();
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Failed to start sync");
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const handleStopSync = async (repoPath: string) => {
+    try {
+      await api.post("/api/v1/sync/stop", { repo_path: repoPath });
+      await fetchSyncStatus();
+    } catch (err) {
+      console.error("Failed to stop sync:", err);
+    }
+  };
+
+  const activeJob = syncJobs.find(
+    (j) => j.status === "pending" || j.status === "running"
+  );
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/auth");
@@ -365,6 +476,73 @@ export default function MemoryPage() {
             </div>
           </div>
 
+          {/* Auto-Sync Prompt */}
+          {showSyncPrompt && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-3 rounded-xl border border-accent/20 bg-accent/5 p-4"
+            >
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                  <FolderSync className="h-5 w-5 text-accent" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-text mb-1">Enable Auto-Sync</h3>
+                  <p className="text-xs text-text-muted mb-3">
+                    Automatically sync your code files to memory. Choose a directory to watch and select an embedding model.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" onClick={() => setSyncModalOpen(true)}>
+                      <FolderSync className="h-3.5 w-3.5" />
+                      Start Auto-Sync
+                    </Button>
+                    <button
+                      onClick={() => setShowSyncPrompt(false)}
+                      className="text-xs text-text-muted hover:text-text-secondary transition-colors px-2 py-1"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Active Sync Progress */}
+          {activeJob && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-3 rounded-xl border border-accent/20 bg-accent/5 p-3"
+            >
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-4 w-4 animate-spin text-accent shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-text">
+                    {activeJob.status === "pending" ? "Initial scan queued..." : "Indexing files..."}
+                  </p>
+                  <p className="text-[10px] text-text-muted truncate">
+                    {activeJob.repo_path}
+                  </p>
+                </div>
+                {activeJob.progress > 0 && activeJob.total && (
+                  <div className="text-xs font-mono text-text-muted">
+                    {activeJob.progress}/{activeJob.total}
+                  </div>
+                )}
+              </div>
+              {activeJob.total && (
+                <div className="mt-2 h-1 bg-bg-surface rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent transition-all duration-300"
+                    style={{ width: `${activeJob.total ? (activeJob.progress / activeJob.total) * 100 : 0}%` }}
+                  />
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {/* Error */}
           {error && (
             <div className="mx-0 mt-3 rounded-xl border border-error/20 bg-error/5 px-4 py-3 text-sm text-error">
@@ -659,6 +837,71 @@ export default function MemoryPage() {
 
         <MemoryEditor open={editorOpen} onOpenChange={setEditorOpen} onSaved={handleSaved} entry={editingEntry} />
         <MemoryDetail open={detailOpen} onOpenChange={setDetailOpen} entry={detailEntry} onEdit={openEditEditor} onDeleted={handleDeleted} />
+
+        {/* Sync Modal */}
+        {syncModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle shadow-2xl w-full max-w-md mx-4">
+              <div className="flex items-center justify-between p-4 border-b border-border-subtle">
+                <h2 className="text-sm font-semibold text-text">Start Auto-Sync</h2>
+                <button
+                  onClick={() => setSyncModalOpen(false)}
+                  className="text-text-muted hover:text-text transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <form onSubmit={handleStartSync} className="p-4 space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-text-muted mb-1.5">
+                    Directory Path
+                  </label>
+                  <input
+                    type="text"
+                    value={syncRepoPath}
+                    onChange={(e) => setSyncRepoPath(e.target.value)}
+                    placeholder="/path/to/your/project"
+                    className="w-full px-3 py-2 rounded-lg bg-bg-surface border border-border-subtle text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-muted mb-1.5">
+                    Embedding Model
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={syncEmbeddingModel}
+                      onChange={(e) => setSyncEmbeddingModel(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-bg-surface border border-border-subtle text-sm text-text appearance-none focus:outline-none focus:border-accent"
+                    >
+                      {EMBEDDING_MODELS.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+                    />
+                  </div>
+                </div>
+                {syncError && (
+                  <p className="text-xs text-error">{syncError}</p>
+                )}
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  loading={syncLoading}
+                  className="w-full"
+                >
+                  Start Sync
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
       </PageTransition>
     </DashboardShell>
   );

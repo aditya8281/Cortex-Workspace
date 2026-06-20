@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from backend.app.core.vector_db import get_vector_db
-from backend.app.models.graph import GraphNode, GraphEdge
+from backend.app.models.graph import GraphEdge, GraphNode
 from backend.app.models.repo_index import CodeChunk
 
 logger = logging.getLogger(__name__)

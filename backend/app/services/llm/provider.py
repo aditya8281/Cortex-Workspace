@@ -44,3 +44,7 @@ class LLMModelInfo:
     context_length: int = 4096
     capabilities: list[str] = field(default_factory=list)
     description: str = ""
+    # Enriched metadata (populated from scraper/cache)
+    parameter_count: str | None = None
+    variants: list[str] = field(default_factory=list)
+    hardware_requirements: dict = field(default_factory=lambda: {"min_ram_gb": 4, "recommended_ram_gb": 8})

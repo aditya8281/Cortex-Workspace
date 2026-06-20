@@ -172,7 +172,7 @@ export default function ModelsPage() {
                               {model.display_name}
                             </h3>
                             <p className="text-xs text-text-muted font-mono">
-                              {model.parameter_count} parameters
+                              {model.parameter_count ? `${model.parameter_count} parameters` : model.model_type}
                             </p>
                           </div>
                         </div>
@@ -188,7 +188,7 @@ export default function ModelsPage() {
                         </div>
                         <div className="flex items-center justify-between text-xs text-text-muted pt-3 border-t border-border-subtle">
                           <span>{model.context_length.toLocaleString()} context</span>
-                          <span>{model.hardware_requirements.min_ram_gb}GB RAM min</span>
+                          <span>{model.hardware_requirements?.min_ram_gb ? `${model.hardware_requirements.min_ram_gb}GB RAM min` : ''}</span>
                         </div>
                       </Card>
                     </motion.div>

@@ -45,8 +45,9 @@ export const modelsApi = {
   },
 
   /** Start downloading a model. */
-  download: (modelName: string): Promise<DownloadResult> => {
-    return api.post(`/api/v1/models/${encodeURIComponent(modelName)}/download`);
+  download: (modelName: string, variant?: string): Promise<DownloadResult> => {
+    const params = variant ? `?variant=${encodeURIComponent(variant)}` : "";
+    return api.post(`/api/v1/models/${encodeURIComponent(modelName)}/download${params}`);
   },
 
   /** Get download progress for a model. */

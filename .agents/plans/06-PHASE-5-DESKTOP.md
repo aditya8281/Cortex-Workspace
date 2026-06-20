@@ -1,5 +1,7 @@
 # Phase 5: Desktop V1 (Tauri v2)
 
+> **⚠️ SUPERSEDED:** This plan has been restructured. See `12-PHASE-7-DESKTOP-PREPARATION.md` for the updated preparation phase. The full Tauri build will come after intelligence features are in place.
+
 **Goal:** Convert the web app to a Tauri v2 desktop app with offline capabilities. Backend becomes a sidecar process. File system access, native menus, system tray, and auto-updates.
 
 **Depends on:** Phase 0-B (service abstraction, storage resolver), Phase 4 (intelligence), Phase 3 (agents)

@@ -74,11 +74,12 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
     return () => clearInterval(interval);
   }, [downloadingModels, fetchData]);
 
-  const handleDownload = async (modelName: string) => {
+  const handleDownload = async (modelName: string, variant?: string) => {
     try {
-      await modelsApi.download(modelName);
-      setDownloadingModels((prev) => new Set(prev).add(modelName));
-      setDownloadProgress((prev) => new Map(prev).set(modelName, 0));
+      await modelsApi.download(modelName, variant);
+      const downloadKey = variant ? `${modelName}:${variant}` : modelName;
+      setDownloadingModels((prev) => new Set(prev).add(downloadKey));
+      setDownloadProgress((prev) => new Map(prev).set(downloadKey, 0));
     } catch {
       // Error handling could show a toast
     }
@@ -202,7 +203,9 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
               onDownload={handleDownload}
               onCancel={handleCancel}
               downloadProgress={downloadProgress.get(model.name) ?? null}
-              isDownloading={downloadingModels.has(model.name)}
+              isDownloading={Array.from(downloadingModels).some(
+                (key) => key === model.name || key.startsWith(`${model.name}:`)
+              )}
             />
           ))}
         </div>

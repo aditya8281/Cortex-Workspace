@@ -1,5 +1,7 @@
 # Phase 4: Intelligence
 
+> **⚠️ SUPERSEDED:** This plan has been split into Phase 4A (LLM Integration) and Phase 4B (Smart Indexing). See `08-PHASE-4A-LLM-INTEGRATION.md` and `09-PHASE-4B-SMART-INDEXING.md` for the updated plans.
+
 **Goal:** Context-aware agent responses, workspace understanding, and learning loop. Agents understand your codebase, remember past interactions, and improve over time.
 
 **Depends on:** Phase 3 (unified search + agents), Phase 2 (knowledge graph)

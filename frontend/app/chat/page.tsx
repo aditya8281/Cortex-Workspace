@@ -3,9 +3,10 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, MessageSquare, Trash2, Send } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Send, Brain, Cpu } from "lucide-react";
 import DashboardShell from "@/shared/layout/DashboardShell";
 import Card from "@/shared/ui/Card";
+import Dropdown, { DropdownItem } from "@/shared/ui/Dropdown";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { api } from "@/shared/api/client";
 
@@ -64,8 +65,8 @@ export default function ChatPage() {
   }, [messages, streamingContent]);
 
   useEffect(() => {
-    api.get<{ models: Array<{ id: string; name: string }> }>("/api/v1/models").then((data) => {
-      setAvailableModels(data.models.map((m) => m.id));
+    api.get<{ models: Array<{ name: string }> }>("/api/v1/models").then((data) => {
+      setAvailableModels(data.models.map((m) => m.name));
     }).catch(() => {});
   }, []);
 
@@ -278,18 +279,37 @@ export default function ChatPage() {
 
           {/* Input */}
           <div className="p-4 border-t border-border-subtle">
-            {availableModels.length > 0 && (
+{availableModels.length > 0 && (
               <div className="flex gap-2 max-w-3xl mx-auto mb-2">
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="text-xs bg-bg-surface border border-border-subtle rounded-lg px-3 py-1.5 text-text-secondary focus:outline-none focus:border-accent transition-colors"
+                <Dropdown
+                  trigger={
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 text-xs bg-bg-surface border border-border-subtle rounded-lg px-3 py-1.5 text-text-secondary hover:border-accent/50 transition-colors"
+                    >
+                      {selectedModel ? <Cpu size={12} /> : <Brain size={12} />}
+                      <span>{selectedModel || "Default model"}</span>
+                    </button>
+                  }
                 >
-                  <option value="">Default model</option>
+                  <DropdownItem
+                    onClick={() => setSelectedModel("")}
+                    className={!selectedModel ? "bg-accent/10 text-accent" : ""}
+                  >
+                    <Brain size={14} />
+                    Default model
+                  </DropdownItem>
                   {availableModels.map((m) => (
-                    <option key={m} value={m}>{m}</option>
+                    <DropdownItem
+                      key={m}
+                      onClick={() => setSelectedModel(m)}
+                      className={selectedModel === m ? "bg-accent/10 text-accent" : ""}
+                    >
+                      <Cpu size={14} />
+                      {m}
+                    </DropdownItem>
                   ))}
-                </select>
+                </Dropdown>
               </div>
             )}
             <div className="flex gap-2 max-w-3xl mx-auto">

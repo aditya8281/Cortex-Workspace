@@ -9,4 +9,5 @@ export { memoryApi } from "./memory";
 export { modelsApi } from "./models";
 export { repoApi } from "./repo";
 export { searchApi } from "./search";
+export { syncApi } from "./sync";
 export { vaultApi } from "./vault";

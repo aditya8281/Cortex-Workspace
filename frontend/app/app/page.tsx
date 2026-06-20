@@ -45,11 +45,19 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
+    let retryCount = 0;
+    const maxRetries = 3;
     const fetchMetrics = async () => {
       try {
         const data = await apiSystemMetrics();
         setMetrics((prev) => ({ ...prev, ...data }));
-      } catch {}
+        retryCount = 0;
+      } catch (err) {
+        retryCount++;
+        if (retryCount <= maxRetries) {
+          console.warn(`[Dashboard] Metrics fetch attempt ${retryCount} failed`);
+        }
+      }
     };
     fetchMetrics();
     const interval = setInterval(fetchMetrics, 10000);
@@ -58,9 +66,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
-    apiSystemLogs(15).then((data) => setRecentActivity(data.logs)).catch(() => {});
+    apiSystemLogs(15).then((data) => setRecentActivity(data.logs)).catch(() => {/* HTTP polling fallback */});
     const interval = setInterval(() => {
-      apiSystemLogs(15).then((data) => setRecentActivity(data.logs)).catch(() => {});
+      apiSystemLogs(15).then((data) => setRecentActivity(data.logs)).catch(() => {/* HTTP polling fallback */});
     }, 10000);
     return () => clearInterval(interval);
   }, [user]);
@@ -81,8 +89,8 @@ export default function DashboardPage() {
       } catch {}
     };
 
-    ws.onerror = () => {};
-    ws.onclose = () => {};
+    ws.onerror = () => { /* HTTP polling provides fallback */ };
+    ws.onclose = () => { /* HTTP polling provides fallback */ };
 
     return () => { ws.close(); wsRef.current = null; };
   }, [user]);
@@ -90,7 +98,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     memoryApi.list({ limit: 1 }).then((data) => setMemoryCount(data.total ?? data.count ?? 0)).catch(() => {});
-    agentApi.list().then((data) => setAgentCount(Array.isArray(data) ? data.length : 0)).catch(() => {});
+    agentApi.list().then((data) => {
+      const agents = data.agents ?? data;
+      setAgentCount(Array.isArray(agents) ? agents.length : 0);
+    }).catch(() => {});
   }, [user]);
 
   if (loading || !user) return null;

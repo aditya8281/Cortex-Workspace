@@ -24,9 +24,9 @@ export default function SettingsPage() {
   const [deleteError, setDeleteError] = useState("");
   const [deleteConfirmStep, setDeleteConfirmStep] = useState(false);
 
-  const [accentColor, setAccentColor] = useState<string>((user?.preferences as any)?.accent_color || "cyan");
-  const [fontSize, setFontSize] = useState<string>((user?.preferences as any)?.font_size || "md");
-  const [sidebarDefault, setSidebarDefault] = useState<string>((user?.preferences as any)?.sidebar_default || "expanded");
+  const [accentColor, setAccentColor] = useState<string>((user?.preferences as Record<string, unknown>)?.accent_color as string || "cyan");
+  const [fontSize, setFontSize] = useState<string>((user?.preferences as Record<string, unknown>)?.font_size as string || "md");
+  const [sidebarDefault, setSidebarDefault] = useState<string>((user?.preferences as Record<string, unknown>)?.sidebar_default as string || "expanded");
   const [prefsSaved, setPrefsSaved] = useState(false);
   const [prefsLoading, setPrefsLoading] = useState(false);
 
@@ -57,7 +57,7 @@ export default function SettingsPage() {
     try {
       const updated = await apiUpdateProfile({
         preferences: {
-          ...((user?.preferences as any) || {}),
+          ...((user?.preferences as Record<string, unknown>) || {}),
           accent_color: accentColor,
           font_size: fontSize,
           sidebar_default: sidebarDefault,

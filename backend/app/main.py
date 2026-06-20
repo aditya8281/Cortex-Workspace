@@ -65,6 +65,12 @@ async def lifespan(app: FastAPI):
     logger.info("LLM providers: %s", llm_status)
 
     try:
+        await llm_manager.fetch_ollama_catalog()
+        logger.info("Ollama model catalog cached on startup")
+    except Exception as e:
+        logger.warning("Failed to pre-fetch Ollama catalog on startup: %s", e)
+
+    try:
         from backend.app.db import session as db_session
 
         if "pytest" not in sys.modules:
