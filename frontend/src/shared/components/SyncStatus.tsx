@@ -474,6 +474,7 @@ export default function SyncStatus() {
   const [status, setStatus] = useState<SyncStatusData | null>(null);
   const [jobs, setJobs] = useState<SyncJobData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [syncAllLoading, setSyncAllLoading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const fetchStatus = useCallback(async () => {
@@ -498,6 +499,27 @@ export default function SyncStatus() {
       fetchJobs();
     }, 5000);
     return () => clearInterval(interval);
+  }, [fetchStatus, fetchJobs]);
+
+  const handleSyncAll = useCallback(async () => {
+    setSyncAllLoading(true);
+    try {
+      const defaults = await syncApi.defaults();
+      const enabledPaths = defaults.default_paths
+        .filter((p) => p.enabled && p.exists)
+        .map((p) => p.path);
+      if (enabledPaths.length === 0) return;
+      const embeddingModel = defaults.embedding_models[0]?.value ?? "nomic-embed-text";
+      for (const path of enabledPaths) {
+        await syncApi.start(path, embeddingModel, defaults.exclude_dirs);
+      }
+      await fetchStatus();
+      await fetchJobs();
+    } catch {
+      // silent
+    } finally {
+      setSyncAllLoading(false);
+    }
   }, [fetchStatus, fetchJobs]);
 
   const handleStartSync = async (repoPath: string, embeddingModel: string, excludeDirs: string[]) => {
@@ -582,6 +604,25 @@ export default function SyncStatus() {
             Last sync: {getLastSyncText()}
           </span>
         )}
+
+        {/* Sync All quick button */}
+        <button
+          onClick={handleSyncAll}
+          disabled={syncAllLoading}
+          className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all",
+            "bg-accent/10 text-accent hover:bg-accent/20",
+            "disabled:opacity-50 disabled:cursor-not-allowed"
+          )}
+          title="Sync all default home directories"
+        >
+          {syncAllLoading ? (
+            <Loader2 size={10} className="animate-spin" />
+          ) : (
+            <FolderSync size={10} />
+          )}
+          Sync All
+        </button>
 
         <button
           onClick={() => setSettingsOpen(true)}

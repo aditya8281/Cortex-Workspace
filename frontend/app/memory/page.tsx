@@ -546,9 +546,31 @@ export default function MemoryPage() {
                     Automatically sync your code files to memory. Choose a directory to watch and select an embedding model.
                   </p>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const defaults = await syncApi.defaults();
+                          const enabledPaths = defaults.default_paths
+                            .filter((p) => p.enabled && p.exists)
+                            .map((p) => p.path);
+                          if (enabledPaths.length === 0) { setSyncModalOpen(true); return; }
+                          const model = defaults.embedding_models[0]?.value ?? "nomic-embed-text";
+                          for (const path of enabledPaths) {
+                            await syncApi.start(path, model, defaults.exclude_dirs);
+                          }
+                          setShowSyncPrompt(false);
+                          await fetchSyncStatus();
+                          await fetchSyncJobs();
+                        } catch {}
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent text-white hover:bg-accent/90 transition-all"
+                    >
+                      <FolderSync className="h-3.5 w-3.5" />
+                      Sync All
+                    </button>
                     <Button size="sm" onClick={() => setSyncModalOpen(true)}>
                       <FolderSync className="h-3.5 w-3.5" />
-                      Start Auto-Sync
+                      Configure
                     </Button>
                     <button
                       onClick={() => setShowSyncPrompt(false)}
