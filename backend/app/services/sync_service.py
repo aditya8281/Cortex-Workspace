@@ -5,6 +5,8 @@ Discovers models from registered providers and upserts them into ModelCatalog.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import structlog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,7 +36,7 @@ class SyncService:
         job = SyncJob(
             sync_type="library",
             status="running",
-            started_at=None,
+            started_at=datetime.now(timezone.utc),
         )
         self.db.add(job)
         self.db.commit()
@@ -42,6 +44,7 @@ class SyncService:
 
         models_discovered = 0
         models_added = 0
+        models_updated = 0
 
         try:
             if provider_name:
@@ -56,8 +59,10 @@ class SyncService:
                     models_discovered += len(models)
 
                     for model_info in models:
-                        added = await self._upsert_model(model_info, adapter.name)
-                        if added:
+                        updated = await self._upsert_model(model_info, adapter.name)
+                        if updated:
+                            models_updated += 1
+                        else:
                             models_added += 1
 
                     # Link sync job to the first provider found in DB
@@ -75,15 +80,20 @@ class SyncService:
                         error=str(e),
                     )
 
+            self.db.commit()
+
             job.models_discovered = models_discovered
             job.models_added = models_added
+            job.models_updated = models_updated
             job.status = "completed"
+            job.completed_at = datetime.now(timezone.utc)
             self.db.commit()
             self.db.refresh(job)
 
         except Exception as e:
             job.status = "failed"
             job.error_message = str(e)
+            job.completed_at = datetime.now(timezone.utc)
             self.db.commit()
             self.db.refresh(job)
             logger.error("sync_library_failed", error=str(e))
@@ -93,10 +103,8 @@ class SyncService:
     async def _upsert_model(self, model_info: ProviderModelInfo, provider_name: str) -> bool:
         """Insert or update a ModelCatalog entry from provider model info.
 
-        Returns True if a new record was created, False if updated.
+        Returns True if an existing record was updated, False if created.
         """
-        from datetime import datetime, timezone
-
         existing = self.db.scalars(
             select(ModelCatalog).where(ModelCatalog.model_id == model_info.provider_model_id)
         ).first()
@@ -115,9 +123,7 @@ class SyncService:
             existing.tags = model_info.tags or existing.tags
             existing.source_url = model_info.source_url or existing.source_url
             existing.last_updated = now
-            self.db.commit()
-            self.db.refresh(existing)
-            return False
+            return True
 
         catalog_entry = ModelCatalog(
             model_id=model_info.provider_model_id,
@@ -135,9 +141,7 @@ class SyncService:
             last_updated=now,
         )
         self.db.add(catalog_entry)
-        self.db.commit()
-        self.db.refresh(catalog_entry)
-        return True
+        return False
 
     def get_sync_status(self) -> list[dict]:
         """Return the last 10 sync jobs."""

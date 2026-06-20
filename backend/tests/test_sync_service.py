@@ -211,7 +211,7 @@ async def test_upsert_model_creates_new(service, db):
 
     result = await service._upsert_model(_make_model_info(), "ollama")
 
-    assert result is True
+    assert result is False
     db.add.assert_called_once()
     added_entry = db.add.call_args[0][0]
     assert isinstance(added_entry, ModelCatalog)
@@ -243,7 +243,7 @@ async def test_upsert_model_updates_existing(service, db):
 
     result = await service._upsert_model(new_info, "ollama")
 
-    assert result is False
+    assert result is True
     assert existing.display_name == "llama3-updated"
     assert existing.description == "Updated description"
     assert existing.tags == ["new"]
