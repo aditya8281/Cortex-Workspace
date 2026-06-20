@@ -76,7 +76,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws/system`;
+    // Connect directly to the backend WebSocket (port 8000), not through the
+    // Next.js dev server which does not proxy WebSocket connections.
+    const backendHost = window.location.hostname + ":8000";
+    const wsUrl = `${protocol}//${backendHost}/ws/system`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -89,8 +92,9 @@ export default function DashboardPage() {
       } catch {}
     };
 
-    ws.onerror = () => { /* HTTP polling provides fallback */ };
-    ws.onclose = () => { /* HTTP polling provides fallback */ };
+    // WebSocket is best-effort — HTTP polling provides the primary fallback
+    ws.onerror = () => {};
+    ws.onclose = () => {};
 
     return () => { ws.close(); wsRef.current = null; };
   }, [user]);
