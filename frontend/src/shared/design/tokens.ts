@@ -1,42 +1,36 @@
 /**
- * Cortex Design Tokens — Neural Dark
- * Monochrome dark canvas with electric cyan pulse.
+ * Cortex Design Tokens — Warm Neural Dark
+ * Warmer dark canvas with blue-cyan pulse.
  */
 
 const tokens = {
   colors: {
-    // Backgrounds
-    void: "#000000",
-    bg: "#000000",
-    "bg-elevated": "#040406",
-    "bg-surface": "#0a0a0f",
-    "bg-hover": "#111118",
-
-    // Borders
-    "border-subtle": "rgba(255,255,255,0.06)",
-    border: "rgba(255,255,255,0.10)",
-    "border-accent": "rgba(6,182,212,0.3)",
-
-    // Text
-    text: "#f0f0f5",
-    "text-secondary": "#8a8a9a",
-    "text-muted": "#555566",
-
-    // Accent — the pulse
-    accent: "#06b6d4",
-    "accent-hover": "#22d3ee",
-    "accent-muted": "rgba(6,182,212,0.12)",
-    "accent-faint": "rgba(6,182,212,0.06)",
-    "accent-glow": "rgba(6,182,212,0.15)",
-
-    // Semantic
+    void: "#0a0a0f",
+    bg: "#0a0a0f",
+    "bg-elevated": "#111118",
+    "bg-surface": "#16161f",
+    "bg-hover": "#1c1c28",
+    border: {
+      subtle: "rgba(255,255,255,0.08)",
+      DEFAULT: "rgba(255,255,255,0.12)",
+      accent: "rgba(14,165,201,0.3)",
+    },
+    text: {
+      DEFAULT: "#e8e8ed",
+      secondary: "#7a7a8a",
+      muted: "#555566",
+    },
+    accent: {
+      DEFAULT: "#0ea5c9",
+      hover: "#38bdf8",
+      muted: "rgba(14,165,201,0.25)",
+      faint: "rgba(14,165,201,0.08)",
+      glow: "rgba(14,165,201,0.12)",
+    },
     error: "#ef4444",
-    "error-muted": "rgba(239,68,68,0.12)",
     success: "#22c55e",
-    "success-muted": "rgba(34,197,94,0.12)",
     warning: "#f59e0b",
-    "warning-muted": "rgba(245,158,11,0.12)",
-  } as Record<string, string>,
+  } as Record<string, string | Record<string, string>>,
 
   fontFamily: {
     sans: ["var(--font-inter)", "system-ui", "sans-serif"],
