@@ -1,531 +1,504 @@
+"""Ollama Library Scraper — scrapes model catalog from ollama.com/library.
+
+Uses semantic HTML selectors with a robust fallback chain:
+  data-attrs → semantic HTML → structural patterns → text matching
+"""
+
 from __future__ import annotations
 
 import asyncio
 import json
-import logging
-import os
 import re
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
+import structlog
+from bs4 import BeautifulSoup, Tag
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
-CACHE_FILE = "CortexMemory/ollama_library_catalog.json"
-CACHE_TTL_HOURS = 24
+CACHE_DIR = Path("CortexMemory")
+CACHE_FILE = CACHE_DIR / "ollama_library_catalog.json"
+DEFAULT_CACHE_TTL_HOURS = 24
 
 BASE_URL = "https://ollama.com/library"
 TIMEOUT_SECONDS = 30.0
 
-HARDCODED_MODELS = [
+HARDCODED_MODELS: list[dict[str, Any]] = [
     {
         "name": "llama3.1",
-        "description": "Meta's Llama 3.1 instruction-tuned model. Supports general conversation, coding, and reasoning.",
+        "description": "Meta Llama 3.1 instruction-tuned model.",
         "capabilities": ["chat"],
         "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "llama3.1:8b", "parameters": "8B", "size_bytes": 4700000000000},
-            {"name": "llama3.1:70b", "parameters": "70B", "size_bytes": 40000000000000},
-            {"name": "llama3.1:405b", "parameters": "405B", "size_bytes": 230000000000000},
-        ],
     },
     {
         "name": "llama3.2",
-        "description": "Meta's Llama 3.2 instruction-tuned model with improved reasoning and instruction following.",
+        "description": "Meta Llama 3.2 with improved reasoning.",
         "capabilities": ["chat"],
         "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "llama3.2:3b", "parameters": "3B", "size_bytes": 2000000000000},
-            {"name": "llama3.2:11b", "parameters": "11B", "size_bytes": 7800000000000},
-        ],
     },
-    {
-        "name": "llama3",
-        "description": "Meta's Llama 3 base model. Powerful general-purpose model for conversation and coding.",
-        "capabilities": ["chat"],
-        "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "llama3:8b", "parameters": "8B", "size_bytes": 4700000000000},
-            {"name": "llama3:70b", "parameters": "70B", "size_bytes": 40000000000000},
-        ],
-    },
-    {
-        "name": "llama2",
-        "description": "Meta's Llama 2 base model. Good for various language tasks and conversation.",
-        "capabilities": ["chat"],
-        "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "llama2:7b", "parameters": "7B", "size_bytes": 3800000000000},
-            {"name": "llama2:13b", "parameters": "13B", "size_bytes": 7400000000000},
-            {"name": "llama2:70b", "parameters": "70B", "size_bytes": 40000000000000},
-        ],
-    },
+    {"name": "llama3", "description": "Meta Llama 3 base model.", "capabilities": ["chat"], "suggested_ram": "8GB+"},
+    {"name": "llama2", "description": "Meta Llama 2 base model.", "capabilities": ["chat"], "suggested_ram": "8GB+"},
     {
         "name": "codellama",
-        "description": "Code-specialized Llama model for code generation and completion.",
+        "description": "Code-specialized Llama model.",
         "capabilities": ["chat", "code"],
         "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "codellama:7b", "parameters": "7B", "size_bytes": 3800000000000},
-            {"name": "codellama:13b", "parameters": "13B", "size_bytes": 7400000000000},
-            {"name": "codellama:34b", "parameters": "34B", "size_bytes": 19000000000000},
-            {"name": "codellama:70b", "parameters": "70B", "size_bytes": 40000000000000},
-        ],
     },
-    {
-        "name": "codellama:python",
-        "description": "Code Llama specialized for Python code generation.",
-        "capabilities": ["chat", "code"],
-        "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "codellama:python:7b", "parameters": "7B", "size_bytes": 3900000000000},
-            {"name": "codellama:python:13b", "parameters": "13B", "size_bytes": 7600000000000},
-            {"name": "codellama:python:34b", "parameters": "34B", "size_bytes": 19500000000000},
-        ],
-    },
-    {
-        "name": "mistral",
-        "description": "Mistral AI's 7B model. Excellent performance for its size, great for instruction following.",
-        "capabilities": ["chat"],
-        "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "mistral:7b", "parameters": "7B", "size_bytes": 4100000000000},
-        ],
-    },
-    {
-        "name": "mistral-nemo",
-        "description": "Mistral AI's 12B model with improved reasoning and instruction following.",
-        "capabilities": ["chat"],
-        "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "mistral-nemo:12b", "parameters": "12B", "size_bytes": 7000000000000},
-        ],
-    },
+    {"name": "mistral", "description": "Mistral AI 7B model.", "capabilities": ["chat"], "suggested_ram": "6GB+"},
+    {"name": "mistral-nemo", "description": "Mistral AI 12B model.", "capabilities": ["chat"], "suggested_ram": "8GB+"},
     {
         "name": "mixtral",
-        "description": "Mistral AI's Mixture of Experts model. Efficient MoE architecture with strong performance.",
+        "description": "Mistral AI Mixture of Experts.",
         "capabilities": ["chat"],
         "suggested_ram": "12GB+",
-        "parameter_variants": [
-            {"name": "mixtral:8x7b", "parameters": "8x7B", "size_bytes": 26000000000000},
-        ],
-    },
-    {
-        "name": "mixtral:instuct",
-        "description": "Instruction-tuned Mixtral model for following complex instructions.",
-        "capabilities": ["chat"],
-        "suggested_ram": "12GB+",
-        "parameter_variants": [
-            {"name": "mixtral:8x7b-instruct", "parameters": "8x7B", "size_bytes": 26000000000000},
-        ],
     },
     {
         "name": "phi",
-        "description": "Microsoft's Phi-3 mini model. Small but capable for reasoning and chat.",
+        "description": "Microsoft Phi-3 mini model.",
         "capabilities": ["chat", "reasoning"],
         "suggested_ram": "2GB+",
-        "parameter_variants": [
-            {"name": "phi:2.7b", "parameters": "2.7B", "size_bytes": 1600000000000},
-        ],
     },
     {
         "name": "phi3",
-        "description": "Microsoft Phi-3 small language model with strong reasoning capabilities.",
+        "description": "Microsoft Phi-3 small language model.",
         "capabilities": ["chat", "reasoning"],
         "suggested_ram": "4GB+",
-        "parameter_variants": [
-            {"name": "phi3:3.8b", "parameters": "3.8B", "size_bytes": 2200000000000},
-            {"name": "phi3:14b", "parameters": "14B", "size_bytes": 8000000000000},
-        ],
     },
     {
         "name": "gemma",
-        "description": "Google's Gemma model. Lightweight, high-quality language model.",
+        "description": "Google Gemma lightweight model.",
         "capabilities": ["chat"],
         "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "gemma:2b", "parameters": "2B", "size_bytes": 1400000000000},
-            {"name": "gemma:7b", "parameters": "7B", "size_bytes": 5000000000000},
-        ],
     },
     {
         "name": "gemma2",
-        "description": "Google's Gemma 2 model with improved architecture and performance.",
+        "description": "Google Gemma 2 improved model.",
         "capabilities": ["chat"],
         "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "gemma2:2b", "parameters": "2B", "size_bytes": 1600000000000},
-            {"name": "gemma2:9b", "parameters": "9B", "size_bytes": 5500000000000},
-            {"name": "gemma2:27b", "parameters": "27B", "size_bytes": 16000000000000},
-        ],
     },
-    {
-        "name": "qwen",
-        "description": "Alibaba's Qwen model. Strong multilingual and coding capabilities.",
-        "capabilities": ["chat", "code"],
-        "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "qwen:0.5b", "parameters": "0.5B", "size_bytes": 400000000000},
-            {"name": "qwen:1.8b", "parameters": "1.8B", "size_bytes": 1100000000000},
-            {"name": "qwen:4b", "parameters": "4B", "size_bytes": 2400000000000},
-            {"name": "qwen:7b", "parameters": "7B", "size_bytes": 4100000000000},
-            {"name": "qwen:14b", "parameters": "14B", "size_bytes": 8000000000000},
-            {"name": "qwen:32b", "parameters": "32B", "size_bytes": 18000000000000},
-        ],
-    },
+    {"name": "qwen", "description": "Alibaba Qwen model.", "capabilities": ["chat", "code"], "suggested_ram": "6GB+"},
     {
         "name": "qwen2",
-        "description": "Alibaba's Qwen 2 model with improved multilingual and reasoning capabilities.",
+        "description": "Alibaba Qwen 2 model.",
         "capabilities": ["chat", "code"],
         "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "qwen2:0.5b", "parameters": "0.5B", "size_bytes": 500000000000},
-            {"name": "qwen2:1.5b", "parameters": "1.5B", "size_bytes": 1000000000000},
-            {"name": "qwen2:7b", "parameters": "7B", "size_bytes": 4400000000000},
-            {"name": "qwen2:72b", "parameters": "72B", "size_bytes": 41000000000000},
-        ],
     },
     {
         "name": "qwen2.5",
-        "description": "Alibaba's Qwen 2.5 model with enhanced instruction following and knowledge.",
+        "description": "Alibaba Qwen 2.5 model.",
         "capabilities": ["chat", "code"],
         "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "qwen2.5:0.5b", "parameters": "0.5B", "size_bytes": 500000000000},
-            {"name": "qwen2.5:1.5b", "parameters": "1.5B", "size_bytes": 1000000000000},
-            {"name": "qwen2.5:3b", "parameters": "3B", "size_bytes": 2000000000000},
-            {"name": "qwen2.5:7b", "parameters": "7B", "size_bytes": 4500000000000},
-            {"name": "qwen2.5:14b", "parameters": "14B", "size_bytes": 9000000000000},
-            {"name": "qwen2.5:32b", "parameters": "32B", "size_bytes": 19000000000000},
-            {"name": "qwen2.5:72b", "parameters": "72B", "size_bytes": 42000000000000},
-        ],
     },
     {
         "name": "deepseek-coder",
-        "description": "DeepSeek's code generation model. Specialized for programming tasks.",
+        "description": "DeepSeek code generation model.",
         "capabilities": ["chat", "code"],
         "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "deepseek-coder:1.3b", "parameters": "1.3B", "size_bytes": 800000000000},
-            {"name": "deepseek-coder:6.7b", "parameters": "6.7B", "size_bytes": 3800000000000},
-            {"name": "deepseek-coder:33b", "parameters": "33B", "size_bytes": 19000000000000},
-        ],
     },
     {
         "name": "deepseek-v2",
-        "description": "DeepSeek's V2 model with Mixture of Experts architecture.",
+        "description": "DeepSeek V2 MoE model.",
         "capabilities": ["chat", "code"],
         "suggested_ram": "12GB+",
-        "parameter_variants": [
-            {"name": "deepseek-v2:16b", "parameters": "16B", "size_bytes": 9000000000000},
-            {"name": "deepseek-v2:236b", "parameters": "236B", "size_bytes": 140000000000000},
-        ],
     },
     {
         "name": "nomic-embed-text",
-        "description": "Nomic's text embedding model. High-quality embeddings for retrieval.",
+        "description": "Nomic text embedding model.",
         "capabilities": ["embedding"],
         "suggested_ram": "2GB+",
-        "parameter_variants": [
-            {"name": "nomic-embed-text:1.5", "parameters": "137M", "size_bytes": 275000000000},
-        ],
     },
     {
         "name": "mxbai-embed-large",
-        "description": "MixedBread's large embedding model for high-quality semantic search.",
+        "description": "MixedBread large embedding model.",
         "capabilities": ["embedding"],
         "suggested_ram": "2GB+",
-        "parameter_variants": [
-            {"name": "mxbai-embed-large:1.5b", "parameters": "1.5B", "size_bytes": 900000000000},
-        ],
     },
     {
         "name": "llava",
-        "description": "Large Language and Vision Assistant. Supports image understanding.",
+        "description": "Large Language and Vision Assistant.",
         "capabilities": ["chat", "vision"],
         "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "llava:7b", "parameters": "7B", "size_bytes": 4200000000000},
-            {"name": "llava:13b", "parameters": "13B", "size_bytes": 7800000000000},
-            {"name": "llava:34b", "parameters": "34B", "size_bytes": 20000000000000},
-        ],
     },
     {
         "name": "llava-llama3",
-        "description": "LLaVA combined with Llama 3 for improved vision-language capabilities.",
+        "description": "LLaVA with Llama 3.",
         "capabilities": ["chat", "vision"],
         "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "llava-llama3:8b", "parameters": "8B", "size_bytes": 4800000000000},
-        ],
     },
-    {
-        "name": "bakllava",
-        "description": "BakLLaVA model with enhanced vision capabilities.",
-        "capabilities": ["chat", "vision"],
-        "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "bakllava:7b", "parameters": "7B", "size_bytes": 4200000000000},
-        ],
-    },
+    {"name": "bakllava", "description": "BakLLaVA model.", "capabilities": ["chat", "vision"], "suggested_ram": "6GB+"},
     {
         "name": "starcoder2",
-        "description": "StarCoder 2 code generation model from HuggingFace.",
+        "description": "StarCoder 2 code model.",
         "capabilities": ["chat", "code"],
         "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "starcoder2:3b", "parameters": "3B", "size_bytes": 1700000000000},
-            {"name": "starcoder2:7b", "parameters": "7B", "size_bytes": 4000000000000},
-            {"name": "starcoder2:15b", "parameters": "15B", "size_bytes": 9000000000000},
-        ],
     },
     {
         "name": "starcoder",
-        "description": "StarCoder code generation model. Supports 80+ programming languages.",
+        "description": "StarCoder code model.",
         "capabilities": ["chat", "code"],
         "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "starcoder:1b", "parameters": "1B", "size_bytes": 600000000000},
-            {"name": "starcoder:3b", "parameters": "3B", "size_bytes": 1700000000000},
-            {"name": "starcoder:7b", "parameters": "7B", "size_bytes": 4000000000000},
-            {"name": "starcoder:15b", "parameters": "15B", "size_bytes": 9000000000000},
-        ],
     },
-    {
-        "name": "wizardlm2",
-        "description": "WizardLM 2 with improved instruction following and reasoning.",
-        "capabilities": ["chat"],
-        "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "wizardlm2:7b", "parameters": "7B", "size_bytes": 4100000000000},
-            {"name": "wizardlm2:8x22b", "parameters": "8x22B", "size_bytes": 52000000000000},
-        ],
-    },
-    {
-        "name": "wizardlm2-llama3",
-        "description": "WizardLM 2 based on Llama 3 architecture.",
-        "capabilities": ["chat"],
-        "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "wizardlm2-llama3:8b", "parameters": "8B", "size_bytes": 4700000000000},
-        ],
-    },
+    {"name": "wizardlm2", "description": "WizardLM 2 model.", "capabilities": ["chat"], "suggested_ram": "6GB+"},
     {
         "name": "orca2",
-        "description": "Microsoft's Orca 2 model with improved reasoning capabilities.",
+        "description": "Microsoft Orca 2 model.",
         "capabilities": ["chat", "reasoning"],
         "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "orca2:7b", "parameters": "7B", "size_bytes": 4100000000000},
-            {"name": "orca2:13b", "parameters": "13B", "size_bytes": 7400000000000},
-        ],
     },
     {
         "name": "neural-chat",
-        "description": "Intel's Neural Chat model optimized for conversation.",
+        "description": "Intel Neural Chat model.",
         "capabilities": ["chat"],
         "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "neural-chat:7b", "parameters": "7B", "size_bytes": 4000000000000},
-        ],
     },
-    {
-        "name": "samantha-mistral",
-        "description": "A conversational model based on Mistral, designed for open dialogue.",
-        "capabilities": ["chat"],
-        "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "samantha-mistral:7b", "parameters": "7B", "size_bytes": 4100000000000},
-        ],
-    },
-    {
-        "name": "dolphin-mistral",
-        "description": "Dolphin model based on Mistral. Uncensored and good for coding.",
-        "capabilities": ["chat", "code"],
-        "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "dolphin-mistral:7b", "parameters": "7B", "size_bytes": 4100000000000},
-            {"name": "dolphin-mistral:7b-v2.5", "parameters": "7B", "size_bytes": 4100000000000},
-        ],
-    },
-    {
-        "name": "command-r",
-        "description": "Cohere's Command R model for retrieval-augmented generation.",
-        "capabilities": ["chat"],
-        "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "command-r:35b", "parameters": "35B", "size_bytes": 20000000000000},
-        ],
-    },
+    {"name": "command-r", "description": "Cohere Command R model.", "capabilities": ["chat"], "suggested_ram": "8GB+"},
     {
         "name": "command-r-plus",
-        "description": "Cohere's Command R+ model with enhanced capabilities.",
+        "description": "Cohere Command R+ model.",
         "capabilities": ["chat"],
         "suggested_ram": "12GB+",
-        "parameter_variants": [
-            {"name": "command-r-plus:8b", "parameters": "8B", "size_bytes": 5000000000000},
-            {"name": "command-r-plus:104b", "parameters": "104B", "size_bytes": 60000000000000},
-        ],
     },
-    {
-        "name": "aya",
-        "description": "Cohere's Aya model for multilingual conversation.",
-        "capabilities": ["chat"],
-        "suggested_ram": "6GB+",
-        "parameter_variants": [
-            {"name": "aya:8b", "parameters": "8B", "size_bytes": 4800000000000},
-            {"name": "aya:32b", "parameters": "32B", "size_bytes": 19000000000000},
-        ],
-    },
-    {
-        "name": "gpt4",
-        "description": "OpenAI GPT-4 model emulation via Ollama.",
-        "capabilities": ["chat"],
-        "suggested_ram": "8GB+",
-        "parameter_variants": [
-            {"name": "gpt4:8b", "parameters": "8B", "size_bytes": 4800000000000},
-        ],
-    },
-    {
-        "name": "bert",
-        "description": "BERT model for embeddings and text classification.",
-        "capabilities": ["embedding"],
-        "suggested_ram": "2GB+",
-        "parameter_variants": [
-            {"name": "bert:base", "parameters": "110M", "size_bytes": 420000000000},
-            {"name": "bert:large", "parameters": "340M", "size_bytes": 1300000000000},
-        ],
-    },
+    {"name": "aya", "description": "Cohere Aya multilingual model.", "capabilities": ["chat"], "suggested_ram": "6GB+"},
+    {"name": "bert", "description": "BERT embeddings model.", "capabilities": ["embedding"], "suggested_ram": "2GB+"},
     {
         "name": "bge-large",
-        "description": "BAAI's BGE large embedding model for semantic search.",
+        "description": "BAAI BGE large embedding.",
         "capabilities": ["embedding"],
         "suggested_ram": "2GB+",
-        "parameter_variants": [
-            {"name": "bge-large:1.5", "parameters": "340M", "size_bytes": 670000000000},
-        ],
     },
     {
         "name": "bge-base",
-        "description": "BAAI's BGE base embedding model.",
+        "description": "BAAI BGE base embedding.",
         "capabilities": ["embedding"],
         "suggested_ram": "2GB+",
-        "parameter_variants": [
-            {"name": "bge-base:1.5", "parameters": "110M", "size_bytes": 220000000000},
-        ],
     },
     {
         "name": "allminilm",
-        "description": "All MiniLM models for fast and efficient embeddings.",
+        "description": "All MiniLM embedding models.",
         "capabilities": ["embedding"],
         "suggested_ram": "1GB+",
-        "parameter_variants": [
-            {"name": "allminilm:6b", "parameters": "22M", "size_bytes": 43000000000},
-            {"name": "allminilm:12b", "parameters": "33M", "size_bytes": 130000000000},
-        ],
     },
 ]
 
 
-def _load_cache() -> dict[str, Any] | None:
-    try:
-        if not os.path.exists(CACHE_FILE):
+class OllamaLibraryScraper:
+    """Scrapes the Ollama model library with robust, semantic selectors."""
+
+    def __init__(self, cache_dir: Path | str | None = None, cache_ttl_hours: int = DEFAULT_CACHE_TTL_HOURS):
+        self._cache_dir = Path(cache_dir) if cache_dir else CACHE_DIR
+        self._cache_file = self._cache_dir / "ollama_library_catalog.json"
+        self._cache_ttl_hours = cache_ttl_hours
+
+    # ── Public API ────────────────────────────────────────────────
+
+    async def fetch_models(self, force_refresh: bool = False) -> list[dict[str, Any]]:
+        cache = self._load_cache()
+        if cache and not force_refresh and self._is_cache_valid(cache):
+            logger.info("ollama_cache_hit", count=len(cache.get("models", [])))
+            return cache.get("models", [])
+
+        try:
+            models = await self._scrape_all_pages()
+            if models:
+                self._save_cache(models)
+                return models
+        except Exception as exc:
+            logger.error("ollama_scrape_failed", error=str(exc))
+
+        if cache and "models" in cache:
+            logger.info("ollama_stale_cache_fallback", count=len(cache["models"]))
+            return cache["models"]
+
+        logger.info("ollama_hardcoded_fallback", count=len(HARDCODED_MODELS))
+        self._save_cache(HARDCODED_MODELS)
+        return list(HARDCODED_MODELS)
+
+    def fetch_models_sync(self, force_refresh: bool = False) -> list[dict[str, Any]]:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(self.fetch_models(force_refresh))
+            finally:
+                loop.close()
+        else:
+            raise RuntimeError(
+                "fetch_models_sync() cannot be called from an async context. Use fetch_models() instead."
+            )
+
+    # ── Scraping ──────────────────────────────────────────────────
+
+    async def _scrape_all_pages(self) -> list[dict[str, Any]]:
+        all_models: list[dict[str, Any]] = []
+        page = 1
+        max_pages = 50
+
+        while page <= max_pages:
+            html = await self._fetch_page(page)
+            if not html:
+                break
+            models = self._parse_page_models(html)
+            if not models:
+                break
+            all_models.extend(models)
+            if not self._has_next_page(html):
+                break
+            page += 1
+
+        seen: set[str] = set()
+        unique: list[dict[str, Any]] = []
+        for m in all_models:
+            if m["name"] not in seen:
+                seen.add(m["name"])
+                unique.append(m)
+        return unique
+
+    async def _fetch_page(self, page: int = 1) -> str | None:
+        url = f"{BASE_URL}?page={page}" if page > 1 else BASE_URL
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS, follow_redirects=True) as client:
+                resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                resp.raise_for_status()
+                return resp.text
+        except Exception as exc:
+            logger.error("ollama_fetch_page_failed", page=page, error=str(exc))
             return None
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        logger.warning(f"Failed to load cache: {e}")
+
+    # ── Parsing with semantic selectors ───────────────────────────
+
+    def _parse_page_models(self, html: str) -> list[dict[str, Any]]:
+        soup = BeautifulSoup(html, "html.parser")
+        models: list[dict[str, Any]] = []
+
+        for card in self._find_model_cards(soup):
+            model = self._extract_model_from_card(card)
+            if model:
+                models.append(model)
+        return models
+
+    def _find_model_cards(self, soup: BeautifulSoup) -> list[Tag]:
+        """Find model card elements using the fallback selector chain."""
+        # Strategy 1: data attributes
+        cards = soup.select("[data-model-name], [data-model], [data-slug]")
+        if cards:
+            logger.debug("selector_strategy", strategy="data_attrs", count=len(cards))
+            return cards
+
+        # Strategy 2: semantic HTML (article, section with links to /library/)
+        cards = soup.select("article a[href^='/library/'], section a[href^='/library/']")
+        if cards:
+            logger.debug("selector_strategy", strategy="semantic_html", count=len(cards))
+            return cards
+
+        # Strategy 3: structural patterns — links that point to /library/{name}
+        cards = soup.select("a[href^='/library/']")
+        if cards:
+            logger.debug("selector_strategy", strategy="structural_links", count=len(cards))
+            return cards
+
+        # Strategy 4: text-based fallback — find any h2/h3 with nearby description text
+        logger.debug("selector_strategy", strategy="text_matching_fallback")
+        return self._find_cards_by_text_pattern(soup)
+
+    def _find_cards_by_text_pattern(self, soup: BeautifulSoup) -> list[Tag]:
+        """Last-resort: walk the DOM and collect link elements near headings."""
+        cards: list[Tag] = []
+        for link in soup.find_all("a", href=True):
+            href = link.get("href")
+            href_str = ""
+            if isinstance(href, str):
+                href_str = href
+            elif href is not None:
+                href_str = str(href[0]) if href else ""
+            if not href_str.startswith("/library/"):
+                continue
+            name = href_str.split("/library/")[-1].strip("/")
+            if name and not name.startswith("?"):
+                cards.append(link)
+        return cards
+
+    def _extract_model_from_card(self, card: Tag) -> dict[str, Any] | None:
+        """Extract model metadata from a single card element using the selector chain."""
+        name = self._extract_name(card)
+        if not name:
+            return None
+
+        display_name = self._extract_display_name(card) or name
+        description = self._extract_description(card) or ""
+        capabilities = self._infer_capabilities(name)
+        suggested_ram = self._estimate_ram(name, capabilities)
+
+        return {
+            "name": name,
+            "display_name": display_name,
+            "description": description,
+            "capabilities": capabilities,
+            "suggested_ram": suggested_ram,
+            "parameter_variants": _extract_parameter_variants(name),
+        }
+
+    # ── Field extractors with fallback chain ──────────────────────
+
+    def _extract_name(self, card: Tag) -> str | None:
+        # data attribute
+        for attr in ("data-model-name", "data-model", "data-slug"):
+            val = card.get(attr)
+            if val:
+                return str(val).strip()
+
+        # href-based extraction
+        href = card.get("href")
+        if isinstance(href, str):
+            match = re.search(r"/library/([^/?]+)", href)
+            if match:
+                return match.group(1).strip()
+        elif href is not None:
+            # AttributeValueList — take first
+            href_str = str(href[0]) if href else ""
+            if href_str:
+                match = re.search(r"/library/([^/?]+)", href_str)
+                if match:
+                    return match.group(1).strip()
+
+        # heading text as last resort
+        heading = card.find(["h1", "h2", "h3", "h4"])
+        if heading:
+            return heading.get_text(strip=True).lower().replace(" ", "-")
+
         return None
 
+    def _extract_display_name(self, card: Tag) -> str | None:
+        # Heading inside the card
+        heading = card.find(["h1", "h2", "h3", "h4"])
+        if heading:
+            return heading.get_text(strip=True)
 
-def _save_cache(data: dict[str, Any]) -> None:
-    try:
-        os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
-        with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        logger.warning(f"Failed to save cache: {e}")
+        # aria-label
+        aria = card.get("aria-label")
+        if aria:
+            return str(aria)
 
+        # title attribute
+        title = card.get("title")
+        if title:
+            return str(title)
 
-def _is_cache_valid(cache: dict[str, Any]) -> bool:
-    if not cache or "fetched_at" not in cache:
-        return False
-    try:
-        fetched_at = datetime.fromisoformat(cache["fetched_at"])
-        age = datetime.now(timezone.utc) - fetched_at
-        return age < timedelta(hours=CACHE_TTL_HOURS)
-    except Exception:
-        return False
+        return None
 
+    def _extract_description(self, card: Tag) -> str | None:
+        # <p> or <span> with description
+        for tag_name in ("p", "span", "div"):
+            for el in card.find_all(tag_name):
+                text = el.get_text(strip=True)
+                if text and len(text) > 10:
+                    return text
 
-def _extract_model_name(url: str) -> str | None:
-    match = re.search(r"/library/([^/]+)", url)
-    return match.group(1) if match else None
+        # aria-describedby or aria-description
+        desc_id = card.get("aria-describedby")
+        if desc_id:
+            desc_el = card.find(id=desc_id)
+            if desc_el:
+                return desc_el.get_text(strip=True)
 
+        aria_desc = card.get("aria-description")
+        if aria_desc:
+            return str(aria_desc)
 
-def _parse_page_models(html: str) -> list[dict[str, Any]]:
-    models = []
-    card_pattern = re.compile(
-        r'<a href="/library/([^"]+)"[^>]*>.*?<h2[^>]*>([^<]+)</h2>.*?<p>([^<]+)</p>',
-        re.DOTALL,
-    )
-    for match in card_pattern.finditer(html):
-        name = match.group(1).strip()
-        title = match.group(2).strip()
-        description = match.group(3).strip()
-        if name and description:
-            description = re.sub(r"<[^>]+>", "", description).strip()
-            capabilities = _infer_capabilities(name)
-            suggested_ram = _estimate_ram(name, capabilities)
-            models.append(
-                {
-                    "name": name,
-                    "display_name": title,
-                    "description": description,
-                    "capabilities": capabilities,
-                    "suggested_ram": suggested_ram,
-                    "parameter_variants": _extract_parameter_variants(name),
-                }
-            )
-    return models
+        # Last resort: any long-ish text node
+        text = card.get_text(strip=True)
+        if text and len(text) > 20:
+            lines = [line.strip() for line in text.split("\n") if line.strip()]
+            for line in lines[1:]:
+                if len(line) > 10:
+                    return line
+        return None
 
+    # ── Capability / RAM inference ────────────────────────────────
 
-def _infer_capabilities(model_name: str) -> list[str]:
-    name_lower = model_name.lower()
-    caps = ["chat"]
-    if any(x in name_lower for x in ["code", "coder", "starcoder", "deepseek", "codellama"]):
-        caps.append("code")
-    if any(x in name_lower for x in ["vision", "llava", "bakllava", "vision"]):
-        caps.append("vision")
-    if any(x in name_lower for x in ["embed", "nomic", "bge", "mxbai", "bert", "allminilm"]):
-        caps.append("embedding")
-    if any(x in name_lower for x in ["reason", "phi", "orca", "qwen"]):
-        caps.append("reasoning")
-    return list(set(caps))
+    @staticmethod
+    def _infer_capabilities(model_name: str) -> list[str]:
+        name_lower = model_name.lower()
+        caps = ["chat"]
+        if any(x in name_lower for x in ("code", "coder", "starcoder", "deepseek", "codellama")):
+            caps.append("code")
+        if any(x in name_lower for x in ("vision", "llava", "bakllava")):
+            caps.append("vision")
+        if any(x in name_lower for x in ("embed", "nomic", "bge", "mxbai", "bert", "allminilm")):
+            caps.append("embedding")
+        if any(x in name_lower for x in ("reason", "phi", "orca", "qwen")):
+            caps.append("reasoning")
+        return list(set(caps))
 
-
-def _estimate_ram(model_name: str, capabilities: list[str]) -> str:
-    name_lower = model_name.lower()
-    if "embedding" in capabilities:
-        return "1-2GB"
-    if any(x in name_lower for x in ["phi", ":0.5b", ":1b", ":2b", ":2.7b", ":3b"]):
-        return "2-4GB"
-    if any(x in name_lower for x in [":3b", ":4b", ":7b", ":8b"]):
+    @staticmethod
+    def _estimate_ram(model_name: str, capabilities: list[str]) -> str:
+        name_lower = model_name.lower()
+        if "embedding" in capabilities:
+            return "1-2GB"
+        if any(x in name_lower for x in ("phi", ":0.5b", ":1b", ":2b", ":2.7b", ":3b")):
+            return "2-4GB"
+        if any(x in name_lower for x in (":3b", ":4b", ":7b", ":8b")):
+            return "6-8GB"
+        if any(x in name_lower for x in (":14b", ":13b", ":12b")):
+            return "12-16GB"
+        if any(x in name_lower for x in (":34b", ":32b", ":30b")):
+            return "24-32GB"
+        if any(x in name_lower for x in (":70b", ":72b", ":65b")):
+            return "48-64GB"
+        if any(x in name_lower for x in (":405b", ":236b", ":180b")):
+            return "128GB+"
         return "6-8GB"
-    if any(x in name_lower for x in [":14b", ":13b", ":12b"]):
-        return "12-16GB"
-    if any(x in name_lower for x in [":34b", ":32b", ":30b"]):
-        return "24-32GB"
-    if any(x in name_lower for x in [":70b", ":72b", ":65b"]):
-        return "48-64GB"
-    if any(x in name_lower for x in [":405b", ":236b", ":180b"]):
-        return "128GB+"
-    return "6-8GB"
+
+    # ── Pagination ────────────────────────────────────────────────
+
+    def _has_next_page(self, html: str) -> bool:
+        soup = BeautifulSoup(html, "html.parser")
+        # Look for "Next" link
+        next_link = soup.find("a", string=re.compile(r"next", re.IGNORECASE))
+        if next_link:
+            return True
+        # Regex fallback
+        return bool(re.search(r'<a[^>]+href="/library\?page=\d+"[^>]*>\s*Next', html, re.IGNORECASE))
+
+    # ── Cache ─────────────────────────────────────────────────────
+
+    def _load_cache(self) -> dict[str, Any] | None:
+        try:
+            if not self._cache_file.exists():
+                return None
+            return json.loads(self._cache_file.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning("ollama_cache_load_failed", error=str(exc))
+            return None
+
+    def _save_cache(self, models: list[dict[str, Any]]) -> None:
+        try:
+            self._cache_dir.mkdir(parents=True, exist_ok=True)
+            data = {"fetched_at": datetime.now(timezone.utc).isoformat(), "models": models}
+            self._cache_file.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception as exc:
+            logger.warning("ollama_cache_save_failed", error=str(exc))
+
+    def _is_cache_valid(self, cache: dict[str, Any]) -> bool:
+        if not cache or "fetched_at" not in cache:
+            return False
+        try:
+            fetched_at = datetime.fromisoformat(cache["fetched_at"])
+            age = datetime.now(timezone.utc) - fetched_at
+            return age < timedelta(hours=self._cache_ttl_hours)
+        except Exception:
+            return False
+
+
+# ── Standalone helpers (kept for backward compatibility) ──────────
 
 
 def _extract_parameter_variants(name: str) -> list[dict[str, Any]]:
-    variants = []
+    variants: list[dict[str, Any]] = []
     base_name = name
     size_match = re.search(r":(\d+(\.\d+)?b)", name.lower())
     if size_match:
@@ -535,21 +508,9 @@ def _extract_parameter_variants(name: str) -> list[dict[str, Any]]:
         for match in pattern.finditer(name):
             variant_name = f"{base_name}:{match.group(1)}"
             size_bytes = _estimate_model_size(match.group(1))
-            variants.append(
-                {
-                    "name": variant_name,
-                    "parameters": match.group(1).upper(),
-                    "size_bytes": size_bytes,
-                }
-            )
+            variants.append({"name": variant_name, "parameters": match.group(1).upper(), "size_bytes": size_bytes})
     if not variants:
-        variants.append(
-            {
-                "name": name,
-                "parameters": "Unknown",
-                "size_bytes": 0,
-            }
-        )
+        variants.append({"name": name, "parameters": "Unknown", "size_bytes": 0})
     return variants
 
 
@@ -562,94 +523,29 @@ def _estimate_model_size(size_str: str) -> int:
         else:
             num = float(size_str)
         if num >= 100:
-            return int(num * 1000000000)
-        else:
-            return int(num * 1000000000000)
+            return int(num * 1_000_000_000)
+        return int(num * 1_000_000_000_000)
     except Exception:
         return 0
 
 
-async def _fetch_page(page: int = 1) -> str | None:
-    url = f"{BASE_URL}?page={page}" if page > 1 else BASE_URL
-    try:
-        async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS, follow_redirects=True) as client:
-            resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
-            resp.raise_for_status()
-            return resp.text
-    except Exception as e:
-        logger.error(f"Failed to fetch page {page}: {e}")
-        return None
+# ── Module-level convenience functions (backward compat) ──────────
 
-
-def _has_next_page(html: str) -> bool:
-    next_pattern = re.compile(r'<a[^>]+href="/library\?page=\d+"[^>]*>\s*Next', re.IGNORECASE)
-    return bool(next_pattern.search(html)) or '"next"' in html.lower()
-
-
-async def _scrape_all_pages() -> list[dict[str, Any]]:
-    all_models = []
-    page = 1
-    max_pages = 50
-    while page <= max_pages:
-        html = await _fetch_page(page)
-        if not html:
-            break
-        models = _parse_page_models(html)
-        if not models:
-            break
-        all_models.extend(models)
-        if not _has_next_page(html):
-            break
-        page += 1
-    seen = set()
-    unique_models = []
-    for model in all_models:
-        if model["name"] not in seen:
-            seen.add(model["name"])
-            unique_models.append(model)
-    return unique_models
-
-
-def get_ollama_library_models(force_refresh: bool = False) -> list[dict[str, Any]]:
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(get_ollama_library_models_async(force_refresh))
-        finally:
-            loop.close()
-    else:
-        raise RuntimeError("get_ollama_library_models() cannot be called from an async context. Use get_ollama_library_models_async() instead.")
+_default_scraper = OllamaLibraryScraper()
 
 
 async def get_ollama_library_models_async(force_refresh: bool = False) -> list[dict[str, Any]]:
-    cache = _load_cache()
-    if cache and not force_refresh and _is_cache_valid(cache):
-        return cache.get("models", [])
-    try:
-        models = await _scrape_all_pages()
-        if models:
-            data = {"fetched_at": datetime.now(timezone.utc).isoformat(), "models": models}
-            _save_cache(data)
-            return models
-    except Exception as e:
-        logger.error(f"Scraping failed: {e}")
-    if cache and "models" in cache:
-        logger.info("Returning stale cache due to scraping failure")
-        return cache["models"]
-    logger.info("Using hardcoded fallback model list")
-    data = {"fetched_at": datetime.now(timezone.utc).isoformat(), "models": HARDCODED_MODELS}
-    _save_cache(data)
-    return HARDCODED_MODELS
+    return await _default_scraper.fetch_models(force_refresh)
+
+
+def get_ollama_library_models(force_refresh: bool = False) -> list[dict[str, Any]]:
+    return _default_scraper.fetch_models_sync(force_refresh)
 
 
 if __name__ == "__main__":
     import asyncio
 
-    logging.basicConfig(level=logging.INFO)
     models = asyncio.run(get_ollama_library_models_async())
     print(f"Found {len(models)} models")
-    for model in models[:5]:
-        print(f"  - {model['name']}: {model['description'][:50]}...")
+    for m in models[:5]:
+        print(f"  - {m['name']}: {m.get('description', '')[:50]}...")

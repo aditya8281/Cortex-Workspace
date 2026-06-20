@@ -8,6 +8,7 @@ dependencies = [
     "alembic>=1.18.4",
     "argon2-cffi>=23.1.0",
     "arq>=0.26.0",
+    "beautifulsoup4>=4.12.0",
     "fastapi>=0.110.0,<1.0.0",
     "httpx>=0.28.1",
     "passlib[bcrypt]>=1.7.4",
