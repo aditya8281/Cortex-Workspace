@@ -1,8 +1,8 @@
 from __future__ import annotations
+
 import asyncio
 import logging
 import os
-from pathlib import Path
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ class FileWatcher:
 
     async def _poll_and_record(self) -> None:
         """Compare current mtime against snapshot, record changes."""
-        for repo_path, config in list(self._watched.items()):
+        for repo_path in list(self._watched.keys()):
             new_snapshot = self._take_snapshot(repo_path)
             old_snapshot = self._snapshots.get(repo_path, {})
 
@@ -103,6 +103,11 @@ class FileWatcher:
         for repo_path, files in changes.items():
             config = self._watched.get(repo_path)
             if not config:
+                continue
+
+            # Check if sync is enabled for this repo
+            if not config.get("sync_enabled", True):
+                logger.debug("Sync disabled for %s, skipping", repo_path)
                 continue
 
             logger.info("Processing %d file changes in %s", len(files), repo_path)
