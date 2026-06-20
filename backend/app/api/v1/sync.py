@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -14,14 +15,150 @@ from backend.app.tasks.worker import enqueue_task
 
 router = APIRouter()
 
+# Default home directories to sync
+DEFAULT_SYNC_PATHS = [
+    {"label": "Home Directory", "path": "~", "enabled": True},
+    {"label": "Desktop", "path": "~/Desktop", "enabled": True},
+    {"label": "Downloads", "path": "~/Downloads", "enabled": True},
+    {"label": "Documents", "path": "~/Documents", "enabled": True},
+]
+
+# Directories to exclude from sync by default
+DEFAULT_EXCLUDE_DIRS = [
+    ".git", "node_modules", "__pycache__", "venv", ".venv",
+    "dist", "build", ".next", "target", ".cache", "tmp",
+    ".local/share", ".npm", ".cargo", ".rustup",
+]
+
+# Available embedding models with technique descriptions
+EMBEDDING_MODELS = [
+    {
+        "value": "nomic-embed-text",
+        "label": "Nomic Embed Text",
+        "technique": "ONNX / Ollama",
+        "dimensions": 768,
+        "description": "Fast, lightweight embeddings. Good balance of speed and quality.",
+        "speed": "fast",
+    },
+    {
+        "value": "mxbai-embed-large",
+        "label": "MXBai Embed Large",
+        "technique": "ONNX / Ollama",
+        "dimensions": 1024,
+        "description": "High-quality embeddings with larger dimension. Best accuracy.",
+        "speed": "medium",
+    },
+    {
+        "value": "all-minilm-l6-v2",
+        "label": "All MiniLM-L6-v2",
+        "technique": "Sentence Transformers",
+        "dimensions": 384,
+        "description": "Classic sentence transformer. Fast and widely compatible.",
+        "speed": "fast",
+    },
+    {
+        "value": "bge-small-en-v1.5",
+        "label": "BGE Small English",
+        "technique": "Sentence Transformers",
+        "dimensions": 384,
+        "description": "BAAI embedding model. Strong retrieval performance.",
+        "speed": "fast",
+    },
+    {
+        "value": "bge-base-en-v1.5",
+        "label": "BGE Base English",
+        "technique": "Sentence Transformers",
+        "dimensions": 768,
+        "description": "BAAI base model. Good quality for general use.",
+        "speed": "medium",
+    },
+    {
+        "value": "bge-large-en-v1.5",
+        "label": "BGE Large English",
+        "technique": "Sentence Transformers",
+        "dimensions": 1024,
+        "description": "BAAI large model. Highest quality embeddings.",
+        "speed": "slow",
+    },
+    {
+        "value": "e5-small-v2",
+        "label": "E5 Small v2",
+        "technique": "Sentence Transformers",
+        "dimensions": 384,
+        "description": "Microsoft E5 model. Excellent for semantic search.",
+        "speed": "fast",
+    },
+    {
+        "value": "e5-base-v2",
+        "label": "E5 Base v2",
+        "technique": "Sentence Transformers",
+        "dimensions": 768,
+        "description": "Microsoft E5 base. Balanced quality and speed.",
+        "speed": "medium",
+    },
+    {
+        "value": "gte-small",
+        "label": "GTE Small",
+        "technique": "Sentence Transformers",
+        "dimensions": 384,
+        "description": "Alibaba GTE model. Strong multilingual support.",
+        "speed": "fast",
+    },
+    {
+        "value": "mock",
+        "label": "Mock (Testing)",
+        "technique": "Hash-based",
+        "dimensions": 768,
+        "description": "Deterministic mock embeddings for testing. Not semantically meaningful.",
+        "speed": "instant",
+    },
+]
+
+
+def _get_default_sync_paths() -> list[dict[str, Any]]:
+    """Return default sync paths with resolved absolute paths."""
+    home = os.path.expanduser("~")
+    resolved = []
+    for p in DEFAULT_SYNC_PATHS:
+        resolved_path = os.path.expanduser(p["path"])
+        exists = os.path.isdir(resolved_path)
+        resolved.append({
+            "label": p["label"],
+            "path": resolved_path,
+            "enabled": p["enabled"] and exists,
+            "exists": exists,
+        })
+    return resolved
+
+
+@router.get("/sync/defaults", response_model=SyncDefaultsResponse)
+async def get_sync_defaults(
+    current_user: User = Depends(get_current_user),
+):
+    """Return default sync paths, exclude dirs, and available embedding models."""
+    del current_user
+    return SyncDefaultsResponse(
+        default_paths=_get_default_sync_paths(),
+        exclude_dirs=DEFAULT_EXCLUDE_DIRS,
+        embedding_models=EMBEDDING_MODELS,
+    )
+
 
 class SyncStartPayload(BaseModel):
     repo_path: str = Field(min_length=1, max_length=4096)
     embedding_model: str | None = None
+    exclude_dirs: list[str] = Field(default_factory=list)
+    exclude_patterns: list[str] = Field(default_factory=list)
 
 
 class SyncStopPayload(BaseModel):
     repo_path: str = Field(min_length=1, max_length=4096)
+
+
+class SyncDefaultsResponse(BaseModel):
+    default_paths: list[dict[str, Any]]
+    exclude_dirs: list[str]
+    embedding_models: list[dict[str, Any]]
 
 
 class SyncStatusResponse(BaseModel):

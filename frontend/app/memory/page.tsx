@@ -54,12 +54,8 @@ interface SyncJobData {
   updated_at: string;
 }
 
-const EMBEDDING_MODELS = [
-  { value: "nomic-embed-text", label: "nomic-embed-text" },
-  { value: "mxbai-embed-large", label: "mxbai-embed-large" },
-  { value: "thenomic-embed-text-v1.5", label: "thenomic-embed-text-v1.5" },
-  { value: "embed-models", label: "embed-models (all-in-one)" },
-];
+import { syncApi } from "@/shared/api/sync";
+import type { SyncDefaultPath, EmbeddingModelOption } from "@/shared/api/sync";
 
 const categoryColors: Record<string, string> = {
   code: "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -117,6 +113,15 @@ export default function MemoryPage() {
   const [syncEmbeddingModel, setSyncEmbeddingModel] = useState("nomic-embed-text");
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncError, setSyncError] = useState("");
+  const [syncDefaults, setSyncDefaults] = useState<{
+    defaultPaths: SyncDefaultPath[];
+    excludeDirs: string[];
+    embeddingModels: EmbeddingModelOption[];
+  } | null>(null);
+  const [syncSelectedPaths, setSyncSelectedPaths] = useState<Record<string, boolean>>({});
+  const [syncExcludeDirs, setSyncExcludeDirs] = useState<string[]>([]);
+  const [syncNewExcludeDir, setSyncNewExcludeDir] = useState("");
+  const [syncShowExcludeList, setSyncShowExcludeList] = useState(false);
 
   const fetchSyncStatus = useCallback(async () => {
     try {
@@ -145,16 +150,38 @@ export default function MemoryPage() {
     return () => clearInterval(interval);
   }, [fetchSyncStatus, fetchSyncJobs]);
 
+  useEffect(() => {
+    if (!syncModalOpen) return;
+    syncApi.defaults().then((data) => {
+      setSyncDefaults({
+        defaultPaths: data.default_paths,
+        excludeDirs: data.exclude_dirs,
+        embeddingModels: data.embedding_models,
+      });
+      const initial: Record<string, boolean> = {};
+      data.default_paths.forEach((p) => { initial[p.path] = p.enabled; });
+      setSyncSelectedPaths(initial);
+      setSyncExcludeDirs(data.exclude_dirs);
+      setSyncEmbeddingModel(data.embedding_models[0]?.value ?? "nomic-embed-text");
+    }).catch(() => {});
+  }, [syncModalOpen]);
+
   const handleStartSync = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!syncRepoPath.trim()) return;
+    const pathsToSync = Object.entries(syncSelectedPaths)
+      .filter(([, enabled]) => enabled)
+      .map(([path]) => path);
+    if (syncRepoPath.trim()) pathsToSync.push(syncRepoPath.trim());
+    if (pathsToSync.length === 0) {
+      setSyncError("Select at least one directory or enter a custom path");
+      return;
+    }
     setSyncLoading(true);
     setSyncError("");
     try {
-      await api.post("/api/v1/sync/start", {
-        repo_path: syncRepoPath.trim(),
-        embedding_model: syncEmbeddingModel,
-      });
+      for (const path of pathsToSync) {
+        await syncApi.start(path, syncEmbeddingModel, syncExcludeDirs);
+      }
       setSyncRepoPath("");
       setSyncModalOpen(false);
       setShowSyncPrompt(false);
@@ -841,9 +868,12 @@ export default function MemoryPage() {
         {/* Sync Modal */}
         {syncModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-bg-elevated rounded-xl border border-border-subtle shadow-2xl w-full max-w-md mx-4">
-              <div className="flex items-center justify-between p-4 border-b border-border-subtle">
-                <h2 className="text-sm font-semibold text-text">Start Auto-Sync</h2>
+            <div className="bg-bg-elevated rounded-xl border border-border-subtle shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-border-subtle shrink-0">
+                <div className="flex items-center gap-2">
+                  <FolderSync size={16} className="text-accent" />
+                  <h2 className="text-sm font-semibold text-text">Auto-Sync Setup</h2>
+                </div>
                 <button
                   onClick={() => setSyncModalOpen(false)}
                   className="text-text-muted hover:text-text transition-colors"
@@ -851,10 +881,55 @@ export default function MemoryPage() {
                   ✕
                 </button>
               </div>
-              <form onSubmit={handleStartSync} className="p-4 space-y-4">
+
+              <form onSubmit={handleStartSync} className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+                {/* Default Home Directories */}
+                {syncDefaults?.defaultPaths && syncDefaults.defaultPaths.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-text-muted mb-2">
+                      Home Directories (auto-synced by default)
+                    </label>
+                    <div className="space-y-1.5">
+                      {syncDefaults.defaultPaths.map((dp) => (
+                        <label
+                          key={dp.path}
+                          className={cn(
+                            "flex items-center gap-3 p-2.5 rounded-lg border transition-all cursor-pointer",
+                            syncSelectedPaths[dp.path]
+                              ? "border-accent/30 bg-accent/5"
+                              : "border-border-subtle bg-bg-surface hover:border-border-default",
+                            !dp.exists && "opacity-50"
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={syncSelectedPaths[dp.path] ?? false}
+                            onChange={(e) =>
+                              setSyncSelectedPaths((prev) => ({
+                                ...prev,
+                                [dp.path]: e.target.checked,
+                              }))
+                            }
+                            className="rounded border-border-subtle bg-bg-surface text-accent focus:ring-accent/20"
+                            disabled={!dp.exists}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-medium text-text">{dp.label}</span>
+                            <span className="text-[10px] text-text-muted ml-2 font-mono">{dp.path}</span>
+                          </div>
+                          {!dp.exists && (
+                            <span className="text-[10px] text-text-muted italic">not found</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Custom Path */}
                 <div>
                   <label className="block text-xs font-medium text-text-muted mb-1.5">
-                    Directory Path
+                    Custom Directory
                   </label>
                   <input
                     type="text"
@@ -864,6 +939,8 @@ export default function MemoryPage() {
                     className="w-full px-3 py-2 rounded-lg bg-bg-surface border border-border-subtle text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
                   />
                 </div>
+
+                {/* Embedding Model with Technique Descriptions */}
                 <div>
                   <label className="block text-xs font-medium text-text-muted mb-1.5">
                     Embedding Model
@@ -874,9 +951,9 @@ export default function MemoryPage() {
                       onChange={(e) => setSyncEmbeddingModel(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-bg-surface border border-border-subtle text-sm text-text appearance-none focus:outline-none focus:border-accent"
                     >
-                      {EMBEDDING_MODELS.map((m) => (
+                      {syncDefaults?.embeddingModels.map((m) => (
                         <option key={m.value} value={m.value}>
-                          {m.label}
+                          {m.label} ({m.technique}, {m.dimensions}d)
                         </option>
                       ))}
                     </select>
@@ -885,19 +962,103 @@ export default function MemoryPage() {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
                     />
                   </div>
+                  {/* Model description */}
+                  {syncDefaults?.embeddingModels.find((m) => m.value === syncEmbeddingModel) && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className={cn(
+                        "text-[10px] font-mono",
+                        syncDefaults.embeddingModels.find((m) => m.value === syncEmbeddingModel)!.speed === "fast"
+                          ? "text-accent"
+                          : syncDefaults.embeddingModels.find((m) => m.value === syncEmbeddingModel)!.speed === "medium"
+                          ? "text-warning"
+                          : syncDefaults.embeddingModels.find((m) => m.value === syncEmbeddingModel)!.speed === "slow"
+                          ? "text-text-muted"
+                          : "text-success"
+                      )}>
+                        {syncDefaults.embeddingModels.find((m) => m.value === syncEmbeddingModel)!.speed}
+                      </span>
+                      <span className="text-[10px] text-text-muted">
+                        {syncDefaults.embeddingModels.find((m) => m.value === syncEmbeddingModel)!.description}
+                      </span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Exclude Directories */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setSyncShowExcludeList(!syncShowExcludeList)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-text-secondary transition-colors"
+                  >
+                    Exclude Directories ({syncExcludeDirs.length})
+                    <ChevronDown
+                      size={12}
+                      className={cn(
+                        "transition-transform",
+                        syncShowExcludeList && "rotate-180"
+                      )}
+                    />
+                  </button>
+                  {syncShowExcludeList && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {syncExcludeDirs.map((dir) => (
+                          <span
+                            key={dir}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-bg-surface border border-border-subtle text-[10px] font-mono text-text-muted"
+                          >
+                            {dir}
+                            <button
+                              type="button"
+                              onClick={() => setSyncExcludeDirs((prev) => prev.filter((d) => d !== dir))}
+                              className="text-text-muted hover:text-error transition-colors"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={syncNewExcludeDir}
+                          onChange={(e) => setSyncNewExcludeDir(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const dir = syncNewExcludeDir.trim();
+                              if (dir && !syncExcludeDirs.includes(dir)) {
+                                setSyncExcludeDirs((prev) => [...prev, dir]);
+                                setSyncNewExcludeDir("");
+                              }
+                            }
+                          }}
+                          placeholder="Add directory to exclude"
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-bg-surface border border-border-subtle text-xs text-text placeholder:text-text-muted focus:outline-none focus:border-accent"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {syncError && (
                   <p className="text-xs text-error">{syncError}</p>
                 )}
-                <Button
+
+                <button
                   type="submit"
-                  variant="primary"
-                  size="sm"
-                  loading={syncLoading}
-                  className="w-full"
+                  disabled={syncLoading}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                    "bg-accent text-white hover:bg-accent/90",
+                    "focus:outline-none focus:ring-2 focus:ring-accent/50",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
                 >
-                  Start Sync
-                </Button>
+                  {syncLoading && <Loader2 size={14} className="animate-spin" />}
+                  Start Auto-Sync
+                </button>
               </form>
             </div>
           </div>

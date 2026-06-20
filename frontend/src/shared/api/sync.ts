@@ -36,8 +36,34 @@ export interface SyncStatus {
   watched_paths: WatchedPath[];
 }
 
+export interface SyncDefaultPath {
+  label: string;
+  path: string;
+  enabled: boolean;
+  exists: boolean;
+}
+
+export interface EmbeddingModelOption {
+  value: string;
+  label: string;
+  technique: string;
+  dimensions: number;
+  description: string;
+  speed: "instant" | "fast" | "medium" | "slow";
+}
+
+export interface SyncDefaults {
+  default_paths: SyncDefaultPath[];
+  exclude_dirs: string[];
+  embedding_models: EmbeddingModelOption[];
+}
+
 export const syncApi = {
-  start: (repoPath: string, embeddingModel?: string): Promise<{
+  defaults: (): Promise<SyncDefaults> => {
+    return api.get("/api/v1/sync/defaults");
+  },
+
+  start: (repoPath: string, embeddingModel?: string, excludeDirs?: string[]): Promise<{
     status: string;
     repo_path: string;
     embedding_model: string;
@@ -46,6 +72,7 @@ export const syncApi = {
     return api.post("/api/v1/sync/start", {
       repo_path: repoPath,
       embedding_model: embeddingModel,
+      exclude_dirs: excludeDirs,
     });
   },
 
