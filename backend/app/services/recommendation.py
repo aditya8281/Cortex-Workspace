@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
-from backend.app.models.model_catalog import ModelCatalog, ModelVariant
+from backend.app.models.model_catalog import ModelCatalog, ModelStatistics, ModelVariant
 from backend.app.services.catalogue import (
     estimate_tps_gpu,
     estimate_vram_gb,
@@ -195,7 +196,7 @@ class RecommendationEngine:
             return None
 
         # Calculate feasibility score
-        score = self._calculate_score(model, best_variant, config)
+        score = self._calculate_score(model, best_variant, config, model.statistics)
 
         # Generate performance estimate
         performance = self._estimate_performance(model, best_variant)
@@ -266,9 +267,24 @@ class RecommendationEngine:
         return variant
 
     def _calculate_score(
-        self, model: ModelCatalog, variant: ModelVariant, config: dict
+        self,
+        model: ModelCatalog,
+        variant: ModelVariant,
+        config: dict,
+        statistics: ModelStatistics | None = None,
     ) -> float:
-        """Calculate feasibility score (0-100)."""
+        """Calculate feasibility score (0-100).
+
+        Scoring breakdown:
+        - VRAM fit: 0-30 pts
+        - Quantization quality: 0-20 pts
+        - Expected TPS: 0-20 pts
+        - Workload match: 0-15 pts
+        - Disk space: 0-5 pts
+        - Popularity: 0-10 pts
+        - Recency: 0-5 pts
+        - Efficiency: 0-5 pts
+        """
         score = 50.0  # Base score
 
         # VRAM fit (30 points)
@@ -329,6 +345,54 @@ class RecommendationEngine:
             score += 2
         else:
             score -= 10
+
+        # Popularity score (0-10 points)
+        downloads = model.total_downloads or 0
+        if statistics and statistics.download_count_total > downloads:
+            downloads = statistics.download_count_total
+        if downloads >= 10000:
+            score += 10
+        elif downloads >= 5000:
+            score += 7
+        elif downloads >= 1000:
+            score += 5
+        elif downloads >= 100:
+            score += 3
+        elif downloads >= 10:
+            score += 1
+
+        # Recency score (0-5 points)
+        now = datetime.now(timezone.utc)
+        last_updated = model.last_updated
+        if last_updated and last_updated.tzinfo is None:
+            last_updated = last_updated.replace(tzinfo=timezone.utc)
+        if last_updated:
+            age_days = (now - last_updated).days
+            if age_days <= 30:
+                score += 5
+            elif age_days <= 90:
+                score += 4
+            elif age_days <= 180:
+                score += 3
+            elif age_days <= 365:
+                score += 2
+            elif age_days <= 730:
+                score += 1
+
+        # Efficiency score (0-5 points): TPS per GB of VRAM
+        if tps and tps > 0:
+            vram_gb = variant.vram_required_gb or 1.0
+            efficiency = tps / vram_gb
+            if efficiency >= 10:
+                score += 5
+            elif efficiency >= 7:
+                score += 4
+            elif efficiency >= 5:
+                score += 3
+            elif efficiency >= 3:
+                score += 2
+            elif efficiency >= 1:
+                score += 1
 
         return max(0, min(100, score))
 
