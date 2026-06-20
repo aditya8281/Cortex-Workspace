@@ -35,6 +35,7 @@ class AgentUpdatePayload(BaseModel):
     system_prompt: str | None = Field(default=None, min_length=1)
     model_id: str | None = Field(default=None, max_length=100)
     is_active: bool | None = None
+    tools: list[str] | None = None
 
 
 class RunCreatePayload(BaseModel):
@@ -159,6 +160,8 @@ def update_agent(
         agent.model_id = payload.model_id
     if payload.is_active is not None:
         agent.is_active = payload.is_active
+    if payload.tools is not None:
+        agent.tools_json = json.dumps(payload.tools) if payload.tools else None
 
     db.commit()
     db.refresh(agent)

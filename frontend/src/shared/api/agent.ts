@@ -36,6 +36,7 @@ export const agentApi = {
       system_prompt?: string;
       model_id?: string;
       is_active?: boolean;
+      tools?: string[];
     },
   ): Promise<{ status: string }> => {
     return api.put(`/api/v1/agents/${agentId}`, body);

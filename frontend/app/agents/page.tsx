@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Plus, Trash2, Clock, Play, CheckCircle, XCircle } from "lucide-react";
+import { Bot, Plus, Trash2, Clock, Play, CheckCircle, XCircle, Pencil } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../../src/shared/ui/Button";
 import DashboardShell from "../../src/shared/layout/DashboardShell";
@@ -12,6 +12,7 @@ import { agentApi } from "../../src/shared/api/agent";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
 import { cn } from "../../src/lib/utils";
 import AgentChat from "./AgentChat";
+import AgentEditor from "./AgentEditor";
 import NeuralNetwork from "../../src/shared/ui/NeuralNetwork";
 
 const statusIcons: Record<string, typeof Clock> = {
@@ -42,6 +43,8 @@ export default function AgentsPage() {
   const [newDesc, setNewDesc] = useState("");
   const [newPrompt, setNewPrompt] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/auth");
@@ -95,10 +98,14 @@ export default function AgentsPage() {
       await agentApi.delete(agentId);
       setAgents((prev) => prev.filter((a) => a.id !== agentId));
       if (selectedAgent?.id === agentId) setSelectedAgent(null);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to delete agent";
-      alert(message);
+    } catch {
+      // silently fail
     }
+  }
+
+  function handleAgentSaved(updated: Agent) {
+    setAgents((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    setSelectedAgent((prev) => (prev?.id === updated.id ? updated : prev));
   }
 
   function handleRunComplete(run: AgentRun) {
@@ -210,7 +217,25 @@ export default function AgentsPage() {
           )}
 
           {selectedAgent ? (
-            <AgentChat agent={selectedAgent} onRunComplete={handleRunComplete} />
+            <>
+              <div className="flex items-center justify-between px-6 pt-4">
+                <div>
+                  <h1 className="text-lg font-semibold text-text">{selectedAgent.name}</h1>
+                  {selectedAgent.description && (
+                    <p className="text-xs text-text-muted mt-0.5">{selectedAgent.description}</p>
+                  )}
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setEditingAgent(selectedAgent)}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                  Edit
+                </Button>
+              </div>
+              <AgentChat agent={selectedAgent} onRunComplete={handleRunComplete} />
+            </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center">
               <motion.div
@@ -291,6 +316,16 @@ export default function AgentsPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Edit Agent Modal */}
+        {editingAgent && (
+          <AgentEditor
+            agent={editingAgent}
+            open={!!editingAgent}
+            onClose={() => setEditingAgent(null)}
+            onSaved={handleAgentSaved}
+          />
+        )}
       </div>
     </DashboardShell>
   );
