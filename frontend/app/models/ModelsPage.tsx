@@ -5,28 +5,32 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Brain,
-  Cpu,
+  Download,
   HardDrive,
-  Activity,
+  Settings,
   RefreshCw,
+  LayoutGrid,
 } from "lucide-react";
 import DashboardShell from "@/shared/layout/DashboardShell";
-import Card from "@/shared/ui/Card";
-import Badge from "@/shared/ui/Badge";
-import { MetricRing } from "@/shared/ui/MetricRing";
-import { TabGroup, TabPanel } from "@/shared/ui/TabGroup";
 import NeuralNetwork from "@/shared/ui/NeuralNetwork";
+import Card from "@/shared/ui/Card";
+import Button from "@/shared/ui/Button";
+import { TabGroup, TabPanel } from "@/shared/ui/TabGroup";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { modelsApi } from "@/shared/api";
+import HardwareOverview from "./HardwareOverview";
+import WorkloadRecommendations from "./WorkloadRecommendations";
 import ModelBrowser from "./ModelBrowser";
-import type { HardwareInfo, ModelInfo } from "@/shared/types";
+import InstalledModelsPanel from "./InstalledModelsPanel";
+import DownloadQueuePanel from "./DownloadQueuePanel";
+import type { HardwareProfile, WorkloadRecommendations as WorkloadRecs } from "@/shared/types";
 
 export default function ModelsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [hardware, setHardware] = useState<HardwareInfo | null>(null);
-  const [recommendedModels, setRecommendedModels] = useState<ModelInfo[]>([]);
-  const [loadingRecommended, setLoadingRecommended] = useState(true);
+  const [hardware, setHardware] = useState<HardwareProfile | null>(null);
+  const [workloads, setWorkloads] = useState<Record<string, WorkloadRecs>>({});
+  const [loadingRecs, setLoadingRecs] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/auth");
@@ -35,29 +39,27 @@ export default function ModelsPage() {
   useEffect(() => {
     if (!user) return;
     modelsApi
-      .recommended()
+      .recommendedEnhanced()
       .then((data) => {
         setHardware(data.hardware);
-        setRecommendedModels(data.recommended);
+        setWorkloads(data.workloads);
       })
       .catch(() => {})
-      .finally(() => setLoadingRecommended(false));
+      .finally(() => setLoadingRecs(false));
   }, [user]);
 
   if (loading || !user) return null;
 
-  const ramUsedPercent = hardware ? hardware.ram_percent : 0;
-
   return (
     <DashboardShell>
       <NeuralNetwork intensity="low" />
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="mb-8"
+          className="mb-6"
         >
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -72,130 +74,99 @@ export default function ModelsPage() {
           </div>
 
           {/* Hardware Overview */}
-          {hardware && (
-            <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 mb-4">
-              <MetricRing
-                label="RAM"
-                value={ramUsedPercent}
-                color="#8b5cf6"
-                unit={`${hardware.ram_gb}GB`}
-              />
-              <Card className="flex flex-col items-center justify-center gap-2 px-6 py-4" gradient>
-                <Cpu size={20} className="text-accent" />
-                <span className="micro-label">CPU Cores</span>
-                <span className="text-sm text-text">{hardware.cpu_count}</span>
-              </Card>
-              <Card className="flex flex-col items-center justify-center gap-2 px-6 py-4" gradient>
-                <HardDrive size={20} className="text-accent" />
-                <span className="micro-label">GPU</span>
-                <span className="text-sm text-text text-center">
-                  {hardware.gpu.available ? hardware.gpu.name : "No GPU"}
-                </span>
-                {hardware.gpu.available && (
-                  <span className="text-xs text-text-muted">
-                    {hardware.gpu.vram_gb.toFixed(1)}GB VRAM
-                  </span>
-                )}
-              </Card>
-              <Card className="flex flex-col items-center justify-center gap-2 px-6 py-4" gradient>
-                <Activity size={20} className="text-accent" />
-                <span className="micro-label">Models</span>
-                <span className="text-sm text-text">
-                  {recommendedModels.length} recommended
-                </span>
-              </Card>
-            </div>
-          )}
+          {hardware && <HardwareOverview hardware={hardware} />}
         </motion.div>
 
-        {/* Content */}
+        {/* Content Tabs */}
         <TabGroup
           tabs={[
-            { id: "browse", label: "Browse All" },
             { id: "recommended", label: "Recommended", icon: <Brain size={14} /> },
+            { id: "installed", label: "Installed", icon: <HardDrive size={14} /> },
+            { id: "browse", label: "Browse All", icon: <LayoutGrid size={14} /> },
+            { id: "downloads", label: "Downloads", icon: <Download size={14} /> },
+            { id: "settings", label: "Settings", icon: <Settings size={14} /> },
           ]}
         >
+          <TabPanel tabId="recommended">
+            {loadingRecs ? (
+              <div className="space-y-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="space-y-3">
+                    <div className="h-6 w-48 rounded bg-bg-surface shimmer-bg" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {Array.from({ length: 3 }).map((_, j) => (
+                        <div key={j} className="h-48 rounded-xl bg-bg-surface shimmer-bg" />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <WorkloadRecommendations workloads={workloads} />
+            )}
+          </TabPanel>
+
+          <TabPanel tabId="installed">
+            <InstalledModelsPanel />
+          </TabPanel>
+
           <TabPanel tabId="browse">
             <ModelBrowser />
           </TabPanel>
 
-          <TabPanel tabId="recommended">
-            {loadingRecommended ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-64 rounded-xl bg-bg-surface shimmer-bg"
-                  />
-                ))}
-              </div>
-            ) : recommendedModels.length === 0 ? (
-              <Card className="p-8 text-center" gradient>
-                <Brain size={40} className="text-text-muted mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-text mb-2">
-                  No recommendations available
-                </h3>
-                <p className="text-sm text-text-secondary max-w-md mx-auto">
-                  Hardware detection could not determine suitable models.
-                  Try browsing all models instead.
+          <TabPanel tabId="downloads">
+            <DownloadQueuePanel />
+          </TabPanel>
+
+          <TabPanel tabId="settings">
+            <div className="space-y-6">
+              <Card className="p-6" gradient>
+                <h3 className="text-sm font-semibold text-text mb-4">Inference Backend</h3>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 text-sm text-text-secondary">
+                    <input type="radio" name="backend" value="auto" defaultChecked className="accent-accent" />
+                    Auto (recommended)
+                  </label>
+                  <label className="flex items-center gap-3 text-sm text-text-secondary">
+                    <input type="radio" name="backend" value="ollama" className="accent-accent" />
+                    Ollama
+                  </label>
+                  <label className="flex items-center gap-3 text-sm text-text-secondary">
+                    <input type="radio" name="backend" value="llama_cpp" className="accent-accent" />
+                    llama.cpp
+                  </label>
+                </div>
+              </Card>
+
+              <Card className="p-6" gradient>
+                <h3 className="text-sm font-semibold text-text mb-4">Catalogue</h3>
+                <p className="text-xs text-text-secondary mb-4">
+                  Refresh the model catalogue from Ollama and HuggingFace.
+                </p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => modelsApi.refreshCatalogue()}
+                >
+                  <RefreshCw size={14} /> Refresh Catalogue
+                </Button>
+              </Card>
+
+              <Card className="p-6" gradient>
+                <h3 className="text-sm font-semibold text-text mb-4">HuggingFace API</h3>
+                <p className="text-xs text-text-secondary mb-4">
+                  Optional: Add your HuggingFace API token for higher rate limits when discovering GGUF models.
+                </p>
+                <input
+                  type="password"
+                  placeholder="hf_..."
+                  className="w-full h-10 px-4 rounded-xl bg-bg-surface border border-border-subtle text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-colors"
+                />
+                <p className="text-xs text-text-muted mt-2">
+                  Token is stored locally and never sent to Cortex servers.
                 </p>
               </Card>
-            ) : (
-              <div className="space-y-6">
-                <p className="text-sm text-text-secondary">
-                  Based on your hardware ({hardware?.ram_gb ?? "?"}GB RAM
-                  {hardware?.gpu.available ? `, ${hardware.gpu.name}` : ""})
-                </p>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {recommendedModels.slice(0, 3).map((model, idx) => (
-                    <motion.div
-                      key={model.name}
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: idx * 0.1 }}
-                    >
-                      <Card
-                        gradient
-                        className="p-6 h-full flex flex-col relative overflow-hidden"
-                      >
-                        {idx === 0 && (
-                          <div className="absolute top-3 right-3">
-                            <Badge variant="accent">Best Match</Badge>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-                            <Brain size={24} className="text-accent" />
-                          </div>
-                          <div>
-                            <h3 className="text-base font-semibold text-text">
-                              {model.display_name}
-                            </h3>
-                            <p className="text-xs text-text-muted font-mono">
-                              {model.parameter_count ? `${model.parameter_count} parameters` : model.model_type}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-text-secondary mb-4 flex-1">
-                          {model.description}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5 mb-4">
-                          {model.capabilities.map((cap) => (
-                            <Badge key={cap} variant={cap === "code" ? "success" : "default"}>
-                              {cap}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-text-muted pt-3 border-t border-border-subtle">
-                          <span>{model.context_length.toLocaleString()} context</span>
-                          <span>{model.hardware_requirements?.min_ram_gb ? `${model.hardware_requirements.min_ram_gb}GB RAM min` : ''}</span>
-                        </div>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
           </TabPanel>
         </TabGroup>
       </div>

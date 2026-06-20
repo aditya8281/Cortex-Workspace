@@ -5,10 +5,32 @@ import { Search, Filter } from "lucide-react";
 import ModelCard from "./ModelCard";
 import Skeleton from "@/shared/ui/Skeleton";
 import { modelsApi } from "@/shared/api";
+import { useSystemWebSocket } from "@/shared/hooks/useSystemWebSocket";
 import type { ModelInfo, HardwareInfo } from "@/shared/types";
 
-const MODEL_TYPES = ["all", "chat", "code", "vision", "embedding"] as const;
+const MODEL_TYPES = ["all", "chat", "code", "vision", "embedding", "reasoning", "lightweight"] as const;
 type FilterType = (typeof MODEL_TYPES)[number];
+
+const SIZE_FILTERS = ["all", "<3B", "3-8B", "8-14B", "14-34B", "34B+"] as const;
+type SizeFilter = (typeof SIZE_FILTERS)[number];
+
+function parseParamCount(paramCount: string): number {
+  const match = paramCount.match(/([\d.]+)/);
+  return match ? parseFloat(match[1]) : 0;
+}
+
+function matchesSizeFilter(paramCount: string, filter: SizeFilter): boolean {
+  if (filter === "all") return true;
+  const n = parseParamCount(paramCount);
+  switch (filter) {
+    case "<3B": return n < 3;
+    case "3-8B": return n >= 3 && n <= 8;
+    case "8-14B": return n > 8 && n <= 14;
+    case "14-34B": return n > 14 && n <= 34;
+    case "34B+": return n > 34;
+    default: return true;
+  }
+}
 
 interface ModelBrowserProps {
   onModelSelect?: (model: ModelInfo) => void;
@@ -20,6 +42,7 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [sizeFilter, setSizeFilter] = useState<SizeFilter>("all");
   const [downloadingModels, setDownloadingModels] = useState<Set<string>>(new Set());
   const [downloadProgress, setDownloadProgress] = useState<Map<string, number>>(new Map());
 
@@ -42,37 +65,31 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
     fetchData();
   }, [fetchData]);
 
-  // Poll download progress
-  useEffect(() => {
-    if (downloadingModels.size === 0) return;
-
-    const interval = setInterval(async () => {
-      for (const modelName of downloadingModels) {
-        try {
-          const res = await modelsApi.progress(modelName);
-          setDownloadProgress((prev) => new Map(prev).set(modelName, res.progress));
-          if (res.progress >= 1.0) {
-            setDownloadingModels((prev) => {
-              const next = new Set(prev);
-              next.delete(modelName);
-              return next;
-            });
-            // Refresh model list to mark as downloaded
-            fetchData();
+  // Live download progress via WebSocket
+  useSystemWebSocket({
+    path: "/ws/models",
+    enabled: downloadingModels.size > 0,
+    onMessage(event) {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "model_progress" && Array.isArray(data.models)) {
+          for (const m of data.models) {
+            const progress = m.progress;
+            setDownloadProgress((prev) => new Map(prev).set(m.name, progress));
+            if (progress >= 1.0) {
+              setDownloadingModels((prev) => {
+                const next = new Set(prev);
+                next.delete(m.name);
+                return next;
+              });
+              // Refresh model list to mark as downloaded
+              fetchData();
+            }
           }
-        } catch {
-          // Stop polling on error
-          setDownloadingModels((prev) => {
-            const next = new Set(prev);
-            next.delete(modelName);
-            return next;
-          });
         }
-      }
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [downloadingModels, fetchData]);
+      } catch {}
+    },
+  });
 
   const handleDownload = async (modelName: string, variant?: string) => {
     try {
@@ -113,7 +130,9 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
     const matchesFilter =
       activeFilter === "all" || model.model_type === activeFilter;
 
-    return matchesSearch && matchesFilter;
+    const matchesSize = matchesSizeFilter(model.parameter_count, sizeFilter);
+
+    return matchesSearch && matchesFilter && matchesSize;
   });
 
   const modelCounts = {
@@ -122,6 +141,8 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
     code: models.filter((m) => m.model_type === "code").length,
     vision: models.filter((m) => m.model_type === "vision").length,
     embedding: models.filter((m) => m.model_type === "embedding").length,
+    reasoning: 0,
+    lightweight: 0,
   };
 
   if (loading) {
@@ -177,6 +198,26 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
               <span className="ml-1.5 text-text-muted">
                 {modelCounts[type]}
               </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Size Filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-text-muted">Size:</span>
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-bg-surface border border-border-subtle">
+          {SIZE_FILTERS.map((size) => (
+            <button
+              key={size}
+              onClick={() => setSizeFilter(size)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-colors ${
+                sizeFilter === size
+                  ? "bg-accent/15 text-accent"
+                  : "text-text-secondary hover:text-text hover:bg-bg-hover"
+              }`}
+            >
+              {size}
             </button>
           ))}
         </div>
