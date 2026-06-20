@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
+import psutil
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
+from backend.app.models.model_catalog import ModelCatalog, ModelVariant
 from backend.app.models.user import User
 from backend.app.services.catalogue import CatalogueManager
 from backend.app.services.hardware import detect_hardware as _detect_hardware_full
@@ -198,6 +202,174 @@ async def delete_model(
     return {"status": "deleted", "model": model_name}
 
 
+@router.get("/models/installed")
+async def list_installed_models(
+    current_user: User = Depends(get_current_user),
+):
+    """List installed/downloaded model variants."""
+    db = next(get_db())
+    catalogue_mgr = CatalogueManager(db)
+
+    # Get Ollama installed models
+    try:
+        import httpx
+
+        async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=5.0) as client:
+            resp = await client.get("/api/tags")
+            resp.raise_for_status()
+            installed = resp.json().get("models", [])
+    except Exception:
+        installed = []
+
+    installed_names = {m["name"] for m in installed}
+
+    # Get all catalogue entries and mark downloaded ones
+    all_models = catalogue_mgr.get_all_catalogue()
+    result = []
+    for model in all_models:
+        variants = []
+        for tag in installed_names:
+            base = tag.split(":")[0]
+            if base in model.model_id or model.model_id.startswith(base):
+                variants.append(
+                    {
+                        "variant_id": tag,
+                        "quantization": _guess_quant_from_tag(tag),
+                        "size_bytes": next((m.get("size", 0) for m in installed if m["name"] == tag), 0),
+                        "size_gb": round(
+                            next((m.get("size", 0) for m in installed if m["name"] == tag), 0) / (1024**3), 1
+                        ),
+                        "downloaded": True,
+                        "parameter_count": model.parameter_count,
+                        "quality_score": 90.0,
+                    }
+                )
+        if variants:
+            result.append(
+                {
+                    "model_id": model.model_id,
+                    "display_name": model.display_name,
+                    "family": model.family,
+                    "parameter_count": model.parameter_count,
+                    "capabilities": model.capabilities or [],
+                    "variants": variants,
+                }
+            )
+
+    return {"models": result, "installed_count": len(result)}
+
+
+def _guess_quant_from_tag(tag: str) -> str:
+    """Guess quantization from Ollama tag."""
+    tag_lower = tag.lower()
+    for q in ["q4_k_m", "q5_k_m", "q8_0", "q4_k_s", "q6_k", "f16", "f32", "q4_0", "q3_k_m"]:
+        if q in tag_lower:
+            return q.upper()
+    return "UNKNOWN"
+
+
+@router.get("/models/storage")
+async def get_storage_usage(
+    current_user: User = Depends(get_current_user),
+):
+    """Get storage usage breakdown."""
+    models_dir = Path(getattr(settings, "CORTEX_ROOT", None) or "./CortexMemory") / "models"
+
+    # Disk usage
+    try:
+        disk = psutil.disk_usage(".")
+        total_gb = disk.total / (1024**3)
+        used_gb = disk.used / (1024**3)
+        free_gb = disk.free / (1024**3)
+    except Exception:
+        total_gb = used_gb = free_gb = 0
+
+    # Models directory size
+    models_size = 0
+    if models_dir.exists():
+        for f in models_dir.rglob("*"):
+            if f.is_file():
+                models_size += f.stat().st_size
+
+    return {
+        "total_disk_gb": round(total_gb, 1),
+        "used_disk_gb": round(used_gb, 1),
+        "free_disk_gb": round(free_gb, 1),
+        "models_total_gb": round(models_size / (1024**3), 1),
+        "models": [],  # Per-model breakdown would need Ollama API
+    }
+
+
+@router.get("/models/{model_id}")
+async def get_model_detail(
+    model_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Get detailed model info with variants."""
+    db = next(get_db())
+
+    model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == model_id)).scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+
+    variants = db.execute(select(ModelVariant).where(ModelVariant.model_catalog_id == model.id)).scalars().all()
+
+    return {
+        "model_id": model.model_id,
+        "display_name": model.display_name,
+        "family": model.family,
+        "parameter_count": model.parameter_count,
+        "architecture": model.architecture,
+        "context_length_default": model.context_length_default,
+        "context_length_max": model.context_length_max,
+        "capabilities": model.capabilities or [],
+        "license": model.license,
+        "recommended_use_cases": model.recommended_use_cases or [],
+        "description": model.description,
+        "tags": model.tags or [],
+        "benchmarks": model.benchmarks,
+        "variants": [
+            {
+                "variant_id": v.variant_id,
+                "quantization": v.quantization,
+                "quantization_level": v.quantization_level,
+                "parameter_count": v.parameter_count,
+                "size_bytes": v.size_bytes,
+                "size_gb": round(v.size_gb, 1) if v.size_gb else None,
+                "vram_required_gb": round(v.vram_required_gb, 1) if v.vram_required_gb else None,
+                "quality_score": round(v.quality_score, 1) if v.quality_score else None,
+                "downloaded": v.downloaded,
+                "ollama_tag": v.ollama_tag,
+            }
+            for v in variants
+        ],
+    }
+
+
+@router.post("/models/catalogue/refresh")
+async def refresh_catalogue(
+    current_user: User = Depends(get_current_user),
+):
+    """Force refresh the model catalogue."""
+    db = next(get_db())
+    catalogue_mgr = CatalogueManager(db)
+
+    # Re-seed curated models
+    added = catalogue_mgr.seed_curated_models()
+
+    return {"status": "refreshed", "models_added": added}
+
+
+@router.get("/models/updates")
+async def check_model_updates(
+    current_user: User = Depends(get_current_user),
+):
+    """Check for available model updates."""
+    # For now, return empty — this will be implemented in lifecycle management
+    return {"updates": []}
+
+
 def _guess_param_count(name: str) -> str | None:
     """Extract parameter count from model name. Delegates to LLMManager helper."""
     return LLMManager._guess_parameter_count(name)
@@ -239,35 +411,41 @@ def _format_recommendations(recs: list) -> list[dict]:
         perf = rec.performance
         variant = rec.variant
         model = rec.catalog_entry
-        result.append({
-            "model_id": model.model_id,
-            "display_name": model.display_name,
-            "family": model.family,
-            "parameter_count": model.parameter_count,
-            "capabilities": model.capabilities or [],
-            "description": model.description,
-            "score": round(rec.score, 1),
-            "variant": {
-                "quantization": variant.quantization if variant else None,
-                "size_gb": round(variant.size_gb, 1) if variant else None,
-                "vram_required_gb": round(variant.vram_required_gb, 1) if variant else None,
-                "quality_score": round(variant.quality_score, 1) if variant else None,
-            } if variant else None,
-            "performance": {
-                "tokens_per_second": round(perf.tokens_per_second, 1) if perf.tokens_per_second else None,
-                "prompt_eval_tps": round(perf.prompt_eval_tps, 1) if perf.prompt_eval_tps else None,
-                "memory_usage_gb": round(perf.memory_usage_gb, 1),
-                "vram_usage_gb": round(perf.vram_usage_gb, 1),
-                "quantization_quality": perf.quantization_quality,
-                "quality_notes": perf.quality_notes,
-                "speed_rating": perf.speed_rating,
-                "fit_rating": perf.fit_rating,
-                "context_length_max": perf.context_length_max,
-            } if perf else None,
-            "explanation": {
-                "why": rec.why_recommended,
-                "tradeoff": rec.quality_tradeoff,
-                "suitability": rec.hardware_suitability,
-            },
-        })
+        result.append(
+            {
+                "model_id": model.model_id,
+                "display_name": model.display_name,
+                "family": model.family,
+                "parameter_count": model.parameter_count,
+                "capabilities": model.capabilities or [],
+                "description": model.description,
+                "score": round(rec.score, 1),
+                "variant": {
+                    "quantization": variant.quantization if variant else None,
+                    "size_gb": round(variant.size_gb, 1) if variant else None,
+                    "vram_required_gb": round(variant.vram_required_gb, 1) if variant else None,
+                    "quality_score": round(variant.quality_score, 1) if variant else None,
+                }
+                if variant
+                else None,
+                "performance": {
+                    "tokens_per_second": round(perf.tokens_per_second, 1) if perf.tokens_per_second else None,
+                    "prompt_eval_tps": round(perf.prompt_eval_tps, 1) if perf.prompt_eval_tps else None,
+                    "memory_usage_gb": round(perf.memory_usage_gb, 1),
+                    "vram_usage_gb": round(perf.vram_usage_gb, 1),
+                    "quantization_quality": perf.quantization_quality,
+                    "quality_notes": perf.quality_notes,
+                    "speed_rating": perf.speed_rating,
+                    "fit_rating": perf.fit_rating,
+                    "context_length_max": perf.context_length_max,
+                }
+                if perf
+                else None,
+                "explanation": {
+                    "why": rec.why_recommended,
+                    "tradeoff": rec.quality_tradeoff,
+                    "suitability": rec.hardware_suitability,
+                },
+            }
+        )
     return result
