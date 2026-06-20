@@ -172,6 +172,24 @@ class LLMManager:
             self._total_requests += 1
             self._total_prompt_tokens += result.get("tokens_prompt", 0)
             self._total_completion_tokens += result.get("tokens_completion", 0)
+
+            # Record usage (fire and forget)
+            try:
+                from backend.app.db import SessionLocal
+                from backend.app.services.usage_tracker import UsageTracker
+
+                db = SessionLocal()
+                tracker = UsageTracker(db)
+                tracker.record_usage(
+                    model_name=result.get("model", "unknown"),
+                    usage_type="chat",
+                    tokens_prompt=result.get("tokens_prompt", 0),
+                    tokens_completion=result.get("tokens_completion", 0),
+                )
+                db.close()
+            except Exception:
+                pass  # Don't fail chat on usage tracking errors
+
             return LLMResponse(
                 content=result["content"],
                 model=result.get("model", "unknown"),

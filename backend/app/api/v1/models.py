@@ -154,6 +154,18 @@ async def llm_metrics(
     return llm_manager.get_metrics()
 
 
+@router.get("/models/usage/stats")
+async def get_usage_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get model usage statistics."""
+    from backend.app.services.usage_tracker import UsageTracker
+
+    tracker = UsageTracker(db)
+    return tracker.get_usage_stats()
+
+
 @router.post("/models/{model_name}/download")
 async def download_model(
     model_name: str,
