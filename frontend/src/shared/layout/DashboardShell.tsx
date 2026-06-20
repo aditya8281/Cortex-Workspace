@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../auth/AuthProvider";
 import { getProfilePhotoUrl, apiListNotifications, apiVaultStatus, apiListMemory } from "../auth/cortexApi";
@@ -25,10 +26,13 @@ interface DashboardShellProps {
   children: ReactNode;
 }
 
-const navItems = [
+const workNavItems = [
   { label: "Dashboard", href: "/app", icon: LayoutDashboard },
   { label: "Search", href: "/search", icon: Search },
   { label: "Agents", href: "/agents", icon: Bot },
+];
+
+const accountNavItems = [
   { label: "Vault", href: "/vault", icon: Lock },
   { label: "Memory", href: "/memory", icon: Brain },
   { label: "Profile", href: "/profile", icon: User },
@@ -113,7 +117,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
       {/* ── Desktop Sidebar ────────────────────────────────────── */}
       {isDesktop && (
         <aside
-          className="fixed left-0 top-0 z-30 h-full flex flex-col border-r border-border-subtle bg-bg-surface"
+          className="fixed left-0 top-0 z-30 h-full flex flex-col border-r border-border-subtle glass-panel-strong"
           style={{ width: SIDEBAR_WIDTH }}
         >
           {/* Logo */}
@@ -128,10 +132,11 @@ export default function DashboardShell({ children }: DashboardShellProps) {
 
           {/* Nav Items */}
           <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-            <div className="px-3 pt-1 pb-1">
-              <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-text-muted/50">Workspace</span>
+            {/* Work Group */}
+            <div className="px-3 mb-1">
+              <span className="micro-label">Work</span>
             </div>
-            {navItems.slice(0, 3).map((item) => {
+            {workNavItems.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
               return (
@@ -161,11 +166,14 @@ export default function DashboardShell({ children }: DashboardShellProps) {
               );
             })}
 
-            <div className="px-3 pt-4 pb-1">
-              <div className="h-px mb-3 bg-gradient-to-r from-transparent via-accent/15 to-transparent" />
-              <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-text-muted/50">Account</span>
+            {/* Divider */}
+            <div className="mx-3 my-2 h-px bg-gradient-to-r from-transparent via-border-subtle to-transparent" />
+
+            {/* You Group */}
+            <div className="px-3 mb-1">
+              <span className="micro-label">You</span>
             </div>
-            {navItems.slice(3).map((item) => {
+            {accountNavItems.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
               return (
@@ -291,10 +299,11 @@ export default function DashboardShell({ children }: DashboardShellProps) {
 
                 {/* Nav Items */}
                 <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-                  <div className="px-3 pt-1 pb-1">
-                    <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-text-muted/50">Workspace</span>
+                  {/* Work Group */}
+                  <div className="px-3 mb-1">
+                    <span className="micro-label">Work</span>
                   </div>
-                  {navItems.slice(0, 3).map((item) => {
+                  {workNavItems.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
                     return (
@@ -323,11 +332,15 @@ export default function DashboardShell({ children }: DashboardShellProps) {
                       </button>
                     );
                   })}
-                  <div className="px-3 pt-3 pb-1">
-                    <div className="h-px mb-3 bg-gradient-to-r from-transparent via-accent/15 to-transparent" />
-                    <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-text-muted/50">Account</span>
+
+                  {/* Divider */}
+                  <div className="mx-3 my-2 h-px bg-gradient-to-r from-transparent via-border-subtle to-transparent" />
+
+                  {/* You Group */}
+                  <div className="px-3 mb-1">
+                    <span className="micro-label">You</span>
                   </div>
-                  {navItems.slice(3).map((item) => {
+                  {accountNavItems.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
                     return (
@@ -412,42 +425,31 @@ export default function DashboardShell({ children }: DashboardShellProps) {
         style={{ marginLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}
       >
         {/* ── Header ──────────────────────────────────────────── */}
-        <header className="glass-panel h-14 flex items-center justify-between px-5 shrink-0 sticky top-0 z-20 relative">
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+        <header className="sticky top-0 z-30 h-14 flex items-center justify-between px-4 glass-panel border-b border-border-subtle shrink-0">
           <div className="flex items-center gap-3">
             {(isTablet || isMobile) && (
               <button
                 onClick={() => setMobileSidebarOpen((v) => !v)}
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-bg-hover hover:text-text transition-colors"
+                className="p-2 rounded-lg hover:bg-bg-hover text-text-secondary"
                 aria-label="Toggle sidebar"
               >
                 <Menu className="h-5 w-5" />
               </button>
             )}
-            {(isTablet || isMobile) && (
-              <button
-                onClick={() => router.push("/app")}
-                className="flex items-center gap-2 group"
-              >
-                <div className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(6,182,212,0.4)] group-hover:shadow-[0_0_12px_rgba(6,182,212,0.6)] transition-shadow" />
-                <span className="font-mono text-[11px] tracking-[0.2em] uppercase text-text-secondary group-hover:text-text transition-colors">
-                  Cortex
-                </span>
-              </button>
-            )}
+            <Link href="/app" className="flex items-center gap-2 group">
+              <div className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(6,182,212,0.4)] group-hover:shadow-[0_0_12px_rgba(6,182,212,0.6)] transition-shadow" />
+              <span className="font-semibold text-text hidden sm:inline">Cortex</span>
+            </Link>
           </div>
 
-          {/* Right: Search + Avatar */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCommandPaletteOpen(true)}
-              className="h-8 px-3 rounded-lg flex items-center gap-2 text-text-muted hover:text-text-secondary hover:bg-bg-hover transition-colors text-xs font-mono border border-border-subtle"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border-subtle bg-bg-surface text-text-secondary text-sm hover:border-accent/20 hover:text-text transition-colors"
             >
-              <Search className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Search...</span>
-              <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-border-subtle bg-bg-surface px-1 py-0.5 text-[9px] text-text-muted ml-1">
-                ⌘K
-              </kbd>
+              <Search size={14} />
+              <span className="hidden sm:inline">Search</span>
+              <kbd className="text-[10px] font-mono bg-bg-hover px-1.5 py-0.5 rounded">⌘K</kbd>
             </button>
             <button
               onClick={() => {/* TODO: open notifications panel */}}
@@ -565,7 +567,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 z-30 glass-panel-strong border-t border-border-subtle">
           <div className="flex items-center justify-around h-16">
-            {navItems.map((item) => {
+            {[...workNavItems, ...accountNavItems].map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
               return (
