@@ -73,7 +73,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("Failed to initialize system database on startup: %s", e)
 
+    from backend.app.services.file_watcher import file_watcher
+    await file_watcher.start()
+
     yield
+
+    await file_watcher.stop()
 
     try:
         await redis_cache.close()
