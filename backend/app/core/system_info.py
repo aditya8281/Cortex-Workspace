@@ -93,19 +93,22 @@ def get_gpu_info() -> dict[str, Any]:
     try:
         # Try NVIDIA GPU
         result = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"],
+            ["nvidia-smi", "--query-gpu=name,driver_version,memory.total,memory.used,utilization.gpu", "--format=csv,noheader,nounits"],
             capture_output=True,
             text=True,
             timeout=3,
         )
         if result.returncode == 0:
             parts = result.stdout.strip().split(",")
-            if len(parts) >= 3:
+            if len(parts) >= 5:
                 return {
+                    "detected": True,
                     "type": "NVIDIA",
                     "name": parts[0].strip(),
                     "driver_version": parts[1].strip(),
-                    "memory_gb": float(parts[2].strip().split()[0]) / 1024,
+                    "memory_total_mb": int(float(parts[2].strip())),
+                    "memory_used_mb": int(float(parts[3].strip())),
+                    "utilization_gpu": int(float(parts[4].strip())),
                 }
     except Exception:
         pass

@@ -52,7 +52,7 @@ async def get_system_metrics(
         "ram_percent": round((ram_used / ram["total_gb"]) * 100, 1) if ram["total_gb"] > 0 else 0,
         "gpu_name": gpu.get("name", "No GPU detected"),
         "gpu_type": gpu.get("type", ""),
-        "gpu_percent": None,
+        "gpu_percent": gpu.get("utilization_gpu") if gpu.get("detected") else None,
         "disk_total_gb": disk["total_gb"],
         "disk_used_gb": disk["used_gb"],
         "disk_percent": disk["percent"],
