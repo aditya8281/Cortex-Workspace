@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
+from backend.app.services.catalogue import CatalogueManager
 from backend.app.services.hardware import detect_hardware as _detect_hardware_full
 from backend.app.services.llm.manager import MODEL_CATALOG, LLMManager, llm_manager
 from backend.app.services.model_downloader import model_downloader
@@ -86,57 +87,43 @@ async def list_models(
 
 @router.get("/models/recommended")
 async def recommended_models(
+    workload: str | None = None,
     current_user: User = Depends(get_current_user),
 ):
     """Return hardware-appropriate model recommendations."""
-    hardware = _detect_hardware()
+    from backend.app.services.hardware import detect_hardware as detect_hw
+    from backend.app.services.recommendation import WORKLOADS, RecommendationEngine
 
-    available_models = await llm_manager.list_all_models()
-    available_names = {m.name for m in available_models}
+    hardware = detect_hw()
+    engine = RecommendationEngine(hardware)
 
-    recommended = []
-    seen_names = set()
+    # Get all catalogue models
+    db = next(get_db())
+    catalogue_mgr = CatalogueManager(db)
+    all_models = catalogue_mgr.get_all_catalogue()
 
-    for m in MODEL_CATALOG:
-        if m.get("recommended") and hardware["ram_gb"] >= m.get("hardware_requirements", {}).get("min_ram_gb", 0):
-            model_dict = dict(m)
-            model_dict["source"] = "catalog"
-            model_dict["downloaded"] = m["name"] in available_names
-            recommended.append(model_dict)
-            seen_names.add(m["name"])
-
-    dynamic_models = await llm_manager.fetch_ollama_catalog()
-    for dm in dynamic_models:
-        if dm.name and dm.name not in seen_names and dm.name in available_names:
-            if hardware["ram_gb"] >= 4:
-                # Infer type from capabilities
-                inferred_type = "chat"
-                if "code" in dm.capabilities and "chat" not in dm.capabilities:
-                    inferred_type = "code"
-                elif "vision" in dm.capabilities:
-                    inferred_type = "vision"
-                elif "embedding" in dm.capabilities:
-                    inferred_type = "embedding"
-                model_dict = {
-                    "name": dm.name,
-                    "display_name": dm.name.split(":")[0].replace("-", " ").title(),
-                    "provider": "ollama",
-                    "model_type": inferred_type,
-                    "parameter_count": _guess_param_count(dm.name),
-                    "size_bytes": dm.size_bytes,
-                    "context_length": dm.context_length,
-                    "capabilities": dm.capabilities,
-                    "description": dm.description,
-                    "hardware_requirements": _estimate_hardware(dm.size_bytes),
-                    "source": "system",
-                    "downloaded": True,
-                }
-                recommended.append(model_dict)
-
-    return {
-        "hardware": hardware,
-        "recommended": recommended,
-    }
+    if workload and workload in WORKLOADS:
+        # Single workload
+        recs = engine.recommend_for_workload(workload, all_models)
+        return {
+            "hardware": hardware.to_dict(),
+            "workload": workload,
+            "recommendations": _format_recommendations(recs),
+        }
+    else:
+        # All workloads
+        all_recs = engine.recommend_all(all_models)
+        formatted = {}
+        for wl_id, recs in all_recs.items():
+            formatted[wl_id] = {
+                "label": WORKLOADS[wl_id]["label"],
+                "description": WORKLOADS[wl_id]["description"],
+                "recommendations": _format_recommendations(recs),
+            }
+        return {
+            "hardware": hardware.to_dict(),
+            "workloads": formatted,
+        }
 
 
 @router.get("/models/hardware")
@@ -243,3 +230,44 @@ def _detect_hardware() -> dict:
     """Detect system hardware — delegates to hardware service."""
     profile = _detect_hardware_full()
     return profile.to_dict()
+
+
+def _format_recommendations(recs: list) -> list[dict]:
+    """Format recommendations for API response."""
+    result = []
+    for rec in recs:
+        perf = rec.performance
+        variant = rec.variant
+        model = rec.catalog_entry
+        result.append({
+            "model_id": model.model_id,
+            "display_name": model.display_name,
+            "family": model.family,
+            "parameter_count": model.parameter_count,
+            "capabilities": model.capabilities or [],
+            "description": model.description,
+            "score": round(rec.score, 1),
+            "variant": {
+                "quantization": variant.quantization if variant else None,
+                "size_gb": round(variant.size_gb, 1) if variant else None,
+                "vram_required_gb": round(variant.vram_required_gb, 1) if variant else None,
+                "quality_score": round(variant.quality_score, 1) if variant else None,
+            } if variant else None,
+            "performance": {
+                "tokens_per_second": round(perf.tokens_per_second, 1) if perf.tokens_per_second else None,
+                "prompt_eval_tps": round(perf.prompt_eval_tps, 1) if perf.prompt_eval_tps else None,
+                "memory_usage_gb": round(perf.memory_usage_gb, 1),
+                "vram_usage_gb": round(perf.vram_usage_gb, 1),
+                "quantization_quality": perf.quantization_quality,
+                "quality_notes": perf.quality_notes,
+                "speed_rating": perf.speed_rating,
+                "fit_rating": perf.fit_rating,
+                "context_length_max": perf.context_length_max,
+            } if perf else None,
+            "explanation": {
+                "why": rec.why_recommended,
+                "tradeoff": rec.quality_tradeoff,
+                "suitability": rec.hardware_suitability,
+            },
+        })
+    return result
