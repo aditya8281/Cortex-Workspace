@@ -216,24 +216,32 @@ class ExecutorAgent(BaseAgent):
     async def _read_file_tool(self, path: str) -> str:
         """Read a file's contents."""
         try:
-            file_path = Path(path)
-            if not file_path.exists():
+            from backend.app.agents.tools import _ensure_within_workspace
+
+            target = _ensure_within_workspace(path)
+            if not target.exists():
                 return f"File not found: {path}"
-            content = file_path.read_text(encoding="utf-8", errors="replace")
+            content = target.read_text(encoding="utf-8", errors="replace")
             # Truncate large files
             if len(content) > 10000:
                 content = content[:10000] + f"\n... (truncated, {len(content)} total chars)"
             return content
+        except ValueError as e:
+            return str(e)
         except Exception as e:
             return f"Error reading {path}: {e}"
 
     async def _write_file_tool(self, path: str, content: str = "") -> str:
         """Write content to a file."""
         try:
-            file_path = Path(path)
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            file_path.write_text(content, encoding="utf-8")
+            from backend.app.agents.tools import _ensure_within_workspace
+
+            target = _ensure_within_workspace(path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
             return f"Written {len(content)} chars to {path}"
+        except ValueError as e:
+            return str(e)
         except Exception as e:
             return f"Error writing {path}: {e}"
 

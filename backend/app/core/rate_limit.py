@@ -24,11 +24,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.window = window or settings.RATE_LIMIT_WINDOW_SECONDS
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        if request.url.path.startswith(("/api/auth", "/api/v1/health", "/metrics", "/ws")):
+        if request.url.path.startswith(("/api/v1/health", "/metrics")):
             return await call_next(request)
 
+        is_auth_endpoint = request.url.path.startswith("/api/auth")
         client_ip = request.client.host if request.client else "unknown"
-        key = f"ratelimit:{client_ip}"
+        key = f"ratelimit:{'auth:' if is_auth_endpoint else ''}{client_ip}"
 
         try:
             current = await redis_cache.get(key) or {"count": 0, "window_start": time.time()}
@@ -37,7 +38,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             current["count"] += 1
             await redis_cache.set(key, current, expire_seconds=self.window)
 
-            if current["count"] > self.max_requests:
+            max_req = min(self.max_requests, 10) if is_auth_endpoint else self.max_requests
+            if current["count"] > max_req:
                 return Response(status_code=429, content="Rate limit exceeded")
         except Exception as e:
             import logging

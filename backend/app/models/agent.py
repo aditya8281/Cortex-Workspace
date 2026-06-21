@@ -55,7 +55,6 @@ class AgentRun(Base):
 
     __table_args__ = (
         Index("idx_agent_runs_status", "status"),
-        Index("idx_agent_runs_user", "user_id"),
     )
 
 

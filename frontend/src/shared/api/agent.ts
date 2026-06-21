@@ -19,14 +19,23 @@ export const agentApi = {
   },
 
   /** Create a new agent. */
-  create: (body: {
+  create: async (body: {
     name: string;
     description?: string;
     system_prompt: string;
     model_id?: string;
     tools?: string[];
   }): Promise<{ status: string; agent: Agent }> => {
-    return api.post("/api/v1/agents", body);
+    const result = await api.post<{ status: string; agent: Agent }>("/api/v1/agents", body);
+    return {
+      ...result,
+      agent: {
+        ...result.agent,
+        tools: typeof result.agent.tools === "string"
+          ? JSON.parse(result.agent.tools)
+          : (result.agent.tools ?? []),
+      },
+    };
   },
 
   /** Get a specific agent. */

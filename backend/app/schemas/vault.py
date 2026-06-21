@@ -20,8 +20,10 @@ class VaultFileInfo(BaseModel):
     path: str
     is_dir: bool
     size: int | None = None
-    modified_at: str | None = None
-    created_at: str | None = None
+    modified: float | None = None
+    created: float | None = None
+    favorite: bool = False
+    tags: list[str] = []
 
 
 class VaultFileListResponse(BaseModel):
@@ -44,8 +46,8 @@ class VaultRenameResponse(BaseModel):
 
 
 class VaultMoveResponse(BaseModel):
-    source_path: str
-    destination_path: str
+    name: str
+    path: str
 
 
 class VaultMetadataResponse(BaseModel):
@@ -71,8 +73,8 @@ class VaultSearchResponse(BaseModel):
 
 
 class VaultExportResponse(BaseModel):
-    exported: int
-    destination_dir: str
+    exported: bool
+    count: int
 
 
 class VaultChangePasswordResponse(BaseModel):

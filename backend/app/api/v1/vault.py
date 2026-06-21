@@ -133,7 +133,8 @@ def list_files(
 ):
     """List files in the vault. Requires unlocked vault."""
     vault_service._require_unlocked(current_user)
-    return vault_service.list_vault_files(db, current_user.id, folder, recursive)
+    files = vault_service.list_vault_files(db, current_user.id, folder, recursive)
+    return VaultFileListResponse(files=files)
 
 
 @router.post("/files/upload", response_model=VaultUploadResponse)

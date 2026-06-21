@@ -45,7 +45,7 @@ class User(Base):
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=True
     )
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
 
     @property
     def handles(self) -> dict:

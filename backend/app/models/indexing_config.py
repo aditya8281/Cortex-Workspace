@@ -14,7 +14,7 @@ class IndexingConfig(Base):
     __tablename__ = "indexing_configs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), default="default")
     include_paths: Mapped[list] = mapped_column(JSON, default=list)
     exclude_paths: Mapped[list] = mapped_column(JSON, default=list)

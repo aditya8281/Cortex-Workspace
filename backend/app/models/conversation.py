@@ -12,9 +12,9 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), server_default="New Conversation")
-    repo_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    repo_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("repo_indexes.id", ondelete="SET NULL"), nullable=True)
     model_used: Mapped[str | None] = mapped_column(String(100), nullable=True)
     message_count: Mapped[int] = mapped_column(Integer, server_default="0")
     total_tokens: Mapped[int] = mapped_column(Integer, server_default="0")

@@ -6,7 +6,9 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from jose import JWTError, jwt
 
+from backend.app.core.config import settings
 from backend.app.core.websocket import manager
 
 logger = logging.getLogger(__name__)
@@ -16,6 +18,20 @@ router = APIRouter()
 
 @router.websocket("/ws/demo")
 async def websocket_demo(ws: WebSocket) -> None:
+    token = ws.query_params.get("token")
+    if not token:
+        await ws.close(code=4001, reason="Missing authentication token")
+        return
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            await ws.close(code=4001, reason="Invalid token")
+            return
+    except JWTError:
+        await ws.close(code=4001, reason="Invalid token")
+        return
+
     await manager.connect(ws, channel="demo")
     try:
         while True:

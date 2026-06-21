@@ -80,6 +80,9 @@ async def create_run(
 
     manager = AgentRunManager(db)
     try:
+        agent = manager.get_agent(payload.agent_id, user_id=current_user.id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
         run = manager.create_run(payload.agent_id, current_user.id, payload.input)
         asyncio.create_task(run_agent_background(run.id, payload.agent_id, current_user.id, payload.input))
         return {"status": "started", "run_id": run.id}
@@ -483,3 +486,4 @@ def delete_agent(
         raise HTTPException(status_code=409, detail="Cannot delete agent with active runs")
     db.delete(agent)
     db.commit()
+    return {"status": "deleted"}

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -41,6 +43,8 @@ class AgentRunInfo(BaseModel):
     input: str
     status: str
     output: str | None = None
+    error: str | None = None
+    completed_at: datetime | None = None
     created_at: str | None = None
     updated_at: str | None = None
 
@@ -50,8 +54,9 @@ class AgentStepInfo(BaseModel):
     run_id: int
     step_number: int
     action: str
-    input: str | None = None
-    output: str | None = None
+    thought: str | None = None
+    action_input: dict | None = None
+    observation: str | None = None
     status: str
     created_at: str | None = None
 

@@ -16,7 +16,7 @@ export const searchApi = {
       max_results?: number;
     },
   ): Promise<SearchResponse> => {
-    const searchParams = new URLSearchParams({ q: query });
+    const searchParams = new URLSearchParams({ query });
     if (params?.repo_id) searchParams.set("repo_id", String(params.repo_id));
     if (params?.node_type) searchParams.set("node_type", params.node_type);
     if (params?.language) searchParams.set("language", params.language);

@@ -34,7 +34,7 @@ class ModelCatalog(Base):
     huggingface_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     tags: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=list)
-    primary_provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("providers.id"), nullable=True)
+    primary_provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("providers.id"), nullable=True, index=True)
     popularity_score: Mapped[float] = mapped_column(Float, default=0)
     recency_score: Mapped[float] = mapped_column(Float, default=0)
     efficiency_score: Mapped[float] = mapped_column(Float, default=0)
@@ -80,8 +80,8 @@ class ModelVariant(Base):
     ollama_tag: Mapped[str | None] = mapped_column(String(255), nullable=True)
     huggingface_repo: Mapped[str | None] = mapped_column(String(255), nullable=True)
     huggingface_file: Mapped[str | None] = mapped_column(Text, nullable=True)
-    provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("providers.id"), nullable=True)
-    provider_model_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("provider_models.id"), nullable=True)
+    provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("providers.id"), nullable=True, index=True)
+    provider_model_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("provider_models.id"), nullable=True, index=True)
     bits_per_param: Mapped[float | None] = mapped_column(Float, nullable=True)
     quality_multiplier: Mapped[float | None] = mapped_column(Float, nullable=True)
     speed_multiplier: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -101,7 +101,7 @@ class ModelDownload(Base):
     __tablename__ = "model_downloads"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    model_variant_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("model_variants.id"), nullable=True)
+    model_variant_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("model_variants.id"), nullable=True, index=True)
     user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     progress: Mapped[float] = mapped_column(Float, default=0)
