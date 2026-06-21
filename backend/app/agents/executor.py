@@ -8,6 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from backend.app.agents.base import BaseAgent
+from backend.app.agents.tools import (
+    TOOL_REGISTRY,
+    get_tool,
+    requires_approval,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +40,23 @@ class ExecutorAgent(BaseAgent):
         self._search_fn = search_fn
         self._llm_chat = llm_chat
         self._agent = agent
+        self._approved_tools: set[str] = set()
 
-        # Register built-in tools
         self.register_tool("search", self._search_tool)
         self.register_tool("read_file", self._read_file_tool)
         self.register_tool("write_file", self._write_file_tool)
         self.register_tool("list_files", self._list_files_tool)
+
+        for name, entry in TOOL_REGISTRY.items():
+            self.register_tool(name, entry["handler"])
+
+    def approve_tool(self, tool_name: str) -> None:
+        self._approved_tools.add(tool_name)
+
+    async def execute_tool(self, name: str, **kwargs: Any) -> Any:
+        if requires_approval(name) and name not in self._approved_tools:
+            return f"Tool '{name}' requires approval. Call approve_tool('{name}') first."
+        return await super().execute_tool(name, **kwargs)
 
     def _default_prompt(self) -> str:
         return EXECUTOR_SYSTEM_PROMPT

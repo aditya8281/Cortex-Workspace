@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -24,10 +25,12 @@ class AgentRunManager:
         db: Session,
         planner: PlannerAgent | None = None,
         executor: ExecutorAgent | None = None,
+        event_callback: Any | None = None,
     ):
         self.db = db
         self.planner = planner or PlannerAgent(llm_chat=llm_manager.chat)
         self.executor = executor or ExecutorAgent()
+        self._event_callback = event_callback
 
     def create_agent(
         self,
@@ -73,6 +76,10 @@ class AgentRunManager:
         self.db.commit()
         self.db.refresh(run)
         return run
+
+    async def _emit(self, event: dict[str, Any]) -> None:
+        if self._event_callback:
+            await self._event_callback(event)
 
     async def run_agent(
         self,
@@ -127,11 +134,25 @@ class AgentRunManager:
 
                 self.db.commit()
 
+                await self._emit({
+                    "type": "step",
+                    "step_number": step.step_number,
+                    "thought": step.thought or "",
+                    "action": step.action or "",
+                    "observation": step.observation or "",
+                })
+
             # Finalize run
             run.status = "completed"
             run.output = results[-1] if results else "No output"
             run.completed_at = datetime.now(timezone.utc)
             self.db.commit()
+
+            await self._emit({
+                "type": "done",
+                "status": "completed",
+                "total_steps": len(plan),
+            })
 
         except Exception as e:
             run.status = "failed"
@@ -139,6 +160,11 @@ class AgentRunManager:
             run.completed_at = datetime.now(timezone.utc)
             self.db.commit()
             logger.error("Agent run %d failed: %s", run.id, e)
+
+            await self._emit({
+                "type": "error",
+                "message": str(e),
+            })
 
         self.db.refresh(run)
         return run

@@ -6,6 +6,7 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -136,6 +137,51 @@ async def get_run_status_endpoint(
     from backend.app.agents.background import get_run_status
 
     return {"run_id": run_id, "status": get_run_status(run_id)}
+
+
+@router.post("/agents/runs/{run_id}/stream")
+async def stream_run_events(
+    run_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Stream SSE events for an agent run."""
+    import asyncio
+
+    from backend.app.agents.background import subscribe, unsubscribe
+
+    manager = AgentRunManager(db)
+    run = manager.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    queue = subscribe(run_id)
+
+    async def event_generator():
+        try:
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=30)
+                except asyncio.TimeoutError:
+                    yield f": keepalive\n\n"
+                    continue
+
+                if event.get("type") == "_done":
+                    break
+
+                yield f"data: {json.dumps(event)}\n\n"
+        finally:
+            unsubscribe(run_id, queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/agents/runs/{run_id}/steps", response_model=AgentRunStepsResponse)
