@@ -15,6 +15,7 @@ from backend.app.api.v1.system import router as system_router
 from backend.app.api.v1.users import router as users_router
 from backend.app.api.v1.vault import router as vault_router
 from backend.app.api.v1.conversations import router as conversations_router
+from backend.app.api.v1.knowledge import router as knowledge_router
 
 api_router = APIRouter()
 
@@ -47,3 +48,5 @@ api_router.include_router(indexing_router, tags=["Indexing"])
 api_router.include_router(sync_router, tags=["Sync"])
 
 api_router.include_router(conversations_router, tags=["Conversations"])
+
+api_router.include_router(knowledge_router, tags=["Knowledge"])
