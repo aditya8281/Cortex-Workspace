@@ -1,102 +1,97 @@
-"""Unified search API — code + memory semantic search."""
+"""Unified search API with enhanced retrieval."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+import logging
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
-from backend.app.services.cross_file_search import CrossFileSearch
-from backend.app.services.memory_manager import MemoryManager
+from backend.app.services.hybrid_retrieval import HybridRetrievalV2
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
 class SearchRequest(BaseModel):
-    query: str = Field(min_length=1, max_length=1000)
+    query: str = Field(..., min_length=1, max_length=1000)
     repo_id: int | None = None
-    node_type: str | None = None
+    max_results: int = Field(default=20, ge=1, le=50)
+    sources: list[str] = Field(default=["vector", "fulltext"])
+    diversity: float = Field(default=0.3, ge=0.0, le=1.0)
+
+
+class SearchResult(BaseModel):
+    content: str
+    source: str
+    score: float
+    file_path: str = ""
+    document_id: int | None = None
     language: str | None = None
-    max_results: int = Field(default=10, ge=1, le=50)
+    chunk_type: str | None = None
 
 
-@router.post("/search")
-def unified_search(
-    payload: SearchRequest,
+class SearchResponse(BaseModel):
+    results: list[SearchResult]
+    total: int
+    query: str
+
+
+@router.post("/search", response_model=SearchResponse)
+async def unified_search(
+    request: SearchRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _user: Any = Depends(get_current_user),
 ):
-    """Unified search across memories and indexed code."""
-    results: list[dict] = []
-    seen: set[str] = set()
-
-    # Code search (if there are indexed repos)
     try:
-        code_search = CrossFileSearch(db)
-        code_results = code_search.search(
-            query=payload.query,
-            repo_id=payload.repo_id,
-            node_type=payload.node_type,
-            language=payload.language,
-            limit=payload.max_results,
+        retrieval = HybridRetrievalV2(db)
+        results = retrieval.retrieve(
+            query=request.query,
+            repo_id=request.repo_id,
+            limit=request.max_results,
+            sources=request.sources,
+            diversity_penalty=request.diversity,
         )
-        for r in code_results:
-            key = f"code:{r.get('chunk_id')}"
-            if key not in seen:
-                results.append({"type": "code", **r})
-                seen.add(key)
-    except Exception:
-        pass  # Code search may fail if no repos indexed
 
-    # Memory search
-    try:
-        memory_search = MemoryManager(db)
-        memory_results = memory_search.search(
-            query=payload.query,
-            user_id=current_user.id,
-            limit=payload.max_results,
+        return SearchResponse(
+            results=[
+                SearchResult(
+                    content=r.content[:500],
+                    source=r.source,
+                    score=r.score,
+                    file_path=r.file_path,
+                    document_id=r.document_id,
+                    language=r.language,
+                    chunk_type=r.chunk_type,
+                )
+                for r in results
+            ],
+            total=len(results),
+            query=request.query,
         )
-        for r in memory_results:
-            entry = r.get("entry")
-            key = f"memory:{entry.get('id') if entry else 'null'}"
-            if key not in seen:
-                results.append({"type": "memory", **r})
-                seen.add(key)
-    except Exception:
-        pass  # Memory search may fail
-
-    # Sort by score descending
-    results.sort(key=lambda x: x.get("score", 0), reverse=True)
-
-    return {
-        "query": payload.query,
-        "total": len(results[:payload.max_results]),
-        "results": results[:payload.max_results],
-    }
+    except Exception as e:
+        logger.error("Search failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 
 
-@router.get("/search")
-def unified_search_get(
-    q: str = Query(min_length=1, max_length=1000),
+@router.get("/search", response_model=SearchResponse)
+async def unified_search_get(
+    query: str,
     repo_id: int | None = None,
-    node_type: str | None = None,
-    language: str | None = None,
-    max_results: int = Query(default=10, ge=1, le=50),
+    max_results: int = 20,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _user: Any = Depends(get_current_user),
 ):
-    """GET variant of unified search."""
-    payload = SearchRequest(
-        query=q, repo_id=repo_id, node_type=node_type,
-        language=language, max_results=max_results,
-    )
-    return unified_search(payload, db, current_user)
+    request = SearchRequest(query=query, repo_id=repo_id, max_results=max_results)
+    return await unified_search(request, db, _user)
 
 
 class SearchAnswerRequest(BaseModel):
-    query: str = Field(min_length=1, max_length=1000)
+    query: str = Field(..., min_length=1, max_length=1000)
     repo_id: int | None = None
     max_results: int = Field(default=10, ge=1, le=50)
 
@@ -111,38 +106,16 @@ async def search_with_answer(
     from backend.app.services.llm.manager import llm_manager
     from backend.app.services.llm.provider import LLMMessage
 
-    # Get code results (CrossFileSearch.search is synchronous)
-    code_results: list[dict] = []
-    try:
-        search = CrossFileSearch(db)
-        code_results = search.search(
-            query=payload.query,
-            repo_id=payload.repo_id,
-            limit=payload.max_results or 10,
-        )
-    except Exception:
-        pass
+    retrieval = HybridRetrievalV2(db)
+    results = retrieval.retrieve(
+        query=payload.query,
+        repo_id=payload.repo_id,
+        limit=payload.max_results or 10,
+    )
 
-    # Get memory results (MemoryManager.search returns list[dict])
-    memory_results: list[dict] = []
-    try:
-        memory = MemoryManager(db)
-        memory_results = memory.search(
-            query=payload.query,
-            user_id=current_user.id,
-            limit=5,
-        )
-    except Exception:
-        pass
-
-    # Build context for LLM
     context_parts: list[str] = []
-    for r in code_results:
-        context_parts.append(f"[Code: {r.get('file_path', 'unknown')}]\n{r.get('content_preview', '')[:500]}")
-    for r in memory_results:
-        entry = r.get("entry")
-        if entry:
-            context_parts.append(f"[Memory: {entry.get('title', 'untitled')}]\n{entry.get('content', '')[:500]}")
+    for r in results:
+        context_parts.append(f"[{r.source}: {r.file_path or 'unknown'}]\n{r.content[:500]}")
 
     context = "\n\n".join(context_parts[:10])
 
@@ -162,6 +135,14 @@ async def search_with_answer(
     return {
         "query": payload.query,
         "answer": answer,
-        "code_results": code_results[:5],
-        "memory_results": memory_results[:5],
+        "results": [
+            {
+                "content": r.content[:500],
+                "source": r.source,
+                "score": r.score,
+                "file_path": r.file_path,
+                "document_id": r.document_id,
+            }
+            for r in results[:5]
+        ],
     }
