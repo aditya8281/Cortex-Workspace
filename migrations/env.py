@@ -24,6 +24,7 @@ if not _db_url:
     # Fall back to settings (reads .env automatically)
     try:
         from backend.app.core.config import settings
+
         _db_url = settings.DATABASE_URL
     except Exception:
         pass
@@ -34,25 +35,34 @@ if _db_url:
 # Import models so Alembic autogenerate can detect them.
 from backend.app.db.base import Base  # noqa: E402
 from backend.app.intelligence.models import KnowledgeEntry  # noqa: F401, E402
-from backend.app.models.auth_event import AuthEvent  # noqa: F401, E402
 from backend.app.models.agent import Agent, AgentFeedback, AgentRun, AgentStep  # noqa: F401, E402
-from backend.app.models.file_index import IndexedFile  # noqa: F401, E402
-from backend.app.models.graph import GraphEdge, GraphNode  # noqa: F401, E402
-from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401, E402
-from backend.app.models.notification import Notification  # noqa: F401, E402
-from backend.app.models.indexing_config import IndexingConfig  # noqa: F401, E402
-from backend.app.models.storage_registry import StorageRegistry  # noqa: F401, E402
-from backend.app.models.user import User  # noqa: F401, E402
+from backend.app.models.auth_event import AuthEvent  # noqa: F401, E402
+from backend.app.models.conversation import Conversation, ConversationMessage  # noqa: F401, E402
 from backend.app.models.document import Document, DocumentChunk  # noqa: F401, E402
 from backend.app.models.embedding_cache import EmbeddingCache  # noqa: F401, E402
-from backend.app.models.conversation import Conversation, ConversationMessage  # noqa: F401, E402
+from backend.app.models.file_index import IndexedFile  # noqa: F401, E402
+from backend.app.models.graph import GraphEdge, GraphNode  # noqa: F401, E402
+from backend.app.models.indexing_config import IndexingConfig  # noqa: F401, E402
 from backend.app.models.long_term_memory import LongTermMemory  # noqa: F401, E402
 from backend.app.models.model_catalog import (  # noqa: F401, E402
-    Capability, HardwareProfile, ModelCatalog, ModelDownload, ModelStatistics,
-    ModelUsage, ModelVariant, Provider, ProviderModel, Quantization, SyncJob,
+    Capability,
+    HardwareProfile,
+    ModelCatalog,
+    ModelDownload,
+    ModelStatistics,
+    ModelUsage,
+    ModelVariant,
+    Provider,
+    ProviderModel,
+    Quantization,
+    SyncJob,
 )
+from backend.app.models.notification import Notification  # noqa: F401, E402
 from backend.app.models.path_index import PathIndex  # noqa: F401, E402
+from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401, E402
+from backend.app.models.storage_registry import StorageRegistry  # noqa: F401, E402
 from backend.app.models.sync_state import SyncState  # noqa: F401, E402
+from backend.app.models.user import User  # noqa: F401, E402
 from backend.app.models.user_settings import UserModelSettings  # noqa: F401, E402
 
 target_metadata = Base.metadata

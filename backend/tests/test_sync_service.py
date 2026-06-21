@@ -53,11 +53,14 @@ def _make_mock_adapter(name="ollama", models=None):
 
 @pytest.mark.asyncio
 async def test_sync_library_creates_job_with_running_status(service, db):
-    adapter = _make_mock_adapter()
+    adapter = _make_mock_adapter(name="openai")
     db.scalars.return_value.first.return_value = None
     db.scalars.return_value.all.return_value = []
 
-    with patch("backend.app.services.sync_service.provider_registry") as registry:
+    with (
+        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=[]),
+    ):
         registry.enabled.return_value = [adapter]
         registry.get.return_value = adapter
         job = await service.sync_library()
@@ -79,13 +82,16 @@ async def test_sync_library_discovers_models(service, db):
             family="mistral",
         ),
     ]
-    adapter = _make_mock_adapter(models=models)
+    adapter = _make_mock_adapter(name="openai", models=models)
 
     # Return None for existing model lookup (no existing models)
     db.scalars.return_value.first.return_value = None
     db.scalars.return_value.all.return_value = []
 
-    with patch("backend.app.services.sync_service.provider_registry") as registry:
+    with (
+        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=[]),
+    ):
         registry.enabled.return_value = [adapter]
         registry.get.return_value = adapter
         job = await service.sync_library()
@@ -100,11 +106,17 @@ async def test_sync_library_filters_by_provider_name(service, db):
     db.scalars.return_value.first.return_value = None
     db.scalars.return_value.all.return_value = []
 
-    with patch("backend.app.services.sync_service.provider_registry") as registry:
+    ollama_models = [
+        {"name": "llama3:8b", "family": "llama", "parameter_size": "8B", "capabilities": ["chat"], "description": "A Llama 3 model"},
+    ]
+
+    with (
+        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=ollama_models),
+    ):
         registry.get.return_value = adapter
         job = await service.sync_library(provider_name="ollama")
 
-    registry.get.assert_called_once_with("ollama")
     assert job.status == "completed"
 
 
@@ -112,7 +124,10 @@ async def test_sync_library_filters_by_provider_name(service, db):
 async def test_sync_library_no_adapter_returns_empty_job(service, db):
     db.scalars.return_value.all.return_value = []
 
-    with patch("backend.app.services.sync_service.provider_registry") as registry:
+    with (
+        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=[]),
+    ):
         registry.get.return_value = None
         job = await service.sync_library(provider_name="nonexistent")
 
@@ -123,12 +138,11 @@ async def test_sync_library_no_adapter_returns_empty_job(service, db):
 
 @pytest.mark.asyncio
 async def test_sync_library_sets_provider_id(service, db):
-    adapter = _make_mock_adapter(name="ollama")
+    adapter = _make_mock_adapter(name="openai")
     db.scalars.return_value.first.return_value = None
 
     def mock_scalars(stmt):
         result = MagicMock()
-        # First call: model lookup (existing model). Second call: provider lookup
         result.first.return_value = None
         return result
 
@@ -137,11 +151,13 @@ async def test_sync_library_sets_provider_id(service, db):
     mock_provider = MagicMock()
     mock_provider.id = 42
 
-    with patch("backend.app.services.sync_service.provider_registry") as registry:
+    with (
+        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=[]),
+    ):
         registry.enabled.return_value = [adapter]
         registry.get.return_value = adapter
 
-        original_scalars = db.scalars
         call_count = 0
 
         def mock_scalars_with_provider(stmt):
@@ -166,12 +182,15 @@ async def test_sync_library_sets_provider_id(service, db):
 
 @pytest.mark.asyncio
 async def test_sync_library_handles_adapter_exception(service, db):
-    adapter = _make_mock_adapter()
+    adapter = _make_mock_adapter(name="openai")
     adapter.list_models = AsyncMock(side_effect=RuntimeError("network error"))
     db.scalars.return_value.first.return_value = None
     db.scalars.return_value.all.return_value = []
 
-    with patch("backend.app.services.sync_service.provider_registry") as registry:
+    with (
+        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=[]),
+    ):
         registry.enabled.return_value = [adapter]
         job = await service.sync_library()
 
@@ -182,7 +201,7 @@ async def test_sync_library_handles_adapter_exception(service, db):
 @pytest.mark.asyncio
 async def test_sync_library_sets_failed_on_global_error(service, db):
     """Test that an unhandled error during sync sets status to failed."""
-    adapter = _make_mock_adapter()
+    adapter = _make_mock_adapter(name="openai")
     adapter.list_models = AsyncMock(return_value=[])
 
     def mock_scalars(stmt):
@@ -194,7 +213,10 @@ async def test_sync_library_sets_failed_on_global_error(service, db):
     # Commits: 1) after adding job (OK), 2) after sync completes (FAIL), 3) in except (OK)
     db.commit.side_effect = [None, RuntimeError("db down"), None]
 
-    with patch("backend.app.services.sync_service.provider_registry") as registry:
+    with (
+        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=[]),
+    ):
         registry.enabled.return_value = [adapter]
         job = await service.sync_library()
 

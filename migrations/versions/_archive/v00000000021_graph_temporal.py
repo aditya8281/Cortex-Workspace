@@ -5,8 +5,8 @@ Revises: u00000000020
 Create Date: 2026-06-21
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "v00000000021"
 down_revision = "u00000000020"
@@ -17,15 +17,11 @@ depends_on = None
 def upgrade() -> None:
     op.add_column(
         "graph_edges",
-        sa.Column(
-            "first_seen", sa.DateTime(), server_default=sa.func.now(), nullable=False
-        ),
+        sa.Column("first_seen", sa.DateTime(), server_default=sa.func.now(), nullable=False),
     )
     op.add_column(
         "graph_edges",
-        sa.Column(
-            "last_seen", sa.DateTime(), server_default=sa.func.now(), nullable=False
-        ),
+        sa.Column("last_seen", sa.DateTime(), server_default=sa.func.now(), nullable=False),
     )
 
 

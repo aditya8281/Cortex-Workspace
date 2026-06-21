@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from backend.app.services.rag_pipeline import RAGPipeline, RAGContext
+from backend.app.services.rag_pipeline import RAGPipeline
 
 
 @pytest.fixture()

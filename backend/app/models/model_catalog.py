@@ -34,9 +34,7 @@ class ModelCatalog(Base):
     huggingface_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     tags: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=list)
-    primary_provider_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("providers.id"), nullable=True
-    )
+    primary_provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("providers.id"), nullable=True)
     popularity_score: Mapped[float] = mapped_column(Float, default=0)
     recency_score: Mapped[float] = mapped_column(Float, default=0)
     efficiency_score: Mapped[float] = mapped_column(Float, default=0)
@@ -45,9 +43,7 @@ class ModelCatalog(Base):
     avg_rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     rating_count: Mapped[int] = mapped_column(Integer, default=0)
     last_updated: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     variants: Mapped[list[ModelVariant]] = relationship(
         "ModelVariant", back_populates="catalog_entry", cascade="all, delete-orphan"
@@ -76,18 +72,16 @@ class ModelVariant(Base):
     estimated_tps_gpu: Mapped[float | None] = mapped_column(Float, nullable=True)
     estimated_tps_cpu: Mapped[float | None] = mapped_column(Float, nullable=True)
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    compatible_backends: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=lambda: ["ollama", "llama_cpp"])
+    compatible_backends: Mapped[list | None] = mapped_column(
+        JSONB, nullable=True, default=lambda: ["ollama", "llama_cpp"]
+    )
     downloaded: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     download_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     ollama_tag: Mapped[str | None] = mapped_column(String(255), nullable=True)
     huggingface_repo: Mapped[str | None] = mapped_column(String(255), nullable=True)
     huggingface_file: Mapped[str | None] = mapped_column(Text, nullable=True)
-    provider_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("providers.id"), nullable=True
-    )
-    provider_model_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("provider_models.id"), nullable=True
-    )
+    provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("providers.id"), nullable=True)
+    provider_model_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("provider_models.id"), nullable=True)
     bits_per_param: Mapped[float | None] = mapped_column(Float, nullable=True)
     quality_multiplier: Mapped[float | None] = mapped_column(Float, nullable=True)
     speed_multiplier: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -97,12 +91,8 @@ class ModelVariant(Base):
     quantization_bits: Mapped[float | None] = mapped_column(Float, nullable=True)
     last_downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     download_count: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     catalog_entry: Mapped[ModelCatalog] = relationship("ModelCatalog", back_populates="variants")
 
@@ -111,9 +101,7 @@ class ModelDownload(Base):
     __tablename__ = "model_downloads"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    model_variant_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("model_variants.id"), nullable=True
-    )
+    model_variant_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("model_variants.id"), nullable=True)
     user_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     progress: Mapped[float] = mapped_column(Float, default=0)
@@ -124,9 +112,7 @@ class ModelDownload(Base):
     file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ModelUsage(Base):
@@ -144,9 +130,7 @@ class ModelUsage(Base):
     tps_generation: Mapped[float | None] = mapped_column(Float, nullable=True)
     tps_prompt: Mapped[float | None] = mapped_column(Float, nullable=True)
     context_length: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Provider(Base):
@@ -163,19 +147,13 @@ class Provider(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     health_status: Mapped[str] = mapped_column(String(20), default="unknown")
     last_health_check: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     provider_models: Mapped[list[ProviderModel]] = relationship(
         "ProviderModel", back_populates="provider", cascade="all, delete-orphan"
     )
-    sync_jobs: Mapped[list[SyncJob]] = relationship(
-        "SyncJob", back_populates="provider", cascade="all, delete-orphan"
-    )
+    sync_jobs: Mapped[list[SyncJob]] = relationship("SyncJob", back_populates="provider", cascade="all, delete-orphan")
 
 
 class Capability(Base):
@@ -186,16 +164,12 @@ class Capability(Base):
     display_name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     icon: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ProviderModel(Base):
     __tablename__ = "provider_models"
-    __table_args__ = (
-        UniqueConstraint("provider_id", "provider_model_id", name="uq_provider_model"),
-    )
+    __table_args__ = (UniqueConstraint("provider_id", "provider_model_id", name="uq_provider_model"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     provider_id: Mapped[int] = mapped_column(
@@ -216,18 +190,10 @@ class ProviderModel(Base):
     size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     quantization: Mapped[str | None] = mapped_column(String(50), nullable=True)
     extra_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    discovered_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    last_seen_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    discovered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     provider: Mapped[Provider] = relationship("Provider", back_populates="provider_models")
 
@@ -243,9 +209,7 @@ class Quantization(Base):
     speed_multiplier: Mapped[float | None] = mapped_column(Float, nullable=True)
     memory_multiplier: Mapped[float] = mapped_column(Float, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class HardwareProfile(Base):
@@ -261,19 +225,13 @@ class HardwareProfile(Base):
     compute_capability: Mapped[str | None] = mapped_column(String(20), nullable=True)
     is_default: Mapped[bool] = mapped_column(Boolean, default=False)
     is_user_defined: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ModelStatistics(Base):
     __tablename__ = "model_statistics"
-    __table_args__ = (
-        UniqueConstraint("model_catalog_id", name="uq_model_statistics"),
-    )
+    __table_args__ = (UniqueConstraint("model_catalog_id", name="uq_model_statistics"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     model_catalog_id: Mapped[int] = mapped_column(
@@ -288,12 +246,8 @@ class ModelStatistics(Base):
     average_tps: Mapped[float | None] = mapped_column(Float, nullable=True)
     average_vram_usage_gb: Mapped[float | None] = mapped_column(Float, nullable=True)
     benchmark_scores: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     catalog_entry: Mapped[ModelCatalog] = relationship("ModelCatalog", back_populates="statistics")
 
@@ -313,8 +267,6 @@ class SyncJob(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     provider: Mapped[Provider | None] = relationship("Provider", back_populates="sync_jobs")

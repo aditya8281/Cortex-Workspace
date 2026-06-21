@@ -1,6 +1,4 @@
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 HEADERS = {"Authorization": "Bearer fake-token"}
 

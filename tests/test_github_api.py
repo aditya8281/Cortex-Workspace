@@ -4,8 +4,8 @@ HEADERS = {"Authorization": "Bearer fake-token"}
 
 
 def _make_real_user(db_session):
-    from backend.app.models.user import User
     from backend.app.core.security import hash_password
+    from backend.app.models.user import User
 
     user = User(
         username="test_user",
@@ -22,8 +22,8 @@ def _make_real_user(db_session):
 
 @pytest.fixture()
 def mock_auth_real_user(db_session):
-    from backend.app.main import app
     from backend.app.api.deps import get_current_user
+    from backend.app.main import app
 
     user = _make_real_user(db_session)
 

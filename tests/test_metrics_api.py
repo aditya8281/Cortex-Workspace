@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_prometheus_metrics(client):

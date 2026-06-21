@@ -5,9 +5,8 @@ Revises: k00000000011
 Create Date: 2026-06-20
 """
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers
 revision = "f00000000006a"
@@ -50,14 +49,10 @@ def upgrade() -> None:
     _drop_and_recreate_fk("repo_indexes", "users", ["user_id"], ["id"], "SET NULL", "repo_indexes_user_id_fkey")
 
     # code_chunks.repo_id FK with ondelete CASCADE
-    _drop_and_recreate_fk(
-        "code_chunks", "repo_indexes", ["repo_id"], ["id"], "CASCADE", "code_chunks_repo_id_fkey"
-    )
+    _drop_and_recreate_fk("code_chunks", "repo_indexes", ["repo_id"], ["id"], "CASCADE", "code_chunks_repo_id_fkey")
 
 
 def downgrade() -> None:
     _drop_and_recreate_fk("notifications", "users", ["user_id"], ["id"], "NO ACTION", "notifications_user_id_fkey")
     _drop_and_recreate_fk("repo_indexes", "users", ["user_id"], ["id"], "NO ACTION", "repo_indexes_user_id_fkey")
-    _drop_and_recreate_fk(
-        "code_chunks", "repo_indexes", ["repo_id"], ["id"], "NO ACTION", "code_chunks_repo_id_fkey"
-    )
+    _drop_and_recreate_fk("code_chunks", "repo_indexes", ["repo_id"], ["id"], "NO ACTION", "code_chunks_repo_id_fkey")

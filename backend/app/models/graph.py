@@ -32,12 +32,8 @@ class GraphNode(Base):
 
     chunk = relationship("CodeChunk", backref="graph_nodes")
     repo = relationship("RepoIndex", backref="graph_nodes")
-    outgoing_edges = relationship(
-        "GraphEdge", foreign_keys="GraphEdge.source_id", back_populates="source"
-    )
-    incoming_edges = relationship(
-        "GraphEdge", foreign_keys="GraphEdge.target_id", back_populates="target"
-    )
+    outgoing_edges = relationship("GraphEdge", foreign_keys="GraphEdge.source_id", back_populates="source")
+    incoming_edges = relationship("GraphEdge", foreign_keys="GraphEdge.target_id", back_populates="target")
 
     __table_args__ = (
         Index("idx_graph_nodes_file_type", "file_path", "node_type"),

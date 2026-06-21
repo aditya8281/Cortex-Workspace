@@ -111,7 +111,9 @@ def upgrade() -> None:
     op.create_table(
         "model_statistics",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("model_catalog_id", sa.Integer(), sa.ForeignKey("model_catalog.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "model_catalog_id", sa.Integer(), sa.ForeignKey("model_catalog.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("download_count_total", sa.Integer(), server_default="0"),
         sa.Column("download_count_period", sa.Integer(), server_default="0"),
         sa.Column("average_rating", sa.Float(), nullable=True),
@@ -156,7 +158,9 @@ def upgrade() -> None:
     op.create_index("ix_sync_jobs_status", "sync_jobs", ["status"])
 
     # Extend model_catalog
-    op.add_column("model_catalog", sa.Column("primary_provider_id", sa.Integer(), sa.ForeignKey("providers.id"), nullable=True))
+    op.add_column(
+        "model_catalog", sa.Column("primary_provider_id", sa.Integer(), sa.ForeignKey("providers.id"), nullable=True)
+    )
     op.add_column("model_catalog", sa.Column("popularity_score", sa.Float(), server_default="0"))
     op.add_column("model_catalog", sa.Column("recency_score", sa.Float(), server_default="0"))
     op.add_column("model_catalog", sa.Column("efficiency_score", sa.Float(), server_default="0"))
@@ -166,8 +170,13 @@ def upgrade() -> None:
     op.add_column("model_catalog", sa.Column("rating_count", sa.Integer(), server_default="0"))
 
     # Extend model_variants
-    op.add_column("model_variants", sa.Column("provider_id", sa.Integer(), sa.ForeignKey("providers.id"), nullable=True))
-    op.add_column("model_variants", sa.Column("provider_model_id", sa.Integer(), sa.ForeignKey("provider_models.id"), nullable=True))
+    op.add_column(
+        "model_variants", sa.Column("provider_id", sa.Integer(), sa.ForeignKey("providers.id"), nullable=True)
+    )
+    op.add_column(
+        "model_variants",
+        sa.Column("provider_model_id", sa.Integer(), sa.ForeignKey("provider_models.id"), nullable=True),
+    )
     op.add_column("model_variants", sa.Column("bits_per_param", sa.Float(), nullable=True))
     op.add_column("model_variants", sa.Column("quality_multiplier", sa.Float(), nullable=True))
     op.add_column("model_variants", sa.Column("speed_multiplier", sa.Float(), nullable=True))

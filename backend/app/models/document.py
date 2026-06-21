@@ -17,6 +17,20 @@ class DocumentType(str, enum.Enum):
     NOTEBOOK = "notebook"
     TEXT = "text"
     CODE = "code"
+    DOCX = "docx"
+    EPUB = "epub"
+    HTML = "html"
+    PPTX = "pptx"
+    XLSX = "xlsx"
+    OPENDOCUMENT = "opendocument"
+    VCARD = "vcard"
+    ICAL = "ical"
+    ARCHIVE = "archive"
+    IMAGE = "image"
+    AUDIO = "audio"
+    VIDEO = "video"
+    FONT = "font"
+    GIS = "gis"
     OTHER = "other"
 
 
@@ -48,9 +62,7 @@ class Document(Base):
         "DocumentChunk", back_populates="document", cascade="all, delete-orphan"
     )
 
-    __table_args__ = (
-        Index("idx_documents_type_deleted", "doc_type", "deleted_at"),
-    )
+    __table_args__ = (Index("idx_documents_type_deleted", "doc_type", "deleted_at"),)
 
 
 class DocumentChunk(Base):
@@ -74,6 +86,4 @@ class DocumentChunk(Base):
 
     document: Mapped[Document] = relationship("Document", back_populates="chunks")
 
-    __table_args__ = (
-        Index("idx_document_chunks_doc_index", "document_id", "chunk_index", unique=True),
-    )
+    __table_args__ = (Index("idx_document_chunks_doc_index", "document_id", "chunk_index", unique=True),)

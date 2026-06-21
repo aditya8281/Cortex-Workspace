@@ -26,9 +26,7 @@ def _make_response(json_data=None, status_code=200, headers=None, text=None):
     resp.text = text or ""
     resp.raise_for_status = MagicMock()
     if status_code >= 400:
-        resp.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "Error", request=MagicMock(), response=resp
-        )
+        resp.raise_for_status.side_effect = httpx.HTTPStatusError("Error", request=MagicMock(), response=resp)
     return resp
 
 
@@ -106,7 +104,9 @@ async def test_list_models_pagination(provider):
     page1 = [{"modelId": "org/model-a", "tags": ["gguf"], "pipeline_tag": "text-generation"}]
     page2 = [{"modelId": "org/model-b", "tags": ["gguf"], "pipeline_tag": "text-generation"}]
 
-    resp1 = _make_response(json_data=page1, headers={"link": '<https://huggingface.co/api/models?cursor=abc>; rel="next"'})
+    resp1 = _make_response(
+        json_data=page1, headers={"link": '<https://huggingface.co/api/models?cursor=abc>; rel="next"'}
+    )
     resp2 = _make_response(json_data=page2, headers={""})
 
     call_count = 0
@@ -227,8 +227,10 @@ async def test_download_model_success(provider):
             return files_resp
         return download_resp
 
-    with patch.object(provider._client, "get", side_effect=mock_get), \
-         patch.object(provider._client, "stream", return_value=download_resp):
+    with (
+        patch.object(provider._client, "get", side_effect=mock_get),
+        patch.object(provider._client, "stream", return_value=download_resp),
+    ):
         progress_values = []
         result = await provider.download_model(
             "TheBloke/llama-7B-GGUF",

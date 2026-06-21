@@ -3,9 +3,7 @@
 import tempfile
 
 import pytest
-from sqlalchemy.orm import Session
 
-from backend.app.models.document import Document
 from backend.app.services.file_watcher_v2 import FileChange
 from backend.app.services.indexing_orchestrator import IndexingOrchestrator
 

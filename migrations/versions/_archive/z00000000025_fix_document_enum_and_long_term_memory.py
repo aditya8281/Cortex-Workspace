@@ -21,8 +21,20 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     # Fix document_type enum — add missing values
     missing_types = [
-        "docx", "epub", "html", "pptx", "xlsx", "opendocument",
-        "vcard", "ical", "archive", "image", "audio", "video", "font", "gis",
+        "docx",
+        "epub",
+        "html",
+        "pptx",
+        "xlsx",
+        "opendocument",
+        "vcard",
+        "ical",
+        "archive",
+        "image",
+        "audio",
+        "video",
+        "font",
+        "gis",
     ]
     for doc_type in missing_types:
         op.execute(f"ALTER TYPE document_type ADD VALUE IF NOT EXISTS '{doc_type}'")

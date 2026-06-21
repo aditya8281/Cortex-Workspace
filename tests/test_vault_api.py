@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import HTTPException
 
-from backend.app.main import app
 from backend.app.api.deps import get_current_user
+from backend.app.main import app
 
 HEADERS = {"Authorization": "Bearer fake-token"}
 

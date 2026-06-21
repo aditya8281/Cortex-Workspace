@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.db.base import Base
@@ -16,7 +17,7 @@ class AuthEvent(Base):
     ip_address: Mapped[str | None] = mapped_column(String, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     event_type: Mapped[str] = mapped_column(String, nullable=False)
-    metadata_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    metadata_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
     @property
     def parsed_metadata(self) -> dict:

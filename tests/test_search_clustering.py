@@ -3,7 +3,7 @@
 import pytest
 
 from backend.app.services.hybrid_retrieval import RetrievalResult
-from backend.app.services.search_clustering import SearchClusterer, ResultCluster
+from backend.app.services.search_clustering import SearchClusterer
 
 
 @pytest.fixture()

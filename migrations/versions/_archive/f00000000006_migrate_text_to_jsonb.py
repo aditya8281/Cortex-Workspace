@@ -7,6 +7,7 @@ Revision ID: f00000000006
 Revises: e00000000005
 Create Date: 2026-06-19
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB

@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_knowledge_health(client, mock_auth):

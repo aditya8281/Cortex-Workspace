@@ -168,7 +168,4 @@ def test_filter_combined(_db_session):
     svc = ModelSearchService(_db_session)
     results = svc.filter(capabilities=["code"], family="qwen")
     assert len(results) > 0
-    assert all(
-        "code" in (m.capabilities or []) and m.family == "qwen"
-        for m in results
-    )
+    assert all("code" in (m.capabilities or []) and m.family == "qwen" for m in results)

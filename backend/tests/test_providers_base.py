@@ -1,11 +1,12 @@
 """Tests for provider base interface."""
 
 import pytest
+
 from backend.app.services.providers.base import (
     ProviderAdapter,
+    ProviderDownloadResult,
     ProviderModelInfo,
     ProviderVariantInfo,
-    ProviderDownloadResult,
 )
 
 

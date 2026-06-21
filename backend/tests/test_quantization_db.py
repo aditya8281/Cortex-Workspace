@@ -1,6 +1,5 @@
 """Tests for quantization database service."""
 
-import pytest
 from backend.app.services.quantization_db import QuantizationService
 
 

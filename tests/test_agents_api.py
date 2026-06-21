@@ -1,7 +1,4 @@
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import AsyncMock, patch
 
 HEADERS = {"Authorization": "Bearer fake-token"}
 
@@ -39,6 +36,7 @@ def test_get_agent(client, mock_auth, db_session):
     from backend.app.models.agent import Agent
 
     agent = Agent(
+        user_id=mock_auth.id,
         name="Fetch Me",
         system_prompt="prompt",
         model_id="local",
@@ -63,6 +61,7 @@ def test_update_agent(client, mock_auth, db_session):
     from backend.app.models.agent import Agent
 
     agent = Agent(
+        user_id=mock_auth.id,
         name="Old Name",
         system_prompt="old prompt",
         model_id="local",
@@ -88,6 +87,7 @@ def test_delete_agent(client, mock_auth, db_session):
     from backend.app.models.agent import Agent
 
     agent = Agent(
+        user_id=mock_auth.id,
         name="Delete Me",
         system_prompt="prompt",
         model_id="local",
@@ -113,6 +113,7 @@ def test_create_run(mock_bg, client, mock_auth, db_session):
     from backend.app.models.agent import Agent
 
     agent = Agent(
+        user_id=mock_auth.id,
         name="Run Agent",
         system_prompt="prompt",
         model_id="local",
@@ -136,6 +137,7 @@ def test_list_runs(client, mock_auth, db_session):
     from backend.app.models.agent import Agent, AgentRun
 
     agent = Agent(
+        user_id=mock_auth.id,
         name="List Runs Agent",
         system_prompt="prompt",
         model_id="local",
@@ -164,6 +166,7 @@ def test_get_run(client, mock_auth, db_session):
     from backend.app.models.agent import Agent, AgentRun
 
     agent = Agent(
+        user_id=mock_auth.id,
         name="Get Run Agent",
         system_prompt="prompt",
         model_id="local",
@@ -199,6 +202,7 @@ def test_get_run_steps(client, mock_auth, db_session):
     from backend.app.models.agent import Agent, AgentRun, AgentStep
 
     agent = Agent(
+        user_id=mock_auth.id,
         name="Steps Agent",
         system_prompt="prompt",
         model_id="local",

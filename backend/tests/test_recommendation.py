@@ -102,13 +102,15 @@ def test_all_workloads_produce_results():
     engine = RecommendationEngine(hw)
 
     models = [
-        _make_model(model_id="llama-3.1-8b", family="llama", parameter_count=8.0, capabilities=["chat", "code", "reasoning"]),
+        _make_model(
+            model_id="llama-3.1-8b", family="llama", parameter_count=8.0, capabilities=["chat", "code", "reasoning"]
+        ),
         _make_model(model_id="nomic-embed", family="nomic", parameter_count=0.137, capabilities=["embedding"]),
         _make_model(model_id="llava-7b", family="llava", parameter_count=7.0, capabilities=["vision"]),
     ]
 
     for workload_id in WORKLOADS:
-        recs = engine.recommend_for_workload(workload_id, models)
+        engine.recommend_for_workload(workload_id, models)
         # Each workload should produce at least one recommendation if there are matching models
         # Some may have 0 if no models match (e.g., embedding models for coding)
 
@@ -116,8 +118,11 @@ def test_all_workloads_produce_results():
 def _constrained_hw() -> HardwareProfile:
     """Hardware with tight RAM so scores stay well below 100."""
     return _make_hardware(
-        gpu_available=False, vram_total_gb=0, vram_available_gb=0,
-        ram_total_gb=6.0, ram_available_gb=5.0,
+        gpu_available=False,
+        vram_total_gb=0,
+        vram_available_gb=0,
+        ram_total_gb=6.0,
+        ram_available_gb=5.0,
         gpu_memory_bandwidth_gbps=0,
     )
 
@@ -168,11 +173,11 @@ def test_popularity_score_tiers():
     assert rec is not None
 
     tiers = [
-        (5, 0),       # 5 downloads -> 0 pts
-        (10, 1),      # 10 downloads -> 1 pt
-        (100, 3),     # 100 downloads -> 3 pts
-        (1000, 5),    # 1000 downloads -> 5 pts
-        (5000, 7),    # 5000 downloads -> 7 pts
+        (5, 0),  # 5 downloads -> 0 pts
+        (10, 1),  # 10 downloads -> 1 pt
+        (100, 3),  # 100 downloads -> 3 pts
+        (1000, 5),  # 1000 downloads -> 5 pts
+        (5000, 7),  # 5000 downloads -> 7 pts
         (10000, 10),  # 10000 downloads -> 10 pts
     ]
 
@@ -205,8 +210,8 @@ def test_recency_score_tiers():
     engine = RecommendationEngine(hw)
 
     tiers = [
-        (15, 5),   # 15 days -> 5 pts
-        (60, 4),   # 60 days -> 4 pts
+        (15, 5),  # 15 days -> 5 pts
+        (60, 4),  # 60 days -> 4 pts
         (120, 3),  # 120 days -> 3 pts
         (200, 2),  # 200 days -> 2 pts
         (500, 1),  # 500 days -> 1 pt
@@ -265,9 +270,14 @@ def test_efficiency_score_calculation():
 
 def test_score_includes_all_dimensions():
     """Verify the total score can include points from all dimensions."""
-    hw = _make_hardware(gpu_available=False, vram_total_gb=0, vram_available_gb=0,
-                        ram_total_gb=32.0, ram_available_gb=20.0,
-                        gpu_memory_bandwidth_gbps=0)
+    hw = _make_hardware(
+        gpu_available=False,
+        vram_total_gb=0,
+        vram_available_gb=0,
+        ram_total_gb=32.0,
+        ram_available_gb=20.0,
+        gpu_memory_bandwidth_gbps=0,
+    )
     engine = RecommendationEngine(hw)
 
     now = datetime.now(timezone.utc)

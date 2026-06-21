@@ -5,8 +5,8 @@ Revises: s00000000018
 Create Date: 2026-06-21
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 
 revision = "t00000000019"
@@ -17,7 +17,12 @@ depends_on = None
 
 def upgrade() -> None:
     document_type_enum = PG_ENUM(
-        "markdown", "pdf", "notebook", "text", "code", "other",
+        "markdown",
+        "pdf",
+        "notebook",
+        "text",
+        "code",
+        "other",
         name="document_type",
         create_type=False,
     )
@@ -46,9 +51,11 @@ def upgrade() -> None:
         "document_chunks",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column(
-            "document_id", sa.Integer(),
+            "document_id",
+            sa.Integer(),
             sa.ForeignKey("documents.id", ondelete="CASCADE"),
-            nullable=False, index=True,
+            nullable=False,
+            index=True,
         ),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("chunk_index", sa.Integer(), nullable=False),

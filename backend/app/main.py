@@ -16,7 +16,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.gzip import GZipMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from backend.app.api.auth import router as auth_router
 from backend.app.api.memory import router as memory_router
@@ -38,12 +41,29 @@ setup_logging()
 logger = get_logger(__name__)
 
 
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Limit request body size to prevent OOM attacks."""
+
+    # 10MB default, 2MB for upload endpoints
+    DEFAULT_LIMIT = 10 * 1024 * 1024  # 10MB
+    UPLOAD_PATHS = {"/api/v1/me/profile/photo", "/api/v1/me/vault/files"}
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH"):
+            content_length = request.headers.get("content-length")
+            if content_length:
+                size = int(content_length)
+                limit = 2 * 1024 * 1024 if request.url.path in self.UPLOAD_PATHS else self.DEFAULT_LIMIT
+                if size > limit:
+                    return Response(status_code=413, content="Request too large")
+        return await call_next(request)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"{settings.APP_NAME} started")
 
     ensure_system_dirs()
-    import sys
 
     if "pytest" not in sys.modules:
         bootstrap_database()
@@ -81,8 +101,15 @@ async def lifespan(app: FastAPI):
         logger.error("Failed to initialize system database on startup: %s", e)
 
     from backend.app.services.file_watcher_v2 import get_file_watcher_v2
+
     get_file_watcher_v2().start()
     logger.info("File watcher started")
+
+    # Start download manager for model downloads
+    from backend.app.services.model_downloader import download_manager
+
+    await download_manager.start()
+    logger.info("Download manager started")
 
     if "pytest" not in sys.modules:
         try:
@@ -124,9 +151,22 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    from backend.app.services.file_watcher_v2 import get_file_watcher_v2
-    get_file_watcher_v2().stop()
-    logger.info("File watcher stopped")
+    # Stop download manager
+    try:
+        from backend.app.services.model_downloader import download_manager
+
+        await download_manager.stop()
+        logger.info("Download manager stopped")
+    except Exception:
+        logger.debug("Download manager stop skipped (test mode)")
+
+    try:
+        from backend.app.services.file_watcher_v2 import get_file_watcher_v2
+
+        get_file_watcher_v2().stop()
+        logger.info("File watcher stopped")
+    except Exception:
+        logger.debug("File watcher stop skipped (test mode)")
 
     try:
         await redis_cache.close()
@@ -153,6 +193,7 @@ app.add_middleware(
 app.add_middleware(RequestLoggingMiddleware)
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
+app.add_middleware(RequestSizeLimitMiddleware)
 
 setup_rate_limiting(app)
 setup_csrf_protection(app)

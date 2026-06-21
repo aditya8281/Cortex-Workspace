@@ -6,10 +6,7 @@ from backend.app.models.model_catalog import ModelCatalog, ModelVariant
 from backend.app.services.hardware import HardwareProfile
 from backend.app.services.model_comparison import (
     COMPARISON_DIMENSIONS,
-    MAX_COMPARE,
-    MIN_COMPARE,
     ComparisonResult,
-    DimensionResult,
     ModelComparisonService,
 )
 
@@ -118,12 +115,8 @@ def test_compare_dimensions_have_correct_names():
 
 def test_parameter_count_dimension():
     svc = ModelComparisonService()
-    small = _make_model(
-        model_id="small", display_name="Small", parameter_count=3.0
-    )
-    large = _make_model(
-        model_id="large", display_name="Large", parameter_count=70.0
-    )
+    small = _make_model(model_id="small", display_name="Small", parameter_count=3.0)
+    large = _make_model(model_id="large", display_name="Large", parameter_count=70.0)
     result = svc.compare([small, large])
 
     pc = next(d for d in result.dimensions if d.dimension == "parameter_count")
@@ -135,12 +128,8 @@ def test_parameter_count_dimension():
 
 def test_context_length_dimension():
     svc = ModelComparisonService()
-    short_ctx = _make_model(
-        model_id="short", display_name="Short", context_length_default=4096
-    )
-    long_ctx = _make_model(
-        model_id="long", display_name="Long", context_length_default=200000
-    )
+    short_ctx = _make_model(model_id="short", display_name="Short", context_length_default=4096)
+    long_ctx = _make_model(model_id="long", display_name="Long", context_length_default=200000)
     result = svc.compare([short_ctx, long_ctx])
 
     cl = next(d for d in result.dimensions if d.dimension == "context_length")
@@ -149,12 +138,8 @@ def test_context_length_dimension():
 
 def test_vram_required_lower_is_better():
     svc = ModelComparisonService()
-    light = _make_model(
-        model_id="light", display_name="Light", parameter_count=3.0
-    )
-    heavy = _make_model(
-        model_id="heavy", display_name="Heavy", parameter_count=70.0
-    )
+    light = _make_model(model_id="light", display_name="Light", parameter_count=3.0)
+    heavy = _make_model(model_id="heavy", display_name="Heavy", parameter_count=70.0)
     result = svc.compare([light, heavy])
 
     vram = next(d for d in result.dimensions if d.dimension == "vram_required")
@@ -165,12 +150,8 @@ def test_vram_required_lower_is_better():
 def test_speed_dimension_with_hardware():
     svc = ModelComparisonService()
     hw = _make_hardware()
-    fast = _make_model(
-        model_id="fast", display_name="Fast", parameter_count=3.0
-    )
-    slow = _make_model(
-        model_id="slow", display_name="Slow", parameter_count=70.0
-    )
+    fast = _make_model(model_id="fast", display_name="Fast", parameter_count=3.0)
+    slow = _make_model(model_id="slow", display_name="Slow", parameter_count=70.0)
     result = svc.compare([fast, slow], hardware=hw)
 
     speed = next(d for d in result.dimensions if d.dimension == "speed")
@@ -265,10 +246,7 @@ def test_compare_with_variants_uses_best_quant():
 
 def test_five_model_comparison():
     svc = ModelComparisonService()
-    models = [
-        _make_model(model_id=f"m{i}", display_name=f"Model{i}", parameter_count=2 ** i)
-        for i in range(1, 6)
-    ]
+    models = [_make_model(model_id=f"m{i}", display_name=f"Model{i}", parameter_count=2**i) for i in range(1, 6)]
     result = svc.compare(models)
     assert len(result.models) == 5
     assert result.winner_model is not None

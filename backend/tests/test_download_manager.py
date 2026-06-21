@@ -27,8 +27,9 @@ def tmp_models_dir(tmp_path):
 @pytest.fixture
 def manager(tmp_models_dir):
     """Create a fresh DownloadManager with tmp state file."""
-    with patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir), patch(
-        "backend.app.services.model_downloader.STATE_FILE", tmp_models_dir / "state.json"
+    with (
+        patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir),
+        patch("backend.app.services.model_downloader.STATE_FILE", tmp_models_dir / "state.json"),
     ):
         mgr = DownloadManager(max_concurrent=2, max_retries=2)
         yield mgr
@@ -62,8 +63,9 @@ def manager_with_state(tmp_models_dir):
             }
         )
     )
-    with patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir), patch(
-        "backend.app.services.model_downloader.STATE_FILE", state_file
+    with (
+        patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir),
+        patch("backend.app.services.model_downloader.STATE_FILE", state_file),
     ):
         yield DownloadManager(max_concurrent=2, max_retries=3)
 
@@ -107,8 +109,9 @@ def test_load_state_restores_queued(manager_with_state: DownloadManager):
 
 
 def test_load_state_handles_missing_file(tmp_models_dir):
-    with patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir), patch(
-        "backend.app.services.model_downloader.STATE_FILE", tmp_models_dir / "nonexistent.json"
+    with (
+        patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir),
+        patch("backend.app.services.model_downloader.STATE_FILE", tmp_models_dir / "nonexistent.json"),
     ):
         mgr = DownloadManager()
         assert len(mgr._records) == 0
@@ -117,8 +120,9 @@ def test_load_state_handles_missing_file(tmp_models_dir):
 def test_load_state_handles_corrupt_file(tmp_models_dir):
     bad_file = tmp_models_dir / "state.json"
     bad_file.write_text("not valid json {{{")
-    with patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir), patch(
-        "backend.app.services.model_downloader.STATE_FILE", bad_file
+    with (
+        patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir),
+        patch("backend.app.services.model_downloader.STATE_FILE", bad_file),
     ):
         mgr = DownloadManager()
         assert len(mgr._records) == 0

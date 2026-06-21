@@ -9,6 +9,7 @@ Revises: g00000000007
 Create Date: 2026-06-19
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -34,18 +35,21 @@ def upgrade() -> None:
     # Columns are NOT NULL but have no server_default — raw SQL inserts fail.
     if not is_sqlite:
         op.alter_column(
-            "user_storage_registry", "created_at",
+            "user_storage_registry",
+            "created_at",
             server_default=sa.text("LOCALTIMESTAMP"),
         )
         op.alter_column(
-            "user_storage_registry", "updated_at",
+            "user_storage_registry",
+            "updated_at",
             server_default=sa.text("LOCALTIMESTAMP"),
         )
 
     # ── 3. Add server_default on auth_events.timestamp ───────────────────
     if not is_sqlite:
         op.alter_column(
-            "auth_events", "timestamp",
+            "auth_events",
+            "timestamp",
             server_default=sa.text("LOCALTIMESTAMP"),
         )
 

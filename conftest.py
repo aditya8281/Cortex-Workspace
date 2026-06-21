@@ -1,6 +1,6 @@
 """Root conftest — shared fixtures for all test directories."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -93,8 +93,34 @@ def mock_auth():
 @pytest.fixture(name="client")
 def fixture_client():
     """Function-scoped TestClient — each test gets a fresh client."""
+    mock_dm = MagicMock()
+    mock_dm.start = AsyncMock()
+    mock_dm.stop = AsyncMock()
+    mock_vdb = MagicMock()
+    mock_vdb.upsert = MagicMock()
+    mock_vdb.search = MagicMock(return_value=[])
+    mock_vdb.delete = MagicMock()
+    mock_embedder = MagicMock()
+    mock_embedder.embed_single = MagicMock(return_value=[0.1] * 128)
+    mock_embedder.embed_batch = MagicMock(return_value=[[0.1] * 128])
+    mock_embedder.compute_embedding_id = MagicMock(return_value="test_id")
+
+    mock_fw = MagicMock()
+
+    patches = [
+        patch("backend.app.services.model_downloader.download_manager", mock_dm),
+        patch("backend.app.services.file_watcher_v2.get_file_watcher_v2", return_value=mock_fw),
+        patch("backend.app.services.memory_manager.get_vector_db", return_value=mock_vdb),
+        patch("backend.app.services.memory_manager.get_embedding_service", return_value=mock_embedder),
+    ]
+    for p in patches:
+        p.start()
+
     with TestClient(app) as c:
         yield c
+
+    for p in patches:
+        p.stop()
 
 
 @pytest.fixture()

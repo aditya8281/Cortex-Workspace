@@ -5,7 +5,7 @@ AUTH_HEADER = {"Authorization": "Bearer test-token"}
 
 
 def test_list_memory_empty(client, mock_auth):
-    resp = client.get("/api/memory")
+    resp = client.get("/api/v1/memory")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 0
@@ -14,7 +14,7 @@ def test_list_memory_empty(client, mock_auth):
 
 def test_create_memory(client, mock_auth):
     resp = client.post(
-        "/api/memory",
+        "/api/v1/memory",
         json={"title": "Test Entry", "content": "This is test content", "category": "note"},
         headers=AUTH_HEADER,
     )
@@ -26,7 +26,7 @@ def test_create_memory(client, mock_auth):
 
 def test_create_memory_with_tags(client, mock_auth):
     resp = client.post(
-        "/api/memory",
+        "/api/v1/memory",
         json={"title": "Tagged", "content": "Content with tags", "tags": ["python", "testing"]},
         headers=AUTH_HEADER,
     )
@@ -36,30 +36,30 @@ def test_create_memory_with_tags(client, mock_auth):
 
 def test_get_memory(client, mock_auth):
     create_resp = client.post(
-        "/api/memory",
+        "/api/v1/memory",
         json={"title": "Get Me", "content": "Content"},
         headers=AUTH_HEADER,
     )
     entry_id = create_resp.json()["entry"]["id"]
-    resp = client.get(f"/api/memory/{entry_id}")
+    resp = client.get(f"/api/v1/memory/{entry_id}")
     assert resp.status_code == 200
-    assert resp.json()["entry"]["title"] == "Get Me"
+    assert resp.json()["title"] == "Get Me"
 
 
 def test_get_memory_not_found(client, mock_auth):
-    resp = client.get("/api/memory/99999")
+    resp = client.get("/api/v1/memory/99999")
     assert resp.status_code == 404
 
 
 def test_update_memory(client, mock_auth):
     create_resp = client.post(
-        "/api/memory",
+        "/api/v1/memory",
         json={"title": "Original", "content": "Original"},
         headers=AUTH_HEADER,
     )
     entry_id = create_resp.json()["entry"]["id"]
     resp = client.put(
-        f"/api/memory/{entry_id}",
+        f"/api/v1/memory/{entry_id}",
         json={"title": "Updated", "content": "Updated"},
         headers=AUTH_HEADER,
     )
@@ -69,43 +69,43 @@ def test_update_memory(client, mock_auth):
 
 def test_delete_memory(client, mock_auth):
     create_resp = client.post(
-        "/api/memory",
+        "/api/v1/memory",
         json={"title": "Delete Me", "content": "Content"},
         headers=AUTH_HEADER,
     )
     entry_id = create_resp.json()["entry"]["id"]
-    resp = client.delete(f"/api/memory/{entry_id}", headers=AUTH_HEADER)
+    resp = client.delete(f"/api/v1/memory/{entry_id}", headers=AUTH_HEADER)
     assert resp.status_code == 200
     assert resp.json()["status"] == "deleted"
 
 
 def test_search_memory(client, mock_auth):
     client.post(
-        "/api/memory",
+        "/api/v1/memory",
         json={"title": "Python", "content": "Python decorators"},
         headers=AUTH_HEADER,
     )
     client.post(
-        "/api/memory",
+        "/api/v1/memory",
         json={"title": "Docker", "content": "Docker setup"},
         headers=AUTH_HEADER,
     )
-    resp = client.post("/api/memory/search", json={"query": "Python"}, headers=AUTH_HEADER)
+    resp = client.post("/api/v1/memory/search", json={"query": "Python"}, headers=AUTH_HEADER)
     assert resp.status_code == 200
     assert isinstance(resp.json()["results"], list)
 
 
 def test_list_memory_category_filter(client, mock_auth):
     client.post(
-        "/api/memory",
+        "/api/v1/memory",
         json={"title": "N1", "content": "C1", "category": "note"},
         headers=AUTH_HEADER,
     )
     client.post(
-        "/api/memory",
+        "/api/v1/memory",
         json={"title": "C1", "content": "C2", "category": "code"},
         headers=AUTH_HEADER,
     )
-    resp = client.get("/api/memory?category=note")
+    resp = client.get("/api/v1/memory?category=note")
     assert resp.status_code == 200
     assert all(e["category"] == "note" for e in resp.json()["entries"])

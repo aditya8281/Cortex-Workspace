@@ -51,7 +51,9 @@ def upgrade() -> None:
     op.create_table(
         "model_variants",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("model_catalog_id", sa.Integer(), sa.ForeignKey("model_catalog.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "model_catalog_id", sa.Integer(), sa.ForeignKey("model_catalog.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("variant_id", sa.String(255), unique=True, nullable=False),
         sa.Column("quantization", sa.String(50), nullable=False),
         sa.Column("quantization_level", sa.String(20), nullable=True),

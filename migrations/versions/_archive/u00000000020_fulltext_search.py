@@ -14,13 +14,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    op.execute("CREATE INDEX idx_code_chunks_content_fts ON code_chunks USING GIN (to_tsvector('english', content))")
     op.execute(
-        "CREATE INDEX idx_code_chunks_content_fts ON code_chunks "
-        "USING GIN (to_tsvector('english', content))"
-    )
-    op.execute(
-        "CREATE INDEX idx_document_chunks_content_fts ON document_chunks "
-        "USING GIN (to_tsvector('english', content))"
+        "CREATE INDEX idx_document_chunks_content_fts ON document_chunks USING GIN (to_tsvector('english', content))"
     )
 
 

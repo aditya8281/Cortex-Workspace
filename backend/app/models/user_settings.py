@@ -19,9 +19,7 @@ class UserModelSettings(Base):
     huggingface_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
     auto_download: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     max_concurrent_downloads: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

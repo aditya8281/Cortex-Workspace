@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.app.services.providers.base import ProviderAdapter
 from backend.app.services.providers.huggingface import HuggingFaceProvider
 from backend.app.services.providers.ollama import OllamaProvider
 from backend.app.services.providers.registry import (
@@ -101,6 +100,7 @@ def test_singleton_exists():
 def test_singleton_is_shared():
     from backend.app.services.providers.registry import provider_registry as pr1
     from backend.app.services.providers.registry import provider_registry as pr2
+
     assert pr1 is pr2
 
 

@@ -4,8 +4,6 @@ import pytest
 
 from backend.app.services.entity_extractor import (
     EntityExtractor,
-    ExtractedEntity,
-    EntityRelationship,
 )
 
 

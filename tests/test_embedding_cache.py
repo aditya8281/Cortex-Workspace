@@ -1,6 +1,5 @@
 """Tests for EmbeddingCache model and EmbeddingCacheService."""
 
-import json
 
 import pytest
 from sqlalchemy.orm import Session

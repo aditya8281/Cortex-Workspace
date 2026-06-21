@@ -14,7 +14,10 @@ class Agent(Base):
     __tablename__ = "agents"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     model_id: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -25,6 +28,7 @@ class Agent(Base):
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
+    user = relationship("User")
     runs = relationship("AgentRun", back_populates="agent", cascade="all, delete-orphan")
 
 
@@ -72,9 +76,7 @@ class AgentStep(Base):
 
     run = relationship("AgentRun", back_populates="steps")
 
-    __table_args__ = (
-        Index("idx_agent_steps_run_number", "run_id", "step_number"),
-    )
+    __table_args__ = (Index("idx_agent_steps_run_number", "run_id", "step_number"),)
 
 
 class AgentFeedback(Base):
@@ -84,9 +86,7 @@ class AgentFeedback(Base):
     run_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     rating: Mapped[int] = mapped_column(Integer, nullable=False)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

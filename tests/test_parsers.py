@@ -4,8 +4,6 @@ import json
 import os
 import tempfile
 
-import pytest
-
 from backend.app.services.parsers.base import ParsedDocument, ParsedSection
 from backend.app.services.parsers.markdown_parser import MarkdownParser
 from backend.app.services.parsers.notebook_parser import NotebookParser

@@ -2,9 +2,9 @@
 
 from backend.app.services.hardware import (
     HardwareProfile,
+    _resolve_arch,
     detect_hardware,
     estimate_vram_for_gpu,
-    _resolve_arch,
 )
 
 
@@ -63,15 +63,11 @@ class TestEstimateVramForGpu:
         assert result["adjusted_vram_gb"] < ampere["adjusted_vram_gb"]
 
     def test_fits_true_when_enough_vram(self):
-        result = estimate_vram_for_gpu(
-            7.0, "Q4_K_M", gpu_arch="ampere", gpu_type="nvidia", vram_available_gb=16.0
-        )
+        result = estimate_vram_for_gpu(7.0, "Q4_K_M", gpu_arch="ampere", gpu_type="nvidia", vram_available_gb=16.0)
         assert result["fits"] is True
 
     def test_fits_false_when_insufficient_vram(self):
-        result = estimate_vram_for_gpu(
-            70.0, "Q4_K_M", gpu_arch="ampere", gpu_type="nvidia", vram_available_gb=16.0
-        )
+        result = estimate_vram_for_gpu(70.0, "Q4_K_M", gpu_arch="ampere", gpu_type="nvidia", vram_available_gb=16.0)
         assert result["fits"] is False
 
     def test_fits_none_when_vram_unknown(self):

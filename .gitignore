@@ -56,4 +56,6 @@ CortexMemory/
 .cortex_memory_path
 
 # Alembic
-alembic/versions/__pycache__/
+migrations/versions/__pycache__/
+migrations/versions/_archive/
+backend/migrations/
