@@ -26,6 +26,7 @@ class MemoryUpdatePayload(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=512)
     content: str | None = Field(default=None, min_length=1)
     category: str | None = Field(default=None, min_length=1, max_length=64)
+    source_path: str | None = None
     tags: list[str] | None = None
 
 
@@ -109,6 +110,7 @@ def update_memory(
         title=payload.title,
         content=payload.content,
         category=payload.category,
+        source_path=payload.source_path,
         tags=payload.tags,
     )
     if not entry:

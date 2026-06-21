@@ -8,10 +8,11 @@ import { Card } from "@/shared/ui/Card";
 import NeuralNetwork from "@/shared/ui/NeuralNetwork";
 import { searchApi } from "@/shared/api";
 import { cn } from "@/lib/utils";
+import type { SearchResult } from "@/shared/types";
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [aiAnswer, setAiAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -34,7 +35,7 @@ export default function SearchPage() {
           if (data.results?.length > 0) {
             const sources = data.results
               .slice(0, 5)
-              .map((r: any, i: number) => `[${i + 1}] ${r.title || r.file_path || "Result"}`)
+              .map((r: SearchResult, i: number) => `[${i + 1}] ${r.file_path || "Result"}`)
               .join("\n");
             setAiAnswer(`Found ${data.results.length} relevant results across your codebase and memories.\n\nTop sources:\n${sources}`);
           } else {
@@ -132,13 +133,13 @@ export default function SearchPage() {
               </span>
             </h3>
             <div className="space-y-2">
-              {results.map((result: any, i: number) => (
+              {results.map((result: SearchResult, i: number) => (
                 <Card key={i} hover className="p-4" gradient>
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                      {result.type === "code" ? (
+                      {result.source === "code" ? (
                         <Code size={14} className="text-accent" />
-                      ) : result.type === "memory" ? (
+                      ) : result.source === "memory" ? (
                         <Brain size={14} className="text-accent" />
                       ) : (
                         <FileText size={14} className="text-accent" />
@@ -147,20 +148,20 @@ export default function SearchPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-sm font-medium text-text truncate">
-                          {result.title || result.file_path || "Result"}
+                          {result.file_path || "Result"}
                         </span>
                         <span className="text-xs text-text-muted shrink-0">
                           [{i + 1}]
                         </span>
                       </div>
-                      {result.preview && (
+                      {result.content && (
                         <p className="text-xs text-text-secondary line-clamp-2">
-                          {result.preview}
+                          {result.content}
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-xs text-text-muted">
-                          {result.type}
+                          {result.source}
                         </span>
                         {result.score && (
                           <span className="text-xs text-accent">

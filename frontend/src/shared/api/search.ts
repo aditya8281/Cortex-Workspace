@@ -3,7 +3,7 @@
  */
 
 import { api } from "./client";
-import type { SearchResponse, GraphData, NodeContext } from "../types";
+import type { SearchResponse, SearchAnswerResponse, GraphData, NodeContext } from "../types";
 
 export const searchApi = {
   /** Unified search across code and memory. */
@@ -49,7 +49,7 @@ export const searchApi = {
   answer: (
     query: string,
     params?: { repo_id?: number; max_results?: number },
-  ): Promise<{ query: string; answer: string; code_results: any[]; memory_results: any[] }> => {
+  ): Promise<SearchAnswerResponse> => {
     return api.post("/api/v1/search/answer", {
       query,
       repo_id: params?.repo_id,

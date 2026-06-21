@@ -150,6 +150,7 @@ class MemoryManager:
         title: str | None = None,
         content: str | None = None,
         category: str | None = None,
+        source_path: str | None = None,
         tags: list[str] | None = None,
     ) -> KnowledgeEntry | None:
         """Update a knowledge entry and re-embed if content changed."""
@@ -166,6 +167,9 @@ class MemoryManager:
             changed = True
         if category is not None:
             entry.category = category
+            changed = True
+        if source_path is not None:
+            entry.source_path = source_path
             changed = True
         if tags is not None:
             entry.tags = json.dumps(tags)

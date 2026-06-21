@@ -197,30 +197,24 @@ export interface NotificationListResponse {
 // ── Search ─────────────────────────────────────────────────────
 
 export interface SearchResult {
-  type: "code" | "memory";
+  content: string;
+  source: string;
   score: number;
-  chunk_id?: number;
-  entry_id?: number;
-  file_path?: string;
-  name?: string;
-  node_type?: string;
-  language?: string | null;
-  content_preview?: string;
-  start_line?: number;
-  end_line?: number;
-  context?: {
-    calls?: string[];
-    called_by?: string[];
-    imports?: string[];
-    inherits?: string[];
-    contains?: string[];
-  };
-  entry?: MemoryEntry | null;
+  file_path: string;
+  document_id: number;
+  language: string;
+  chunk_type: string;
 }
 
 export interface SearchResponse {
   query: string;
   total: number;
+  results: SearchResult[];
+}
+
+export interface SearchAnswerResponse {
+  query: string;
+  answer: string;
   results: SearchResult[];
 }
 
@@ -566,12 +560,19 @@ export interface ModelSearchResult {
   count: number;
 }
 
+export interface DimensionComparison {
+  dimension: string;
+  display_name: string;
+  values: Record<string, number>;
+  winner: string;
+  higher_is_better: boolean;
+}
+
 export interface ModelComparisonResult {
-  models: { model_id: string; display_name: string }[];
-  dimensions: string[];
-  scores: Record<string, Record<string, number>>;
-  winner: Record<string, string>;
-  recommendation: string;
+  winner_model: string;
+  dimension_wins: Record<string, string>;
+  dimensions: DimensionComparison[];
+  summary: string;
 }
 
 export interface SyncJob {

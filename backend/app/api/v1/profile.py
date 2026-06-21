@@ -102,6 +102,7 @@ class ProfileUpdate(BaseModel):
     current_projects: list[dict] | None = None
     contribution_style: str | None = None
     social_links: dict[str, Any] | None = None
+    preferences: dict[str, Any] | None = None
 
 
 # ── Profile CRUD ─────────────────────────────────────────────────────

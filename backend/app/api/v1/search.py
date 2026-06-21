@@ -96,7 +96,13 @@ class SearchAnswerRequest(BaseModel):
     max_results: int = Field(default=10, ge=1, le=50)
 
 
-@router.post("/search/answer")
+class SearchAnswerResponse(BaseModel):
+    query: str
+    answer: str
+    results: list[SearchResult]
+
+
+@router.post("/search/answer", response_model=SearchAnswerResponse)
 async def search_with_answer(
     payload: SearchAnswerRequest,
     db: Session = Depends(get_db),

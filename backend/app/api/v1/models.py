@@ -5,6 +5,7 @@ from pathlib import Path
 
 import psutil
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,6 +22,22 @@ from backend.app.services.model_search import ModelSearchService
 from backend.app.services.sync_service import SyncService
 
 logger = logging.getLogger(__name__)
+
+
+class DimensionComparisonResponse(BaseModel):
+    dimension: str
+    display_name: str
+    values: dict[str, float]
+    winner: str
+    higher_is_better: bool
+
+
+class ModelComparisonResponse(BaseModel):
+    winner_model: str
+    dimension_wins: dict[str, str]
+    dimensions: list[DimensionComparisonResponse]
+    summary: str
+
 
 router = APIRouter()
 
@@ -106,31 +123,34 @@ async def recommended_models(
 
     # Get all catalogue models
     db = next(get_db())
-    catalogue_mgr = CatalogueManager(db)
-    all_models = catalogue_mgr.get_all_catalogue()
+    try:
+        catalogue_mgr = CatalogueManager(db)
+        all_models = catalogue_mgr.get_all_catalogue()
 
-    if workload and workload in WORKLOADS:
-        # Single workload
-        recs = engine.recommend_for_workload(workload, all_models)
-        return {
-            "hardware": hardware.to_dict(),
-            "workload": workload,
-            "recommendations": _format_recommendations(recs),
-        }
-    else:
-        # All workloads
-        all_recs = engine.recommend_all(all_models)
-        formatted = {}
-        for wl_id, recs in all_recs.items():
-            formatted[wl_id] = {
-                "label": WORKLOADS[wl_id]["label"],
-                "description": WORKLOADS[wl_id]["description"],
+        if workload and workload in WORKLOADS:
+            # Single workload
+            recs = engine.recommend_for_workload(workload, all_models)
+            return {
+                "hardware": hardware.to_dict(),
+                "workload": workload,
                 "recommendations": _format_recommendations(recs),
             }
-        return {
-            "hardware": hardware.to_dict(),
-            "workloads": formatted,
-        }
+        else:
+            # All workloads
+            all_recs = engine.recommend_all(all_models)
+            formatted = {}
+            for wl_id, recs in all_recs.items():
+                formatted[wl_id] = {
+                    "label": WORKLOADS[wl_id]["label"],
+                    "description": WORKLOADS[wl_id]["description"],
+                    "recommendations": _format_recommendations(recs),
+                }
+            return {
+                "hardware": hardware.to_dict(),
+                "workloads": formatted,
+            }
+    finally:
+        db.close()
 
 
 @router.get("/models/hardware")
@@ -223,55 +243,58 @@ async def list_installed_models(
 ):
     """List installed/downloaded model variants."""
     db = next(get_db())
-    catalogue_mgr = CatalogueManager(db)
-
-    # Get Ollama installed models
     try:
-        import httpx
+        catalogue_mgr = CatalogueManager(db)
 
-        async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=5.0) as client:
-            resp = await client.get("/api/tags")
-            resp.raise_for_status()
-            installed = resp.json().get("models", [])
-    except Exception:
-        installed = []
+        # Get Ollama installed models
+        try:
+            import httpx
 
-    installed_names = {m["name"] for m in installed}
+            async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=5.0) as client:
+                resp = await client.get("/api/tags")
+                resp.raise_for_status()
+                installed = resp.json().get("models", [])
+        except Exception:
+            installed = []
 
-    # Get all catalogue entries and mark downloaded ones
-    all_models = catalogue_mgr.get_all_catalogue()
-    result = []
-    for model in all_models:
-        variants = []
-        for tag in installed_names:
-            base = tag.split(":")[0]
-            if base in model.model_id or model.model_id.startswith(base):
-                variants.append(
+        installed_names = {m["name"] for m in installed}
+
+        # Get all catalogue entries and mark downloaded ones
+        all_models = catalogue_mgr.get_all_catalogue()
+        result = []
+        for model in all_models:
+            variants = []
+            for tag in installed_names:
+                base = tag.split(":")[0]
+                if base in model.model_id or model.model_id.startswith(base):
+                    variants.append(
+                        {
+                            "variant_id": tag,
+                            "quantization": _guess_quant_from_tag(tag),
+                            "size_bytes": next((m.get("size", 0) for m in installed if m["name"] == tag), 0),
+                            "size_gb": round(
+                                next((m.get("size", 0) for m in installed if m["name"] == tag), 0) / (1024**3), 1
+                            ),
+                            "downloaded": True,
+                            "parameter_count": model.parameter_count,
+                            "quality_score": 90.0,
+                        }
+                    )
+            if variants:
+                result.append(
                     {
-                        "variant_id": tag,
-                        "quantization": _guess_quant_from_tag(tag),
-                        "size_bytes": next((m.get("size", 0) for m in installed if m["name"] == tag), 0),
-                        "size_gb": round(
-                            next((m.get("size", 0) for m in installed if m["name"] == tag), 0) / (1024**3), 1
-                        ),
-                        "downloaded": True,
+                        "model_id": model.model_id,
+                        "display_name": model.display_name,
+                        "family": model.family,
                         "parameter_count": model.parameter_count,
-                        "quality_score": 90.0,
+                        "capabilities": model.capabilities or [],
+                        "variants": variants,
                     }
                 )
-        if variants:
-            result.append(
-                {
-                    "model_id": model.model_id,
-                    "display_name": model.display_name,
-                    "family": model.family,
-                    "parameter_count": model.parameter_count,
-                    "capabilities": model.capabilities or [],
-                    "variants": variants,
-                }
-            )
 
-    return {"models": result, "installed_count": len(result)}
+        return {"models": result, "installed_count": len(result)}
+    finally:
+        db.close()
 
 
 @router.get("/models/search")
@@ -330,7 +353,7 @@ async def search_models(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/models/compare")
+@router.post("/models/compare", response_model=ModelComparisonResponse)
 async def compare_models(
     model_ids: list[str],
     current_user: User = Depends(get_current_user),
@@ -469,7 +492,8 @@ async def get_storage_usage(
         "used_disk_gb": round(used_gb, 1),
         "free_disk_gb": round(free_gb, 1),
         "models_total_gb": round(models_size / (1024**3), 1),
-        "models": [],  # Per-model breakdown would need Ollama API
+        "models": [],
+        "cache_gb": 0.0,
     }
 
 
@@ -480,44 +504,46 @@ async def get_model_detail(
 ):
     """Get detailed model info with variants."""
     db = next(get_db())
+    try:
+        model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == model_id)).scalar_one_or_none()
 
-    model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == model_id)).scalar_one_or_none()
+        if not model:
+            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
 
-    if not model:
-        raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+        variants = db.execute(select(ModelVariant).where(ModelVariant.model_catalog_id == model.id)).scalars().all()
 
-    variants = db.execute(select(ModelVariant).where(ModelVariant.model_catalog_id == model.id)).scalars().all()
-
-    return {
-        "model_id": model.model_id,
-        "display_name": model.display_name,
-        "family": model.family,
-        "parameter_count": model.parameter_count,
-        "architecture": model.architecture,
-        "context_length_default": model.context_length_default,
-        "context_length_max": model.context_length_max,
-        "capabilities": model.capabilities or [],
-        "license": model.license,
-        "recommended_use_cases": model.recommended_use_cases or [],
-        "description": model.description,
-        "tags": model.tags or [],
-        "benchmarks": model.benchmarks,
-        "variants": [
-            {
-                "variant_id": v.variant_id,
-                "quantization": v.quantization,
-                "quantization_level": v.quantization_level,
-                "parameter_count": v.parameter_count,
-                "size_bytes": v.size_bytes,
-                "size_gb": round(v.size_gb, 1) if v.size_gb else None,
-                "vram_required_gb": round(v.vram_required_gb, 1) if v.vram_required_gb else None,
-                "quality_score": round(v.quality_score, 1) if v.quality_score else None,
-                "downloaded": v.downloaded,
-                "ollama_tag": v.ollama_tag,
-            }
-            for v in variants
-        ],
-    }
+        return {
+            "model_id": model.model_id,
+            "display_name": model.display_name,
+            "family": model.family,
+            "parameter_count": model.parameter_count,
+            "architecture": model.architecture,
+            "context_length_default": model.context_length_default,
+            "context_length_max": model.context_length_max,
+            "capabilities": model.capabilities or [],
+            "license": model.license,
+            "recommended_use_cases": model.recommended_use_cases or [],
+            "description": model.description,
+            "tags": model.tags or [],
+            "benchmarks": model.benchmarks,
+            "variants": [
+                {
+                    "variant_id": v.variant_id,
+                    "quantization": v.quantization,
+                    "quantization_level": v.quantization_level,
+                    "parameter_count": v.parameter_count,
+                    "size_bytes": v.size_bytes,
+                    "size_gb": round(v.size_gb, 1) if v.size_gb else None,
+                    "vram_required_gb": round(v.vram_required_gb, 1) if v.vram_required_gb else None,
+                    "quality_score": round(v.quality_score, 1) if v.quality_score else None,
+                    "downloaded": v.downloaded,
+                    "ollama_tag": v.ollama_tag,
+                }
+                for v in variants
+            ],
+        }
+    finally:
+        db.close()
 
 
 @router.post("/models/catalogue/refresh")
@@ -526,12 +552,15 @@ async def refresh_catalogue(
 ):
     """Force refresh the model catalogue."""
     db = next(get_db())
-    catalogue_mgr = CatalogueManager(db)
+    try:
+        catalogue_mgr = CatalogueManager(db)
 
-    # Re-seed curated models
-    added = catalogue_mgr.seed_curated_models()
+        # Re-seed curated models
+        added = catalogue_mgr.seed_curated_models()
 
-    return {"status": "refreshed", "models_added": added}
+        return {"status": "refreshed", "models_added": added}
+    finally:
+        db.close()
 
 
 @router.get("/models/updates")
