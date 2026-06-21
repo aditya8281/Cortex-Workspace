@@ -16,6 +16,8 @@ import type {
   ModelCatalogEntry,
   ModelSearchResult,
   ModelComparisonResult,
+  ModelUsageStats,
+  DeleteModelResponse,
   SyncJob,
 } from "../types";
 
@@ -139,5 +141,15 @@ export const modelsApi = {
   /** Get autocomplete suggestions for model search. */
   autocomplete: (query: string): Promise<{ suggestions: string[] }> => {
     return api.get(`/api/v1/models/autocomplete?q=${encodeURIComponent(query)}`);
+  },
+
+  /** Get model usage statistics. */
+  usageStats: (): Promise<ModelUsageStats> => {
+    return api.get("/api/v1/models/usage/stats");
+  },
+
+  /** Delete an Ollama model. */
+  delete: (modelName: string): Promise<DeleteModelResponse> => {
+    return api.delete(`/api/v1/models/${encodeURIComponent(modelName)}`);
   },
 };

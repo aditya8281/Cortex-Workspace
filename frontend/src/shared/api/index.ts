@@ -5,6 +5,7 @@
 export { agentApi } from "./agent";
 export { indexingApi } from "./indexing";
 export { api } from "./client";
+export { knowledgeApi } from "./knowledge";
 export { memoryApi } from "./memory";
 export { modelsApi } from "./models";
 export { repoApi } from "./repo";

@@ -86,6 +86,36 @@ export interface VaultUploadResult {
   size: number;
 }
 
+export interface VaultSearchResult {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  score: number;
+}
+
+export interface VaultSearchResponse {
+  results: VaultSearchResult[];
+}
+
+// ── Knowledge ─────────────────────────────────────────────────────
+
+export interface KnowledgeHealth {
+  status: string;
+  documents_indexed: number;
+  total_chunks: number;
+  graph_nodes: number;
+  graph_edges: number;
+  repos_indexed: number;
+  code_chunks: number;
+}
+
+export interface KnowledgeStats {
+  documents_by_type: Record<string, number>;
+  chunks_by_language: Record<string, number>;
+  avg_chunks_per_document: number;
+  graph_edge_types: Record<string, number>;
+}
+
 // ── Memory ────────────────────────────────────────────────────────
 
 export interface MemoryEntry {
@@ -557,6 +587,17 @@ export interface ModelComparisonResult {
   dimension_wins: Record<string, string>;
   dimensions: DimensionComparison[];
   summary: string;
+}
+
+export interface ModelUsageStats {
+  total_requests: number;
+  avg_latency: number;
+  total_tokens: number;
+}
+
+export interface DeleteModelResponse {
+  status: string;
+  model: string;
 }
 
 export interface SyncJob {

@@ -3,7 +3,7 @@
  */
 
 import { api } from "./client";
-import type { VaultStatus, VaultFileEntry, VaultUploadResult } from "../types";
+import type { VaultStatus, VaultFileEntry, VaultUploadResult, VaultSearchResponse } from "../types";
 
 export const vaultApi = {
   status: (): Promise<VaultStatus> => {
@@ -57,5 +57,9 @@ export const vaultApi = {
     new_password: string;
   }): Promise<{ message: string }> => {
     return api.post("/api/v1/me/vault/change-password", payload);
+  },
+
+  search: (query: string): Promise<VaultSearchResponse> => {
+    return api.post("/api/v1/me/vault/search", { query });
   },
 };
