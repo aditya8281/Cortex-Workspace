@@ -12,6 +12,7 @@ from backend.app.db.base import Base
 from backend.app.intelligence.models import KnowledgeEntry  # noqa: F401
 from backend.app.main import app
 from backend.app.models.auth_event import AuthEvent  # noqa: F401
+from backend.app.models.document import Document, DocumentChunk  # noqa: F401
 from backend.app.models.model_catalog import ModelCatalog, ModelVariant  # noqa: F401
 from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401
 from backend.app.models.storage_registry import StorageRegistry  # noqa: F401
@@ -114,7 +115,7 @@ def db_session(_db_session):
 
 @pytest.fixture(autouse=True)
 def _mock_external_services():
-    """Mock vector DB and embedding service for all integration tests."""
+    """Mock vector DB, embedding service, and cache for all integration tests."""
     mock_vector_db = MagicMock()
     mock_vector_db.collection_exists.return_value = True
     mock_vector_db.upsert.return_value = None
@@ -127,10 +128,18 @@ def _mock_external_services():
     mock_embedder.embed_batch.side_effect = lambda texts: [[0.1] * 768 for _ in texts]
     mock_embedder.compute_embedding_id.return_value = "test-embedding-id"
 
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_cache.put.return_value = None
+    mock_cache.invalidate.return_value = 0
+
     with (
         patch("backend.app.services.memory_manager.get_vector_db", return_value=mock_vector_db),
         patch("backend.app.services.memory_manager.get_embedding_service", return_value=mock_embedder),
         patch("backend.app.services.repo_scanner.get_embedding_service", return_value=mock_embedder),
         patch("backend.app.services.repo_scanner.get_vector_db", return_value=mock_vector_db),
+        patch("backend.app.services.embedding_cache.get_embedding_cache", return_value=mock_cache),
+        patch("backend.app.services.deletion_pipeline.get_vector_db", return_value=mock_vector_db),
+        patch("backend.app.services.deletion_pipeline.get_embedding_cache", return_value=mock_cache),
     ):
         yield
