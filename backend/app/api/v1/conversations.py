@@ -14,6 +14,7 @@ from backend.app.services.conversation_service import (
     ConversationService,
     estimate_tokens,
 )
+from backend.app.services.rag_pipeline import get_rag_pipeline
 
 router = APIRouter()
 
@@ -136,9 +137,12 @@ async def _stream_chat_response(
             conv.model_used = model
             db.commit()
 
-    # Build context from conversation history (token-budget aware)
-    history = svc.get_context_messages(conversation_id)
-    messages = [LLMMessage(role=m.role, content=m.content) for m in history]
+    # Build context using RAG pipeline (retrieves relevant knowledge + history)
+    rag = get_rag_pipeline(db)
+    conv = svc.get(conversation_id, user_id) if user_id else None
+    repo_id = conv.repo_id if conv else None
+    raw_messages = rag.build_messages(conversation_id, user_content, repo_id=repo_id)
+    messages = [LLMMessage(role=m["role"], content=m["content"]) for m in raw_messages]
 
     full_response = ""
     response_tokens = 0
