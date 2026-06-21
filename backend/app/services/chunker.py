@@ -74,6 +74,8 @@ class Chunk:
     symbol_name: str | None = None
     start_line: int | None = None
     end_line: int | None = None
+    context_before: str | None = None
+    context_after: str | None = None
 
 
 def detect_language(file_path: str) -> str | None:
@@ -154,6 +156,12 @@ def chunk_code(content: str, file_path: str, max_tokens: int = 500) -> list[Chun
     if current_chunk:
         _flush()
 
+    for i, chunk in enumerate(chunks):
+        if i > 0:
+            chunk.context_before = chunks[i - 1].content[-200:]
+        if i < len(chunks) - 1:
+            chunk.context_after = chunks[i + 1].content[:200]
+
     return chunks
 
 
@@ -191,5 +199,11 @@ def chunk_text(content: str, file_path: str, max_tokens: int = 500) -> list[Chun
                 language=detect_language(file_path),
             )
         )
+
+    for i, chunk in enumerate(chunks):
+        if i > 0:
+            chunk.context_before = chunks[i - 1].content[-200:]
+        if i < len(chunks) - 1:
+            chunk.context_after = chunks[i + 1].content[:200]
 
     return chunks
