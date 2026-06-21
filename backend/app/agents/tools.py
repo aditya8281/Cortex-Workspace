@@ -164,6 +164,8 @@ async def git_log(repo_path: str = ".", count: int = 10) -> str:
 async def git_diff(repo_path: str = ".", file_path: str | None = None) -> str:
     """Show file changes (git diff)."""
     try:
+        if file_path and file_path.startswith("-"):
+            return "Error: invalid file path"
         args = ["git", "diff"]
         if file_path:
             args.append(file_path)

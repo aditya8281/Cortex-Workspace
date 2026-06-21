@@ -52,7 +52,10 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
         if request.method in ("POST", "PUT", "PATCH"):
             content_length = request.headers.get("content-length")
             if content_length:
-                size = int(content_length)
+                try:
+                    size = int(content_length)
+                except (ValueError, TypeError):
+                    return Response(status_code=400, content="Invalid Content-Length header")
                 limit = 2 * 1024 * 1024 if request.url.path in self.UPLOAD_PATHS else self.DEFAULT_LIMIT
                 if size > limit:
                     return Response(status_code=413, content="Request too large")
@@ -96,7 +99,7 @@ async def lifespan(app: FastAPI):
 
         if "pytest" not in sys.modules:
             db_session.get_engine()
-            logger.info("System database initialized at %s", db_session.get_database_url())
+            logger.info("System database initialized")
     except Exception as e:
         logger.error("Failed to initialize system database on startup: %s", e)
 

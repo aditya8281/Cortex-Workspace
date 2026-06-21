@@ -30,7 +30,7 @@ async def record_login_failure(
 async def reset_login_failures(ip: str, username: str):
     key = f"{FAIL_PREFIX}{ip}:{username}"
     await redis_cache.delete(key)
-    await redis_cache.delete(f"{BLOCK_PREFIX}ip:{ip}")
+    # Only clear user-specific block, not IP block — IP block prevents brute force
     await redis_cache.delete(f"{BLOCK_PREFIX}user:{username}")
 
 

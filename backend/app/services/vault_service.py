@@ -206,6 +206,7 @@ def lock_vault(db: Session, user: User) -> None:
         db.add(user)
         db.commit()
     except Exception:
+        logger.exception("Failed to lock vault for user %d", user.id)
         db.rollback()
     with _vault_cache_lock:
         _vault_passwords.pop(user.id, None)
@@ -468,7 +469,13 @@ def rename_vault_item(db: Session, user_id: int, old_path: str, new_name: str) -
         raise HTTPException(status_code=403, detail="Access denied")
     if not old.exists():
         raise HTTPException(status_code=404, detail="Item not found")
+    if "/" in new_name or "\\" in new_name or new_name in (".", ".."):
+        raise HTTPException(status_code=400, detail="Invalid name: path separators not allowed")
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Name cannot be empty")
     new = old.parent / new_name
+    if not str(new.resolve()).startswith(str(vault_dir.resolve())):
+        raise HTTPException(status_code=403, detail="Access denied")
     old.rename(new)
 
     old_rel = str(old.relative_to(vault_dir))

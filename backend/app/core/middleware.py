@@ -33,7 +33,6 @@ _SECURITY_HEADERS: list[tuple[bytes, bytes]] = [
     (b"x-xss-protection", b"1; mode=block"),
     (b"referrer-policy", b"strict-origin-when-cross-origin"),
     (b"content-security-policy", _CSP_DEV if _is_dev else _CSP_PROD),
-    (b"strict-transport-security", b"max-age=31536000; includeSubDomains"),
 ]
 
 
@@ -59,6 +58,9 @@ class RequestLoggingMiddleware:
                 headers = list(message.get("headers", []))
                 headers.append((b"x-request-id", request_id.encode("ascii")))
                 headers.extend(_SECURITY_HEADERS)
+                # Only send HSTS over HTTPS
+                if scope.get("scheme") == "https":
+                    headers.append((b"strict-transport-security", b"max-age=31536000; includeSubDomains"))
                 message["headers"] = headers
 
             await send(message)

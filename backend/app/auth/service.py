@@ -184,6 +184,12 @@ async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None)
         # Token was already revoked — this is a reuse attempt.
         # Revoke ALL tokens for this user as a safety measure.
         log_event("refresh_reuse_detected", info["user_id"], ip, {"jti": info["jti"]}, db=db)
+        # Revoke all active refresh tokens for this user
+        from backend.app.core.redis import redis_cache
+        try:
+            await redis_cache.clear_pattern("refresh:*")
+        except Exception:
+            logger.warning("Failed to revoke all tokens for user %d on reuse", info["user_id"])
         raise HTTPException(status_code=401, detail="Refresh token already used")
     access = await create_access_token_async({"sub": str(info["user_id"])})
     log_event("refresh", info["user_id"], ip, {}, db=db)

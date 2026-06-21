@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import Awaitable, Callable
 
@@ -9,6 +10,8 @@ from starlette.types import ASGIApp
 
 from backend.app.core.config import settings
 from backend.app.core.redis import redis_cache
+
+logger = logging.getLogger(__name__)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -42,9 +45,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if current["count"] > max_req:
                 return Response(status_code=429, content="Rate limit exceeded")
         except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).warning("Rate limiter Redis failure, allowing request through: %s", e)
+            logger.warning("Rate limiter Redis failure for %s %s: %s", request.method, request.url.path, e)
             return await call_next(request)
 
         return await call_next(request)

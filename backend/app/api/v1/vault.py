@@ -185,11 +185,12 @@ def preview_file(
     vault_service._require_unlocked(current_user)
     content = vault_service.download_vault_file(db, current_user.id, file_path)
     filename = file_path.split("/")[-1]
+    safe_name = filename.replace('"', '_')
     mime_type = get_mime_type(filename)
     return StreamingResponse(
         io.BytesIO(content),
         media_type=mime_type,
-        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+        headers={"Content-Disposition": f'inline; filename="{safe_name}"'},
     )
 
 
@@ -203,10 +204,11 @@ def download_file(
     vault_service._require_unlocked(current_user)
     content = vault_service.download_vault_file(db, current_user.id, file_path)
     filename = file_path.split("/")[-1]
+    safe_name = filename.replace('"', '_')
     return StreamingResponse(
         io.BytesIO(content),
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
     )
 
 

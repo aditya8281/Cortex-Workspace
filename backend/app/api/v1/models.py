@@ -311,8 +311,8 @@ async def search_models(
             ],
             "total_count": len(models),
         }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid input")
     except Exception as e:
         logger.error("search_failed", error=str(e))
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -382,8 +382,8 @@ async def trigger_sync(
             "models_updated": job.models_updated,
             "error_message": job.error_message,
         }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Provider error")
     except Exception as e:
         logger.error("sync_failed", error=str(e))
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -667,8 +667,8 @@ async def download_model(
     try:
         result = await model_downloader.download_model(model_name, [], variant=variant)
         return result
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Model not found")
 
 
 @router.get("/models/{model_name}/progress", response_model=DownloadProgressResponse)

@@ -165,7 +165,7 @@ class AgentRunManager:
 
         except Exception as e:
             run.status = "failed"
-            run.error = str(e)
+            run.error = "Agent execution failed"
             run.completed_at = datetime.now(timezone.utc)
             self.db.commit()
             logger.error("Agent run %d failed: %s", run.id, e)
@@ -173,7 +173,7 @@ class AgentRunManager:
             await self._emit(
                 {
                     "type": "error",
-                    "message": str(e),
+                    "message": "Agent execution failed",
                 }
             )
 

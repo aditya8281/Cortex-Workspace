@@ -71,7 +71,7 @@ async def revoke_access_token(jti: str, expires_in_minutes: int = 30) -> None:
             expire_seconds=expires_in_minutes * 60,
         )
     except Exception:
-        pass
+        logger.warning("Failed to revoke access token %s in Redis", jti)
 
 
 async def is_access_token_revoked(jti: str) -> bool:
@@ -80,7 +80,8 @@ async def is_access_token_revoked(jti: str) -> bool:
         val = await redis_cache.get(f"revoked_access:{jti}")
         return bool(val)
     except Exception:
-        return False
+        logger.warning("Redis unavailable checking revoked token %s — rejecting", jti)
+        return True
 
 
 async def create_access_token_async(data: dict) -> str:

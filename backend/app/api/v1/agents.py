@@ -86,10 +86,10 @@ async def create_run(
         run = manager.create_run(payload.agent_id, current_user.id, payload.input)
         asyncio.create_task(run_agent_background(run.id, payload.agent_id, current_user.id, payload.input))
         return {"status": "started", "run_id": run.id}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        logger.error("Agent run failed: %s", e)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    except Exception:
+        logger.error("Agent run failed", exc_info=True)
         raise HTTPException(status_code=500, detail="Agent run failed")
 
 
@@ -250,8 +250,8 @@ def add_feedback(
                 "comment": feedback.comment,
             },
         }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid input")
 
 
 @router.get("/agents/runs/{run_id}/feedback", response_model=AgentFeedbackListResponse)

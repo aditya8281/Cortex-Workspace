@@ -58,7 +58,10 @@ async def get_current_user(
                 detail="Token has been revoked",
             )
     except JWTError:
-        pass
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired or invalid",
+        )
 
     user = db.query(User).filter(User.id == int(user_id), User.deleted_at.is_(None)).first()
 
@@ -91,5 +94,5 @@ async def get_current_user_optional(
         if jti and await is_access_token_revoked(jti):
             return None
     except JWTError:
-        pass
+        return None
     return db.query(User).filter(User.id == int(user_id), User.deleted_at.is_(None)).first()
