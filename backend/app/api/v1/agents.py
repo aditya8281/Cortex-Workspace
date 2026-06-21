@@ -8,11 +8,12 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.app.agents.run_manager import AgentRunManager
 from backend.app.core.db import get_current_user, get_db
-from backend.app.models.agent import AgentRun
+from backend.app.models.agent import AgentFeedback, AgentRun, AgentStep
 from backend.app.models.user import User
 from backend.app.schemas.agent import (
     AgentCreateResponse,
@@ -258,6 +259,69 @@ def get_feedback(
             }
             for f in feedback_list
         ]
+    }
+
+
+# ── Metrics ─────────────────────────────────────────────────────
+
+
+class AgentMetricsResponse(BaseModel):
+    total_runs: int
+    success_rate: float
+    avg_duration_seconds: float | None
+    total_steps: int
+    avg_steps_per_run: float
+    feedback_summary: dict[str, float | int]
+
+
+@router.get("/agents/metrics", response_model=AgentMetricsResponse)
+async def get_agent_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    runs = db.query(AgentRun).filter(AgentRun.user_id == current_user.id).all()
+    total_runs = len(runs)
+
+    if total_runs == 0:
+        return {
+            "total_runs": 0,
+            "success_rate": 0.0,
+            "avg_duration_seconds": None,
+            "total_steps": 0,
+            "avg_steps_per_run": 0.0,
+            "feedback_summary": {"count": 0, "avg_rating": 0.0},
+        }
+
+    completed_runs = [r for r in runs if r.status == "completed"]
+    success_rate = len(completed_runs) / total_runs
+
+    durations = []
+    for r in runs:
+        if r.completed_at and r.created_at:
+            duration = (r.completed_at - r.created_at).total_seconds()
+            durations.append(duration)
+    avg_duration = sum(durations) / len(durations) if durations else None
+
+    total_steps = db.query(AgentStep).join(AgentRun).filter(
+        AgentRun.user_id == current_user.id
+    ).count()
+    avg_steps = total_steps / total_runs if total_runs > 0 else 0.0
+
+    feedback_stats = db.query(
+        func.count(AgentFeedback.id),
+        func.coalesce(func.avg(AgentFeedback.rating), 0.0),
+    ).join(AgentRun).filter(AgentRun.user_id == current_user.id).one()
+
+    return {
+        "total_runs": total_runs,
+        "success_rate": round(success_rate, 3),
+        "avg_duration_seconds": round(avg_duration, 1) if avg_duration is not None else None,
+        "total_steps": total_steps,
+        "avg_steps_per_run": round(avg_steps, 1),
+        "feedback_summary": {
+            "count": feedback_stats[0],
+            "avg_rating": round(float(feedback_stats[1]), 2),
+        },
     }
 
 
