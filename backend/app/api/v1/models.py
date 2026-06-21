@@ -46,14 +46,6 @@ from backend.app.services.sync_service import SyncService
 logger = logging.getLogger(__name__)
 
 
-class DimensionComparisonResponse(BaseModel):
-    dimension: str
-    display_name: str
-    values: dict[str, float]
-    winner: str
-    higher_is_better: bool
-
-
 router = APIRouter()
 
 
