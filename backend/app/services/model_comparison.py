@@ -26,6 +26,7 @@ MIN_COMPARE = 2
 @dataclass
 class DimensionResult:
     """Result for a single comparison dimension."""
+
     dimension: str
     display_name: str
     values: dict[str, float | str | None] = field(default_factory=dict)
@@ -36,6 +37,7 @@ class DimensionResult:
 @dataclass
 class ComparisonResult:
     """Full comparison result for 2-5 models."""
+
     models: list[str]
     dimensions: list[DimensionResult] = field(default_factory=list)
     winner_model: str | None = None
@@ -72,15 +74,11 @@ class ModelComparisonService:
             dr = self._compute_dimension(dim, models, hardware)
             result.dimensions.append(dr)
             if dr.winner:
-                result.dimension_wins[dr.winner] = (
-                    result.dimension_wins.get(dr.winner, 0) + 1
-                )
+                result.dimension_wins[dr.winner] = result.dimension_wins.get(dr.winner, 0) + 1
 
         # Overall winner: model with most dimension wins
         if result.dimension_wins:
-            result.winner_model = max(
-                result.dimension_wins, key=result.dimension_wins.get
-            )
+            result.winner_model = max(result.dimension_wins, key=result.dimension_wins.get)
 
         result.summary = self._generate_summary(result, models, hardware)
         return result
@@ -118,9 +116,7 @@ class ModelComparisonService:
             dr.values[model.display_name] = value
 
         # Determine winner (only for numeric values)
-        numeric_vals = {
-            k: v for k, v in dr.values.items() if isinstance(v, (int, float))
-        }
+        numeric_vals = {k: v for k, v in dr.values.items() if isinstance(v, (int, float))}
         if numeric_vals:
             if dr.higher_is_better:
                 dr.winner = max(numeric_vals, key=numeric_vals.get)
@@ -189,9 +185,7 @@ class ModelComparisonService:
         if result.winner_model:
             wins = result.dimension_wins[result.winner_model]
             total = len(COMPARISON_DIMENSIONS)
-            parts.append(
-                f"{result.winner_model} wins {wins}/{total} dimensions."
-            )
+            parts.append(f"{result.winner_model} wins {wins}/{total} dimensions.")
 
         for dim in result.dimensions:
             if dim.winner:

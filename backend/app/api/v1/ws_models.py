@@ -20,7 +20,7 @@ async def model_download_progress_ws(ws: WebSocket, token: str = Query(None)):
         await ws.close(code=4001, reason="Authentication required")
         return
     try:
-        verify_access_token(token)
+        _user_id = verify_access_token(token)
     except Exception:
         await ws.close(code=4001, reason="Invalid token")
         return
@@ -32,10 +32,7 @@ async def model_download_progress_ws(ws: WebSocket, token: str = Query(None)):
             if active:
                 payload = {
                     "type": "model_progress",
-                    "models": [
-                        {"name": name, "progress": prog}
-                        for name, prog in active.items()
-                    ],
+                    "models": [{"name": name, "progress": prog} for name, prog in active.items()],
                 }
                 await ws.send_text(json.dumps(payload))
 

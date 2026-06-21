@@ -11,8 +11,6 @@ from sqlalchemy.orm import Session
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.repo_index import RepoIndex
 from backend.app.models.user import User
-from backend.app.services.graph_builder import GraphBuilder
-from backend.app.services.incremental_indexer import IncrementalIndexer
 from backend.app.schemas.repository import (
     GraphBuildResponse,
     RepoCreateResponse,
@@ -23,6 +21,8 @@ from backend.app.schemas.repository import (
     RepoListResponse,
     RepoUpdateResponse,
 )
+from backend.app.services.graph_builder import GraphBuilder
+from backend.app.services.incremental_indexer import IncrementalIndexer
 from backend.app.tasks.worker import enqueue_task
 
 logger = logging.getLogger(__name__)
@@ -185,15 +185,19 @@ async def index_repo(
     try:
         indexer = IncrementalIndexer(db)
         result = indexer.index_repo(repo_id, force=force)
-        return {"status": "completed", "result": {
-            "files_scanned": result.files_scanned,
-            "files_indexed": result.files_indexed,
-            "files_skipped": result.files_skipped,
-            "files_errors": result.files_errors,
-            "chunks_created": result.chunks_created,
-        }}
+        return {
+            "status": "completed",
+            "result": {
+                "files_scanned": result.files_scanned,
+                "files_indexed": result.files_indexed,
+                "files_skipped": result.files_skipped,
+                "files_errors": result.files_errors,
+                "chunks_created": result.chunks_created,
+            },
+        }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Indexing failed for repo %d: %s", repo_id, e)
+        raise HTTPException(status_code=500, detail="Repository operation failed")
 
 
 @router.get("/repos/{repo_id}/status", response_model=RepoIndexStatusResponse)

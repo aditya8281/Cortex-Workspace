@@ -36,6 +36,7 @@ class AgentRunManager:
         self,
         name: str,
         system_prompt: str,
+        user_id: int,
         model_id: str = "local",
         description: str | None = None,
         tools: list[str] | None = None,
@@ -46,6 +47,7 @@ class AgentRunManager:
             description=description,
             system_prompt=system_prompt,
             model_id=model_id,
+            user_id=user_id,
             tools_json=json.dumps(tools) if tools else None,
         )
         self.db.add(agent)
@@ -53,13 +55,16 @@ class AgentRunManager:
         self.db.refresh(agent)
         return agent
 
-    def get_agent(self, agent_id: int) -> Agent | None:
-        """Get an agent by ID."""
-        return self.db.query(Agent).filter(Agent.id == agent_id).first()
+    def get_agent(self, agent_id: int, user_id: int | None = None) -> Agent | None:
+        """Get an agent by ID, optionally filtered by user."""
+        query = self.db.query(Agent).filter(Agent.id == agent_id)
+        if user_id is not None:
+            query = query.filter(Agent.user_id == user_id)
+        return query.first()
 
-    def list_agents(self, active_only: bool = True) -> list[Agent]:
-        """List all agents."""
-        query = self.db.query(Agent)
+    def list_agents(self, user_id: int, active_only: bool = True) -> list[Agent]:
+        """List agents for a specific user."""
+        query = self.db.query(Agent).filter(Agent.user_id == user_id)
         if active_only:
             query = query.filter(Agent.is_active.is_(True))
         return query.order_by(Agent.name).all()
@@ -134,13 +139,15 @@ class AgentRunManager:
 
                 self.db.commit()
 
-                await self._emit({
-                    "type": "step",
-                    "step_number": step.step_number,
-                    "thought": step.thought or "",
-                    "action": step.action or "",
-                    "observation": step.observation or "",
-                })
+                await self._emit(
+                    {
+                        "type": "step",
+                        "step_number": step.step_number,
+                        "thought": step.thought or "",
+                        "action": step.action or "",
+                        "observation": step.observation or "",
+                    }
+                )
 
             # Finalize run
             run.status = "completed"
@@ -148,11 +155,13 @@ class AgentRunManager:
             run.completed_at = datetime.now(timezone.utc)
             self.db.commit()
 
-            await self._emit({
-                "type": "done",
-                "status": "completed",
-                "total_steps": len(plan),
-            })
+            await self._emit(
+                {
+                    "type": "done",
+                    "status": "completed",
+                    "total_steps": len(plan),
+                }
+            )
 
         except Exception as e:
             run.status = "failed"
@@ -161,10 +170,12 @@ class AgentRunManager:
             self.db.commit()
             logger.error("Agent run %d failed: %s", run.id, e)
 
-            await self._emit({
-                "type": "error",
-                "message": str(e),
-            })
+            await self._emit(
+                {
+                    "type": "error",
+                    "message": str(e),
+                }
+            )
 
         self.db.refresh(run)
         return run
@@ -192,12 +203,7 @@ class AgentRunManager:
 
     def get_run_steps(self, run_id: int) -> list[AgentStep]:
         """Get all steps for a run, ordered by step number."""
-        return (
-            self.db.query(AgentStep)
-            .filter(AgentStep.run_id == run_id)
-            .order_by(AgentStep.step_number)
-            .all()
-        )
+        return self.db.query(AgentStep).filter(AgentStep.run_id == run_id).order_by(AgentStep.step_number).all()
 
     def add_feedback(
         self,
@@ -224,10 +230,7 @@ class AgentRunManager:
     def get_run_feedback(self, run_id: int) -> list[AgentFeedback]:
         """Get all feedback for a run."""
         return (
-            self.db.query(AgentFeedback)
-            .filter(AgentFeedback.run_id == run_id)
-            .order_by(AgentFeedback.created_at)
-            .all()
+            self.db.query(AgentFeedback).filter(AgentFeedback.run_id == run_id).order_by(AgentFeedback.created_at).all()
         )
 
     @staticmethod

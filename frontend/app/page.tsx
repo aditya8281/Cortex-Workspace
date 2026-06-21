@@ -183,7 +183,7 @@ export default function RootPage() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a
-                href="https://github.com"
+                href="#" // TODO: Replace with actual Cortex GitHub repo URL
                 target="_blank"
                 rel="noreferrer"
                 className="h-12 px-6 rounded-xl border border-border text-sm text-text-secondary hover:bg-bg-hover hover:text-text hover:border-accent/20 transition-all inline-flex items-center gap-2"

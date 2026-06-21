@@ -14,7 +14,7 @@ from backend.app.core.redis import redis_cache
 
 logger = logging.getLogger(__name__)
 
-pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # ── Password helpers ────────────────────────────────────────────────────
 
@@ -40,6 +40,8 @@ def validate_password_strength(password: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
+    if "jti" not in to_encode:
+        to_encode["jti"] = str(uuid.uuid4())
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
@@ -58,6 +60,27 @@ def decode_access_token(token: str) -> str:
 
 def verify_access_token(token: str) -> str:
     return decode_access_token(token)
+
+
+async def revoke_access_token(jti: str, expires_in_minutes: int = 30) -> None:
+    """Revoke an access token by storing its jti in Redis."""
+    try:
+        await redis_cache.set(
+            f"revoked_access:{jti}",
+            True,
+            expire_seconds=expires_in_minutes * 60,
+        )
+    except Exception:
+        pass
+
+
+async def is_access_token_revoked(jti: str) -> bool:
+    """Check if an access token has been revoked."""
+    try:
+        val = await redis_cache.get(f"revoked_access:{jti}")
+        return bool(val)
+    except Exception:
+        return False
 
 
 async def create_access_token_async(data: dict) -> str:
@@ -114,7 +137,7 @@ def _mem_is_active(jti: str) -> bool:
 
 
 async def _store_token(jti: str, user_id: int) -> None:
-    _mem_store_active(jti)
+    # Store in Redis FIRST (primary), then cache in memory
     try:
         await redis_cache.set(
             f"refresh:{jti}",
@@ -123,10 +146,12 @@ async def _store_token(jti: str, user_id: int) -> None:
         )
     except Exception:
         pass
+    # Always cache in memory for fast lookups
+    _mem_store_active(jti)
 
 
 async def _revoke_token(jti: str) -> None:
-    _mem_store_revoked(jti)
+    # Revoke in Redis FIRST (primary), then mark in memory
     try:
         await redis_cache.delete(f"refresh:{jti}")
         await redis_cache.set(
@@ -136,30 +161,29 @@ async def _revoke_token(jti: str) -> None:
         )
     except Exception:
         pass
+    _mem_store_revoked(jti)
 
 
 async def _is_revoked(jti: str) -> bool:
-    if _mem_is_revoked(jti):
-        return True
+    # Check Redis first (source of truth), then memory cache
     try:
         val = await redis_cache.get(f"revoked_refresh:{jti}")
         if val:
             return True
     except Exception:
         pass
-    return False
+    return bool(_mem_is_revoked(jti))
 
 
 async def _is_active(jti: str) -> bool:
-    if _mem_is_active(jti):
-        return True
+    # Check Redis first (source of truth), then memory cache
     try:
         stored = await redis_cache.get(f"refresh:{jti}")
         if stored:
             return True
     except Exception:
         pass
-    return False
+    return bool(_mem_is_active(jti))
 
 
 async def create_refresh_token(user_id: int) -> dict:

@@ -10,7 +10,6 @@ from typing import Any
 from backend.app.agents.base import BaseAgent
 from backend.app.agents.tools import (
     TOOL_REGISTRY,
-    get_tool,
     requires_approval,
 )
 
@@ -75,10 +74,12 @@ class ExecutorAgent(BaseAgent):
         ]
 
         if context:
-            messages.append({
-                "role": "user",
-                "content": f"Context from previous steps:\n{context}",
-            })
+            messages.append(
+                {
+                    "role": "user",
+                    "content": f"Context from previous steps:\n{context}",
+                }
+            )
 
         # Filter tools based on agent's allowed tools_json
         all_schemas = self.get_tool_schemas()
@@ -89,10 +90,7 @@ class ExecutorAgent(BaseAgent):
             except (json.JSONDecodeError, TypeError):
                 pass
         if allowed_tools:
-            all_schemas = [
-                s for s in all_schemas
-                if s["function"]["name"] in allowed_tools
-            ]
+            all_schemas = [s for s in all_schemas if s["function"]["name"] in allowed_tools]
 
         max_iterations = 10
         for _ in range(max_iterations):
@@ -107,15 +105,19 @@ class ExecutorAgent(BaseAgent):
                         tool_name = call.get("name", "")
                         tool_args = call.get("arguments", {})
                         observation = await self.execute_tool(tool_name, **tool_args)
-                        messages.append({
-                            "role": "assistant",
-                            "content": text,
-                            "tool_calls": [call],
-                        })
-                        messages.append({
-                            "role": "tool",
-                            "content": str(observation),
-                        })
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": text,
+                                "tool_calls": [call],
+                            }
+                        )
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "content": str(observation),
+                            }
+                        )
                 else:
                     return text
             except Exception as e:
@@ -182,12 +184,13 @@ class ExecutorAgent(BaseAgent):
         for prefix in ["search for", "find", "look for", "search", "find"]:
             if prefix in task.lower():
                 idx = task.lower().index(prefix)
-                return task[idx + len(prefix):].strip().strip('"\'')
+                return task[idx + len(prefix) :].strip().strip("\"'")
         return task.strip()
 
     def _extract_path(self, task: str) -> str | None:
         """Extract a file path from task text."""
         import re
+
         # Look for path-like patterns
         match = re.search(r"[\w/.\-]+\.\w+", task)
         return match.group(0) if match else None

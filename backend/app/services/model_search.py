@@ -24,7 +24,6 @@ class ModelSearchService:
         "small model": {"max_params": 4.0},
         "large model": {"min_params": 30.0},
         "fast model": {"sort": "speed"},
-
         "lightweight": {"max_params": 4.0},
         "embedding": {"capabilities": ["embedding"]},
         "reasoning": {"capabilities": ["reasoning"]},
@@ -58,9 +57,7 @@ class ModelSearchService:
 
         if capabilities:
             for cap in capabilities:
-                q = q.filter(
-                    sa_cast(ModelCatalog.capabilities, sa_String).like(f'%"{cap}"%')
-                )
+                q = q.filter(sa_cast(ModelCatalog.capabilities, sa_String).like(f'%"{cap}"%'))
         if min_params is not None:
             q = q.filter(ModelCatalog.parameter_count >= min_params)
         if max_params is not None:

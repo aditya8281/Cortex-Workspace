@@ -81,14 +81,13 @@ async def create_run(
     manager = AgentRunManager(db)
     try:
         run = manager.create_run(payload.agent_id, current_user.id, payload.input)
-        asyncio.create_task(
-            run_agent_background(run.id, payload.agent_id, current_user.id, payload.input)
-        )
+        asyncio.create_task(run_agent_background(run.id, payload.agent_id, current_user.id, payload.input))
         return {"status": "started", "run_id": run.id}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Agent run failed: %s", e)
+        raise HTTPException(status_code=500, detail="Agent run failed")
 
 
 @router.get("/agents/runs", response_model=AgentRunListResponse)
@@ -176,7 +175,7 @@ async def stream_run_events(
                 try:
                     event = await asyncio.wait_for(queue.get(), timeout=30)
                 except asyncio.TimeoutError:
-                    yield f": keepalive\n\n"
+                    yield ": keepalive\n\n"
                     continue
 
                 if event.get("type") == "_done":
@@ -320,15 +319,18 @@ async def get_agent_metrics(
             durations.append(duration)
     avg_duration = sum(durations) / len(durations) if durations else None
 
-    total_steps = db.query(AgentStep).join(AgentRun).filter(
-        AgentRun.user_id == current_user.id
-    ).count()
+    total_steps = db.query(AgentStep).join(AgentRun).filter(AgentRun.user_id == current_user.id).count()
     avg_steps = total_steps / total_runs if total_runs > 0 else 0.0
 
-    feedback_stats = db.query(
-        func.count(AgentFeedback.id),
-        func.coalesce(func.avg(AgentFeedback.rating), 0.0),
-    ).join(AgentRun).filter(AgentRun.user_id == current_user.id).one()
+    feedback_stats = (
+        db.query(
+            func.count(AgentFeedback.id),
+            func.coalesce(func.avg(AgentFeedback.rating), 0.0),
+        )
+        .join(AgentRun)
+        .filter(AgentRun.user_id == current_user.id)
+        .one()
+    )
 
     return {
         "total_runs": total_runs,
@@ -351,9 +353,9 @@ def list_agents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List all agents."""
+    """List all agents for the current user."""
     manager = AgentRunManager(db)
-    agents = manager.list_agents()
+    agents = manager.list_agents(user_id=current_user.id)
     return {
         "agents": [
             {
@@ -386,6 +388,7 @@ def create_agent(
             description=payload.description,
             system_prompt=payload.system_prompt,
             model_id=payload.model_id,
+            user_id=current_user.id,
             tools=payload.tools,
         )
         return {
@@ -403,7 +406,8 @@ def create_agent(
             },
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error("Failed to create agent: %s", e)
+        raise HTTPException(status_code=400, detail="Failed to create agent")
 
 
 @router.get("/agents/{agent_id}", response_model=AgentGetResponse)
@@ -414,7 +418,7 @@ def get_agent(
 ):
     """Get a specific agent."""
     manager = AgentRunManager(db)
-    agent = manager.get_agent(agent_id)
+    agent = manager.get_agent(agent_id, user_id=current_user.id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return {
@@ -441,7 +445,7 @@ def update_agent(
 ):
     """Update an agent."""
     manager = AgentRunManager(db)
-    agent = manager.get_agent(agent_id)
+    agent = manager.get_agent(agent_id, user_id=current_user.id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -471,12 +475,10 @@ def delete_agent(
 ):
     """Delete an agent."""
     manager = AgentRunManager(db)
-    agent = manager.get_agent(agent_id)
+    agent = manager.get_agent(agent_id, user_id=current_user.id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    active_runs = db.query(AgentRun).filter(
-        AgentRun.agent_id == agent_id, AgentRun.status == "running"
-    ).all()
+    active_runs = db.query(AgentRun).filter(AgentRun.agent_id == agent_id, AgentRun.status == "running").all()
     if active_runs:
         raise HTTPException(status_code=409, detail="Cannot delete agent with active runs")
     db.delete(agent)

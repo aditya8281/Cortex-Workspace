@@ -91,11 +91,7 @@ class EmbeddingCacheService:
 
     def invalidate(self, content_hash: str) -> int:
         """Remove all cache entries for a content hash. Returns count removed."""
-        count = (
-            self._db.query(EmbeddingCache)
-            .filter(EmbeddingCache.content_hash == content_hash)
-            .delete()
-        )
+        count = self._db.query(EmbeddingCache).filter(EmbeddingCache.content_hash == content_hash).delete()
         self._db.commit()
         if count > 0:
             logger.info("Invalidated %d cache entries for hash %s", count, content_hash[:12])

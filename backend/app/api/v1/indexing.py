@@ -33,9 +33,7 @@ async def get_indexing_config(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    config = db.query(IndexingConfig).filter(
-        IndexingConfig.user_id == current_user.id
-    ).first()
+    config = db.query(IndexingConfig).filter(IndexingConfig.user_id == current_user.id).first()
     if not config:
         return {"config": None, "defaults": True}
     return {
@@ -61,10 +59,14 @@ async def update_indexing_config(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    config = db.query(IndexingConfig).filter(
-        IndexingConfig.user_id == current_user.id,
-        IndexingConfig.name == payload.name,
-    ).first()
+    config = (
+        db.query(IndexingConfig)
+        .filter(
+            IndexingConfig.user_id == current_user.id,
+            IndexingConfig.name == payload.name,
+        )
+        .first()
+    )
     if not config:
         config = IndexingConfig(user_id=current_user.id, name=payload.name)
         db.add(config)
@@ -82,9 +84,7 @@ async def preview_indexing(
     current_user: User = Depends(get_current_user),
 ):
     """Preview what would be indexed for a given path."""
-    config = db.query(IndexingConfig).filter(
-        IndexingConfig.user_id == current_user.id
-    ).first()
+    config = db.query(IndexingConfig).filter(IndexingConfig.user_id == current_user.id).first()
     rules = IndexingRules(config)
     stats = rules.get_stats(repo_path)
     return stats

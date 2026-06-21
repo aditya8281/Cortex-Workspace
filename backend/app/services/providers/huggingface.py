@@ -305,9 +305,25 @@ class HuggingFaceProvider(ProviderAdapter):
 
     def _extract_architecture(self, tags: list[str]) -> str | None:
         arch_keywords = [
-            "llama", "mistral", "mixtral", "phi", "qwen", "gemma", "gpt",
-            "bloom", "falcon", "mpt", "dolly", "starcoder", "codellama",
-            "deepseek", "yi", "internlm", "baichuan", "command-r", "jamba",
+            "llama",
+            "mistral",
+            "mixtral",
+            "phi",
+            "qwen",
+            "gemma",
+            "gpt",
+            "bloom",
+            "falcon",
+            "mpt",
+            "dolly",
+            "starcoder",
+            "codellama",
+            "deepseek",
+            "yi",
+            "internlm",
+            "baichuan",
+            "command-r",
+            "jamba",
         ]
         lower_tags = [t.lower() for t in tags]
         for arch in arch_keywords:
@@ -334,7 +350,23 @@ class HuggingFaceProvider(ProviderAdapter):
         return base.lower()
 
     def _extract_license(self, tags: list[str]) -> str | None:
-        known_licenses = {"apache-2.0", "mit", "lgpl-2.1", "lgpl-3.0", "gpl-2.0", "gpl-3.0", "bsd-2-clause", "bsd-3-clause", "cc-by-4.0", "cc-by-sa-4.0", "cc0-1.0", "artistic-2.0", "unlicense", "wtfpl", "isc"}
+        known_licenses = {
+            "apache-2.0",
+            "mit",
+            "lgpl-2.1",
+            "lgpl-3.0",
+            "gpl-2.0",
+            "gpl-3.0",
+            "bsd-2-clause",
+            "bsd-3-clause",
+            "cc-by-4.0",
+            "cc-by-sa-4.0",
+            "cc0-1.0",
+            "artistic-2.0",
+            "unlicense",
+            "wtfpl",
+            "isc",
+        }
         for tag in tags:
             if tag.startswith("license:"):
                 return tag.split(":", 1)[1]

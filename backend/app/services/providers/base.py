@@ -14,6 +14,7 @@ from typing import Any
 @dataclass
 class ProviderModelInfo:
     """Normalized model information from any provider."""
+
     provider_model_id: str
     display_name: str
     family: str = ""
@@ -32,6 +33,7 @@ class ProviderModelInfo:
 @dataclass
 class ProviderVariantInfo:
     """Normalized variant/quantization information."""
+
     variant_id: str
     quantization: str
     size_bytes: int | None = None
@@ -47,6 +49,7 @@ class ProviderVariantInfo:
 @dataclass
 class ProviderDownloadResult:
     """Result of a download operation."""
+
     success: bool
     file_path: str | None = None
     file_size_bytes: int | None = None

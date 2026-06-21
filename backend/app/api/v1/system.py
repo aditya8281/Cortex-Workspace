@@ -20,13 +20,15 @@ def _get_top_processes(n: int = 20) -> list[dict]:
     for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent", "status"]):
         try:
             info = p.info
-            procs.append({
-                "pid": info["pid"],
-                "name": info["name"],
-                "cpu": round(info["cpu_percent"] or 0.0, 1),
-                "memory": round(info["memory_percent"] or 0.0, 1),
-                "status": "running" if info["status"] == psutil.STATUS_RUNNING else "sleeping",
-            })
+            procs.append(
+                {
+                    "pid": info["pid"],
+                    "name": info["name"],
+                    "cpu": round(info["cpu_percent"] or 0.0, 1),
+                    "memory": round(info["memory_percent"] or 0.0, 1),
+                    "status": "running" if info["status"] == psutil.STATUS_RUNNING else "sleeping",
+                }
+            )
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
     procs.sort(key=lambda x: x["cpu"], reverse=True)

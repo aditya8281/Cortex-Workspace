@@ -1,5 +1,3 @@
-import os
-
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -63,9 +61,16 @@ class Settings(BaseSettings):
 
     @field_validator("SECRET_KEY")
     @classmethod
-    def validate_secret_key(cls, value: str) -> str:
-        if not value and os.environ.get("ENV") not in ("development", "test"):
+    def validate_secret_key(cls, value: str, info) -> str:
+        env = info.data.get("ENV", "development")
+        if not value and env not in ("development", "test"):
             raise ValueError("SECRET_KEY must be set in production. Generate one with: openssl rand -hex 32")
+        if not value and env in ("development", "test"):
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "SECRET_KEY is empty. Using development/test mode — do NOT use in production."
+            )
         return value
 
     WORKSPACE_ROOT: str = "."

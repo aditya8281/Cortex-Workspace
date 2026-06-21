@@ -89,9 +89,7 @@ class DownloadManager:
                 rec.retry_count = 0
                 self._records[rec.download_id] = rec
                 self._queue.put_nowait(rec.download_id)
-            logger.info(
-                "Restored %d queued downloads from state file", len(data.get("records", []))
-            )
+            logger.info("Restored %d queued downloads from state file", len(data.get("records", [])))
         except (OSError, json.JSONDecodeError, TypeError) as e:
             logger.warning("Failed to load download state: %s", e)
 
@@ -410,9 +408,7 @@ class DownloadManager:
             "created_at": record.created_at,
         }
 
-    def list_downloads(
-        self, status: str | None = None, limit: int = 50
-    ) -> list[dict]:
+    def list_downloads(self, status: str | None = None, limit: int = 50) -> list[dict]:
         records = list(self._records.values())
         if status:
             try:
@@ -475,9 +471,7 @@ class _LegacyModelDownloader:
     def __init__(self):
         self._dm = download_manager
 
-    async def download_model(
-        self, model_name: str, catalog: list[dict], variant: str | None = None
-    ) -> dict:
+    async def download_model(self, model_name: str, catalog: list[dict], variant: str | None = None) -> dict:
         full_model_name = f"{model_name}:{variant}" if variant else model_name
 
         from backend.app.services.llm.manager import llm_manager
@@ -515,7 +509,10 @@ class _LegacyModelDownloader:
     def get_active_progress(self) -> dict[str, float]:
         active: dict[str, float] = {}
         for rec in self._dm._records.values():
-            if rec.status in (DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.QUEUED) and 0.0 < rec.progress <= 1.0:
+            if (
+                rec.status in (DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED, DownloadStatus.QUEUED)
+                and 0.0 < rec.progress <= 1.0
+            ):
                 active[rec.model_name] = rec.progress
         return active
 

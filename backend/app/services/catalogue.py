@@ -13,265 +13,6 @@ from backend.app.models.model_catalog import ModelCatalog, ModelVariant
 logger = logging.getLogger(__name__)
 
 
-# Curated model families with metadata
-CURATED_FAMILIES: list[dict] = [
-    {
-        "model_id": "llama-3.1-8b-instruct",
-        "family": "llama",
-        "display_name": "Llama 3.1 8B Instruct",
-        "provider": "ollama",
-        "parameter_count": 8.0,
-        "architecture": "transformer",
-        "context_length_default": 128000,
-        "context_length_max": 128000,
-        "capabilities": ["chat", "code", "reasoning", "tool_use"],
-        "license": "llama3.1",
-        "recommended_use_cases": ["coding", "agents", "reasoning", "general"],
-        "description": "Meta's Llama 3.1 8B — balanced performance, excellent for coding and agents.",
-        "tags": ["meta", "llama", "instruct", "popular"],
-    },
-    {
-        "model_id": "llama-3.1-70b-instruct",
-        "family": "llama",
-        "display_name": "Llama 3.1 70B Instruct",
-        "provider": "ollama",
-        "parameter_count": 70.0,
-        "architecture": "transformer",
-        "context_length_default": 128000,
-        "context_length_max": 128000,
-        "capabilities": ["chat", "code", "reasoning", "tool_use"],
-        "license": "llama3.1",
-        "recommended_use_cases": ["high_quality", "reasoning", "coding"],
-        "description": "Meta's flagship 70B model — top-tier quality for complex tasks.",
-        "tags": ["meta", "llama", "instruct", "high_quality"],
-    },
-    {
-        "model_id": "llama-3.2-3b-instruct",
-        "family": "llama",
-        "display_name": "Llama 3.2 3B Instruct",
-        "provider": "ollama",
-        "parameter_count": 3.0,
-        "architecture": "transformer",
-        "context_length_default": 128000,
-        "context_length_max": 128000,
-        "capabilities": ["chat", "code", "reasoning"],
-        "license": "llama3.2",
-        "recommended_use_cases": ["lightweight", "chat", "agents"],
-        "description": "Fast, lightweight model ideal for chat and quick tasks.",
-        "tags": ["meta", "llama", "instruct", "lightweight", "fast"],
-    },
-    {
-        "model_id": "qwen2.5-7b-instruct",
-        "family": "qwen",
-        "display_name": "Qwen 2.5 7B Instruct",
-        "provider": "ollama",
-        "parameter_count": 7.0,
-        "architecture": "transformer",
-        "context_length_default": 32768,
-        "context_length_max": 128000,
-        "capabilities": ["chat", "code", "reasoning", "tool_use"],
-        "license": "apache-2.0",
-        "recommended_use_cases": ["coding", "multilingual", "reasoning"],
-        "description": "Alibaba's Qwen 2.5 — strong multilingual and coding capabilities.",
-        "tags": ["alibaba", "qwen", "instruct", "multilingual"],
-    },
-    {
-        "model_id": "qwen2.5-coder-7b-instruct",
-        "family": "qwen",
-        "display_name": "Qwen 2.5 Coder 7B Instruct",
-        "provider": "ollama",
-        "parameter_count": 7.0,
-        "architecture": "transformer",
-        "context_length_default": 32768,
-        "context_length_max": 128000,
-        "capabilities": ["code", "reasoning"],
-        "license": "apache-2.0",
-        "recommended_use_cases": ["coding"],
-        "description": "Specialized coding model — excellent code generation across languages.",
-        "tags": ["alibaba", "qwen", "coding", "specialized"],
-    },
-    {
-        "model_id": "qwen2.5-coder-32b-instruct",
-        "family": "qwen",
-        "display_name": "Qwen 2.5 Coder 32B Instruct",
-        "provider": "ollama",
-        "parameter_count": 32.0,
-        "architecture": "transformer",
-        "context_length_default": 32768,
-        "context_length_max": 128000,
-        "capabilities": ["code", "reasoning"],
-        "license": "apache-2.0",
-        "recommended_use_cases": ["coding", "high_quality"],
-        "description": "Large coding model — top-tier code generation quality.",
-        "tags": ["alibaba", "qwen", "coding", "high_quality"],
-    },
-    {
-        "model_id": "deepseek-coder-v2-lite-instruct",
-        "family": "deepseek",
-        "display_name": "DeepSeek Coder V2 Lite",
-        "provider": "ollama",
-        "parameter_count": 16.0,
-        "architecture": "moe",
-        "context_length_default": 128000,
-        "context_length_max": 128000,
-        "capabilities": ["code", "reasoning"],
-        "license": "mit",
-        "recommended_use_cases": ["coding"],
-        "description": "DeepSeek's code model — excellent across 338 programming languages.",
-        "tags": ["deepseek", "coding", "moe"],
-    },
-    {
-        "model_id": "deepseek-r1-distill-qwen-7b",
-        "family": "deepseek",
-        "display_name": "DeepSeek R1 Distill Qwen 7B",
-        "provider": "ollama",
-        "parameter_count": 7.0,
-        "architecture": "transformer",
-        "context_length_default": 32768,
-        "context_length_max": 65536,
-        "capabilities": ["reasoning", "chat", "code"],
-        "license": "mit",
-        "recommended_use_cases": ["reasoning", "math", "logic"],
-        "description": "Distilled reasoning model — strong math and logic capabilities.",
-        "tags": ["deepseek", "reasoning", "distilled"],
-    },
-    {
-        "model_id": "deepseek-r1-distill-llama-70b",
-        "family": "deepseek",
-        "display_name": "DeepSeek R1 Distill Llama 70B",
-        "provider": "ollama",
-        "parameter_count": 70.0,
-        "architecture": "transformer",
-        "context_length_default": 32768,
-        "context_length_max": 65536,
-        "capabilities": ["reasoning", "chat", "code"],
-        "license": "mit",
-        "recommended_use_cases": ["reasoning", "high_quality"],
-        "description": "Large distilled reasoning model — state-of-the-art reasoning quality.",
-        "tags": ["deepseek", "reasoning", "high_quality"],
-    },
-    {
-        "model_id": "phi-3.5-mini-instruct",
-        "family": "phi",
-        "display_name": "Phi 3.5 Mini Instruct",
-        "provider": "ollama",
-        "parameter_count": 3.8,
-        "architecture": "transformer",
-        "context_length_default": 128000,
-        "context_length_max": 128000,
-        "capabilities": ["chat", "reasoning"],
-        "license": "mit",
-        "recommended_use_cases": ["lightweight", "reasoning", "chat"],
-        "description": "Microsoft's efficient reasoning model — capable for its size.",
-        "tags": ["microsoft", "phi", "lightweight"],
-    },
-    {
-        "model_id": "gemma-2-9b-it",
-        "family": "gemma",
-        "display_name": "Gemma 2 9B Instruct",
-        "provider": "ollama",
-        "parameter_count": 9.0,
-        "architecture": "transformer",
-        "context_length_default": 8192,
-        "context_length_max": 8192,
-        "capabilities": ["chat"],
-        "license": "gemma",
-        "recommended_use_cases": ["chat", "lightweight"],
-        "description": "Google's Gemma 2 — efficient and fast.",
-        "tags": ["google", "gemma", "lightweight"],
-    },
-    {
-        "model_id": "mistral-7b-instruct-v0.3",
-        "family": "mistral",
-        "display_name": "Mistral 7B Instruct v0.3",
-        "provider": "ollama",
-        "parameter_count": 7.0,
-        "architecture": "transformer",
-        "context_length_default": 32768,
-        "context_length_max": 32768,
-        "capabilities": ["chat", "reasoning"],
-        "license": "apache-2.0",
-        "recommended_use_cases": ["chat", "general"],
-        "description": "Mistral's efficient 7B — great performance for its size.",
-        "tags": ["mistral", "instruct"],
-    },
-    {
-        "model_id": "mixtral-8x7b-instruct",
-        "family": "mixtral",
-        "display_name": "Mixtral 8x7B Instruct",
-        "provider": "ollama",
-        "parameter_count": 46.7,
-        "architecture": "moe",
-        "context_length_default": 32768,
-        "context_length_max": 32768,
-        "capabilities": ["chat", "reasoning", "code"],
-        "license": "apache-2.0",
-        "recommended_use_cases": ["general", "reasoning"],
-        "description": "Mistral's MoE model — efficient with strong performance.",
-        "tags": ["mistral", "moe"],
-    },
-    {
-        "model_id": "nomic-embed-text",
-        "family": "nomic",
-        "display_name": "Nomic Embed Text",
-        "provider": "ollama",
-        "parameter_count": 0.137,
-        "architecture": "transformer",
-        "context_length_default": 8192,
-        "context_length_max": 8192,
-        "capabilities": ["embedding"],
-        "license": "apache-2.0",
-        "recommended_use_cases": ["embeddings", "rag", "search"],
-        "description": "High-quality text embeddings for semantic search.",
-        "tags": ["nomic", "embedding"],
-    },
-    {
-        "model_id": "llava-llama3-8b",
-        "family": "llava",
-        "display_name": "LLaVA Llama3 8B",
-        "provider": "ollama",
-        "parameter_count": 8.0,
-        "architecture": "multimodal",
-        "context_length_default": 4096,
-        "context_length_max": 8192,
-        "capabilities": ["chat", "vision"],
-        "license": "apache-2.0",
-        "recommended_use_cases": ["vision", "image_understanding"],
-        "description": "Vision-language model for image understanding.",
-        "tags": ["llava", "vision", "multimodal"],
-    },
-    {
-        "model_id": "codellama-7b-instruct",
-        "family": "codellama",
-        "display_name": "CodeLlama 7B Instruct",
-        "provider": "ollama",
-        "parameter_count": 7.0,
-        "architecture": "transformer",
-        "context_length_default": 16384,
-        "context_length_max": 100000,
-        "capabilities": ["code", "chat"],
-        "license": "llama2",
-        "recommended_use_cases": ["coding"],
-        "description": "Code-specialized Llama model for code generation.",
-        "tags": ["meta", "codellama", "coding"],
-    },
-    {
-        "model_id": "starcoder2-7b",
-        "family": "starcoder",
-        "display_name": "StarCoder2 7B",
-        "provider": "ollama",
-        "parameter_count": 7.0,
-        "architecture": "transformer",
-        "context_length_default": 16384,
-        "context_length_max": 16384,
-        "capabilities": ["code"],
-        "license": "bigcode-openrail-m",
-        "recommended_use_cases": ["coding", "completion"],
-        "description": "Code generation model supporting 619 programming languages.",
-        "tags": ["bigcode", "starcoder", "coding"],
-    },
-]
-
 # Quantization quality mapping
 QUANT_QUALITY: dict[str, float] = {
     "F32": 100.0,
@@ -295,10 +36,21 @@ QUANT_QUALITY: dict[str, float] = {
 def estimate_vram_gb(parameter_count: float, quantization: str) -> float:
     """Estimate VRAM usage based on parameter count and quantization."""
     quant_bytes = {
-        "F32": 4.0, "F16": 2.0, "Q8_0": 1.0, "Q6_K": 0.75,
-        "Q5_K_M": 0.65, "Q5_K_S": 0.62, "Q4_K_M": 0.56, "Q4_K_S": 0.53,
-        "Q4_0": 0.5, "Q3_K_M": 0.44, "Q3_K_S": 0.41, "Q2_K": 0.34,
-        "IQ4_XS": 0.55, "IQ3_XXS": 0.43, "IQ2_XS": 0.33,
+        "F32": 4.0,
+        "F16": 2.0,
+        "Q8_0": 1.0,
+        "Q6_K": 0.75,
+        "Q5_K_M": 0.65,
+        "Q5_K_S": 0.62,
+        "Q4_K_M": 0.56,
+        "Q4_K_S": 0.53,
+        "Q4_0": 0.5,
+        "Q3_K_M": 0.44,
+        "Q3_K_S": 0.41,
+        "Q2_K": 0.34,
+        "IQ4_XS": 0.55,
+        "IQ3_XXS": 0.43,
+        "IQ2_XS": 0.33,
     }
     bytes_per_param = quant_bytes.get(quantization.upper(), 0.56)
     model_gb = parameter_count * bytes_per_param
@@ -354,50 +106,124 @@ class CatalogueManager:
         self.db = db
 
     def seed_curated_models(self) -> int:
-        """Seed the catalogue with curated model families."""
+        """Seed the catalogue with models from the unified catalog.
+
+        Backward-compatible wrapper around ingest_from_catalog().
+        """
+        return self.ingest_from_catalog()
+
+    def ingest_from_catalog(self, force_refresh: bool = False) -> int:
+        """Ingest models from the unified Ollama catalog into the database.
+
+        Uses the three-source pipeline (OCI Registry, Cloud API, Local API)
+        instead of hardcoded model families.
+        """
+        try:
+            from backend.app.services.ollama_catalog import get_ollama_catalog_sync
+
+            models = get_ollama_catalog_sync(force_refresh=force_refresh)
+        except Exception as e:
+            logger.warning("Failed to fetch catalog: %s", e)
+            return 0
+
         count = 0
         now = datetime.now(timezone.utc)
 
-        for family_data in CURATED_FAMILIES:
+        for model in models:
+            name = model.get("name", "")
+            base_name = name.split(":")[0]
+            tag = name.split(":")[1] if ":" in name else "latest"
+
+            # Extract metadata from catalog entry
+            family = model.get("family", "") or base_name
+            param_size = model.get("parameter_size", "")
+            capabilities = model.get("capabilities", [])
+            model.get("source", "registry")
+
+            # Try to parse parameter count
+            param_count = self._parse_param_count(param_size)
+
+            # Create/update catalog entry (one per base model)
             existing = self.db.execute(
-                select(ModelCatalog).where(ModelCatalog.model_id == family_data["model_id"])
+                select(ModelCatalog).where(ModelCatalog.model_id == base_name)
             ).scalar_one_or_none()
 
             if existing:
-                continue
+                # Update capabilities if we have better data from new source
+                if capabilities and not existing.capabilities:
+                    existing.capabilities = capabilities
+                existing.last_updated = now
+                catalog_id = existing.id
+            else:
+                catalog = ModelCatalog(
+                    model_id=base_name,
+                    family=family,
+                    display_name=base_name.replace("-", " ").title(),
+                    provider="ollama",
+                    parameter_count=param_count,
+                    context_length_default=4096,
+                    capabilities=capabilities or ["chat"],
+                    description=model.get("description", f"Ollama model: {base_name}"),
+                    tags=[family] if family else [],
+                    last_updated=now,
+                )
+                self.db.add(catalog)
+                self.db.flush()
+                catalog_id = catalog.id
+                count += 1
 
-            catalog = ModelCatalog(
-                model_id=family_data["model_id"],
-                family=family_data["family"],
-                display_name=family_data["display_name"],
-                provider=family_data["provider"],
-                parameter_count=family_data["parameter_count"],
-                architecture=family_data.get("architecture"),
-                context_length_default=family_data.get("context_length_default", 4096),
-                context_length_max=family_data.get("context_length_max"),
-                capabilities=family_data.get("capabilities", ["chat"]),
-                license=family_data.get("license"),
-                recommended_use_cases=family_data.get("recommended_use_cases", []),
-                not_recommended_for=family_data.get("not_recommended_for", []),
-                description=family_data.get("description", ""),
-                tags=family_data.get("tags", []),
-                last_updated=now,
-            )
-            self.db.add(catalog)
-            count += 1
+            # Create/update variant entry
+            variant_id = f"{base_name}:{tag}"
+            existing_variant = self.db.execute(
+                select(ModelVariant).where(ModelVariant.variant_id == variant_id)
+            ).scalar_one_or_none()
+
+            if not existing_variant:
+                size_bytes = model.get("size", 0) or model.get("size_bytes", 0)
+                quantization = model.get("quantization", "")
+                vram = estimate_vram_gb(param_count or 7.0, quantization) if param_count else None
+
+                variant = ModelVariant(
+                    model_catalog_id=catalog_id,
+                    variant_id=variant_id,
+                    quantization=quantization.upper() if quantization else "UNKNOWN",
+                    quantization_level=_quant_level(quantization) if quantization else "unknown",
+                    parameter_count=param_count,
+                    size_bytes=size_bytes,
+                    size_gb=size_bytes / (1024**3) if size_bytes else 0,
+                    vram_required_gb=vram,
+                    ram_required_gb=(vram * 1.2) if vram else None,
+                    recommended_vram_gb=(vram * 1.3) if vram else None,
+                    quality_score=get_quantization_quality(quantization) if quantization else 85.0,
+                    ollama_tag=variant_id,
+                    downloaded=False,
+                )
+                self.db.add(variant)
 
         self.db.commit()
         return count
 
-    def mark_downloaded_models(
-        self, installed_ollama_tags: list[str]
-    ) -> int:
+    @staticmethod
+    def _parse_param_count(param_str: str | None) -> float | None:
+        """Parse parameter count string like '7B', '8B', '137M' to float in billions."""
+        if not param_str:
+            return None
+        param_str = param_str.strip().upper()
+        try:
+            if param_str.endswith("B"):
+                return float(param_str[:-1])
+            elif param_str.endswith("M"):
+                return float(param_str[:-1]) / 1000.0
+            else:
+                return float(param_str)
+        except (ValueError, IndexError):
+            return None
+
+    def mark_downloaded_models(self, installed_ollama_tags: list[str]) -> int:
         """Mark variants as downloaded based on Ollama installed models."""
         updated = 0
         for tag in installed_ollama_tags:
-            variant = self.db.execute(
-                select(ModelVariant).where(ModelVariant.ollama_tag == tag)
-            ).scalar_one_or_none()
+            variant = self.db.execute(select(ModelVariant).where(ModelVariant.ollama_tag == tag)).scalar_one_or_none()
 
             if variant and not variant.downloaded:
                 variant.downloaded = True
@@ -469,8 +295,4 @@ class CatalogueManager:
 
     def get_downloaded_variants(self) -> list[ModelVariant]:
         """Get all downloaded model variants."""
-        return list(
-            self.db.execute(
-                select(ModelVariant).where(ModelVariant.downloaded)
-            ).scalars().all()
-        )
+        return list(self.db.execute(select(ModelVariant).where(ModelVariant.downloaded)).scalars().all())

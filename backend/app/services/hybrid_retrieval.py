@@ -76,9 +76,7 @@ class HybridRetrievalV2:
         diverse = self._mmr_rerank(deduped, limit, diversity_penalty)
         return diverse
 
-    def _vector_search(
-        self, query: str, repo_id: int | None, limit: int
-    ) -> list[RetrievalResult]:
+    def _vector_search(self, query: str, repo_id: int | None, limit: int) -> list[RetrievalResult]:
         query_vector = self._embedder.embed_single(query)
         results = []
 
@@ -89,54 +87,60 @@ class HybridRetrievalV2:
                     filter_payload["repo_id"] = repo_id
 
                 hits = self._vector_db.search(
-                    collection, query_vector, limit=limit,
+                    collection,
+                    query_vector,
+                    limit=limit,
                     filter_payload=filter_payload if filter_payload else None,
                 )
 
                 for hit in hits:
                     payload = hit.get("payload", {})
-                    results.append(RetrievalResult(
-                        content=payload.get("content", ""),
-                        source="vector",
-                        score=hit.get("score", 0.0),
-                        file_path=payload.get("file_path", payload.get("path", "")),
-                        document_id=payload.get("document_id"),
-                        chunk_id=payload.get("chunk_id"),
-                        language=payload.get("language"),
-                        chunk_type=payload.get("chunk_type"),
-                        line_start=payload.get("line_start"),
-                        line_end=payload.get("line_end"),
-                        symbol_name=payload.get("symbol_name"),
-                    ))
+                    results.append(
+                        RetrievalResult(
+                            content=payload.get("content", ""),
+                            source="vector",
+                            score=hit.get("score", 0.0),
+                            file_path=payload.get("file_path", payload.get("path", "")),
+                            document_id=payload.get("document_id"),
+                            chunk_id=payload.get("chunk_id"),
+                            language=payload.get("language"),
+                            chunk_type=payload.get("chunk_type"),
+                            line_start=payload.get("line_start"),
+                            line_end=payload.get("line_end"),
+                            symbol_name=payload.get("symbol_name"),
+                        )
+                    )
             except Exception as e:
                 logger.warning("Vector search failed on %s: %s", collection, e)
 
         return results
 
-    def _fulltext_search(
-        self, query: str, repo_id: int | None, limit: int
-    ) -> list[RetrievalResult]:
+    def _fulltext_search(self, query: str, repo_id: int | None, limit: int) -> list[RetrievalResult]:
         results = []
 
         code_results = self._fulltext.search_code(query, repo_id=repo_id, limit=limit)
         for r in code_results:
-            results.append(RetrievalResult(
-                content=r.content,
-                source="fulltext",
-                score=min(1.0, r.rank),
-                file_path=r.file_path,
-                chunk_id=r.chunk_id,
-                language=r.language,
-            ))
+            results.append(
+                RetrievalResult(
+                    content=r.content,
+                    source="fulltext",
+                    score=min(1.0, r.rank),
+                    file_path=r.file_path,
+                    chunk_id=r.chunk_id,
+                    language=r.language,
+                )
+            )
 
         doc_results = self._fulltext.search_documents(query, limit=limit)
         for r in doc_results:
-            results.append(RetrievalResult(
-                content=r.content,
-                source="fulltext",
-                score=min(1.0, r.rank),
-                document_id=r.document_id,
-            ))
+            results.append(
+                RetrievalResult(
+                    content=r.content,
+                    source="fulltext",
+                    score=min(1.0, r.rank),
+                    document_id=r.document_id,
+                )
+            )
 
         return results
 
@@ -148,19 +152,12 @@ class HybridRetrievalV2:
             results = []
 
             for term in terms[:3]:
-                nodes = (
-                    self._db.query(GraphNode)
-                    .filter(GraphNode.name.ilike(f"%{term}%"))
-                    .limit(5)
-                    .all()
-                )
+                nodes = self._db.query(GraphNode).filter(GraphNode.name.ilike(f"%{term}%")).limit(5).all()
 
                 for node in nodes:
                     edges = (
                         self._db.query(GraphEdge)
-                        .filter(
-                            (GraphEdge.source_id == node.id) | (GraphEdge.target_id == node.id)
-                        )
+                        .filter((GraphEdge.source_id == node.id) | (GraphEdge.target_id == node.id))
                         .limit(5)
                         .all()
                     )
@@ -172,13 +169,15 @@ class HybridRetrievalV2:
                         if other:
                             connected_names.add(other.name)
 
-                    results.append(RetrievalResult(
-                        content=f"{node.name} ({node.node_type}): {', '.join(connected_names)}",
-                        source="graph",
-                        score=0.4,
-                        file_path=node.file_path,
-                        node_id=node.id,
-                    ))
+                    results.append(
+                        RetrievalResult(
+                            content=f"{node.name} ({node.node_type}): {', '.join(connected_names)}",
+                            source="graph",
+                            score=0.4,
+                            file_path=node.file_path,
+                            node_id=node.id,
+                        )
+                    )
 
             return results[:limit]
         except Exception as e:
@@ -232,10 +231,7 @@ class HybridRetrievalV2:
 
             for i, candidate in enumerate(remaining):
                 relevance = candidate.score
-                max_similarity = max(
-                    self._text_similarity(candidate.content, s.content)
-                    for s in selected
-                )
+                max_similarity = max(self._text_similarity(candidate.content, s.content) for s in selected)
                 mmr = lambda_param * relevance - (1 - lambda_param) * max_similarity
 
                 if mmr > best_mmr:

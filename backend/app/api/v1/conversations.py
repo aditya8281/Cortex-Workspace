@@ -41,11 +41,7 @@ async def list_conversations(
 ):
     svc = ConversationService(db)
     convs = svc.list(current_user.id, limit, offset)
-    total = (
-        db.query(func.count(Conversation.id))
-        .filter(Conversation.user_id == current_user.id)
-        .scalar()
-    )
+    total = db.query(func.count(Conversation.id)).filter(Conversation.user_id == current_user.id).scalar()
     return ConversationListResponse(
         conversations=[ConversationResponse.model_validate(c) for c in convs],
         total=total,
@@ -135,16 +131,15 @@ async def _stream_chat_response(
     conv = svc.get(conversation_id, user_id) if user_id else None
     repo_id = conv.repo_id if conv else None
     rag_context = rag.retrieve_context(user_content, repo_id=repo_id)
-    sources = [
-        {"file_path": r.file_path, "score": r.score, "content": r.content[:300]}
-        for r in rag_context.results
-    ]
+    sources = [{"file_path": r.file_path, "score": r.score, "content": r.content[:300]} for r in rag_context.results]
 
     history = svc.get_context_messages(conversation_id, max_tokens=28000)
     system_parts = ["You are Cortex, a helpful AI assistant with access to the user's codebase and knowledge."]
     if rag_context.formatted_context:
         system_parts.append(f"Relevant context from the codebase:\n\n{rag_context.formatted_context}")
-        system_parts.append("\nUse this context to answer the user's question. Cite sources using [1], [2], etc. when referencing specific files.")
+        system_parts.append(
+            "\nUse this context to answer the user's question. Cite sources using [1], [2], etc. when referencing specific files."
+        )
     raw_messages = [{"role": "system", "content": "\n\n".join(system_parts)}]
     for msg in history:
         raw_messages.append({"role": msg.role, "content": msg.content})
@@ -200,9 +195,7 @@ async def send_message(
         ):
             yield event
         background_svc = ConversationService(db)
-        asyncio.create_task(
-            background_svc.extract_insights(conversation_id, current_user.id, model=payload.model)
-        )
+        asyncio.create_task(background_svc.extract_insights(conversation_id, current_user.id, model=payload.model))
 
     return StreamingResponse(
         _wrapped_stream(),

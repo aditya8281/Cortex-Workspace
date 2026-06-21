@@ -36,11 +36,13 @@ class MarkdownParser(BaseParser):
                     code_lines.append(lines[i])
                     i += 1
                 i += 1  # skip closing ```
-                sections.append(ParsedSection(
-                    content="\n".join(code_lines),
-                    section_type="code",
-                    title=lang or None,
-                ))
+                sections.append(
+                    ParsedSection(
+                        content="\n".join(code_lines),
+                        section_type="code",
+                        title=lang or None,
+                    )
+                )
                 continue
 
             # Heading
@@ -48,12 +50,14 @@ class MarkdownParser(BaseParser):
             if heading_match:
                 level = len(heading_match.group(1))
                 title = heading_match.group(2).strip()
-                sections.append(ParsedSection(
-                    title=title,
-                    content=title,
-                    section_type="heading",
-                    level=level,
-                ))
+                sections.append(
+                    ParsedSection(
+                        title=title,
+                        content=title,
+                        section_type="heading",
+                        level=level,
+                    )
+                )
                 i += 1
                 continue
 
@@ -66,10 +70,12 @@ class MarkdownParser(BaseParser):
                 # Remove separator line if present
                 if len(table_lines) > 1 and re.match(r"^\|[\s\-:|]+\|$", table_lines[1]):
                     table_lines.pop(1)
-                sections.append(ParsedSection(
-                    content="\n".join(table_lines),
-                    section_type="table",
-                ))
+                sections.append(
+                    ParsedSection(
+                        content="\n".join(table_lines),
+                        section_type="table",
+                    )
+                )
                 continue
 
             # List items
@@ -78,22 +84,34 @@ class MarkdownParser(BaseParser):
                 while i < len(lines) and (re.match(r"^\s*[-*+]\s+", lines[i]) or re.match(r"^\s*\d+\.\s+", lines[i])):
                     list_lines.append(lines[i].strip())
                     i += 1
-                sections.append(ParsedSection(
-                    content="\n".join(list_lines),
-                    section_type="list",
-                ))
+                sections.append(
+                    ParsedSection(
+                        content="\n".join(list_lines),
+                        section_type="list",
+                    )
+                )
                 continue
 
             # Paragraph (non-empty lines)
             if line.strip():
                 para_lines = []
-                while i < len(lines) and lines[i].strip() and not lines[i].strip().startswith("#") and not lines[i].strip().startswith("```") and not lines[i].strip().startswith("|") and not re.match(r"^\s*[-*+]\s+", lines[i]) and not re.match(r"^\s*\d+\.\s+", lines[i]):
+                while (
+                    i < len(lines)
+                    and lines[i].strip()
+                    and not lines[i].strip().startswith("#")
+                    and not lines[i].strip().startswith("```")
+                    and not lines[i].strip().startswith("|")
+                    and not re.match(r"^\s*[-*+]\s+", lines[i])
+                    and not re.match(r"^\s*\d+\.\s+", lines[i])
+                ):
                     para_lines.append(lines[i].strip())
                     i += 1
-                sections.append(ParsedSection(
-                    content=" ".join(para_lines),
-                    section_type="paragraph",
-                ))
+                sections.append(
+                    ParsedSection(
+                        content=" ".join(para_lines),
+                        section_type="paragraph",
+                    )
+                )
                 continue
 
             i += 1

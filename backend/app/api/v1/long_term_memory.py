@@ -29,36 +29,40 @@ def list_memories(
 ):
     service = LongTermMemoryService(db)
     if category:
-        return {"memories": [
-            {
-                "id": m.id,
-                "category": m.category,
-                "title": m.title,
-                "content": m.content,
-                "confidence": m.confidence,
-                "access_count": m.access_count,
-                "source": m.source,
-                "created_at": m.created_at.isoformat() if m.created_at else None,
-            }
-            for m in service.search(user.id, category=category)
-        ]}
+        return {
+            "memories": [
+                {
+                    "id": m.id,
+                    "category": m.category,
+                    "title": m.title,
+                    "content": m.content,
+                    "confidence": m.confidence,
+                    "access_count": m.access_count,
+                    "source": m.source,
+                    "created_at": m.created_at.isoformat() if m.created_at else None,
+                }
+                for m in service.search(user.id, category=category)
+            ]
+        }
     grouped = service.list_by_category(user.id)
-    return {"grouped": {
-        cat: [
-            {
-                "id": m.id,
-                "category": m.category,
-                "title": m.title,
-                "content": m.content,
-                "confidence": m.confidence,
-                "access_count": m.access_count,
-                "source": m.source,
-                "created_at": m.created_at.isoformat() if m.created_at else None,
-            }
-            for m in memories
-        ]
-        for cat, memories in grouped.items()
-    }}
+    return {
+        "grouped": {
+            cat: [
+                {
+                    "id": m.id,
+                    "category": m.category,
+                    "title": m.title,
+                    "content": m.content,
+                    "confidence": m.confidence,
+                    "access_count": m.access_count,
+                    "source": m.source,
+                    "created_at": m.created_at.isoformat() if m.created_at else None,
+                }
+                for m in memories
+            ]
+            for cat, memories in grouped.items()
+        }
+    }
 
 
 @router.get("/long-term-memory/stats")

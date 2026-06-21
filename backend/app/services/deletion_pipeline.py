@@ -103,11 +103,7 @@ class DeletionPipeline:
 
     def _remove_vectors(self, document_id: int) -> int:
         """Remove all vector embeddings for a document's chunks."""
-        chunks = (
-            self._db.query(DocumentChunk)
-            .filter(DocumentChunk.document_id == document_id)
-            .all()
-        )
+        chunks = self._db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).all()
 
         embedding_ids = [c.embedding_id for c in chunks if c.embedding_id]
         if not embedding_ids:
@@ -123,11 +119,7 @@ class DeletionPipeline:
 
     def _invalidate_embeddings(self, document_id: int) -> int:
         """Invalidate embedding cache entries for a document's chunks."""
-        chunks = (
-            self._db.query(DocumentChunk)
-            .filter(DocumentChunk.document_id == document_id)
-            .all()
-        )
+        chunks = self._db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).all()
 
         count = 0
         for chunk in chunks:
@@ -149,15 +141,10 @@ class DeletionPipeline:
         """Invalidate cache entries with no referencing chunks."""
         from backend.app.models.embedding_cache import EmbeddingCache
 
-        cached_hashes = {
-            row[0]
-            for row in self._db.query(EmbeddingCache.content_hash).all()
-        }
+        cached_hashes = {row[0] for row in self._db.query(EmbeddingCache.content_hash).all()}
         used_ids = {
             row[0]
-            for row in self._db.query(DocumentChunk.embedding_id)
-            .filter(DocumentChunk.embedding_id.isnot(None))
-            .all()
+            for row in self._db.query(DocumentChunk.embedding_id).filter(DocumentChunk.embedding_id.isnot(None)).all()
         }
 
         count = 0

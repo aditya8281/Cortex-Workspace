@@ -2,9 +2,11 @@ from collections.abc import Generator
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from backend.app.core.security import verify_access_token
+from backend.app.core.config import settings
+from backend.app.core.security import is_access_token_revoked, verify_access_token
 from backend.app.db.session import SessionLocal
 
 oauth2_scheme = HTTPBearer(auto_error=False)
@@ -47,6 +49,17 @@ async def get_current_user(
             detail="Token expired or invalid",
         )
 
+    try:
+        payload = jwt.decode(raw_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        jti = payload.get("jti")
+        if jti and await is_access_token_revoked(jti):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked",
+            )
+    except JWTError:
+        pass
+
     user = db.query(User).filter(User.id == int(user_id), User.deleted_at.is_(None)).first()
 
     if not user:
@@ -72,4 +85,11 @@ async def get_current_user_optional(
         user_id = verify_access_token(raw_token)
     except Exception:
         return None
+    try:
+        payload = jwt.decode(raw_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        jti = payload.get("jti")
+        if jti and await is_access_token_revoked(jti):
+            return None
+    except JWTError:
+        pass
     return db.query(User).filter(User.id == int(user_id), User.deleted_at.is_(None)).first()

@@ -44,10 +44,11 @@ const mockDelete = vi.fn();
 
 vi.mock("@/shared/api/client", () => ({
   api: {
-    get: (...args: any[]) => mockGet(...args),
-    post: (...args: any[]) => mockPost(...args),
-    delete: (...args: any[]) => mockDelete(...args),
+    get: (...args) => mockGet(...args),
+    post: (...args) => mockPost(...args),
+    delete: (...args) => mockDelete(...args),
   },
+  getCsrfToken: vi.fn(() => "test-csrf-token"),
 }));
 
 vi.mock("@/shared/ui/Dropdown", () => ({
@@ -89,6 +90,9 @@ vi.mock("@/shared/auth/cortexApi", () => ({
   apiListMemory: vi.fn().mockResolvedValue({ total: 0, entries: [], categories: {} }),
 }));
 
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockGet.mockImplementation((path: string) => {
@@ -102,6 +106,14 @@ beforeEach(() => {
       return Promise.resolve({ messages: [] });
     }
     return Promise.resolve({});
+  });
+  mockFetch.mockResolvedValue({
+    ok: true,
+    body: {
+      getReader: () => ({
+        read: async () => ({ done: true, value: undefined }),
+      }),
+    },
   });
 });
 
@@ -173,6 +185,110 @@ describe("Chat Page", () => {
     render(<ChatPage />);
     await waitFor(() => {
       expect(screen.getByText("Start a conversation with Cortex.")).toBeInTheDocument();
+    });
+  });
+
+  it("sends message on Enter key and calls fetch", async () => {
+    mockGet.mockImplementation((path: string) => {
+      if (path === "/api/v1/conversations") {
+        return Promise.resolve({
+          conversations: [{ id: 1, title: "Chat 1", repo_id: null, model_used: null, message_count: 0, total_tokens: 0, created_at: null, updated_at: null }],
+        });
+      }
+      if (path === "/api/v1/models") {
+        return Promise.resolve({ models: [] });
+      }
+      if (path.startsWith("/api/v1/conversations/")) {
+        return Promise.resolve({ messages: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    render(<ChatPage />);
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Ask Cortex anything...")).toBeInTheDocument();
+    });
+
+    const input = screen.getByPlaceholderText("Ask Cortex anything...");
+    fireEvent.change(input, { target: { value: "Hello Cortex" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/conversations/1/messages",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ content: "Hello Cortex" }),
+        })
+      );
+    });
+  });
+
+  it("sends message via Send button click", async () => {
+    mockGet.mockImplementation((path: string) => {
+      if (path === "/api/v1/conversations") {
+        return Promise.resolve({
+          conversations: [{ id: 1, title: "Chat 1", repo_id: null, model_used: null, message_count: 0, total_tokens: 0, created_at: null, updated_at: null }],
+        });
+      }
+      if (path === "/api/v1/models") {
+        return Promise.resolve({ models: [] });
+      }
+      if (path.startsWith("/api/v1/conversations/")) {
+        return Promise.resolve({ messages: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    render(<ChatPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Chat 1")).toBeInTheDocument();
+    });
+
+    const input = screen.getByPlaceholderText("Ask Cortex anything...");
+    fireEvent.change(input, { target: { value: "Test message" } });
+
+    const sendBtn = document.querySelector("button.bg-accent") as HTMLButtonElement;
+    fireEvent.click(sendBtn);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/conversations/1/messages",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ content: "Test message" }),
+        })
+      );
+    });
+  });
+
+  it("displays user message in conversation after sending", async () => {
+    mockGet.mockImplementation((path: string) => {
+      if (path === "/api/v1/conversations") {
+        return Promise.resolve({
+          conversations: [{ id: 1, title: "Chat 1", repo_id: null, model_used: null, message_count: 0, total_tokens: 0, created_at: null, updated_at: null }],
+        });
+      }
+      if (path === "/api/v1/models") {
+        return Promise.resolve({ models: [] });
+      }
+      if (path.startsWith("/api/v1/conversations/")) {
+        return Promise.resolve({ messages: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    render(<ChatPage />);
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Ask Cortex anything...")).toBeInTheDocument();
+    });
+
+    const input = screen.getByPlaceholderText("Ask Cortex anything...");
+    fireEvent.change(input, { target: { value: "Visible message" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Visible message")).toBeInTheDocument();
     });
   });
 });

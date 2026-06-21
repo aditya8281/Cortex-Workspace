@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from backend.app.auth import service as auth_service
 from backend.app.core.config import settings
 from backend.app.core.db import get_db
-from backend.app.core.security import verify_access_token
+from backend.app.core.security import revoke_access_token, verify_access_token
 from backend.app.models.user import User
 from backend.app.schemas.user import (
     MeUpdate,
@@ -136,6 +136,19 @@ async def logout(body: RefreshRequest, request: Request, response: Response, db:
     ip = request.client.host if request.client else None
     refresh_token = _get_refresh_token(request, body.refresh_token)
     await auth_service.logout_user(db, refresh_token, ip)
+
+    access_token = _get_token(request)
+    if access_token:
+        try:
+            from jose import jwt
+
+            payload = jwt.decode(access_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            jti = payload.get("jti")
+            if jti:
+                await revoke_access_token(jti, expires_in_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        except Exception:
+            pass
+
     _clear_auth_cookies(response)
     return {"message": "Logged out"}
 
@@ -241,7 +254,7 @@ async def delete_me(
 
 
 class RestoreAccountRequest(BaseModel):
-    password: str | None = None
+    password: str
 
 
 @router.post("/api/v1/auth/restore")
@@ -275,11 +288,10 @@ async def restore_account(
         if elapsed > grace_days:
             raise HTTPException(status_code=400, detail="Grace period has expired. Account cannot be restored.")
 
-    if body.password:
-        from backend.app.core.security import verify_password
+    from backend.app.core.security import verify_password
 
-        if not verify_password(body.password, user.hashed_password):
-            raise HTTPException(status_code=401, detail="Invalid password")
+    if not verify_password(body.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid password")
 
     from backend.app.services.user_service import restore_user
 

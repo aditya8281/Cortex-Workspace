@@ -93,17 +93,13 @@ class RAGPipeline:
     ) -> list[dict]:
         context = self.retrieve_context(user_message, repo_id)
 
-        history = self._conv_service.get_context_messages(
-            conversation_id, max_tokens=max_history_tokens
-        )
+        history = self._conv_service.get_context_messages(conversation_id, max_tokens=max_history_tokens)
 
         messages = []
 
         system_parts = ["You are Cortex, a helpful AI assistant with access to the user's codebase and knowledge."]
         if context.formatted_context:
-            system_parts.append(
-                f"Relevant context from the codebase:\n\n{context.formatted_context}"
-            )
+            system_parts.append(f"Relevant context from the codebase:\n\n{context.formatted_context}")
             system_parts.append(
                 "\nUse this context to answer the user's question. "
                 "Cite sources using [1], [2], etc. when referencing specific files."

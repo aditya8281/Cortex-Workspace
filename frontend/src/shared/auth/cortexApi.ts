@@ -256,17 +256,21 @@ export async function apiVaultUploadFile(
   const fd = new FormData();
   fd.append("file", file);
   const uploadUrl = `${getBase()}/api/v1/me/vault/files/upload?folder=${encodeURIComponent(folder)}`;
+  const csrfToken = getCsrfToken();
   let res = await fetch(uploadUrl, {
     method: "POST",
     credentials: "include",
+    headers: csrfToken ? { "x-csrf-token": csrfToken } : {},
     body: fd,
   });
   if (res.status === 401) {
     const refreshed = await tryRefresh();
     if (refreshed) {
+      const retryCsrf = getCsrfToken();
       res = await fetch(uploadUrl, {
         method: "POST",
         credentials: "include",
+        headers: retryCsrf ? { "x-csrf-token": retryCsrf } : {},
         body: fd,
       });
     }
@@ -447,18 +451,24 @@ export async function apiDeleteAccount(
   password: string
 ): Promise<{ message: string }> {
   const url = `${getBase()}/api/v1/auth/me`;
+  const csrfToken = getCsrfToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (csrfToken) headers["x-csrf-token"] = csrfToken;
   let res = await fetch(url, {
     method: "DELETE",
-    headers: { "Content-Type": "application/json" },
+    headers,
     credentials: "include",
     body: JSON.stringify({ password }),
   });
   if (res.status === 401) {
     const refreshed = await tryRefresh();
     if (refreshed) {
+      const retryCsrf = getCsrfToken();
+      const retryHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (retryCsrf) retryHeaders["x-csrf-token"] = retryCsrf;
       res = await fetch(url, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: retryHeaders,
         credentials: "include",
         body: JSON.stringify({ password }),
       });

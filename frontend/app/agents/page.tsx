@@ -10,6 +10,7 @@ import { CollapsiblePanel } from "../../src/shared/ui/CollapsiblePanel";
 import type { Agent, AgentRun } from "../../src/shared/types";
 import { agentApi } from "../../src/shared/api/agent";
 import { useAuth } from "../../src/shared/auth/AuthProvider";
+import { toast } from "sonner";
 import { cn } from "../../src/lib/utils";
 import AgentChat from "./AgentChat";
 import AgentEditor from "./AgentEditor";
@@ -98,8 +99,9 @@ export default function AgentsPage() {
       await agentApi.delete(agentId);
       setAgents((prev) => prev.filter((a) => a.id !== agentId));
       if (selectedAgent?.id === agentId) setSelectedAgent(null);
-    } catch {
-      // silently fail
+    } catch (err) {
+      toast.error("Failed to delete agent");
+      console.error(err);
     }
   }
 

@@ -42,27 +42,18 @@ def get_notifications(
     """Return (notifications, total, unread_count)."""
     query = db.query(Notification).filter(Notification.user_id == user_id)
     if unread_only:
-        query = query.filter(Notification.read == False)
+        query = query.filter(not Notification.read)
 
     total = db.query(Notification).filter(Notification.user_id == user_id).count()
-    unread_count = db.query(Notification).filter(
-        Notification.user_id == user_id, Notification.read == False
-    ).count()
+    unread_count = db.query(Notification).filter(Notification.user_id == user_id, not Notification.read).count()
 
-    notifications = (
-        query.order_by(Notification.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-        .all()
-    )
+    notifications = query.order_by(Notification.created_at.desc()).offset(offset).limit(limit).all()
     return notifications, total, unread_count
 
 
 def mark_read(db: Session, notification_id: int, user_id: int) -> bool:
     """Mark a single notification as read. Returns True if found."""
-    notif = db.query(Notification).filter(
-        Notification.id == notification_id, Notification.user_id == user_id
-    ).first()
+    notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user_id).first()
     if not notif:
         return False
     notif.read = True
@@ -72,20 +63,14 @@ def mark_read(db: Session, notification_id: int, user_id: int) -> bool:
 
 def mark_all_read(db: Session, user_id: int) -> int:
     """Mark all unread notifications as read. Returns count updated."""
-    count = (
-        db.query(Notification)
-        .filter(Notification.user_id == user_id, Notification.read == False)
-        .update({"read": True})
-    )
+    count = db.query(Notification).filter(Notification.user_id == user_id, not Notification.read).update({"read": True})
     db.commit()
     return count
 
 
 def delete_notification(db: Session, notification_id: int, user_id: int) -> bool:
     """Delete a notification. Returns True if found."""
-    notif = db.query(Notification).filter(
-        Notification.id == notification_id, Notification.user_id == user_id
-    ).first()
+    notif = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user_id).first()
     if not notif:
         return False
     db.delete(notif)

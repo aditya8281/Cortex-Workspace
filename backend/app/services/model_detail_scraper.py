@@ -188,7 +188,9 @@ class ModelDetailScraper:
 
     def _extract_context_length(self, soup: BeautifulSoup) -> int | None:
         text = soup.get_text()
-        match = re.search(r"(?:context|ctx)\s*(?:length|window|size)?\s*[:=]?\s*([\d,]+)\s*(?:tokens?)?", text, re.IGNORECASE)
+        match = re.search(
+            r"(?:context|ctx)\s*(?:length|window|size)?\s*[:=]?\s*([\d,]+)\s*(?:tokens?)?", text, re.IGNORECASE
+        )
         if match:
             try:
                 return int(match.group(1).replace(",", ""))

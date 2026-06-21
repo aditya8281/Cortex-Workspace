@@ -120,7 +120,7 @@ async def list_models(
     }
 
 
-@router.get("/models/recommended")
+@router.get("/models/recommended", response_model=None)
 async def recommended_models(
     workload: str | None = None,
     current_user: User = Depends(get_current_user),
@@ -463,6 +463,7 @@ async def check_model_updates(
 
     try:
         import httpx
+
         async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=5.0) as client:
             resp = await client.get("/api/tags")
             resp.raise_for_status()
@@ -476,31 +477,33 @@ async def check_model_updates(
         installed_version = tag.split(":")[1] if ":" in tag else "latest"
 
         # Look up in catalogue
-        catalog_entry = db.execute(
-            select(ModelCatalog).where(ModelCatalog.model_id == base_name)
-        ).scalar_one_or_none()
+        catalog_entry = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == base_name)).scalar_one_or_none()
 
         if not catalog_entry:
             # Model not in catalogue — might be new
-            updates.append(ModelUpdate(
-                model_id=base_name,
-                display_name=base_name.replace("-", " ").title(),
-                installed_version=installed_version,
-                available_version=None,
-                update_type="new",
-            ))
+            updates.append(
+                ModelUpdate(
+                    model_id=base_name,
+                    display_name=base_name.replace("-", " ").title(),
+                    installed_version=installed_version,
+                    available_version=None,
+                    update_type="new",
+                )
+            )
             continue
 
         # Compare versions
         catalog_version = catalog_entry.version
         if catalog_version and installed_version != catalog_version and installed_version != "latest":
-            updates.append(ModelUpdate(
-                model_id=base_name,
-                display_name=catalog_entry.display_name,
-                installed_version=installed_version,
-                available_version=catalog_version,
-                update_type="version",
-            ))
+            updates.append(
+                ModelUpdate(
+                    model_id=base_name,
+                    display_name=catalog_entry.display_name,
+                    installed_version=installed_version,
+                    available_version=catalog_version,
+                    update_type="version",
+                )
+            )
 
     return {"updates": updates}
 
@@ -620,17 +623,19 @@ async def get_download_history(
     history = []
     for rec in records:
         if rec.status.value in ("completed", "failed", "cancelled"):
-            history.append({
-                "job_id": rec.download_id,
-                "model_id": rec.model_name,
-                "status": rec.status.value,
-                "progress": rec.progress if rec.status.value != "completed" else 1.0,
-                "downloaded_bytes": rec.bytes_downloaded,
-                "total_bytes": rec.total_bytes,
-                "error": rec.error_message,
-                "completed_at": rec.completed_at,
-                "created_at": rec.created_at,
-            })
+            history.append(
+                {
+                    "job_id": rec.download_id,
+                    "model_id": rec.model_name,
+                    "status": rec.status.value,
+                    "progress": rec.progress if rec.status.value != "completed" else 1.0,
+                    "downloaded_bytes": rec.bytes_downloaded,
+                    "total_bytes": rec.total_bytes,
+                    "error": rec.error_message,
+                    "completed_at": rec.completed_at,
+                    "created_at": rec.created_at,
+                }
+            )
 
     # Sort by completed_at descending
     history.sort(key=lambda x: x.get("completed_at") or 0, reverse=True)

@@ -5,6 +5,7 @@ import { RefreshCw, Check, Loader2, Settings, X, ChevronDown, FolderSync, Folder
 import { api } from "@/shared/api/client";
 import { syncApi } from "@/shared/api/sync";
 import type { SyncDefaultPath, EmbeddingModelOption } from "@/shared/api/sync";
+import Button from "@/shared/ui/Button";
 import { cn } from "../../lib/utils";
 
 interface WatchedPath {
@@ -432,41 +433,6 @@ function SyncSettingsModal({
         )}
       </div>
     </div>
-  );
-}
-
-function Button({
-  variant = "secondary",
-  size = "sm",
-  loading = false,
-  className = "",
-  children,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost";
-  size?: "sm" | "md";
-  loading?: boolean;
-}) {
-  return (
-    <button
-      className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-all",
-        "focus:outline-none focus:ring-2 focus:ring-accent/50",
-        {
-          "bg-accent text-white hover:bg-accent/90": variant === "primary",
-          "bg-bg-surface border border-border-subtle text-text hover:border-accent": variant === "secondary",
-          "text-text-muted hover:text-text hover:bg-bg-hover": variant === "ghost",
-          "px-3 py-1.5 text-xs": size === "sm",
-          "px-4 py-2 text-sm": size === "md",
-        },
-        className
-      )}
-      disabled={loading}
-      {...props}
-    >
-      {loading && <Loader2 size={12} className="animate-spin" />}
-      {children}
-    </button>
   );
 }
 

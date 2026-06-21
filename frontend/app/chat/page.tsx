@@ -8,7 +8,8 @@ import DashboardShell from "@/shared/layout/DashboardShell";
 import Card from "@/shared/ui/Card";
 import Dropdown, { DropdownItem } from "@/shared/ui/Dropdown";
 import { useAuth } from "@/shared/auth/AuthProvider";
-import { api } from "@/shared/api/client";
+import { api, getCsrfToken } from "@/shared/api/client";
+import { toast } from "sonner";
 import type { Conversation } from "@/shared/types";
 import { MarkdownRenderer } from "@/shared/components/MarkdownRenderer";
 
@@ -58,6 +59,9 @@ export default function ChatPage() {
       if (data.conversations.length > 0 && !activeId) {
         setActiveId(data.conversations[0].id);
       }
+    }).catch((err) => {
+      console.error("Failed to load conversations:", err);
+      toast.error("Failed to load conversations");
     });
   }, [user]);
 
@@ -65,6 +69,9 @@ export default function ChatPage() {
     if (!activeId) return;
     api.get<{ messages: Message[] }>(`/api/v1/conversations/${activeId}`).then((data) => {
       setMessages(data.messages);
+    }).catch((err) => {
+      console.error("Failed to load messages:", err);
+      toast.error("Failed to load messages");
     });
   }, [activeId]);
 
@@ -113,10 +120,15 @@ export default function ChatPage() {
     setStreamingContent("");
 
     try {
+      const csrfToken = getCsrfToken();
       const res = await fetch(`/api/v1/conversations/${activeId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
+        },
         body: JSON.stringify({ content: userMsg.content, model: selectedModel || undefined }),
+        credentials: "include",
         signal: abortRef.current?.signal,
       });
 

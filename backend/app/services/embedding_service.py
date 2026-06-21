@@ -114,16 +114,18 @@ class EmbeddingService:
         except RuntimeError:
             loop = None
         if loop and loop.is_running():
-            raise RuntimeError("Cannot call async Ollama from running event loop")
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, coro)
+                return future.result()
         return asyncio.run(coro)
 
     async def _embed_via_ollama(self, texts: list[str]) -> list[list[float]]:
         import httpx
 
         vectors = []
-        async with httpx.AsyncClient(
-            base_url=settings.OLLAMA_BASE_URL, timeout=30.0
-        ) as client:
+        async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=30.0) as client:
             for text in texts:
                 resp = await client.post(
                     "/api/embeddings",
@@ -137,7 +139,19 @@ class EmbeddingService:
         return vectors
 
     def _tokenize(self, text: str) -> dict[str, Any]:
-        return {"input_ids": [[0]], "attention_mask": [[1]]}
+        """Tokenize text for ONNX model. Raises RuntimeError if tokenizer not loaded."""
+        if self._tokenizer is None:
+            try:
+                from transformers import AutoTokenizer  # type: ignore
+
+                self._tokenizer = AutoTokenizer.from_pretrained("nomic-ai/nomic-embed-text-v1", trust_remote_code=True)
+            except ImportError:
+                raise RuntimeError("transformers not installed. Install with: pip install transformers")
+            except Exception as e:
+                raise RuntimeError(f"Failed to load tokenizer: {e}")
+
+        encoded = self._tokenizer(text, return_tensors="np", padding=True, truncation=True, max_length=512)
+        return {k: v.tolist() for k, v in encoded.items()}
 
     def _mock_embed(self, text: str) -> list[float]:
         import hashlib
@@ -175,6 +189,7 @@ class EmbeddingService:
             return "onnx-nomic-embed-text"
         elif self._backend == "ollama":
             from backend.app.core.config import settings
+
             return settings.EMBEDDING_MODEL_NAME
         return "mock-embedding"
 

@@ -51,7 +51,10 @@ class RetrievalMetrics:
 
         logger.info(
             "Search: %d results in %.1fms (sources=%s, top_score=%.3f)",
-            result_count, latency_ms, sources_used, top_score,
+            result_count,
+            latency_ms,
+            sources_used,
+            top_score,
         )
 
     def get_stats(self) -> dict:

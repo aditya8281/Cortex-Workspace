@@ -60,11 +60,7 @@ class CrossFileSearch:
             # Find corresponding graph node
             node = None
             if chunk_id:
-                node = (
-                    self.db.query(GraphNode)
-                    .filter(GraphNode.chunk_id == chunk_id)
-                    .first()
-                )
+                node = self.db.query(GraphNode).filter(GraphNode.chunk_id == chunk_id).first()
 
             # Filter by node_type if specified
             if node_type and node and node.node_type != node_type:
@@ -108,34 +104,21 @@ class CrossFileSearch:
 
     def _get_graph_context(self, node_id: int) -> dict:
         """Get graph relationships for a node."""
-        outgoing = (
-            self.db.query(GraphEdge).filter(GraphEdge.source_id == node_id).all()
-        )
-        incoming = (
-            self.db.query(GraphEdge).filter(GraphEdge.target_id == node_id).all()
-        )
+        outgoing = self.db.query(GraphEdge).filter(GraphEdge.source_id == node_id).all()
+        incoming = self.db.query(GraphEdge).filter(GraphEdge.target_id == node_id).all()
 
         return {
-            "calls": [
-                e.target.name for e in outgoing if e.edge_type == "calls"
-            ],
-            "called_by": [
-                e.source.name for e in incoming if e.edge_type == "calls"
-            ],
-            "imports": [
-                e.target.name for e in outgoing if e.edge_type == "imports"
-            ],
-            "inherits": [
-                e.target.name for e in outgoing if e.edge_type == "inherits"
-            ],
-            "contains": [
-                e.target.name for e in outgoing if e.edge_type == "contains"
-            ],
+            "calls": [e.target.name for e in outgoing if e.edge_type == "calls"],
+            "called_by": [e.source.name for e in incoming if e.edge_type == "calls"],
+            "imports": [e.target.name for e in outgoing if e.edge_type == "imports"],
+            "inherits": [e.target.name for e in outgoing if e.edge_type == "inherits"],
+            "contains": [e.target.name for e in outgoing if e.edge_type == "contains"],
         }
 
     async def hybrid_search(self, query: str, repo_id: int | None = None, max_results: int = 20):
         """Use hybrid retrieval for better results."""
         from backend.app.services.hybrid_retrieval import HybridRetrievalV2 as HybridRetrieval
+
         retrieval = HybridRetrieval(self.db)
         return await retrieval.retrieve(query, repo_id, max_results)
 
@@ -153,9 +136,7 @@ class CrossFileSearch:
 
         edges = (
             self.db.query(GraphEdge)
-            .filter(
-                (GraphEdge.source_id.in_(node_ids)) | (GraphEdge.target_id.in_(node_ids))
-            )
+            .filter((GraphEdge.source_id.in_(node_ids)) | (GraphEdge.target_id.in_(node_ids)))
             .all()
         )
 

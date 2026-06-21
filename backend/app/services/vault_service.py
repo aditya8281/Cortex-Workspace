@@ -684,6 +684,11 @@ def export_vault_items(db: Session, user_id: int, paths: list[str], destination_
     from pathlib import Path
 
     dest_path = Path(os.path.expanduser(destination_dir)).resolve()
+
+    home_dir = os.path.expanduser("~")
+    if not str(dest_path).startswith(home_dir):
+        raise HTTPException(status_code=400, detail="Export destination must be within home directory")
+
     if not dest_path.exists() or not dest_path.is_dir():
         raise HTTPException(
             status_code=400, detail=f"Destination directory '{destination_dir}' does not exist or is not a directory."

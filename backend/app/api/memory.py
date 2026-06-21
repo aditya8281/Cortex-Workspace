@@ -25,9 +25,7 @@ class MemoryCreatePayload(BaseModel):
 
     def model_post_init(self, __context: object) -> None:
         if self.category not in VALID_CATEGORIES:
-            raise ValueError(
-                f"Invalid category: {self.category}. Must be one of {VALID_CATEGORIES}"
-            )
+            raise ValueError(f"Invalid category: {self.category}. Must be one of {VALID_CATEGORIES}")
 
 
 class MemoryUpdatePayload(BaseModel):
@@ -39,9 +37,7 @@ class MemoryUpdatePayload(BaseModel):
 
     def model_post_init(self, __context: object) -> None:
         if self.category is not None and self.category not in VALID_CATEGORIES:
-            raise ValueError(
-                f"Invalid category: {self.category}. Must be one of {VALID_CATEGORIES}"
-            )
+            raise ValueError(f"Invalid category: {self.category}. Must be one of {VALID_CATEGORIES}")
 
 
 class MemorySearchPayload(BaseModel):

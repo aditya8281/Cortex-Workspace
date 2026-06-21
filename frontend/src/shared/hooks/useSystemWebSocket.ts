@@ -43,6 +43,7 @@ export function useSystemWebSocket({
   const onMessageRef = useRef(onMessage);
   const onStatusChangeRef = useRef(onStatusChange);
   const pathRef = useRef(path);
+  const backendUrlRef = useRef<string | null>(null);
 
   // Keep refs in sync without re-triggering the effect
   onMessageRef.current = onMessage;
@@ -71,11 +72,14 @@ export function useSystemWebSocket({
     setConnectionStatus("connecting");
 
     try {
-      const res = await fetch("/api/env");
-      const { wsUrl } = await res.json();
+      if (!backendUrlRef.current) {
+        const res = await fetch("/api/env");
+        const { wsUrl } = await res.json();
+        backendUrlRef.current = wsUrl;
+      }
       if (cancelledRef.current) return;
 
-      const ws = new WebSocket(`${wsUrl}${pathRef.current}`);
+      const ws = new WebSocket(`${backendUrlRef.current}${pathRef.current}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -131,8 +135,12 @@ export function useSystemWebSocket({
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
-      wsRef.current?.close();
-      wsRef.current = null;
+      if (wsRef.current) {
+        if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+          wsRef.current.close();
+        }
+        wsRef.current = null;
+      }
       setConnectionStatus("disconnected");
     };
   }, [enabled, connect, setConnectionStatus]);

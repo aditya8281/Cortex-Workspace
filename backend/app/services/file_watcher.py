@@ -63,6 +63,7 @@ class FileWatcher:
     def watch(self, repo_path: str, repo_id: int, embedding_model: str | None = None) -> None:
         """Start watching a directory. Takes initial mtime snapshot."""
         from backend.app.core.config import settings
+
         self._watched[repo_path] = {
             "repo_id": repo_id,
             "embedding_model": embedding_model or settings.EMBEDDING_MODEL_NAME,
@@ -71,7 +72,12 @@ class FileWatcher:
         self._snapshots[repo_path] = self._take_snapshot(repo_path)
         self._sync_state["watching"] = len(self._watched)
         self._sync_state["status"] = "watching"
-        logger.info("Watching %s for changes (repo %d, embedding: %s)", repo_path, repo_id, self._watched[repo_path]["embedding_model"])
+        logger.info(
+            "Watching %s for changes (repo %d, embedding: %s)",
+            repo_path,
+            repo_id,
+            self._watched[repo_path]["embedding_model"],
+        )
 
     def unwatch(self, repo_path: str) -> None:
         """Stop watching a directory."""
@@ -85,6 +91,7 @@ class FileWatcher:
     def _take_snapshot(self, repo_path: str) -> dict[str, float]:
         """Build a {filepath: mtime} snapshot, respecting SKIP_DIRS."""
         from backend.app.services.chunker import SKIP_DIRS
+
         snapshot: dict[str, float] = {}
         for root, dirs, files in os.walk(repo_path):
             dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
@@ -183,6 +190,7 @@ class FileWatcher:
                 self.add_job(job)
 
                 from backend.app.tasks.worker import enqueue_task
+
                 await enqueue_task("index_repo_task", config["repo_id"])
 
                 # Mark job as completed
@@ -219,14 +227,16 @@ class FileWatcher:
         watched_info = []
         for path, config in self._watched.items():
             initial_job = self.get_initial_scan_job(path)
-            watched_info.append({
-                "path": path,
-                "repo_id": config.get("repo_id"),
-                "embedding_model": config.get("embedding_model"),
-                "sync_enabled": config.get("sync_enabled", True),
-                "initial_scan_job_id": initial_job.job_id if initial_job else None,
-                "initial_scan_status": initial_job.status if initial_job else None,
-            })
+            watched_info.append(
+                {
+                    "path": path,
+                    "repo_id": config.get("repo_id"),
+                    "embedding_model": config.get("embedding_model"),
+                    "sync_enabled": config.get("sync_enabled", True),
+                    "initial_scan_job_id": initial_job.job_id if initial_job else None,
+                    "initial_scan_status": initial_job.status if initial_job else None,
+                }
+            )
         return {
             **dict(self._sync_state),
             "watched_paths": watched_info,
@@ -253,7 +263,15 @@ class FileWatcher:
             return self._jobs.get(job_id)
         return None
 
-    def update_job_status(self, job_id: str, status: str, progress: int = 0, total: int | None = None, result: dict[str, Any] | None = None, error: str | None = None) -> None:
+    def update_job_status(
+        self,
+        job_id: str,
+        status: str,
+        progress: int = 0,
+        total: int | None = None,
+        result: dict[str, Any] | None = None,
+        error: str | None = None,
+    ) -> None:
         job = self._jobs.get(job_id)
         if job:
             job.status = status

@@ -438,7 +438,9 @@ export interface HardwareInfo {
 
 export interface ModelListResponse {
   models: ModelInfo[];
-  available_from_providers: string[];
+  total_count: number;
+  downloaded_count: number;
+  available_from_providers: { name: string; size_bytes: number; context_length: number; capabilities: string[] }[];
   type_counts: Record<string, number>;
   size_counts: Record<string, number>;
 }
@@ -454,9 +456,10 @@ export interface DownloadProgressResponse {
 }
 
 export interface DownloadResult {
-  status: "started" | "already_downloading" | "already_downloaded";
+  status: string;
   model: string;
-  download_id?: string;
+  variant: string | null;
+  download_id: string | null;
 }
 
 // ── Enhanced Models ──────────────────────────────────────────────
@@ -500,7 +503,7 @@ export interface ModelRecommendation {
   model_id: string;
   display_name: string;
   family: string;
-  parameter_count: number;
+  parameter_count: string;
   capabilities: string[];
   description: string;
   score: number;
@@ -515,7 +518,7 @@ export interface ModelRecommendation {
     why: string;
     tradeoff: string;
     suitability: string;
-  };
+  } | null;
 }
 
 export interface WorkloadRecommendations {
@@ -603,7 +606,7 @@ export interface ModelVariantInfo {
 
 export interface ModelSearchResult {
   models: ModelInfo[];
-  count: number;
+  total_count: number;
 }
 
 export interface DimensionComparison {
@@ -659,9 +662,9 @@ export type UserSettings = ModelSettings;
 export interface ModelUpdate {
   model_id: string;
   display_name: string;
-  current_version: string;
-  available_version: string;
-  update_size_gb: number;
+  installed_version: string | null;
+  available_version: string | null;
+  update_type: string;
 }
 
 export interface ModelUpdatesResponse {

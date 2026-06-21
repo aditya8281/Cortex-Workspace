@@ -13,8 +13,23 @@ from backend.app.services.file_watcher_v2 import FileChange, FileWatcherV2, get_
 logger = logging.getLogger(__name__)
 
 CODE_EXTENSIONS = {
-    ".py", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go", ".java",
-    ".c", ".cpp", ".h", ".rb", ".php", ".swift", ".kt", ".sql", ".sh",
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".rs",
+    ".go",
+    ".java",
+    ".c",
+    ".cpp",
+    ".h",
+    ".rb",
+    ".php",
+    ".swift",
+    ".kt",
+    ".sql",
+    ".sh",
 }
 
 
@@ -51,7 +66,21 @@ class IndexingOrchestrator:
             logger.debug("Code change (deferred to existing pipeline): %s", change.path)
             return
 
-        if ext not in {".md", ".markdown", ".rst", ".txt", ".log", ".ipynb", ".json", ".yaml", ".yml", ".toml", ".xml", ".html", ".css"}:
+        if ext not in {
+            ".md",
+            ".markdown",
+            ".rst",
+            ".txt",
+            ".log",
+            ".ipynb",
+            ".json",
+            ".yaml",
+            ".yml",
+            ".toml",
+            ".xml",
+            ".html",
+            ".css",
+        }:
             return
 
         if change.event_type == "deleted":

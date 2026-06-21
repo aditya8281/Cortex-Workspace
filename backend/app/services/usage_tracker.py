@@ -30,11 +30,7 @@ class UsageTracker:
         """Record a model usage event."""
         try:
             tps = (tokens_completion / (duration_ms / 1000)) if duration_ms > 0 else 0
-            prompt_tps = (
-                (tokens_prompt / (duration_ms / 1000))
-                if duration_ms > 0 and tokens_prompt > 0
-                else 0
-            )
+            prompt_tps = (tokens_prompt / (duration_ms / 1000)) if duration_ms > 0 and tokens_prompt > 0 else 0
 
             usage = ModelUsage(
                 model_variant_id=None,
@@ -57,18 +53,9 @@ class UsageTracker:
         from sqlalchemy import func, select
 
         total = self.db.execute(select(func.count(ModelUsage.id))).scalar() or 0
-        avg_tps = (
-            self.db.execute(select(func.avg(ModelUsage.tps_generation))).scalar() or 0
-        )
+        avg_tps = self.db.execute(select(func.avg(ModelUsage.tps_generation))).scalar() or 0
         total_tokens = (
-            self.db.execute(
-                select(
-                    func.sum(
-                        ModelUsage.tokens_prompt + ModelUsage.tokens_completion
-                    )
-                )
-            ).scalar()
-            or 0
+            self.db.execute(select(func.sum(ModelUsage.tokens_prompt + ModelUsage.tokens_completion))).scalar() or 0
         )
 
         return {

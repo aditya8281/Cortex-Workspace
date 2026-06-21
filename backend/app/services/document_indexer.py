@@ -1,9 +1,15 @@
-"""Document indexer — indexes non-code files into Document + DocumentChunk models."""
+"""Document indexer — indexes non-code files into Document + DocumentChunk models.
+
+Enhanced with proper MIME type detection via Python's mimetypes module, encoding
+detection using chardet (when available), and MIME-to-DocumentType mapping.
+Inspired by sist2's file handling approach.
+"""
 
 from __future__ import annotations
 
 import hashlib
 import logging
+import mimetypes
 import os
 from pathlib import Path
 
@@ -13,7 +19,23 @@ from backend.app.core.vector_db import VectorDB, get_vector_db
 from backend.app.models.document import Document, DocumentChunk, DocumentType
 from backend.app.services.embedding_cache import EmbeddingCacheService, get_embedding_cache
 from backend.app.services.embedding_service import EmbeddingService, get_embedding_service
-from backend.app.services.parsers import MarkdownParser, NotebookParser, PDFParser
+from backend.app.services.parsers import (
+    ArchiveParser,
+    DocxParser,
+    EPUBParser,
+    FontParser,
+    GISParser,
+    HTMLParser,
+    ICalParser,
+    MarkdownParser,
+    MediaParser,
+    NotebookParser,
+    OpenDocumentParser,
+    PDFParser,
+    PptxParser,
+    VCardParser,
+    XlsxParser,
+)
 from backend.app.services.semantic_chunker import SemanticChunker
 
 logger = logging.getLogger(__name__)
@@ -24,8 +46,23 @@ _PARSERS: dict[DocumentType, object] = {
     DocumentType.PDF: PDFParser(),
     DocumentType.MARKDOWN: MarkdownParser(),
     DocumentType.NOTEBOOK: NotebookParser(),
+    DocumentType.DOCX: DocxParser(),
+    DocumentType.EPUB: EPUBParser(),
+    DocumentType.HTML: HTMLParser(),
+    DocumentType.PPTX: PptxParser(),
+    DocumentType.XLSX: XlsxParser(),
+    DocumentType.OPENDOCUMENT: OpenDocumentParser(),
+    DocumentType.VCARD: VCardParser(),
+    DocumentType.ICAL: ICalParser(),
+    DocumentType.ARCHIVE: ArchiveParser(),
+    DocumentType.IMAGE: MediaParser(),
+    DocumentType.AUDIO: MediaParser(),
+    DocumentType.VIDEO: MediaParser(),
+    DocumentType.FONT: FontParser(),
+    DocumentType.GIS: GISParser(),
 }
 
+# Extension-based fallback map (used when mimetypes module can't resolve).
 DOC_TYPE_MAP: dict[str, DocumentType] = {
     ".md": DocumentType.MARKDOWN,
     ".markdown": DocumentType.MARKDOWN,
@@ -34,20 +71,122 @@ DOC_TYPE_MAP: dict[str, DocumentType] = {
     ".log": DocumentType.TEXT,
     ".csv": DocumentType.TEXT,
     ".json": DocumentType.TEXT,
+    ".jsonl": DocumentType.TEXT,
+    ".ndjson": DocumentType.TEXT,
     ".yaml": DocumentType.TEXT,
     ".yml": DocumentType.TEXT,
     ".toml": DocumentType.TEXT,
     ".xml": DocumentType.TEXT,
-    ".html": DocumentType.TEXT,
     ".css": DocumentType.TEXT,
     ".ipynb": DocumentType.NOTEBOOK,
     ".pdf": DocumentType.PDF,
+    ".docx": DocumentType.DOCX,
+    ".epub": DocumentType.EPUB,
+    ".html": DocumentType.HTML,
+    ".htm": DocumentType.HTML,
+    ".pptx": DocumentType.PPTX,
+    ".xlsx": DocumentType.XLSX,
+    ".odt": DocumentType.OPENDOCUMENT,
+    ".ods": DocumentType.OPENDOCUMENT,
+    ".odp": DocumentType.OPENDOCUMENT,
+    ".vcf": DocumentType.VCARD,
+    ".ics": DocumentType.ICAL,
+    ".zip": DocumentType.ARCHIVE,
+    ".tar": DocumentType.ARCHIVE,
+    ".gz": DocumentType.ARCHIVE,
+    ".bz2": DocumentType.ARCHIVE,
+    ".7z": DocumentType.ARCHIVE,
+    ".rar": DocumentType.ARCHIVE,
+    ".jpg": DocumentType.IMAGE,
+    ".jpeg": DocumentType.IMAGE,
+    ".png": DocumentType.IMAGE,
+    ".gif": DocumentType.IMAGE,
+    ".bmp": DocumentType.IMAGE,
+    ".tiff": DocumentType.IMAGE,
+    ".webp": DocumentType.IMAGE,
+    ".svg": DocumentType.IMAGE,
+    ".mp3": DocumentType.AUDIO,
+    ".wav": DocumentType.AUDIO,
+    ".flac": DocumentType.AUDIO,
+    ".ogg": DocumentType.AUDIO,
+    ".m4a": DocumentType.AUDIO,
+    ".wma": DocumentType.AUDIO,
+    ".mp4": DocumentType.VIDEO,
+    ".mkv": DocumentType.VIDEO,
+    ".avi": DocumentType.VIDEO,
+    ".mov": DocumentType.VIDEO,
+    ".wmv": DocumentType.VIDEO,
+    ".webm": DocumentType.VIDEO,
+    ".ttf": DocumentType.FONT,
+    ".otf": DocumentType.FONT,
+    ".woff": DocumentType.FONT,
+    ".woff2": DocumentType.FONT,
+    ".sh": DocumentType.CODE,
+    ".py": DocumentType.CODE,
+    ".js": DocumentType.CODE,
+    ".ts": DocumentType.CODE,
+    ".go": DocumentType.CODE,
+    ".rs": DocumentType.CODE,
+    ".java": DocumentType.CODE,
+    ".c": DocumentType.CODE,
+    ".cpp": DocumentType.CODE,
+    ".h": DocumentType.CODE,
+    ".geojson": DocumentType.GIS,
+    ".kml": DocumentType.GIS,
+    ".gpx": DocumentType.GIS,
+}
+
+# MIME type -> DocumentType mapping for when mimetypes detects a MIME type
+# that doesn't directly correspond to an extension in DOC_TYPE_MAP.
+MIME_TYPE_MAP: dict[str, DocumentType] = {
+    "text/markdown": DocumentType.MARKDOWN,
+    "text/x-markdown": DocumentType.MARKDOWN,
+    "text/x-rst": DocumentType.MARKDOWN,
+    "text/plain": DocumentType.TEXT,
+    "text/csv": DocumentType.TEXT,
+    "text/json": DocumentType.TEXT,
+    "application/json": DocumentType.TEXT,
+    "application/x-yaml": DocumentType.TEXT,
+    "text/yaml": DocumentType.TEXT,
+    "text/toml": DocumentType.TEXT,
+    "application/xml": DocumentType.TEXT,
+    "text/xml": DocumentType.TEXT,
+    "text/html": DocumentType.HTML,
+    "text/css": DocumentType.TEXT,
+    "application/x-ipynb+json": DocumentType.NOTEBOOK,
+    "application/pdf": DocumentType.PDF,
+    # Code-like text files that may end up in document indexing
+    "text/x-python": DocumentType.CODE,
+    "text/x-javascript": DocumentType.CODE,
+    "text/x-typescript": DocumentType.CODE,
+    "text/x-c": DocumentType.CODE,
+    "text/x-c++": DocumentType.CODE,
+    "text/x-java": DocumentType.CODE,
+    "text/x-go": DocumentType.CODE,
+    "text/x-rust": DocumentType.CODE,
+    "text/x-shellscript": DocumentType.CODE,
 }
 
 SKIP_DIRS: set[str] = {
-    ".git", "node_modules", "__pycache__", "venv", ".venv",
-    "dist", "build", ".next", "target", ".cache",
+    ".git",
+    "node_modules",
+    "__pycache__",
+    "venv",
+    ".venv",
+    "dist",
+    "build",
+    ".next",
+    "target",
+    ".cache",
 }
+
+# chardet availability
+try:
+    import chardet  # type: ignore[import-untyped]
+
+    _CHARDET_AVAILABLE = True
+except ImportError:
+    _CHARDET_AVAILABLE = False
 
 
 def _file_hash(path: str) -> str:
@@ -58,9 +197,60 @@ def _file_hash(path: str) -> str:
     return h.hexdigest()[:32]
 
 
+def _detect_encoding(file_path: str) -> str:
+    """Detect file encoding using chardet if available, else default to utf-8."""
+    if not _CHARDET_AVAILABLE:
+        return "utf-8"
+
+    try:
+        with open(file_path, "rb") as f:
+            raw = f.read(min(os.path.getsize(file_path), 1024 * 1024))
+        result = chardet.detect(raw)
+        encoding = result.get("encoding") or "utf-8"
+        confidence = result.get("confidence", 0)
+
+        # Low-confidence detections are unreliable; fall back to utf-8.
+        if confidence < 0.6:
+            logger.debug(
+                "Low-confidence encoding detection (%s, %.0f%%) for %s, using utf-8",
+                encoding,
+                confidence * 100,
+                file_path,
+            )
+            return "utf-8"
+
+        return encoding
+    except Exception as e:
+        logger.debug("Encoding detection failed for %s: %s", file_path, e)
+        return "utf-8"
+
+
+def detect_mime_type(file_path: str) -> str | None:
+    """Detect MIME type using Python's mimetypes module.
+
+    Returns the MIME type string or None if undetectable.
+    """
+    mime_type, _ = mimetypes.guess_type(file_path)
+    return mime_type
+
+
 def _detect_doc_type(path: str) -> DocumentType:
+    """Detect document type using mimetypes with extension fallback."""
+    # 1. Try mimetypes module first
+    mime_type = detect_mime_type(path)
+    if mime_type and mime_type in MIME_TYPE_MAP:
+        return MIME_TYPE_MAP[mime_type]
+
+    # 2. Fall back to extension map
     ext = Path(path).suffix.lower()
-    return DOC_TYPE_MAP.get(ext, DocumentType.OTHER)
+    if ext in DOC_TYPE_MAP:
+        return DOC_TYPE_MAP[ext]
+
+    # 3. Check if it's a generic text/* MIME type
+    if mime_type and mime_type.startswith("text/"):
+        return DocumentType.TEXT
+
+    return DocumentType.OTHER
 
 
 class DocumentIndexer:
@@ -82,17 +272,27 @@ class DocumentIndexer:
     def _extract_content(self, file_path: str, doc_type: DocumentType) -> str | None:
         parser = _PARSERS.get(doc_type)
         if parser is None:
-            try:
-                with open(file_path, encoding="utf-8", errors="replace") as f:
-                    return f.read()
-            except Exception as e:
-                logger.warning("Failed to read %s: %s", file_path, e)
-                return None
+            return self._read_text_file(file_path)
         try:
             parsed = parser.parse(file_path)
             return parsed.full_text
         except Exception as e:
-            logger.warning("Failed to parse %s with %s: %s", file_path, type(parser).__name__, e)
+            logger.warning(
+                "Failed to parse %s with %s: %s, falling back to raw read",
+                file_path,
+                type(parser).__name__,
+                e,
+            )
+            return self._read_text_file(file_path)
+
+    def _read_text_file(self, file_path: str) -> str | None:
+        """Read a text file with automatic encoding detection."""
+        encoding = _detect_encoding(file_path)
+        try:
+            with open(file_path, encoding=encoding, errors="replace") as f:
+                return f.read()
+        except Exception as e:
+            logger.warning("Failed to read %s with encoding %s: %s", file_path, encoding, e)
             return None
 
     def index_file(self, file_path: str, force: bool = False) -> bool:
@@ -215,18 +415,20 @@ class DocumentIndexer:
         for db_chunk, embedding in zip(db_chunks, embeddings, strict=False):
             embedding_id = self._embedder.compute_embedding_id(db_chunk.content)
             db_chunk.embedding_id = embedding_id
-            points.append({
-                "id": embedding_id,
-                "vector": embedding,
-                "payload": {
-                    "document_id": doc.id,
-                    "chunk_id": db_chunk.id,
-                    "path": doc.path,
-                    "doc_type": doc.doc_type.value,
-                    "chunk_type": db_chunk.chunk_type,
-                    "language": db_chunk.language,
-                },
-            })
+            points.append(
+                {
+                    "id": embedding_id,
+                    "vector": embedding,
+                    "payload": {
+                        "document_id": doc.id,
+                        "chunk_id": db_chunk.id,
+                        "path": doc.path,
+                        "doc_type": doc.doc_type.value,
+                        "chunk_type": db_chunk.chunk_type,
+                        "language": db_chunk.language,
+                    },
+                }
+            )
 
         for i in range(0, len(points), EMBED_BATCH_SIZE):
             batch = points[i : i + EMBED_BATCH_SIZE]

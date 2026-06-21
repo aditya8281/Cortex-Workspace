@@ -14,12 +14,13 @@ type FilterType = (typeof MODEL_TYPES)[number];
 const SIZE_FILTERS = ["all", "<3B", "3-8B", "8-14B", "14-34B", "34B+"] as const;
 type SizeFilter = (typeof SIZE_FILTERS)[number];
 
-function parseParamCount(paramCount: string): number {
+function parseParamCount(paramCount: string | null | undefined): number {
+  if (!paramCount) return 0;
   const match = paramCount.match(/([\d.]+)/);
   return match ? parseFloat(match[1]) : 0;
 }
 
-function matchesSizeFilter(paramCount: string, filter: SizeFilter): boolean {
+function matchesSizeFilter(paramCount: string | null | undefined, filter: SizeFilter): boolean {
   if (filter === "all") return true;
   const n = parseParamCount(paramCount);
   switch (filter) {
@@ -149,8 +150,8 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
       const downloadKey = variant ? `${modelName}:${variant}` : modelName;
       setDownloadingModels((prev) => new Set(prev).add(downloadKey));
       setDownloadProgress((prev) => new Map(prev).set(downloadKey, 0));
-    } catch {
-      // Error handling could show a toast
+    } catch (err) {
+      console.error("Download failed:", err);
     }
   };
 
@@ -167,8 +168,8 @@ export default function ModelBrowser({ onModelSelect }: ModelBrowserProps) {
         next.delete(modelName);
         return next;
       });
-    } catch {
-      // Error handling could show a toast
+    } catch (err) {
+      console.error("Cancel download failed:", err);
     }
   };
 

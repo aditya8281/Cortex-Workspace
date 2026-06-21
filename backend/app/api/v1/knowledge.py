@@ -69,10 +69,7 @@ async def knowledge_stats(
         .group_by(Document.doc_type)
         .all()
     )
-    documents_by_type = {
-        str(row[0].value if hasattr(row[0], "value") else row[0]): row[1]
-        for row in type_rows
-    }
+    documents_by_type = {str(row[0].value if hasattr(row[0], "value") else row[0]): row[1] for row in type_rows}
 
     lang_rows = (
         db.query(DocumentChunk.language, func.count(DocumentChunk.id))
@@ -86,11 +83,7 @@ async def knowledge_stats(
     total_docs = db.query(Document).filter(Document.deleted_at.is_(None)).count()
     avg_chunks = total_chunks / max(total_docs, 1)
 
-    edge_rows = (
-        db.query(GraphEdge.edge_type, func.count(GraphEdge.id))
-        .group_by(GraphEdge.edge_type)
-        .all()
-    )
+    edge_rows = db.query(GraphEdge.edge_type, func.count(GraphEdge.id)).group_by(GraphEdge.edge_type).all()
     graph_edge_types = {str(row[0]): row[1] for row in edge_rows}
 
     return KnowledgeStats(

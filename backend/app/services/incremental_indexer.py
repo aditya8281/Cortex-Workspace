@@ -22,9 +22,28 @@ logger = logging.getLogger(__name__)
 CODE_COLLECTION = "cortex_code"
 EMBED_BATCH_SIZE = 32
 TRACKED_EXTENSIONS = {
-    ".py", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go",
-    ".java", ".c", ".cpp", ".h", ".rb", ".php", ".swift", ".kt",
-    ".sql", ".sh", ".md", ".json", ".yaml", ".yml", ".toml",
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".rs",
+    ".go",
+    ".java",
+    ".c",
+    ".cpp",
+    ".h",
+    ".rb",
+    ".php",
+    ".swift",
+    ".kt",
+    ".sql",
+    ".sh",
+    ".md",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
 }
 
 
@@ -34,6 +53,7 @@ class IndexResult:
     files_scanned: int = 0
     files_indexed: int = 0
     files_skipped: int = 0
+    files_deleted: int = 0
     files_errors: int = 0
     chunks_created: int = 0
     languages: dict[str, int] = field(default_factory=dict)
@@ -62,25 +82,46 @@ class IncrementalIndexer:
             raise ValueError(f"Repository path does not exist: {repo.repo_path}")
 
         existing_files = {
-            f.file_path: f
-            for f in self.db.query(IndexedFile).filter(IndexedFile.repo_id == repo_id).all()
+            f.file_path: f for f in self.db.query(IndexedFile).filter(IndexedFile.repo_id == repo_id).all()
         }
 
         all_files = self._walk_repository(path, rules=rules)
+        current_files: dict[str, Path] = {}
+        for file_path in all_files:
+            rel = str(file_path.relative_to(path))
+            current_files[rel] = file_path
+
         languages: dict[str, int] = {}
         result = IndexResult(repo_id=repo_id)
 
-        for file_path in all_files:
+        for rel_path, file_path in current_files.items():
             result.files_scanned += 1
             lang = detect_language(str(file_path))
             if lang:
                 languages[lang] = languages.get(lang, 0) + 1
 
-            rel_path = str(file_path.relative_to(path))
+            existing = existing_files.get(rel_path)
+
+            # --- Mtime/size pre-filter ---
+            try:
+                stat = file_path.stat()
+            except OSError:
+                result.files_errors += 1
+                if existing:
+                    existing.status = "error"
+                continue
+
+            if not force and existing and existing.mtime == stat.st_mtime and existing.file_size == stat.st_size:
+                result.files_skipped += 1
+                continue
+
+            # --- Hash check (only if mtime/size changed) ---
             current_hash = self._file_hash(file_path)
 
-            existing = existing_files.get(rel_path)
             if not force and existing and existing.file_hash == current_hash:
+                # File content unchanged — just update stat metadata
+                existing.mtime = stat.st_mtime
+                existing.file_size = stat.st_size
                 result.files_skipped += 1
                 continue
 
@@ -90,6 +131,8 @@ class IncrementalIndexer:
 
                 if existing:
                     existing.file_hash = current_hash
+                    existing.file_size = stat.st_size
+                    existing.mtime = stat.st_mtime
                     existing.last_indexed_at = datetime.now(timezone.utc)
                     existing.chunk_count = chunk_count
                     existing.status = "indexed"
@@ -99,6 +142,8 @@ class IncrementalIndexer:
                             repo_id=repo_id,
                             file_path=rel_path,
                             file_hash=current_hash,
+                            file_size=stat.st_size,
+                            mtime=stat.st_mtime,
                             last_indexed_at=datetime.now(timezone.utc),
                             chunk_count=chunk_count,
                             status="indexed",
@@ -113,6 +158,13 @@ class IncrementalIndexer:
                 if existing:
                     existing.status = "error"
 
+        # --- Deleted file cleanup ---
+        stale_files = set(existing_files.keys()) - set(current_files.keys())
+        for stale_path in stale_files:
+            existing = existing_files[stale_path]
+            self._remove_file(existing)
+            result.files_deleted += 1
+
         result.languages = languages
 
         repo.total_files = result.files_scanned
@@ -122,11 +174,47 @@ class IncrementalIndexer:
         self.db.commit()
 
         logger.info(
-            "Indexed repo %d: %d indexed, %d skipped, %d errors, %d chunks",
-            repo_id, result.files_indexed, result.files_skipped,
-            result.files_errors, result.chunks_created,
+            "Indexed repo %d: %d indexed, %d skipped, %d deleted, %d errors, %d chunks",
+            repo_id,
+            result.files_indexed,
+            result.files_skipped,
+            result.files_deleted,
+            result.files_errors,
+            result.chunks_created,
         )
         return result
+
+    def _remove_file(self, indexed_file: IndexedFile) -> None:
+        """Remove a stale IndexedFile and all its associated data."""
+        rel_path = indexed_file.file_path
+
+        # Collect embedding IDs from old chunks (batch query)
+        old_chunks = (
+            self.db.query(CodeChunk)
+            .filter(
+                CodeChunk.repo_id == indexed_file.repo_id,
+                CodeChunk.file_path == rel_path,
+            )
+            .all()
+        )
+        embedding_ids: list[str] = [c.embedding_id for c in old_chunks if c.embedding_id]
+
+        # Batch delete vector DB entries
+        if embedding_ids:
+            try:
+                vdb = get_vector_db()
+                vdb.delete(CODE_COLLECTION, embedding_ids)
+            except Exception as exc:
+                logger.warning("Failed to delete vectors for %s: %s", rel_path, exc)
+
+        # Batch delete CodeChunk records
+        for chunk in old_chunks:
+            self.db.delete(chunk)
+
+        # Delete the IndexedFile record
+        self.db.delete(indexed_file)
+        self.db.flush()
+        logger.info("Removed stale file: %s (%d chunks, %d vectors)", rel_path, len(old_chunks), len(embedding_ids))
 
     def _walk_repository(self, path: Path, rules: IndexingRules | None = None) -> list[Path]:
         """Walk repository files, skipping ignored directories.
@@ -156,20 +244,13 @@ class IncrementalIndexer:
         except Exception as exc:
             raise ValueError(f"Cannot read {file_path}: {exc}") from exc
 
-        if lang in {"markdown", "text"}:
-            chunks = chunk_text(content, rel_path)
-        else:
-            chunks = chunk_code(content, rel_path)
+        chunks = chunk_text(content, rel_path) if lang in {"markdown", "text"} else chunk_code(content, rel_path)
 
         if not chunks:
             return []
 
         # Remove old chunks for this file
-        old_chunks = (
-            self.db.query(CodeChunk)
-            .filter(CodeChunk.file_path == rel_path)
-            .all()
-        )
+        old_chunks = self.db.query(CodeChunk).filter(CodeChunk.file_path == rel_path).all()
         if old_chunks:
             embedding_ids = [c.embedding_id for c in old_chunks if c.embedding_id]
             if embedding_ids:
@@ -180,8 +261,6 @@ class IncrementalIndexer:
             self.db.flush()
 
         # Create new chunk records
-        repo = self.db.query(RepoIndex).filter(RepoIndex.id == Path(rel_path).parent.as_posix().__hash__()).first()
-        # Get repo_id from the first CodeChunk's repo or use a lookup
         repo_id = self._get_repo_id_for_file(rel_path)
 
         db_chunks: list[CodeChunk] = []
@@ -208,7 +287,6 @@ class IncrementalIndexer:
 
     def _get_repo_id_for_file(self, rel_path: str) -> int:
         """Find the repo_id that owns this file path."""
-        # Query the most recently indexed repo that contains this file
         result = (
             self.db.query(IndexedFile.repo_id)
             .filter(IndexedFile.file_path == rel_path)
@@ -217,7 +295,6 @@ class IncrementalIndexer:
         )
         if result:
             return result[0]
-        # Fallback: get the latest repo
         repo = self.db.query(RepoIndex).order_by(RepoIndex.id.desc()).first()
         return repo.id if repo else 0
 

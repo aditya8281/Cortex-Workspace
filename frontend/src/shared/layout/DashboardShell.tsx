@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../auth/AuthProvider";
 import { getProfilePhotoUrl, apiListNotifications, apiVaultStatus, apiListMemory } from "../auth/cortexApi";
+import { toast } from "sonner";
 import { cn } from "../../lib/utils";
 import {
   LayoutDashboard,
@@ -20,6 +21,7 @@ import {
   Search,
   Bell,
   Cpu,
+  Download,
   MessageSquare,
 } from "lucide-react";
 import CommandPalette from "../ui/CommandPalette";
@@ -34,6 +36,7 @@ const workNavItems = [
   { label: "Agents", href: "/agents", icon: Bot },
   { label: "Chat", href: "/chat", icon: MessageSquare },
   { label: "Models", href: "/models", icon: Cpu },
+  { label: "Downloads", href: "/downloads", icon: Download },
 ];
 
 const accountNavItems = [
@@ -456,7 +459,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
               <kbd className="text-[10px] font-mono bg-bg-hover px-1.5 py-0.5 rounded">⌘K</kbd>
             </button>
             <button
-              onClick={() => {/* TODO: open notifications panel */}}
+              onClick={() => { toast.info("Notifications coming soon"); }}
               className="relative h-8 w-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-bg-hover hover:text-text transition-colors"
               aria-label="Notifications"
             >

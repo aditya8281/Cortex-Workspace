@@ -21,6 +21,7 @@ router = APIRouter()
 # (macOS, Windows) different paths are used. Only paths that actually
 # exist on disk will be enabled by default.
 
+
 def _get_platform_default_paths() -> list[dict[str, Any]]:
     """Return default sync paths appropriate for the current OS."""
     import sys
@@ -97,19 +98,34 @@ def _get_default_sync_paths() -> list[dict[str, Any]]:
         resolved_path = os.path.expanduser(p["path"])
         exists = os.path.isdir(resolved_path)
         # Only enable if it exists AND is marked as enabled
-        resolved.append({
-            "label": p["label"],
-            "path": resolved_path,
-            "enabled": p["enabled"] and exists,
-            "exists": exists,
-        })
+        resolved.append(
+            {
+                "label": p["label"],
+                "path": resolved_path,
+                "enabled": p["enabled"] and exists,
+                "exists": exists,
+            }
+        )
     return resolved
+
 
 # Directories to exclude from sync by default
 DEFAULT_EXCLUDE_DIRS = [
-    ".git", "node_modules", "__pycache__", "venv", ".venv",
-    "dist", "build", ".next", "target", ".cache", "tmp",
-    ".local/share", ".npm", ".cargo", ".rustup",
+    ".git",
+    "node_modules",
+    "__pycache__",
+    "venv",
+    ".venv",
+    "dist",
+    "build",
+    ".next",
+    "target",
+    ".cache",
+    "tmp",
+    ".local/share",
+    ".npm",
+    ".cargo",
+    ".rustup",
 ]
 
 # Available embedding models with technique descriptions
@@ -266,11 +282,17 @@ async def start_sync(
     payload: SyncStartPayload,
     current_user: User = Depends(get_current_user),
 ):
+    from backend.app.core.system_paths import get_blocked_system_paths
     from backend.app.db.session import SessionLocal
     from backend.app.models.repo_index import RepoIndex
     from backend.app.models.sync_state import SyncState
 
     repo_path = str(Path(payload.repo_path).expanduser().resolve())
+
+    for blocked in get_blocked_system_paths():
+        if repo_path.startswith(blocked):
+            raise HTTPException(status_code=400, detail=f"Cannot sync system path: {blocked}")
+
     if not Path(repo_path).is_dir():
         raise HTTPException(status_code=400, detail=f"Path is not a directory: {repo_path}")
 
@@ -290,18 +312,24 @@ async def start_sync(
             db.commit()
             db.refresh(repo)
 
-        existing_state = db.query(SyncState).filter(
-            SyncState.user_id == current_user.id,
-            SyncState.repo_path == repo_path,
-        ).first()
+        existing_state = (
+            db.query(SyncState)
+            .filter(
+                SyncState.user_id == current_user.id,
+                SyncState.repo_path == repo_path,
+            )
+            .first()
+        )
         if not existing_state:
-            db.add(SyncState(
-                user_id=current_user.id,
-                repo_path=repo_path,
-                repo_id=repo.id,
-                status="active",
-                config_json={"embedding_model": embedding_model},
-            ))
+            db.add(
+                SyncState(
+                    user_id=current_user.id,
+                    repo_path=repo_path,
+                    repo_id=repo.id,
+                    status="active",
+                    config_json={"embedding_model": embedding_model},
+                )
+            )
             db.commit()
 
         watcher = get_file_watcher_v2()
@@ -325,7 +353,6 @@ async def validate_sync_path(
     current_user: User = Depends(get_current_user),
 ):
     """Check if a path exists and is a directory. Returns resolved path info."""
-    del current_user
     resolved_path = str(Path(payload.path).expanduser().resolve())
     exists = Path(resolved_path).is_dir()
     return {
@@ -343,7 +370,6 @@ async def stop_sync(
     from backend.app.db.session import SessionLocal
     from backend.app.models.sync_state import SyncState
 
-    del current_user
     repo_path = str(Path(payload.repo_path).expanduser().resolve())
     watcher = get_file_watcher_v2()
     if not watcher.unwatch(repo_path):
@@ -351,7 +377,14 @@ async def stop_sync(
 
     db = SessionLocal()
     try:
-        state = db.query(SyncState).filter(SyncState.repo_path == repo_path).first()
+        state = (
+            db.query(SyncState)
+            .filter(
+                SyncState.user_id == current_user.id,
+                SyncState.repo_path == repo_path,
+            )
+            .first()
+        )
         if state:
             state.status = "stopped"
             db.commit()
@@ -365,8 +398,17 @@ async def stop_sync(
 async def get_sync_status(
     current_user: User = Depends(get_current_user),
 ):
-    del current_user
+    from backend.app.db.session import SessionLocal
+    from backend.app.models.sync_state import SyncState
+
     watcher = get_file_watcher_v2()
+    db = SessionLocal()
+    try:
+        user_states = db.query(SyncState).filter(SyncState.user_id == current_user.id).all()
+        watched_paths = [{"path": s.repo_path, "status": s.status} for s in user_states]
+    finally:
+        db.close()
+
     return SyncStatusResponse(
         watching=watcher.watched_count,
         pending_changes=0,
@@ -374,7 +416,7 @@ async def get_sync_status(
         errors=0,
         status="watching" if watcher.is_running else "idle",
         last_sync=None,
-        watched_paths=[],
+        watched_paths=watched_paths,
     )
 
 
@@ -382,7 +424,6 @@ async def get_sync_status(
 async def get_sync_jobs(
     current_user: User = Depends(get_current_user),
 ):
-    del current_user
     return []
 
 
@@ -391,5 +432,4 @@ async def get_sync_job(
     job_id: str,
     current_user: User = Depends(get_current_user),
 ):
-    del current_user
     raise HTTPException(status_code=404, detail="Job not found")

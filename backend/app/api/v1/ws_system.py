@@ -64,7 +64,7 @@ async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
         await ws.close(code=4001, reason="Authentication required")
         return
     try:
-        verify_access_token(token)
+        _user_id = verify_access_token(token)
     except Exception:
         await ws.close(code=4001, reason="Invalid token")
         return

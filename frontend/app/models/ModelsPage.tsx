@@ -1,67 +1,282 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Brain,
-  Download,
-  HardDrive,
-  Settings,
+  Code,
+  Eye,
+  Wrench,
+  Database,
+  Zap,
+  Star,
+  Search,
   RefreshCw,
-  LayoutGrid,
 } from "lucide-react";
 import DashboardShell from "@/shared/layout/DashboardShell";
 import NeuralNetwork from "@/shared/ui/NeuralNetwork";
 import Card from "@/shared/ui/Card";
 import Button from "@/shared/ui/Button";
-import { TabGroup, TabPanel } from "@/shared/ui/TabGroup";
+import HardwareBar from "./components/HardwareBar";
+import SearchBar from "./components/SearchBar";
+import RecommendedRow from "./components/RecommendedRow";
+import CategorySection from "./components/CategorySection";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { modelsApi } from "@/shared/api";
-import HardwareOverview from "./HardwareOverview";
-import WorkloadRecommendations from "./WorkloadRecommendations";
-import ModelBrowser from "./ModelBrowser";
-import InstalledModelsPanel from "./InstalledModelsPanel";
-import DownloadQueuePanel from "./DownloadQueuePanel";
-import type { HardwareProfile, WorkloadRecommendations as WorkloadRecs } from "@/shared/types";
+import { useSystemWebSocket } from "@/shared/hooks/useSystemWebSocket";
+import type {
+  HardwareProfile,
+  WorkloadRecommendations as WorkloadRecs,
+  ModelInfo,
+  ModelRecommendation,
+} from "@/shared/types";
+
+const workloadIcons: Record<string, typeof Brain> = {
+  coding: Code,
+  reasoning: Brain,
+  agents: Wrench,
+  vision: Eye,
+  embeddings: Database,
+  lightweight: Zap,
+  high_quality: Star,
+  rag: Search,
+};
+
+function matchesSizeFilter(parameterCount: string, filter: string): boolean {
+  if (filter === "all") return true;
+  const match = parameterCount.match(/([\d.]+)\s*[Bb]/i);
+  if (!match) return false;
+  const bn = parseFloat(match[1]);
+  switch (filter) {
+    case "<3B":
+      return bn < 3;
+    case "3-8B":
+      return bn >= 3 && bn <= 8;
+    case "8-14B":
+      return bn > 8 && bn <= 14;
+    case "14B+":
+      return bn > 14;
+    default:
+      return true;
+  }
+}
+
+function recommendationToModelInfo(rec: ModelRecommendation): ModelInfo {
+  return {
+    model_id: rec.model_id,
+    name: rec.model_id,
+    display_name: rec.display_name,
+    description: rec.description,
+    provider: "",
+    model_type: "chat",
+    parameter_count: String(rec.parameter_count),
+    context_length: rec.performance?.context_length_max ?? 0,
+    capabilities: rec.capabilities,
+    hardware_requirements: rec.variant
+      ? {
+          min_ram_gb: rec.variant.size_gb,
+          recommended_ram_gb: rec.variant.size_gb * 1.5,
+          min_vram_gb: rec.variant.vram_required_gb,
+          recommended_vram_gb: rec.variant.vram_required_gb * 1.2,
+        }
+      : null,
+    family: rec.family,
+    architecture: "",
+    license: "",
+  };
+}
 
 export default function ModelsPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
   const [workloads, setWorkloads] = useState<Record<string, WorkloadRecs>>({});
-  const [loadingRecs, setLoadingRecs] = useState(true);
+  const [allModels, setAllModels] = useState<ModelInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [downloadingModels, setDownloadingModels] = useState<Set<string>>(new Set());
+  const [downloadProgress, setDownloadProgress] = useState<Map<string, number>>(new Map());
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTypeFilter, setActiveTypeFilter] = useState("all");
+  const [activeSizeFilter, setActiveSizeFilter] = useState("all");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [compareModels, setCompareModels] = useState<string[]>([]);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/auth");
-  }, [user, loading, router]);
+    if (!authLoading && !user) router.replace("/auth");
+  }, [user, authLoading, router]);
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
-    modelsApi
-      .recommendedEnhanced()
-      .then((data) => {
-        setHardware(data.hardware);
-        setWorkloads(data.workloads);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingRecs(false));
+    try {
+      const [recsData, listData] = await Promise.all([
+        modelsApi.recommendedEnhanced(),
+        modelsApi.list(),
+      ]);
+      setHardware(recsData.hardware);
+      setWorkloads(recsData.workloads);
+      setAllModels(listData.models);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load models");
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
-  if (loading || !user) return null;
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await modelsApi.autocomplete(searchQuery);
+        setSuggestions(res.suggestions);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 250);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery]);
+
+  const handleDownload = async (modelName: string, variant?: string) => {
+    try {
+      const res = await modelsApi.download(modelName, variant);
+      const key = res.download_id || modelName;
+      setDownloadingModels((prev) => new Set(prev).add(key));
+      setDownloadProgress((prev) => new Map(prev).set(key, 0));
+    } catch (err) {
+      console.error("Download failed:", err);
+    }
+  };
+
+  const handleCancel = async (modelName: string) => {
+    try {
+      await modelsApi.cancel(modelName);
+      setDownloadingModels((prev) => {
+        const n = new Set(prev);
+        n.delete(modelName);
+        return n;
+      });
+      setDownloadProgress((prev) => {
+        const n = new Map(prev);
+        n.delete(modelName);
+        return n;
+      });
+    } catch (err) {
+      console.error("Cancel failed:", err);
+    }
+  };
+
+  useSystemWebSocket({
+    path: "/ws/models",
+    enabled: downloadingModels.size > 0,
+    onMessage(event) {
+      const data = JSON.parse(event.data);
+      if (data.type === "model_progress" && Array.isArray(data.models)) {
+        for (const m of data.models) {
+          setDownloadProgress((prev) => new Map(prev).set(m.name, m.progress));
+          if (m.progress >= 1.0) {
+            setDownloadingModels((prev) => {
+              const n = new Set(prev);
+              n.delete(m.name);
+              return n;
+            });
+            fetchData();
+          }
+        }
+      }
+    },
+  });
+
+  const topRecs = useMemo(() => {
+    const all = Object.values(workloads).flatMap((w) => w.recommendations);
+    return all.sort((a, b) => b.score - a.score).slice(0, 5);
+  }, [workloads]);
+
+  const filteredModels = useMemo(() => {
+    return allModels.filter((m) => {
+      if (activeTypeFilter !== "all" && m.model_type !== activeTypeFilter) return false;
+      if (activeSizeFilter !== "all" && !matchesSizeFilter(m.parameter_count, activeSizeFilter)) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return (
+          m.name.toLowerCase().includes(q) ||
+          m.display_name.toLowerCase().includes(q) ||
+          m.description.toLowerCase().includes(q) ||
+          m.family.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [allModels, activeTypeFilter, activeSizeFilter, searchQuery]);
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const m of allModels) {
+      counts[m.model_type] = (counts[m.model_type] || 0) + 1;
+    }
+    return counts;
+  }, [allModels]);
+
+  const sizeCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: allModels.length,
+      "<3B": 0,
+      "3-8B": 0,
+      "8-14B": 0,
+      "14B+": 0,
+    };
+    for (const m of allModels) {
+      if (matchesSizeFilter(m.parameter_count, "<3B")) counts["<3B"]++;
+      if (matchesSizeFilter(m.parameter_count, "3-8B")) counts["3-8B"]++;
+      if (matchesSizeFilter(m.parameter_count, "8-14B")) counts["8-14B"]++;
+      if (matchesSizeFilter(m.parameter_count, "14B+")) counts["14B+"]++;
+    }
+    return counts;
+  }, [allModels]);
+
+  const categoryModels = useMemo(() => {
+    const result: Record<string, ModelInfo[]> = {};
+    for (const [id, workload] of Object.entries(workloads)) {
+      const recModelIds = new Set(workload.recommendations.map((r) => r.model_id));
+      const recModels = filteredModels.filter((m) => recModelIds.has(m.model_id));
+      if (recModels.length > 0) {
+        result[id] = recModels;
+      } else {
+        result[id] = workload.recommendations.map(recommendationToModelInfo);
+      }
+    }
+    return result;
+  }, [workloads, filteredModels]);
+
+  if (authLoading || !user) return null;
 
   return (
     <DashboardShell>
       <NeuralNetwork intensity="low" />
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
+        {/* Page Header */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="mb-6"
         >
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-4 mb-2">
             <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
               <Brain size={24} className="text-accent" />
             </div>
@@ -72,103 +287,123 @@ export default function ModelsPage() {
               </p>
             </div>
           </div>
-
-          {/* Hardware Overview */}
-          {hardware && <HardwareOverview hardware={hardware} />}
         </motion.div>
 
-        {/* Content Tabs */}
-        <TabGroup
-          tabs={[
-            { id: "recommended", label: "Recommended", icon: <Brain size={14} /> },
-            { id: "installed", label: "Installed", icon: <HardDrive size={14} /> },
-            { id: "browse", label: "Browse All", icon: <LayoutGrid size={14} /> },
-            { id: "downloads", label: "Downloads", icon: <Download size={14} /> },
-            { id: "settings", label: "Settings", icon: <Settings size={14} /> },
-          ]}
-        >
-          <TabPanel tabId="recommended">
-            {loadingRecs ? (
-              <div className="space-y-6">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="space-y-3">
-                    <div className="h-6 w-48 rounded bg-bg-surface shimmer-bg" />
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {Array.from({ length: 3 }).map((_, j) => (
-                        <div key={j} className="h-48 rounded-xl bg-bg-surface shimmer-bg" />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <WorkloadRecommendations workloads={workloads} />
-            )}
-          </TabPanel>
+        {/* Hardware Status Bar */}
+        {hardware && (
+          <HardwareBar hardware={hardware} activeDownloads={downloadingModels.size} />
+        )}
 
-          <TabPanel tabId="installed">
-            <InstalledModelsPanel />
-          </TabPanel>
-
-          <TabPanel tabId="browse">
-            <ModelBrowser />
-          </TabPanel>
-
-          <TabPanel tabId="downloads">
-            <DownloadQueuePanel />
-          </TabPanel>
-
-          <TabPanel tabId="settings">
-            <div className="space-y-6">
-              <Card className="p-6" gradient>
-                <h3 className="text-sm font-semibold text-text mb-4">Inference Backend</h3>
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3 text-sm text-text-secondary">
-                    <input type="radio" name="backend" value="auto" defaultChecked className="accent-accent" />
-                    Auto (recommended)
-                  </label>
-                  <label className="flex items-center gap-3 text-sm text-text-secondary">
-                    <input type="radio" name="backend" value="ollama" className="accent-accent" />
-                    Ollama
-                  </label>
-                  <label className="flex items-center gap-3 text-sm text-text-secondary">
-                    <input type="radio" name="backend" value="llama_cpp" className="accent-accent" />
-                    llama.cpp
-                  </label>
+        {/* Loading State */}
+        {loading && (
+          <div className="space-y-6 mt-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="space-y-3">
+                <div className="h-6 w-48 rounded bg-bg-surface shimmer-bg" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {Array.from({ length: 3 }).map((_, j) => (
+                    <div key={j} className="h-48 rounded-xl bg-bg-surface shimmer-bg" />
+                  ))}
                 </div>
-              </Card>
+              </div>
+            ))}
+          </div>
+        )}
 
-              <Card className="p-6" gradient>
-                <h3 className="text-sm font-semibold text-text mb-4">Catalogue</h3>
-                <p className="text-xs text-text-secondary mb-4">
-                  Refresh the model catalogue from Ollama and HuggingFace.
-                </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => modelsApi.refreshCatalogue()}
-                >
-                  <RefreshCw size={14} /> Refresh Catalogue
-                </Button>
-              </Card>
+        {/* Error State */}
+        {!loading && error && (
+          <Card className="p-8 text-center mt-6">
+            <p className="text-sm text-text-secondary mb-4">{error}</p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                fetchData();
+              }}
+            >
+              <RefreshCw size={14} /> Retry
+            </Button>
+          </Card>
+        )}
 
-              <Card className="p-6" gradient>
-                <h3 className="text-sm font-semibold text-text mb-4">HuggingFace API</h3>
-                <p className="text-xs text-text-secondary mb-4">
-                  Optional: Add your HuggingFace API token for higher rate limits when discovering GGUF models.
-                </p>
-                <input
-                  type="password"
-                  placeholder="hf_..."
-                  className="w-full h-10 px-4 rounded-xl bg-bg-surface border border-border-subtle text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/20 transition-colors"
+        {/* Main Content */}
+        {!loading && !error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.15 }}
+            className="space-y-8 mt-6"
+          >
+            {/* Search + Filters */}
+            <SearchBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onSearchSubmit={() => {}}
+              activeTypeFilter={activeTypeFilter}
+              onTypeFilterChange={setActiveTypeFilter}
+              activeSizeFilter={activeSizeFilter}
+              onSizeFilterChange={setActiveSizeFilter}
+              typeCounts={typeCounts}
+              sizeCounts={sizeCounts}
+              suggestions={suggestions}
+              onSuggestionSelect={(s) => {
+                setSearchQuery(s);
+              }}
+              onCompare={() => {
+                if (compareModels.length > 0) {
+                  router.push(`/models/compare?ids=${compareModels.join(",")}`);
+                }
+              }}
+              compareCount={compareModels.length}
+            />
+
+            {/* Recommended Row */}
+            {topRecs.length > 0 && (
+              <RecommendedRow
+                recommendations={topRecs}
+                hardware={hardware}
+                onDownload={handleDownload}
+              />
+            )}
+
+            {/* Category Sections */}
+            {Object.entries(workloads).map(([id, workload]) => {
+              const Icon = workloadIcons[id] || Brain;
+              const models = categoryModels[id] || [];
+              return (
+                <CategorySection
+                  key={id}
+                  icon={<Icon size={16} />}
+                  title={workload.label}
+                  count={workload.recommendations.length}
+                  models={models}
+                  hardware={hardware}
+                  onDownload={handleDownload}
+                  onCancel={handleCancel}
+                  downloadProgress={downloadProgress}
+                  downloadingModels={downloadingModels}
                 />
-                <p className="text-xs text-text-muted mt-2">
-                  Token is stored locally and never sent to Cortex servers.
-                </p>
-              </Card>
-            </div>
-          </TabPanel>
-        </TabGroup>
+              );
+            })}
+
+            {/* All Models Fallback (when no workloads match filters) */}
+            {Object.keys(categoryModels).length === 0 && filteredModels.length > 0 && (
+              <CategorySection
+                icon={<Search size={16} />}
+                title="All Models"
+                count={filteredModels.length}
+                models={filteredModels}
+                hardware={hardware}
+                onDownload={handleDownload}
+                onCancel={handleCancel}
+                downloadProgress={downloadProgress}
+                downloadingModels={downloadingModels}
+              />
+            )}
+          </motion.div>
+        )}
       </div>
     </DashboardShell>
   );

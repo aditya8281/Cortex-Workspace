@@ -105,7 +105,9 @@ class GraphBuilder:
         )
         logger.info(
             "Built graph for repo %d: %d nodes, %d edges",
-            repo_id, result.nodes_created, result.edges_created,
+            repo_id,
+            result.nodes_created,
+            result.edges_created,
         )
         return result
 
@@ -121,11 +123,7 @@ class GraphBuilder:
         if not doc:
             return {"nodes": 0, "edges": 0}
 
-        chunks = (
-            self.db.query(DocumentChunk)
-            .filter(DocumentChunk.document_id == document_id)
-            .all()
-        )
+        chunks = self.db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).all()
 
         node_count = 0
         edge_count = 0
@@ -133,13 +131,9 @@ class GraphBuilder:
 
         for chunk in chunks:
             if doc.doc_type.value in ("markdown", "text"):
-                entities, relationships = extractor.extract_from_text(
-                    chunk.content, doc.path
-                )
+                entities, relationships = extractor.extract_from_text(chunk.content, doc.path)
             else:
-                entities, relationships = extractor.extract_from_code(
-                    chunk.content, doc.path
-                )
+                entities, relationships = extractor.extract_from_code(chunk.content, doc.path)
 
             for ent in entities:
                 if ent.name not in entity_nodes:
@@ -187,16 +181,12 @@ class GraphBuilder:
 
     def _clear_graph(self, repo_id: int) -> None:
         """Remove existing graph data for a repo."""
-        node_ids = [
-            n.id for n in self.db.query(GraphNode.id).filter(GraphNode.repo_id == repo_id).all()
-        ]
+        node_ids = [n.id for n in self.db.query(GraphNode.id).filter(GraphNode.repo_id == repo_id).all()]
         if node_ids:
             self.db.query(GraphEdge).filter(
                 GraphEdge.source_id.in_(node_ids) | GraphEdge.target_id.in_(node_ids)
             ).delete(synchronize_session="fetch")
-            self.db.query(GraphNode).filter(GraphNode.id.in_(node_ids)).delete(
-                synchronize_session="fetch"
-            )
+            self.db.query(GraphNode).filter(GraphNode.id.in_(node_ids)).delete(synchronize_session="fetch")
             self.db.flush()
 
     def _infer_node_type(self, chunk: CodeChunk) -> str:
@@ -219,9 +209,7 @@ class GraphBuilder:
             return f"{base}::{chunk.symbol_name}"
         return base
 
-    def _create_import_edges(
-        self, source: GraphNode, chunk: CodeChunk, nodes: dict[int, GraphNode]
-    ) -> int:
+    def _create_import_edges(self, source: GraphNode, chunk: CodeChunk, nodes: dict[int, GraphNode]) -> int:
         """Create 'imports' edges from import statements."""
         imports = _IMPORT_RE.findall(chunk.content)
         count = 0
@@ -241,16 +229,33 @@ class GraphBuilder:
                 count += 1
         return count
 
-    def _create_call_edges(
-        self, source: GraphNode, chunk: CodeChunk, nodes: dict[int, GraphNode]
-    ) -> int:
+    def _create_call_edges(self, source: GraphNode, chunk: CodeChunk, nodes: dict[int, GraphNode]) -> int:
         """Create 'calls' edges from function call patterns."""
         calls = set(_CALL_RE.findall(chunk.content))
         # Remove common builtins and keywords
         builtins = {
-            "print", "len", "range", "str", "int", "float", "list", "dict",
-            "set", "tuple", "type", "isinstance", "getattr", "setattr",
-            "self", "cls", "super", "return", "yield", "if", "for", "while",
+            "print",
+            "len",
+            "range",
+            "str",
+            "int",
+            "float",
+            "list",
+            "dict",
+            "set",
+            "tuple",
+            "type",
+            "isinstance",
+            "getattr",
+            "setattr",
+            "self",
+            "cls",
+            "super",
+            "return",
+            "yield",
+            "if",
+            "for",
+            "while",
         }
         count = 0
         for call in calls:
@@ -268,9 +273,7 @@ class GraphBuilder:
                 count += 1
         return count
 
-    def _create_inherit_edges(
-        self, source: GraphNode, chunk: CodeChunk, nodes: dict[int, GraphNode]
-    ) -> int:
+    def _create_inherit_edges(self, source: GraphNode, chunk: CodeChunk, nodes: dict[int, GraphNode]) -> int:
         """Create 'inherits' edges from class definitions."""
         inherits = _INHERIT_RE.findall(chunk.content)
         count = 0
@@ -291,9 +294,7 @@ class GraphBuilder:
                     count += 1
         return count
 
-    def _create_contains_edges(
-        self, source: GraphNode, chunk: CodeChunk, nodes: dict[int, GraphNode]
-    ) -> int:
+    def _create_contains_edges(self, source: GraphNode, chunk: CodeChunk, nodes: dict[int, GraphNode]) -> int:
         """Create 'contains' edges from file-level containment."""
         count = 0
         for node in nodes.values():
@@ -327,17 +328,11 @@ class GraphBuilder:
 
     def get_graph(self, repo_id: int) -> dict:
         """Get the full graph for a repository."""
-        nodes = (
-            self.db.query(GraphNode)
-            .filter(GraphNode.repo_id == repo_id)
-            .all()
-        )
+        nodes = self.db.query(GraphNode).filter(GraphNode.repo_id == repo_id).all()
         node_ids = [n.id for n in nodes]
         edges = (
             self.db.query(GraphEdge)
-            .filter(
-                (GraphEdge.source_id.in_(node_ids)) | (GraphEdge.target_id.in_(node_ids))
-            )
+            .filter((GraphEdge.source_id.in_(node_ids)) | (GraphEdge.target_id.in_(node_ids)))
             .all()
         )
 

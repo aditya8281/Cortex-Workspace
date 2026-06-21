@@ -30,21 +30,25 @@ class PDFParser(BaseParser):
                 for i, page in enumerate(pdf.pages):
                     text = page.extract_text() or ""
                     if text.strip():
-                        sections.append(ParsedSection(
-                            content=text.strip(),
-                            section_type="paragraph",
-                            title=f"Page {i + 1}",
-                        ))
+                        sections.append(
+                            ParsedSection(
+                                content=text.strip(),
+                                section_type="paragraph",
+                                title=f"Page {i + 1}",
+                            )
+                        )
 
                     tables = page.extract_tables()
                     for table in tables:
                         if table:
                             table_text = self._format_table(table)
                             if table_text.strip():
-                                sections.append(ParsedSection(
-                                    content=table_text,
-                                    section_type="table",
-                                ))
+                                sections.append(
+                                    ParsedSection(
+                                        content=table_text,
+                                        section_type="table",
+                                    )
+                                )
 
         except Exception as e:
             logger.warning("Failed to parse PDF %s: %s", file_path, e)

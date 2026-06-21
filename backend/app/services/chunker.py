@@ -53,13 +53,9 @@ _SYMBOL_RE = re.compile(
     r"(?:\s+|\s*\()(\w*)"
 )
 
-_ARROW_FUNC_RE = re.compile(
-    r"^\s*(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*=>"
-)
+_ARROW_FUNC_RE = re.compile(r"^\s*(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*=>")
 
-_PYTHON_DECORATED_RE = re.compile(
-    r"^\s*@\w+(?:\([^)]*\))?\s*$"
-)
+_PYTHON_DECORATED_RE = re.compile(r"^\s*@\w+(?:\([^)]*\))?\s*$")
 
 _TYPE_MAP: dict[str, str] = {
     "def": "function",

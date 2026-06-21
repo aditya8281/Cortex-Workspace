@@ -73,6 +73,7 @@ GPU_COMPUTE_DB: dict[str, str] = {
 @dataclass
 class HardwareProfile:
     """Complete hardware profile for inference recommendations."""
+
     # CPU
     cpu_count: int = 0
     cpu_threads: int = 0
@@ -113,8 +114,8 @@ class HardwareProfile:
             "ram_gb": round(self.ram_total_gb, 1),
             "ram_available_gb": round(self.ram_available_gb, 1),
             "ram_percent": round(
-                ((self.ram_total_gb - self.ram_available_gb) / self.ram_total_gb * 100)
-                if self.ram_total_gb > 0 else 0, 1
+                ((self.ram_total_gb - self.ram_available_gb) / self.ram_total_gb * 100) if self.ram_total_gb > 0 else 0,
+                1,
             ),
             "cpu_count": self.cpu_count,
             "cpu_threads": self.cpu_threads,

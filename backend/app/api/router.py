@@ -2,10 +2,13 @@ from fastapi import APIRouter
 
 from backend.app.api.metrics import router as metrics_router
 from backend.app.api.v1.agents import router as agents_router
-from backend.app.api.v1.models import router as models_router
+from backend.app.api.v1.conversations import router as conversations_router
 from backend.app.api.v1.github import router as github_router
-from backend.app.api.v1.indexing import router as indexing_router
 from backend.app.api.v1.health import router as health_router
+from backend.app.api.v1.indexing import router as indexing_router
+from backend.app.api.v1.knowledge import router as knowledge_router
+from backend.app.api.v1.long_term_memory import router as long_term_memory_router
+from backend.app.api.v1.models import router as models_router
 from backend.app.api.v1.notifications import router as notifications_router
 from backend.app.api.v1.profile import router as profile_router
 from backend.app.api.v1.repository import router as repository_router
@@ -14,9 +17,6 @@ from backend.app.api.v1.sync import router as sync_router
 from backend.app.api.v1.system import router as system_router
 from backend.app.api.v1.users import router as users_router
 from backend.app.api.v1.vault import router as vault_router
-from backend.app.api.v1.conversations import router as conversations_router
-from backend.app.api.v1.knowledge import router as knowledge_router
-from backend.app.api.v1.long_term_memory import router as long_term_memory_router
 
 api_router = APIRouter()
 

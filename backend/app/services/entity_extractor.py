@@ -42,15 +42,46 @@ _CONCEPT_RE = re.compile(
 _TOOL_RE = re.compile(
     r"\b(?:Python|JavaScript|TypeScript|Rust|Go|Java|React|Vue|Angular|Django|FastAPI|Flask|Express|Node|Docker|Kubernetes|PostgreSQL|MySQL|Redis|Qdrant|SQLite|Git|GitHub|GitLab|VSCode|PyCharm|Neovim|Vim|tmux|Linux|macOS|Windows|AWS|GCP|Azure|OpenAI|Anthropic|HuggingFace|Ollama|LlamaIndex|LangChain|ChromaDB|Pinecone|Weaviate|Milvus)\b",
 )
-_FILE_REF_RE = re.compile(
-    r"[\w/]+\.(?:py|js|ts|tsx|jsx|rs|go|java|md|txt|json|yaml|yml|toml|xml|html|css)"
-)
+_FILE_REF_RE = re.compile(r"[\w/]+\.(?:py|js|ts|tsx|jsx|rs|go|java|md|txt|json|yaml|yml|toml|xml|html|css)")
 
 _BUILTIN_NAMES = {
-    "print", "len", "range", "int", "str", "float", "list", "dict", "set", "tuple",
-    "type", "class", "def", "return", "if", "else", "for", "while", "import", "from",
-    "with", "as", "try", "except", "finally", "raise", "pass", "break", "continue",
-    "True", "False", "None", "self", "cls", "__init__", "__name__", "__main__",
+    "print",
+    "len",
+    "range",
+    "int",
+    "str",
+    "float",
+    "list",
+    "dict",
+    "set",
+    "tuple",
+    "type",
+    "class",
+    "def",
+    "return",
+    "if",
+    "else",
+    "for",
+    "while",
+    "import",
+    "from",
+    "with",
+    "as",
+    "try",
+    "except",
+    "finally",
+    "raise",
+    "pass",
+    "break",
+    "continue",
+    "True",
+    "False",
+    "None",
+    "self",
+    "cls",
+    "__init__",
+    "__name__",
+    "__main__",
 }
 
 
@@ -174,9 +205,7 @@ class EntityExtractor:
         seen: set[tuple[str, str]] = set()
         for e in entities:
             for other in entities:
-                if e.name != other.name and e.name.lower() in (
-                    content.lower().split()
-                ):
+                if e.name != other.name and e.name.lower() in (content.lower().split()):
                     key = (e.name, other.name)
                     if key not in seen:
                         seen.add(key)

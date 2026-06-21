@@ -48,7 +48,7 @@ class SemanticChunker:
             return self._chunk_text(content)
 
     def _chunk_markdown(self, content: str) -> list[SemanticChunk]:
-        sections = re.split(r'\n(?=#{1,6}\s)', content)
+        sections = re.split(r"\n(?=#{1,6}\s)", content)
         chunks: list[SemanticChunk] = []
         current_paras: list[str] = []
         current_tokens = 0
@@ -62,7 +62,7 @@ class SemanticChunker:
             paras = [p.strip() for p in section.split("\n\n") if p.strip()]
             for para in paras:
                 para_tokens = estimate_tokens(para)
-                _heading_match = re.match(r'^(#{1,6})\s+(.+)', para)
+                _heading_match = re.match(r"^(#{1,6})\s+(.+)", para)
 
                 if current_tokens + para_tokens > self._max_tokens and current_paras:
                     chunk_text = "\n\n".join(current_paras)

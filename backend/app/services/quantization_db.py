@@ -116,12 +116,16 @@ class QuantizationService:
         for name, data in QUANT_DATA.items():
             vram = self.estimate_vram_gb(parameter_count, name)
             if vram <= vram_available_gb:
-                score = data["quality"] * quality_priority + (1.0 - vram / vram_available_gb) * 100 * (1 - quality_priority)
-                recommendations.append({
-                    "quantization": name,
-                    "vram_required_gb": round(vram, 2),
-                    "quality_score": data["quality"],
-                    "score": round(score, 1),
-                })
+                score = data["quality"] * quality_priority + (1.0 - vram / vram_available_gb) * 100 * (
+                    1 - quality_priority
+                )
+                recommendations.append(
+                    {
+                        "quantization": name,
+                        "vram_required_gb": round(vram, 2),
+                        "quality_score": data["quality"],
+                        "score": round(score, 1),
+                    }
+                )
         recommendations.sort(key=lambda x: x["score"], reverse=True)
         return recommendations

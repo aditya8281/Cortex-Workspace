@@ -1,6 +1,7 @@
 """Background sync service for the model catalog.
 
-Discovers models from registered providers and upserts them into ModelCatalog.
+Discovers models from the unified Ollama catalog and registered providers,
+then upserts them into ModelCatalog.
 """
 
 from __future__ import annotations
@@ -27,6 +28,9 @@ class SyncService:
     async def sync_library(self, provider_name: str | None = None) -> SyncJob:
         """Run a full sync: discover models from providers and upsert into catalog.
 
+        Uses the unified Ollama catalog (three-source pipeline) for Ollama models
+        and registered provider adapters for other providers.
+
         Args:
             provider_name: If given, only sync this provider. Otherwise sync all enabled.
 
@@ -47,11 +51,39 @@ class SyncService:
         models_updated = 0
 
         try:
-            if provider_name:
+            # Sync Ollama models from unified catalog
+            try:
+                from backend.app.services.ollama_catalog import get_ollama_catalog
+
+                ollama_models = await get_ollama_catalog(force_refresh=True)
+                for model in ollama_models:
+                    model_info = ProviderModelInfo(
+                        provider_model_id=model.get("name", ""),
+                        display_name=model.get("name", "").split(":")[0].replace("-", " ").title(),
+                        family=model.get("family"),
+                        parameter_count=self._parse_param_count(model.get("parameter_size")),
+                        context_length=4096,
+                        capabilities=model.get("capabilities", []),
+                        description=model.get("description", ""),
+                        tags=[model.get("family", "")] if model.get("family") else [],
+                    )
+                    updated = await self._upsert_model(model_info, "ollama")
+                    if updated:
+                        models_updated += 1
+                    else:
+                        models_added += 1
+                    models_discovered += 1
+            except Exception as e:
+                logger.warning("ollama_catalog_sync_failed", error=str(e))
+
+            # Sync other registered providers
+            if provider_name and provider_name != "ollama":
                 adapter = provider_registry.get(provider_name)
                 adapters = [adapter] if adapter else []
+            elif provider_name is None:
+                adapters = [a for a in provider_registry.enabled() if a.name != "ollama"]
             else:
-                adapters = provider_registry.enabled()
+                adapters = []
 
             for adapter in adapters:
                 try:
@@ -67,9 +99,7 @@ class SyncService:
 
                     # Link sync job to the first provider found in DB
                     if job.provider_id is None:
-                        db_provider = self.db.scalars(
-                            select(Provider).where(Provider.name == adapter.name)
-                        ).first()
+                        db_provider = self.db.scalars(select(Provider).where(Provider.name == adapter.name)).first()
                         if db_provider:
                             job.provider_id = db_provider.id
 
@@ -99,6 +129,22 @@ class SyncService:
             logger.error("sync_library_failed", error=str(e))
 
         return job
+
+    @staticmethod
+    def _parse_param_count(param_str: str | None) -> float | None:
+        """Parse parameter count string like '7B', '137M' to float in billions."""
+        if not param_str:
+            return None
+        param_str = param_str.strip().upper()
+        try:
+            if param_str.endswith("B"):
+                return float(param_str[:-1])
+            elif param_str.endswith("M"):
+                return float(param_str[:-1]) / 1000.0
+            else:
+                return float(param_str)
+        except (ValueError, IndexError):
+            return None
 
     async def _upsert_model(self, model_info: ProviderModelInfo, provider_name: str) -> bool:
         """Insert or update a ModelCatalog entry from provider model info.
@@ -145,9 +191,7 @@ class SyncService:
 
     def get_sync_status(self) -> list[dict]:
         """Return the last 10 sync jobs."""
-        jobs = self.db.scalars(
-            select(SyncJob).order_by(SyncJob.created_at.desc()).limit(10)
-        ).all()
+        jobs = self.db.scalars(select(SyncJob).order_by(SyncJob.created_at.desc()).limit(10)).all()
 
         return [
             {

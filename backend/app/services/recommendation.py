@@ -90,6 +90,7 @@ WORKLOADS = {
 @dataclass
 class PerformanceEstimate:
     """Estimated performance for a model on current hardware."""
+
     tokens_per_second: float | None = None
     prompt_eval_tps: float | None = None
     memory_usage_gb: float = 0.0
@@ -107,6 +108,7 @@ class PerformanceEstimate:
 @dataclass
 class ModelRecommendation:
     """A single model recommendation."""
+
     catalog_entry: ModelCatalog
     variant: ModelVariant | None = None
     score: float = 0.0
@@ -150,9 +152,7 @@ class RecommendationEngine:
             result[workload_id] = self.recommend_for_workload(workload_id, models)
         return result
 
-    def _filter_candidates(
-        self, models: list[ModelCatalog], config: dict
-    ) -> list[ModelCatalog]:
+    def _filter_candidates(self, models: list[ModelCatalog], config: dict) -> list[ModelCatalog]:
         """Filter models to candidates for a workload."""
         candidates = []
         preferred_families = config.get("preferred_families", [])
@@ -186,9 +186,7 @@ class RecommendationEngine:
 
         return candidates
 
-    def _evaluate_model(
-        self, model: ModelCatalog, config: dict
-    ) -> ModelRecommendation | None:
+    def _evaluate_model(self, model: ModelCatalog, config: dict) -> ModelRecommendation | None:
         """Evaluate a model and generate a recommendation."""
         # Find best variant for this hardware
         best_variant = self._find_best_variant(model)
@@ -238,16 +236,12 @@ class RecommendationEngine:
         param_count = model.parameter_count or 7.0
         return self._make_virtual_variant(model, "Q4_K_M", estimate_vram_gb(param_count, "Q4_K_M"))
 
-    def _make_virtual_variant(
-        self, model: ModelCatalog, quantization: str, vram_gb: float
-    ) -> ModelVariant:
+    def _make_virtual_variant(self, model: ModelCatalog, quantization: str, vram_gb: float) -> ModelVariant:
         """Create a virtual variant for scoring (not persisted)."""
         param_count = model.parameter_count or 7.0
         size_bytes = int(
             param_count
-            * {"Q4_K_M": 0.56, "Q5_K_M": 0.65, "Q8_0": 1.0, "Q4_K_S": 0.53, "Q6_K": 0.75}.get(
-                quantization, 0.56
-            )
+            * {"Q4_K_M": 0.56, "Q5_K_M": 0.65, "Q8_0": 1.0, "Q4_K_S": 0.53, "Q6_K": 0.75}.get(quantization, 0.56)
             * (1024**3)
         )
 
@@ -396,9 +390,7 @@ class RecommendationEngine:
 
         return max(0, min(100, score))
 
-    def _estimate_performance(
-        self, model: ModelCatalog, variant: ModelVariant
-    ) -> PerformanceEstimate:
+    def _estimate_performance(self, model: ModelCatalog, variant: ModelVariant) -> PerformanceEstimate:
         """Estimate performance for a model variant."""
         bandwidth = self.hardware.gpu_memory_bandwidth_gbps
         param_count = variant.parameter_count or 7.0
@@ -421,18 +413,10 @@ class RecommendationEngine:
         kv_cache_per_1k_ctx = param_count * 0.001  # Rough: 1MB per 1K context per B params
         if self.hardware.gpu_available and self.hardware.vram_total_gb > 0:
             remaining_vram = self.hardware.vram_available_gb - vram_needed
-            max_ctx = (
-                int((remaining_vram / kv_cache_per_1k_ctx) * 1000)
-                if kv_cache_per_1k_ctx > 0
-                else 4096
-            )
+            max_ctx = int((remaining_vram / kv_cache_per_1k_ctx) * 1000) if kv_cache_per_1k_ctx > 0 else 4096
         else:
             remaining_ram = self.hardware.ram_available_gb - ram_needed
-            max_ctx = (
-                int((remaining_ram / kv_cache_per_1k_ctx) * 1000)
-                if kv_cache_per_1k_ctx > 0
-                else 4096
-            )
+            max_ctx = int((remaining_ram / kv_cache_per_1k_ctx) * 1000) if kv_cache_per_1k_ctx > 0 else 4096
 
         max_ctx = max(1024, min(max_ctx, model.context_length_max or 128000))
 
@@ -450,9 +434,7 @@ class RecommendationEngine:
         # Fit rating
         total_needed = vram_needed if self.hardware.gpu_available else ram_needed
         total_available = (
-            self.hardware.vram_available_gb
-            if self.hardware.gpu_available
-            else self.hardware.ram_available_gb
+            self.hardware.vram_available_gb if self.hardware.gpu_available else self.hardware.ram_available_gb
         )
         if total_needed <= total_available * 0.6:
             fit_rating = "excellent"

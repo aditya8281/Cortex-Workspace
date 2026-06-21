@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
+from backend.app.core.db import get_current_user_optional
 from backend.app.db.session import SessionLocal
 from backend.app.models.storage_registry import StorageRegistry
 from backend.app.models.user import User
@@ -200,8 +201,15 @@ async def upload_profile_photo(
 
 
 @router.get("/photo/{user_id}")
-async def get_profile_photo(user_id: int):
-    """Serve a user's profile photo (public — no auth required for <img> tags)."""
+async def get_profile_photo(
+    user_id: int,
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Serve a user's profile photo (optional auth — logged-in users see own photos, anonymous get 404)."""
+    # Only serve own photos to authenticated users; anonymous users get 404
+    if current_user and current_user.id != user_id:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
     avatar = _avatar_path(user_id)
     if not avatar.exists():
         raise HTTPException(status_code=404, detail="Profile photo not found")

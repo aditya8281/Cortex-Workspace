@@ -45,11 +45,13 @@ dev = [
     "types-psutil",
     "types-python-jose",
     "types-passlib",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 filterwarnings = []
+asyncio_mode = "auto"
 # Enforce deterministic test ordering within modules
 addopts = ["--tb=short", "-q"]
 

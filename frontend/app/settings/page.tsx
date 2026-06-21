@@ -12,6 +12,7 @@ import Card from "../../src/shared/ui/Card";
 import IndexingConfigForm from "./IndexingConfigForm";
 import { AlertTriangle, Trash2, User, Shield, Hash, HardDrive, ExternalLink } from "lucide-react";
 import { cn } from "../../src/lib/utils";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -67,7 +68,8 @@ export default function SettingsPage() {
       setPrefsSaved(true);
       setTimeout(() => setPrefsSaved(false), 2000);
     } catch (err) {
-      // silent
+      console.error("Failed to save preferences:", err);
+      toast.error("Failed to save preferences");
     } finally {
       setPrefsLoading(false);
     }

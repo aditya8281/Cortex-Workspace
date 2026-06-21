@@ -35,35 +35,44 @@ class NotebookParser(BaseParser):
                 continue
 
             if cell_type == "code":
-                sections.append(ParsedSection(
-                    content=source.strip(),
-                    section_type="code",
-                ))
+                sections.append(
+                    ParsedSection(
+                        content=source.strip(),
+                        section_type="code",
+                    )
+                )
             elif cell_type == "markdown":
                 first_line = source.strip().split("\n")[0]
                 heading_match = None
                 if first_line.startswith("#"):
                     import re
+
                     heading_match = re.match(r"^(#{1,6})\s+(.+)", first_line)
 
                 if heading_match:
                     level = len(heading_match.group(1))
-                    sections.append(ParsedSection(
-                        title=heading_match.group(2).strip(),
-                        content=source.strip(),
-                        section_type="heading",
-                        level=level,
-                    ))
+                    sections.append(
+                        ParsedSection(
+                            title=heading_match.group(2).strip(),
+                            content=source.strip(),
+                            section_type="heading",
+                            level=level,
+                        )
+                    )
                 else:
-                    sections.append(ParsedSection(
+                    sections.append(
+                        ParsedSection(
+                            content=source.strip(),
+                            section_type="paragraph",
+                        )
+                    )
+            elif cell_type == "raw":
+                sections.append(
+                    ParsedSection(
                         content=source.strip(),
                         section_type="paragraph",
-                    ))
-            elif cell_type == "raw":
-                sections.append(ParsedSection(
-                    content=source.strip(),
-                    section_type="paragraph",
-                ))
+                    )
+                )
 
         metadata = nb.get("metadata", {})
         total_chars = sum(len(s.content) for s in sections)

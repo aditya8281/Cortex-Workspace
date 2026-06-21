@@ -4,11 +4,18 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import subprocess
-from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+class UserInputRequired(Exception):
+    """Raised when the agent needs user input to proceed."""
+
+    def __init__(self, prompt: str):
+        self.prompt = prompt
+        super().__init__(prompt)
+
 
 TOOL_REGISTRY: dict[str, dict[str, Any]] = {}
 
@@ -63,7 +70,10 @@ async def git_log(repo_path: str = ".", count: int = 10) -> str:
     """Show recent git commits."""
     try:
         proc = await asyncio.create_subprocess_exec(
-            "git", "log", f"--oneline", f"-{count}",
+            "git",
+            "log",
+            "--oneline",
+            f"-{count}",
             cwd=repo_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -106,6 +116,7 @@ async def web_fetch(url: str) -> str:
     """Fetch URL content (max 100KB)."""
     try:
         import urllib.request
+
         req = urllib.request.Request(url, headers={"User-Agent": "Cortex-Agent/1.0"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = resp.read(100 * 1024)
@@ -115,8 +126,8 @@ async def web_fetch(url: str) -> str:
 
 
 async def ask_user(question: str) -> str:
-    """Ask user for input. Returns placeholder — real implementation needs UI integration."""
-    return f"[PENDING USER INPUT] {question}"
+    """Ask user for input. Raises UserInputRequired for run manager to handle."""
+    raise UserInputRequired(question)
 
 
 register_tool("exec_command", exec_command, "Run a shell command with safety limits")

@@ -36,9 +36,10 @@ const fitColors: Record<string, string> = {
 
 interface WorkloadRecommendationsProps {
   workloads: Record<string, WorkloadRecs>;
+  onDownload?: (modelId: string) => void;
 }
 
-export default function WorkloadRecommendations({ workloads }: WorkloadRecommendationsProps) {
+export default function WorkloadRecommendations({ workloads, onDownload }: WorkloadRecommendationsProps) {
   return (
     <div className="space-y-8">
       {Object.entries(workloads).map(([workloadId, workload], idx) => {
@@ -66,7 +67,7 @@ export default function WorkloadRecommendations({ workloads }: WorkloadRecommend
             {/* Recommendation Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {workload.recommendations.slice(0, 3).map((rec, recIdx) => (
-                <RecommendationCard key={rec.model_id} rec={rec} rank={recIdx + 1} />
+                <RecommendationCard key={rec.model_id} rec={rec} rank={recIdx + 1} onDownload={onDownload} />
               ))}
             </div>
           </motion.div>
@@ -76,7 +77,7 @@ export default function WorkloadRecommendations({ workloads }: WorkloadRecommend
   );
 }
 
-function RecommendationCard({ rec, rank }: { rec: ModelRecommendation; rank: number }) {
+function RecommendationCard({ rec, rank, onDownload }: { rec: ModelRecommendation; rank: number; onDownload?: (modelId: string) => void }) {
   const perf = rec.performance;
   const variant = rec.variant;
 
@@ -92,7 +93,7 @@ function RecommendationCard({ rec, rank }: { rec: ModelRecommendation; rank: num
       <div className="mb-2">
         <h4 className="text-sm font-semibold text-text">{rec.display_name}</h4>
         <p className="text-xs text-text-muted font-mono">
-          {rec.parameter_count}B params
+          {rec.parameter_count ? `${rec.parameter_count}B params` : "Unknown params"}
           {variant && ` · ${variant.quantization} · ${variant.size_gb}GB`}
         </p>
       </div>
@@ -103,7 +104,7 @@ function RecommendationCard({ rec, rank }: { rec: ModelRecommendation; rank: num
           {perf.tokens_per_second && (
             <span className="flex items-center gap-1">
               <Zap size={10} className="text-accent" />
-              ~{Math.round(perf.tokens_per_second)} tps
+              ~{perf.tokens_per_second ? Math.round(perf.tokens_per_second) : "–"} tps
             </span>
           )}
           <span className={`flex items-center gap-1 ${fitColors[perf.fit_rating] || "text-text-muted"}`}>
@@ -116,13 +117,13 @@ function RecommendationCard({ rec, rank }: { rec: ModelRecommendation; rank: num
 
       {/* Explanation */}
       <p className="text-xs text-text-secondary mb-3 flex-1 line-clamp-3">
-        {rec.explanation.why}
+        {rec.explanation?.why}
       </p>
 
       {/* Quality tradeoff */}
       {perf && (
         <p className="text-xs text-text-muted mb-3 italic">
-          {perf.quality_notes}
+          {perf?.quality_notes}
         </p>
       )}
 
@@ -137,7 +138,12 @@ function RecommendationCard({ rec, rank }: { rec: ModelRecommendation; rank: num
 
       {/* Action */}
       <div className="mt-auto pt-2 border-t border-border-subtle">
-        <Button variant="secondary" size="sm" className="w-full">
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full"
+          onClick={() => onDownload?.(rec.model_id)}
+        >
           Download {variant?.quantization || ""}
         </Button>
       </div>

@@ -13,6 +13,8 @@ import {
   Settings,
   Shield,
   Search,
+  Cpu,
+  Download,
 } from "lucide-react";
 
 interface CommandPaletteProps {
@@ -27,6 +29,8 @@ const pages = [
   { label: "Vault", href: "/vault", icon: Lock },
   { label: "Memory", href: "/memory", icon: Brain },
   { label: "Profile", href: "/profile", icon: User },
+  { label: "Models", href: "/models", icon: Cpu },
+  { label: "Downloads", href: "/downloads", icon: Download },
   { label: "Settings", href: "/settings", icon: Settings },
   { label: "Admin", href: "/admin", icon: Shield },
 ];

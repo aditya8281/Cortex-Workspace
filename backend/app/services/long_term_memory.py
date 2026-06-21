@@ -48,17 +48,32 @@ class LongTermMemoryService:
             self.db.commit()
         return memory
 
-    def decay(self, user_id: int, decay_rate: float = 0.01) -> None:
-        memories = self.db.query(LongTermMemory).filter(
-            LongTermMemory.user_id == user_id,
-            LongTermMemory.is_active == True,  # noqa: E712
-        ).all()
-        for m in memories:
-            m.confidence = max(0.0, m.confidence - decay_rate)
-            if m.confidence <= 0.0:
-                m.is_active = False
-                m.decayed_at = func.now()
+    def decay(self, user_id: int) -> int:
+        """Apply time-based decay to all active memories for a user. Returns count of decayed memories."""
+        from datetime import datetime, timedelta, timezone
+
+        from sqlalchemy import and_, update
+
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=30)
+
+        stmt = (
+            update(LongTermMemory)
+            .where(
+                and_(
+                    LongTermMemory.user_id == user_id,
+                    LongTermMemory.is_active == True,  # noqa: E712
+                    LongTermMemory.last_accessed_at < cutoff,
+                )
+            )
+            .values(
+                confidence=LongTermMemory.confidence * 0.95,
+                decayed_at=now,
+            )
+        )
+        result = self.db.execute(stmt)
         self.db.commit()
+        return result.rowcount
 
     def search(
         self,
@@ -76,10 +91,7 @@ class LongTermMemoryService:
         if category:
             q = q.filter(LongTermMemory.category == category)
         if query:
-            q = q.filter(
-                LongTermMemory.title.ilike(f"%{query}%")
-                | LongTermMemory.content.ilike(f"%{query}%")
-            )
+            q = q.filter(LongTermMemory.title.ilike(f"%{query}%") | LongTermMemory.content.ilike(f"%{query}%"))
         return q.order_by(LongTermMemory.confidence.desc()).limit(limit).all()
 
     def list_by_category(self, user_id: int) -> dict[str, list[LongTermMemory]]:

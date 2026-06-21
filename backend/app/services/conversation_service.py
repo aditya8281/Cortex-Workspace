@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from backend.app.models.conversation import Conversation, ConversationMessage
 
@@ -20,9 +24,7 @@ class ConversationService:
     def __init__(self, db: Session):
         self._db = db
 
-    def create(
-        self, user_id: int, title: str = "New Conversation", repo_id: int | None = None
-    ) -> Conversation:
+    def create(self, user_id: int, title: str = "New Conversation", repo_id: int | None = None) -> Conversation:
         conv = Conversation(user_id=user_id, title=title, repo_id=repo_id)
         self._db.add(conv)
         self._db.commit()
@@ -65,11 +67,7 @@ class ConversationService:
             tokens=tokens,
         )
         self._db.add(msg)
-        conv = (
-            self._db.query(Conversation)
-            .filter(Conversation.id == conversation_id)
-            .first()
-        )
+        conv = self._db.query(Conversation).filter(Conversation.id == conversation_id).first()
         if conv:
             conv.message_count = (conv.message_count or 0) + 1
             conv.total_tokens = (conv.total_tokens or 0) + tokens
@@ -114,18 +112,12 @@ class ConversationService:
         return False
 
     def update_title(self, conversation_id: int, title: str) -> None:
-        conv = (
-            self._db.query(Conversation)
-            .filter(Conversation.id == conversation_id)
-            .first()
-        )
+        conv = self._db.query(Conversation).filter(Conversation.id == conversation_id).first()
         if conv:
             conv.title = title
             self._db.commit()
 
-    async def extract_insights(
-        self, conversation_id: int, user_id: int, model: str | None = None
-    ) -> list[dict]:
+    async def extract_insights(self, conversation_id: int, user_id: int, model: str | None = None) -> list[dict]:
         try:
             from backend.app.services.llm.manager import llm_manager
             from backend.app.services.llm.provider import LLMMessage
@@ -135,9 +127,7 @@ class ConversationService:
             if len(messages) < 2:
                 return []
 
-            conversation_text = "\n".join(
-                f"{m.role}: {m.content}" for m in messages
-            )
+            conversation_text = "\n".join(f"{m.role}: {m.content}" for m in messages)
             extraction_prompt = (
                 "Analyze this conversation and extract key insights about the user. "
                 "For each insight, provide:\n"
@@ -157,6 +147,7 @@ class ConversationService:
 
             import json
             import re
+
             raw = result.content.strip()
             json_match = re.search(r"\[.*\]", raw, re.DOTALL)
             if not json_match:
@@ -185,7 +176,8 @@ class ConversationService:
                 )
                 stored.append({"id": memory.id, "category": category, "title": title})
             return stored
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to extract insights: %s", e)
             return []
 
     async def generate_title(self, content: str, model: str | None = None) -> str:
