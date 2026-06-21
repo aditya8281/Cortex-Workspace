@@ -13,11 +13,18 @@ from backend.app.core.vector_db import VectorDB, get_vector_db
 from backend.app.models.document import Document, DocumentChunk, DocumentType
 from backend.app.services.embedding_cache import EmbeddingCacheService, get_embedding_cache
 from backend.app.services.embedding_service import EmbeddingService, get_embedding_service
+from backend.app.services.parsers import MarkdownParser, NotebookParser, PDFParser
 from backend.app.services.semantic_chunker import SemanticChunker
 
 logger = logging.getLogger(__name__)
 
 EMBED_BATCH_SIZE = 32
+
+_PARSERS: dict[DocumentType, object] = {
+    DocumentType.PDF: PDFParser(),
+    DocumentType.MARKDOWN: MarkdownParser(),
+    DocumentType.NOTEBOOK: NotebookParser(),
+}
 
 DOC_TYPE_MAP: dict[str, DocumentType] = {
     ".md": DocumentType.MARKDOWN,
@@ -72,6 +79,22 @@ class DocumentIndexer:
         self._vector_db = vector_db or get_vector_db()
         self._chunker = SemanticChunker(max_tokens=800, overlap_tokens=150)
 
+    def _extract_content(self, file_path: str, doc_type: DocumentType) -> str | None:
+        parser = _PARSERS.get(doc_type)
+        if parser is None:
+            try:
+                with open(file_path, encoding="utf-8", errors="replace") as f:
+                    return f.read()
+            except Exception as e:
+                logger.warning("Failed to read %s: %s", file_path, e)
+                return None
+        try:
+            parsed = parser.parse(file_path)
+            return parsed.full_text
+        except Exception as e:
+            logger.warning("Failed to parse %s with %s: %s", file_path, type(parser).__name__, e)
+            return None
+
     def index_file(self, file_path: str, force: bool = False) -> bool:
         if not os.path.isfile(file_path):
             return False
@@ -82,16 +105,9 @@ class DocumentIndexer:
         if existing and existing.content_hash == content_hash and not force:
             return False
 
-        try:
-            with open(file_path, encoding="utf-8", errors="replace") as f:
-                content = f.read()
-        except Exception as e:
-            logger.warning("Failed to read %s: %s", file_path, e)
-            return False
-
         doc_type = _detect_doc_type(file_path)
-        if doc_type == DocumentType.PDF:
-            logger.info("PDF indexing not yet implemented: %s", file_path)
+        content = self._extract_content(file_path, doc_type)
+        if content is None:
             return False
 
         if existing:
