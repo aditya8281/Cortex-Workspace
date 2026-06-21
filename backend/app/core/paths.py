@@ -33,12 +33,11 @@ class StorageResolver:
         return self.resolve() / "profile"
 
 
-_storage_resolver: StorageResolver | None = None
+_storage_resolvers: dict[str, StorageResolver] = {}
 
 
 def get_storage_resolver(mode: str = "web") -> StorageResolver:
-    """Get or create the global StorageResolver singleton."""
-    global _storage_resolver
-    if _storage_resolver is None:
-        _storage_resolver = StorageResolver(mode)
-    return _storage_resolver
+    """Get or create a StorageResolver per mode."""
+    if mode not in _storage_resolvers:
+        _storage_resolvers[mode] = StorageResolver(mode)
+    return _storage_resolvers[mode]
