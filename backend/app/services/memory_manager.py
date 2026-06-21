@@ -197,6 +197,30 @@ class MemoryManager:
         logger.info("Updated memory entry %d", entry_id)
         return entry
 
+    def consolidate_from_conversation(
+        self,
+        facts: list[str],
+        user_id: int | None = None,
+        conversation_id: int | None = None,
+    ) -> list[KnowledgeEntry]:
+        """Create knowledge entries from consolidated conversation facts."""
+        entries = []
+        for i, fact in enumerate(facts):
+            title = f"Conversation insight #{i + 1}"
+            if conversation_id:
+                title = f"Conversation {conversation_id} — insight #{i + 1}"
+
+            entry = self.create(
+                user_id=user_id,
+                title=title,
+                content=fact,
+                category="conversation",
+                source_path=f"conversation:{conversation_id}" if conversation_id else None,
+            )
+            entries.append(entry)
+
+        return entries
+
     def delete(self, entry_id: int) -> bool:
         """Delete a knowledge entry and its vector embedding."""
         entry = self.get(entry_id)
