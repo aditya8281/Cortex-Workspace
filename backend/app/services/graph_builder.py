@@ -274,7 +274,7 @@ class GraphBuilder:
         """Create 'inherits' edges from class definitions."""
         inherits = _INHERIT_RE.findall(chunk.content)
         count = 0
-        for class_name, parents in inherits:
+        for _class_name, parents in inherits:
             for parent in parents.split(","):
                 parent = parent.strip()
                 if not parent or parent == "object":
