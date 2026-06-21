@@ -1,6 +1,5 @@
 """Tests for Document and DocumentChunk ORM models."""
 
-import pytest
 from sqlalchemy.orm import Session
 
 from backend.app.models.document import Document, DocumentChunk, DocumentType

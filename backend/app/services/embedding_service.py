@@ -142,7 +142,7 @@ class EmbeddingService:
         """Embed a single text into a vector (alias for embed)."""
         return self.embed(text)
 
-    def embed_with_cache(self, text: str, cache_service: 'EmbeddingCacheService') -> list[float]:
+    def embed_with_cache(self, text: str, cache_service: Any) -> list[float]:
         """Embed text using cache when available, computing only on miss."""
         import hashlib
 
