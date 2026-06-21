@@ -17,9 +17,24 @@ export default function InstalledModelsPanel() {
   useEffect(() => {
     modelsApi.installed()
       .then((data) => setVariants(data.models.flatMap(m => m.variants.filter(v => v.downloaded))))
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load installed models:", err))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleDelete = async (modelName: string) => {
+    try {
+      await modelsApi.delete(modelName);
+      // Remove from local state
+      setVariants(prev => prev.filter(v => v.variant_id !== modelName));
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  };
+
+  const handleRun = (modelName: string) => {
+    // TODO: Implement model inference/selection
+    console.log("Run model:", modelName);
+  };
 
   if (loading) {
     return (
@@ -80,13 +95,13 @@ export default function InstalledModelsPanel() {
               </div>
 
               <div className="mt-auto pt-2 border-t border-border-subtle flex items-center gap-2">
-                <Button variant="primary" size="sm" className="flex-1">
+                <Button variant="primary" size="sm" className="flex-1" onClick={() => handleRun(variant.variant_id)}>
                   <Play size={12} /> Run
                 </Button>
                 <Button variant="ghost" size="sm">
                   <Settings size={12} />
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(variant.variant_id)}>
                   <Trash2 size={12} />
                 </Button>
               </div>

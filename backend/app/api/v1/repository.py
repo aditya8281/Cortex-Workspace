@@ -206,6 +206,8 @@ def index_status(
     repo = db.query(RepoIndex).filter(RepoIndex.id == repo_id).first()
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
+    if repo.user_id is not None and repo.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Repository not found")
 
     from backend.app.models.file_index import IndexedFile
 

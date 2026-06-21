@@ -26,7 +26,7 @@ export default function DownloadQueuePanel() {
         setCompleted(data.completed);
         setFailed(data.failed);
       })
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load download queue:", err))
       .finally(() => setLoading(false));
   };
 

@@ -121,6 +121,8 @@ def get_run(
     run = manager.get_run(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
+    if run.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Run not found")
 
     steps = manager.get_run_steps(run_id)
     return {
@@ -132,10 +134,18 @@ def get_run(
 @router.get("/agents/runs/{run_id}/status", response_model=AgentRunStatusResponse)
 async def get_run_status_endpoint(
     run_id: int,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Get the status of a background agent run."""
     from backend.app.agents.background import get_run_status
+
+    manager = AgentRunManager(db)
+    run = manager.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Run not found")
 
     return {"run_id": run_id, "status": get_run_status(run_id)}
 
@@ -154,6 +164,8 @@ async def stream_run_events(
     manager = AgentRunManager(db)
     run = manager.get_run(run_id)
     if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Run not found")
 
     queue = subscribe(run_id)
@@ -196,6 +208,8 @@ def get_run_steps(
     run = manager.get_run(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
+    if run.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Run not found")
 
     steps = manager.get_run_steps(run_id)
     return {"steps": [manager.serialize_step(s) for s in steps]}
@@ -215,6 +229,8 @@ def add_feedback(
     manager = AgentRunManager(db)
     run = manager.get_run(run_id)
     if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Run not found")
 
     try:
@@ -246,6 +262,8 @@ def get_feedback(
     manager = AgentRunManager(db)
     run = manager.get_run(run_id)
     if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Run not found")
 
     feedback_list = manager.get_run_feedback(run_id)
