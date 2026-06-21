@@ -44,9 +44,10 @@ def test_indexing_preview(mock_rules_cls, client, mock_auth):
     mock_rules = MagicMock()
     mock_rules.get_stats.return_value = {
         "total_files": 100,
-        "included_files": 80,
-        "excluded_files": 20,
-        "by_extension": {".py": 50, ".js": 30},
+        "will_index": 80,
+        "excluded_by_directory": 5,
+        "excluded_by_pattern": 10,
+        "excluded_by_size": 5,
     }
     mock_rules_cls.return_value = mock_rules
 
@@ -54,4 +55,4 @@ def test_indexing_preview(mock_rules_cls, client, mock_auth):
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_files"] == 100
-    assert data["included_files"] == 80
+    assert data["will_index"] == 80
