@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.user import User
 from backend.app.schemas.notification import NotificationListResponse, NotificationResponse
+from backend.app.schemas.notification_extra import NotificationMarkReadResponse, NotificationOkResponse
 from backend.app.services import notification_service
 
 router = APIRouter()
@@ -32,7 +33,7 @@ async def list_notifications(
     )
 
 
-@router.post("/{notification_id}/read")
+@router.post("/{notification_id}/read", response_model=NotificationOkResponse)
 async def mark_notification_read(
     notification_id: int,
     current_user: User = Depends(get_current_user),
@@ -45,7 +46,7 @@ async def mark_notification_read(
     return {"ok": True}
 
 
-@router.post("/read-all")
+@router.post("/read-all", response_model=NotificationMarkReadResponse)
 async def mark_all_notifications_read(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -55,7 +56,7 @@ async def mark_all_notifications_read(
     return {"ok": True, "marked_read": count}
 
 
-@router.delete("/{notification_id}")
+@router.delete("/{notification_id}", response_model=NotificationOkResponse)
 async def delete_notification_endpoint(
     notification_id: int,
     current_user: User = Depends(get_current_user),

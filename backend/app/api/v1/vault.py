@@ -19,6 +19,20 @@ from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.user import User
+from backend.app.schemas.vault import (
+    VaultChangePasswordResponse,
+    VaultDeleteResponse,
+    VaultExportResponse,
+    VaultFileListResponse,
+    VaultFolderResponse,
+    VaultLockResponse,
+    VaultMetadataResponse,
+    VaultMoveResponse,
+    VaultRenameResponse,
+    VaultSearchResponse,
+    VaultStatusResponse,
+    VaultUploadResponse,
+)
 from backend.app.services import vault_service
 
 router = APIRouter()
@@ -84,7 +98,7 @@ def unlock_vault(
     return VaultUnlockResponse(unlocked=True, message="Vault unlocked")
 
 
-@router.post("/lock")
+@router.post("/lock", response_model=VaultLockResponse)
 def lock_vault(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -94,7 +108,7 @@ def lock_vault(
     return {"locked": True, "message": "Vault locked"}
 
 
-@router.get("/status")
+@router.get("/status", response_model=VaultStatusResponse)
 def vault_status(
     current_user: User = Depends(get_current_user),
 ):
@@ -110,7 +124,7 @@ def vault_status(
 # ── File Operations ──────────────────────────────────────────────────
 
 
-@router.get("/files")
+@router.get("/files", response_model=VaultFileListResponse)
 def list_files(
     folder: str = "/",
     recursive: bool = False,
@@ -122,7 +136,7 @@ def list_files(
     return vault_service.list_vault_files(db, current_user.id, folder, recursive)
 
 
-@router.post("/files/upload")
+@router.post("/files/upload", response_model=VaultUploadResponse)
 async def upload_file(
     file: UploadFile = File(...),
     folder: str = "/",
@@ -195,7 +209,7 @@ def download_file(
     )
 
 
-@router.delete("/files/{file_path:path}")
+@router.delete("/files/{file_path:path}", response_model=VaultDeleteResponse)
 def delete_file(
     file_path: str,
     current_user: User = Depends(get_current_user),
@@ -209,7 +223,7 @@ def delete_file(
     return {"deleted": True}
 
 
-@router.put("/files/{file_path:path}/rename")
+@router.put("/files/{file_path:path}/rename", response_model=VaultRenameResponse)
 def rename_file(
     file_path: str,
     body: VaultRenameRequest,
@@ -221,7 +235,7 @@ def rename_file(
     return vault_service.rename_vault_item(db, current_user.id, file_path, body.new_name)
 
 
-@router.post("/files/move")
+@router.post("/files/move", response_model=VaultMoveResponse)
 def move_file(
     body: VaultMoveRequest,
     current_user: User = Depends(get_current_user),
@@ -232,7 +246,7 @@ def move_file(
     return vault_service.move_vault_item(db, current_user.id, body.source_path, body.destination_folder)
 
 
-@router.put("/files/{file_path:path}/metadata")
+@router.put("/files/{file_path:path}/metadata", response_model=VaultMetadataResponse)
 def update_file_metadata(
     file_path: str,
     body: VaultMetadataUpdateRequest,
@@ -244,7 +258,7 @@ def update_file_metadata(
     return vault_service.update_vault_metadata(db, current_user.id, file_path, body.favorite, body.tags)
 
 
-@router.post("/folders")
+@router.post("/folders", response_model=VaultFolderResponse)
 def create_folder(
     body: VaultFolderRequest,
     current_user: User = Depends(get_current_user),
@@ -255,7 +269,7 @@ def create_folder(
     return vault_service.create_vault_folder(db, current_user.id, body.folder_path)
 
 
-@router.post("/search")
+@router.post("/search", response_model=VaultSearchResponse)
 def search_files(
     body: VaultSearchRequest,
     current_user: User = Depends(get_current_user),
@@ -266,7 +280,7 @@ def search_files(
     return vault_service.search_vault_files(db, current_user.id, body.query)
 
 
-@router.post("/files/export")
+@router.post("/files/export", response_model=VaultExportResponse)
 def export_files(
     body: VaultExportRequest,
     current_user: User = Depends(get_current_user),
@@ -277,7 +291,7 @@ def export_files(
     return vault_service.export_vault_items(db, current_user.id, body.paths, body.destination_dir)
 
 
-@router.post("/change-password")
+@router.post("/change-password", response_model=VaultChangePasswordResponse)
 def change_password(
     body: VaultChangePasswordRequest,
     current_user: User = Depends(get_current_user),

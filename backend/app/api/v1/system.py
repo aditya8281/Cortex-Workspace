@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import psutil
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from backend.app.core.db import get_current_user
 from backend.app.core.logging import get_recent_logs
 from backend.app.core.system_info import get_disk_info, get_gpu_info, get_ram_info
+from backend.app.models.user import User
+from backend.app.schemas.system import SystemLogsResponse, SystemMetricsResponse
 
 router = APIRouter()
 
@@ -30,13 +33,9 @@ def _get_top_processes(n: int = 20) -> list[dict]:
     return procs[:n]
 
 
-@router.get("/system/metrics")
-async def get_system_metrics():
-    """Return real-time system metrics: CPU, RAM, GPU, Disk, Processes.
-
-    Public endpoint — system info is not user-specific and does not
-    require authentication.
-    """
+@router.get("/system/metrics", response_model=SystemMetricsResponse)
+async def get_system_metrics(current_user: User = Depends(get_current_user)):
+    """Return real-time system metrics: CPU, RAM, GPU, Disk, Processes."""
     ram = get_ram_info()
     gpu = get_gpu_info()
     disk = get_disk_info(".")
@@ -59,13 +58,11 @@ async def get_system_metrics():
     }
 
 
-@router.get("/system/logs")
+@router.get("/system/logs", response_model=SystemLogsResponse)
 async def get_system_logs(
     limit: int = 20,
+    current_user: User = Depends(get_current_user),
 ):
-    """Return recent system logs from the in-memory log buffer.
-
-    Public endpoint — system logs are not user-specific.
-    """
+    """Return recent system logs from the in-memory log buffer."""
     logs = get_recent_logs(limit=min(limit, 200))
     return {"logs": logs, "total": len(logs)}

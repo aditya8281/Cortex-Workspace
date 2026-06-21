@@ -86,20 +86,6 @@ export interface VaultUploadResult {
   size: number;
 }
 
-// ── CRTX ──────────────────────────────────────────────────────────
-
-export interface CrtxVerifyResult {
-  metadata: Record<string, unknown>;
-  manifest: Record<string, unknown>;
-}
-
-export interface CrtxImportResult {
-  user_id: number;
-  username: string;
-  vault_files_restored: number;
-  message: string;
-}
-
 // ── Memory ────────────────────────────────────────────────────────
 
 export interface MemoryEntry {

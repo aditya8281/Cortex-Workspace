@@ -7,7 +7,6 @@ this interface to integrate with the Model Intelligence System.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 

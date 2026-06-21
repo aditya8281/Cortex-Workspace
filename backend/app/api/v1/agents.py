@@ -13,6 +13,19 @@ from backend.app.agents.run_manager import AgentRunManager
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.agent import AgentRun
 from backend.app.models.user import User
+from backend.app.schemas.agent import (
+    AgentCreateResponse,
+    AgentFeedbackCreateResponse,
+    AgentFeedbackListResponse,
+    AgentGetResponse,
+    AgentListResponse,
+    AgentRunCreateResponse,
+    AgentRunGetResponse,
+    AgentRunListResponse,
+    AgentRunStatusResponse,
+    AgentRunStepsResponse,
+    AgentUpdateResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +65,7 @@ class FeedbackPayload(BaseModel):
 # ── Runs ────────────────────────────────────────────────────────
 
 
-@router.post("/agents/runs")
+@router.post("/agents/runs", response_model=AgentRunCreateResponse)
 async def create_run(
     payload: RunCreatePayload,
     db: Session = Depends(get_db),
@@ -76,7 +89,7 @@ async def create_run(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/agents/runs")
+@router.get("/agents/runs", response_model=AgentRunListResponse)
 def list_runs(
     agent_id: int | None = None,
     status: str | None = None,
@@ -95,7 +108,7 @@ def list_runs(
     return {"runs": [manager.serialize_run(r) for r in runs]}
 
 
-@router.get("/agents/runs/{run_id}")
+@router.get("/agents/runs/{run_id}", response_model=AgentRunGetResponse)
 def get_run(
     run_id: int,
     db: Session = Depends(get_db),
@@ -114,7 +127,7 @@ def get_run(
     }
 
 
-@router.get("/agents/runs/{run_id}/status")
+@router.get("/agents/runs/{run_id}/status", response_model=AgentRunStatusResponse)
 async def get_run_status_endpoint(
     run_id: int,
     current_user: User = Depends(get_current_user),
@@ -125,7 +138,7 @@ async def get_run_status_endpoint(
     return {"run_id": run_id, "status": get_run_status(run_id)}
 
 
-@router.get("/agents/runs/{run_id}/steps")
+@router.get("/agents/runs/{run_id}/steps", response_model=AgentRunStepsResponse)
 def get_run_steps(
     run_id: int,
     db: Session = Depends(get_db),
@@ -144,7 +157,7 @@ def get_run_steps(
 # ── Feedback ────────────────────────────────────────────────────
 
 
-@router.post("/agents/runs/{run_id}/feedback")
+@router.post("/agents/runs/{run_id}/feedback", response_model=AgentFeedbackCreateResponse)
 def add_feedback(
     run_id: int,
     payload: FeedbackPayload,
@@ -176,7 +189,7 @@ def add_feedback(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/agents/runs/{run_id}/feedback")
+@router.get("/agents/runs/{run_id}/feedback", response_model=AgentFeedbackListResponse)
 def get_feedback(
     run_id: int,
     db: Session = Depends(get_db),
@@ -205,7 +218,7 @@ def get_feedback(
 # ── Agent CRUD ──────────────────────────────────────────────────
 
 
-@router.get("/agents")
+@router.get("/agents", response_model=AgentListResponse)
 def list_agents(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -231,7 +244,7 @@ def list_agents(
     }
 
 
-@router.post("/agents")
+@router.post("/agents", response_model=AgentCreateResponse)
 def create_agent(
     payload: AgentCreatePayload,
     db: Session = Depends(get_db),
@@ -265,7 +278,7 @@ def create_agent(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/agents/{agent_id}")
+@router.get("/agents/{agent_id}", response_model=AgentGetResponse)
 def get_agent(
     agent_id: int,
     db: Session = Depends(get_db),
@@ -291,7 +304,7 @@ def get_agent(
     }
 
 
-@router.put("/agents/{agent_id}")
+@router.put("/agents/{agent_id}", response_model=AgentUpdateResponse)
 def update_agent(
     agent_id: int,
     payload: AgentUpdatePayload,

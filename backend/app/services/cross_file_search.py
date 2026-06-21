@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
@@ -136,7 +135,7 @@ class CrossFileSearch:
 
     async def hybrid_search(self, query: str, repo_id: int | None = None, max_results: int = 20):
         """Use hybrid retrieval for better results."""
-        from backend.app.services.hybrid_retrieval import HybridRetrieval
+        from backend.app.services.hybrid_retrieval import HybridRetrievalV2 as HybridRetrieval
         retrieval = HybridRetrieval(self.db)
         return await retrieval.retrieve(query, repo_id, max_results)
 

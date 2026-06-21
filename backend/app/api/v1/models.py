@@ -5,7 +5,6 @@ from pathlib import Path
 
 import psutil
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,6 +15,29 @@ from backend.app.models.user import User
 from backend.app.services.catalogue import CatalogueManager
 from backend.app.services.hardware import detect_hardware as _detect_hardware_full
 from backend.app.services.llm.manager import MODEL_CATALOG, LLMManager, llm_manager
+from backend.app.schemas.model import (
+    AutocompleteResponse,
+    CancelDownloadResponse,
+    CatalogueRefreshResponse,
+    DeleteModelResponse,
+    DownloadModelResponse,
+    DownloadProgressResponse,
+    HardwareInfo,
+    InstalledModelsResponse,
+    LLMMetricsResponse,
+    ModelComparisonResponse,
+    ModelDetailResponse,
+    ModelListResponse,
+    ModelSearchResponse,
+    ModelUpdatesResponse,
+    RecommendedModelsAllResponse,
+    RecommendedModelsSingleResponse,
+    StorageUsageResponse,
+    SyncStatusListResponse,
+    SyncTriggerResponse,
+    UsageStatsResponse,
+    WorkloadRecommendations,
+)
 from backend.app.services.model_comparison import ModelComparisonService
 from backend.app.services.model_downloader import model_downloader
 from backend.app.services.model_search import ModelSearchService
@@ -32,17 +54,10 @@ class DimensionComparisonResponse(BaseModel):
     higher_is_better: bool
 
 
-class ModelComparisonResponse(BaseModel):
-    winner_model: str
-    dimension_wins: dict[str, str]
-    dimensions: list[DimensionComparisonResponse]
-    summary: str
-
-
 router = APIRouter()
 
 
-@router.get("/models")
+@router.get("/models", response_model=ModelListResponse)
 async def list_models(
     model_type: str | None = None,
     downloaded_only: bool = False,
@@ -130,30 +145,30 @@ async def recommended_models(
         if workload and workload in WORKLOADS:
             # Single workload
             recs = engine.recommend_for_workload(workload, all_models)
-            return {
-                "hardware": hardware.to_dict(),
-                "workload": workload,
-                "recommendations": _format_recommendations(recs),
-            }
+            return RecommendedModelsSingleResponse(
+                hardware=hardware.to_dict(),
+                workload=workload,
+                recommendations=_format_recommendations(recs),
+            )
         else:
             # All workloads
             all_recs = engine.recommend_all(all_models)
             formatted = {}
             for wl_id, recs in all_recs.items():
-                formatted[wl_id] = {
-                    "label": WORKLOADS[wl_id]["label"],
-                    "description": WORKLOADS[wl_id]["description"],
-                    "recommendations": _format_recommendations(recs),
-                }
-            return {
-                "hardware": hardware.to_dict(),
-                "workloads": formatted,
-            }
+                formatted[wl_id] = WorkloadRecommendations(
+                    label=WORKLOADS[wl_id]["label"],
+                    description=WORKLOADS[wl_id]["description"],
+                    recommendations=_format_recommendations(recs),
+                )
+            return RecommendedModelsAllResponse(
+                hardware=hardware.to_dict(),
+                workloads=formatted,
+            )
     finally:
         db.close()
 
 
-@router.get("/models/hardware")
+@router.get("/models/hardware", response_model=HardwareInfo)
 async def detect_hardware(
     current_user: User = Depends(get_current_user),
 ):
@@ -161,7 +176,7 @@ async def detect_hardware(
     return _detect_hardware()
 
 
-@router.get("/models/health")
+@router.get("/models/health", response_model=dict)
 async def llm_health(
     current_user: User = Depends(get_current_user),
 ):
@@ -169,7 +184,7 @@ async def llm_health(
     return await llm_manager.health_check()
 
 
-@router.get("/models/metrics")
+@router.get("/models/metrics", response_model=dict)
 async def llm_metrics(
     current_user: User = Depends(get_current_user),
 ):
@@ -177,7 +192,7 @@ async def llm_metrics(
     return llm_manager.get_metrics()
 
 
-@router.get("/models/usage/stats")
+@router.get("/models/usage/stats", response_model=UsageStatsResponse)
 async def get_usage_stats(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -189,7 +204,7 @@ async def get_usage_stats(
     return tracker.get_usage_stats()
 
 
-@router.post("/models/{model_name}/download")
+@router.post("/models/{model_name}/download", response_model=DownloadModelResponse)
 async def download_model(
     model_name: str,
     variant: str | None = None,
@@ -203,7 +218,7 @@ async def download_model(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.get("/models/{model_name}/progress")
+@router.get("/models/{model_name}/progress", response_model=DownloadProgressResponse)
 async def download_progress(
     model_name: str,
     current_user: User = Depends(get_current_user),
@@ -213,7 +228,7 @@ async def download_progress(
     return {"model": model_name, "progress": progress}
 
 
-@router.post("/models/{model_name}/cancel")
+@router.post("/models/{model_name}/cancel", response_model=CancelDownloadResponse)
 async def cancel_download(
     model_name: str,
     current_user: User = Depends(get_current_user),
@@ -223,7 +238,7 @@ async def cancel_download(
     return {"cancelled": cancelled}
 
 
-@router.delete("/models/{model_name}")
+@router.delete("/models/{model_name}", response_model=DeleteModelResponse)
 async def delete_model(
     model_name: str,
     current_user: User = Depends(get_current_user),
@@ -237,7 +252,7 @@ async def delete_model(
     return {"status": "deleted", "model": model_name}
 
 
-@router.get("/models/installed")
+@router.get("/models/installed", response_model=InstalledModelsResponse)
 async def list_installed_models(
     current_user: User = Depends(get_current_user),
 ):
@@ -297,7 +312,7 @@ async def list_installed_models(
         db.close()
 
 
-@router.get("/models/search")
+@router.get("/models/search", response_model=ModelSearchResponse)
 async def search_models(
     q: str = "",
     capabilities: str | None = None,
@@ -399,7 +414,7 @@ async def compare_models(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/models/sync")
+@router.post("/models/sync", response_model=SyncTriggerResponse)
 async def trigger_sync(
     provider: str | None = None,
     current_user: User = Depends(get_current_user),
@@ -424,7 +439,7 @@ async def trigger_sync(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/models/sync/status")
+@router.get("/models/sync/status", response_model=SyncStatusListResponse)
 async def sync_status(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -438,7 +453,7 @@ async def sync_status(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/models/autocomplete")
+@router.get("/models/autocomplete", response_model=AutocompleteResponse)
 async def autocomplete_models(
     q: str = "",
     limit: int = 10,
@@ -464,7 +479,7 @@ def _guess_quant_from_tag(tag: str) -> str:
     return "UNKNOWN"
 
 
-@router.get("/models/storage")
+@router.get("/models/storage", response_model=StorageUsageResponse)
 async def get_storage_usage(
     current_user: User = Depends(get_current_user),
 ):
@@ -497,7 +512,7 @@ async def get_storage_usage(
     }
 
 
-@router.get("/models/{model_id}")
+@router.get("/models/{model_id}", response_model=ModelDetailResponse)
 async def get_model_detail(
     model_id: str,
     current_user: User = Depends(get_current_user),
@@ -546,7 +561,7 @@ async def get_model_detail(
         db.close()
 
 
-@router.post("/models/catalogue/refresh")
+@router.post("/models/catalogue/refresh", response_model=CatalogueRefreshResponse)
 async def refresh_catalogue(
     current_user: User = Depends(get_current_user),
 ):
@@ -563,7 +578,7 @@ async def refresh_catalogue(
         db.close()
 
 
-@router.get("/models/updates")
+@router.get("/models/updates", response_model=ModelUpdatesResponse)
 async def check_model_updates(
     current_user: User = Depends(get_current_user),
 ):

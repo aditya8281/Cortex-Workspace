@@ -13,6 +13,16 @@ from backend.app.models.repo_index import RepoIndex
 from backend.app.models.user import User
 from backend.app.services.graph_builder import GraphBuilder
 from backend.app.services.incremental_indexer import IncrementalIndexer
+from backend.app.schemas.repository import (
+    GraphBuildResponse,
+    RepoCreateResponse,
+    RepoDeleteResponse,
+    RepoGetResponse,
+    RepoIndexResponse,
+    RepoIndexStatusResponse,
+    RepoListResponse,
+    RepoUpdateResponse,
+)
 from backend.app.tasks.worker import enqueue_task
 
 logger = logging.getLogger(__name__)
@@ -48,7 +58,7 @@ def _serialize_repo(repo: RepoIndex) -> dict:
 # ── Repository CRUD ─────────────────────────────────────────────
 
 
-@router.get("/repos")
+@router.get("/repos", response_model=RepoListResponse)
 def list_repos(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -63,7 +73,7 @@ def list_repos(
     return {"repos": [_serialize_repo(r) for r in repos]}
 
 
-@router.post("/repos")
+@router.post("/repos", response_model=RepoCreateResponse)
 def create_repo(
     payload: RepoCreatePayload,
     db: Session = Depends(get_db),
@@ -94,7 +104,7 @@ def create_repo(
     return {"status": "created", "repo": _serialize_repo(repo)}
 
 
-@router.get("/repos/{repo_id}")
+@router.get("/repos/{repo_id}", response_model=RepoGetResponse)
 def get_repo(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -107,7 +117,7 @@ def get_repo(
     return {"repo": _serialize_repo(repo)}
 
 
-@router.put("/repos/{repo_id}")
+@router.put("/repos/{repo_id}", response_model=RepoUpdateResponse)
 def update_repo(
     repo_id: int,
     payload: RepoUpdatePayload,
@@ -127,7 +137,7 @@ def update_repo(
     return {"status": "updated", "repo": _serialize_repo(repo)}
 
 
-@router.delete("/repos/{repo_id}")
+@router.delete("/repos/{repo_id}", response_model=RepoDeleteResponse)
 def delete_repo(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -146,7 +156,7 @@ def delete_repo(
 # ── Indexing ────────────────────────────────────────────────────
 
 
-@router.post("/repos/{repo_id}/index")
+@router.post("/repos/{repo_id}/index", response_model=RepoIndexResponse)
 async def index_repo(
     repo_id: int,
     force: bool = False,
@@ -178,7 +188,7 @@ async def index_repo(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/repos/{repo_id}/status")
+@router.get("/repos/{repo_id}/status", response_model=RepoIndexStatusResponse)
 def index_status(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -209,7 +219,7 @@ def index_status(
 # ── Graph ───────────────────────────────────────────────────────
 
 
-@router.post("/repos/{repo_id}/graph")
+@router.post("/repos/{repo_id}/graph", response_model=GraphBuildResponse)
 def build_graph(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -229,7 +239,7 @@ def build_graph(
     }
 
 
-@router.get("/repos/{repo_id}/graph")
+@router.get("/repos/{repo_id}/graph", response_model=dict)
 def get_graph(
     repo_id: int,
     db: Session = Depends(get_db),
@@ -244,7 +254,7 @@ def get_graph(
     return builder.get_graph(repo_id)
 
 
-@router.get("/repos/{repo_id}/graph/node/{node_id}")
+@router.get("/repos/{repo_id}/graph/node/{node_id}", response_model=dict)
 def get_node_context(
     repo_id: int,
     node_id: int,

@@ -13,8 +13,6 @@ import type {
   VaultStatus,
   VaultFileEntry,
   VaultUploadResult,
-  CrtxVerifyResult,
-  CrtxImportResult,
   MemoryEntry,
   MemoryListResponse,
   MemorySearchResponse,
@@ -403,22 +401,6 @@ export async function apiVaultDownloadFileBlob(filePath: string): Promise<Blob> 
   }
   if (!res.ok) throw new Error(`Download failed (${res.status})`);
   return res.blob();
-}
-
-// ── CRTX Export/Import endpoints (DISABLED — backend routes inactive) ──
-
-/** @deprecated CRTX routes are disabled. This function will always throw. */
-export function apiCrtxVerify(_file: File): Promise<CrtxVerifyResult> {
-  return Promise.reject(new Error("CRTX export/import is not yet available"));
-}
-
-/** @deprecated CRTX routes are disabled. This function will always throw. */
-export function apiCrtxImport(
-  _file: File,
-  _exportPassword: string,
-  _newStorageRoot: string
-): Promise<CrtxImportResult> {
-  return Promise.reject(new Error("CRTX export/import is not yet available"));
 }
 
 // ── Memory endpoints ────────────────────────────────────────────────

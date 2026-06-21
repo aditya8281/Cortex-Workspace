@@ -34,6 +34,12 @@ class EmbeddingService:
                 self._model = ort.InferenceSession(model_path)
                 self._backend = "onnx"
                 logger.info("Loaded ONNX model from %s", model_path)
+                # Verify tokenizer works (detect stub tokenizers)
+                test_inputs = self._tokenize("test")
+                if test_inputs.get("input_ids") == [[0]] and test_inputs.get("attention_mask") == [[1]]:
+                    logger.warning("ONNX tokenizer returned stub tensors — falling back")
+                    self._backend = None
+                    raise RuntimeError("Stub tokenizer detected")
                 return
             except ImportError:
                 logger.warning("onnxruntime not installed — install with: pip install 'cortex-workspace[embeddings]'")
@@ -77,11 +83,7 @@ class EmbeddingService:
                 return self._mock_embed(text)
         if self._backend == "ollama":
             try:
-                import asyncio
-
-                return asyncio.get_event_loop().run_until_complete(
-                    self._embed_via_ollama([text])
-                )[0]
+                return self._run_async(self._embed_via_ollama([text]))[0]
             except Exception as e:
                 logger.warning("Ollama embedding failed: %s, falling back to mock", e)
                 return self._mock_embed(text)
@@ -97,15 +99,23 @@ class EmbeddingService:
                 return [self._mock_embed(t) for t in texts]
         if self._backend == "ollama":
             try:
-                import asyncio
-
-                return asyncio.get_event_loop().run_until_complete(
-                    self._embed_via_ollama(texts)
-                )
+                return self._run_async(self._embed_via_ollama(texts))
             except Exception as e:
                 logger.warning("Ollama batch embedding failed: %s, falling back to mock", e)
                 return [self._mock_embed(t) for t in texts]
         return [self._mock_embed(t) for t in texts]
+
+    def _run_async(self, coro):
+        """Run an async coroutine from sync context safely."""
+        import asyncio
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            raise RuntimeError("Cannot call async Ollama from running event loop")
+        return asyncio.run(coro)
 
     async def _embed_via_ollama(self, texts: list[str]) -> list[list[float]]:
         import httpx

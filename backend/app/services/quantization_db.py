@@ -74,11 +74,7 @@ class QuantizationService:
     def estimate_vram_gb(self, parameter_count: float, quantization: str, context_length: int = 4096) -> float:
         """Estimate VRAM requirement in GB."""
         info = self.get_quant_info(quantization)
-        if not info:
-            # Default to Q4_K_M estimation
-            bytes_per_param = 0.56
-        else:
-            bytes_per_param = info["bits_per_param"] / 8.0
+        bytes_per_param = 0.56 if not info else info["bits_per_param"] / 8.0
 
         model_size_gb = parameter_count * bytes_per_param
 
@@ -94,10 +90,7 @@ class QuantizationService:
     def estimate_tps(self, parameter_count: float, quantization: str, bandwidth_gbps: float) -> float | None:
         """Estimate tokens per second based on model size and GPU bandwidth."""
         info = self.get_quant_info(quantization)
-        if not info:
-            memory_mult = 0.56
-        else:
-            memory_mult = info["memory_multiplier"]
+        memory_mult = 0.56 if not info else info["memory_multiplier"]
 
         model_size_gb = parameter_count * memory_mult
         if model_size_gb <= 0 or bandwidth_gbps <= 0:

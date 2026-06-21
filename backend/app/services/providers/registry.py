@@ -74,11 +74,8 @@ def load_providers_from_db(db: Session, registry: ProviderRegistry | None = None
             continue
 
         kwargs: dict = {}
-        if prov.base_url:
-            if prov.name == "ollama":
-                kwargs["base_url"] = prov.base_url
-            elif prov.name == "huggingface":
-                kwargs["base_url"] = prov.base_url
+        if prov.base_url and prov.name in ("ollama", "huggingface"):
+            kwargs["base_url"] = prov.base_url
 
         try:
             adapter = adapter_cls(**kwargs)

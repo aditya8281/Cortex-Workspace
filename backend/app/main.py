@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.auth import router as auth_router
 from backend.app.api.memory import router as memory_router
 from backend.app.api.router import api_router
+from backend.app.api.v1.ws_models import router as ws_models_router
 from backend.app.api.v1.ws_system import router as ws_system_router
 from backend.app.api.ws import router as ws_router
 from backend.app.core.config import settings
@@ -29,7 +30,6 @@ from backend.app.core.logging import get_logger, setup_logging
 from backend.app.core.middleware import RequestLoggingMiddleware
 from backend.app.core.rate_limit import setup_rate_limiting
 from backend.app.core.system_paths import ensure_system_dirs
-from backend.app.core.websocket import manager
 from backend.app.db.bootstrap import bootstrap_database
 
 setup_logging()
@@ -143,21 +143,8 @@ app.include_router(
 app.include_router(auth_router)
 app.include_router(memory_router)
 app.include_router(ws_router)
+app.include_router(ws_models_router)
 app.include_router(ws_system_router)
-
-
-from fastapi import WebSocket, WebSocketDisconnect
-
-
-@app.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket):
-    await manager.connect(ws)
-    try:
-        while True:
-            data = await ws.receive_text()
-            await manager.send(ws, {"echo": data})
-    except WebSocketDisconnect:
-        manager.disconnect(ws)
 
 
 @app.get("/")

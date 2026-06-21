@@ -140,7 +140,7 @@ async def update_my_profile(
 # ── Profile Photo ────────────────────────────────────────────────────
 
 
-@router.post("/photo")
+@router.post("/photo", response_model=dict)
 async def upload_profile_photo(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
@@ -224,7 +224,7 @@ async def get_my_profile_photo(
     return FileResponse(str(path), media_type="image/webp", filename=path.name)
 
 
-@router.delete("/photo")
+@router.delete("/photo", response_model=dict)
 async def remove_profile_photo(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

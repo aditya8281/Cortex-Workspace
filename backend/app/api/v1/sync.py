@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from backend.app.core.config import settings
 from backend.app.core.db import get_current_user
 from backend.app.models.user import User
+from backend.app.schemas.sync import SyncStopResponse, SyncValidatePathResponse
 from backend.app.services.file_watcher import SyncJob, file_watcher
 from backend.app.tasks.worker import enqueue_task
 
@@ -247,22 +248,6 @@ class SyncJobResponse(BaseModel):
     updated_at: str
 
 
-def _get_default_sync_paths() -> list[dict[str, Any]]:
-    """Return default sync paths with resolved absolute paths."""
-    home = os.path.expanduser("~")
-    resolved = []
-    for p in DEFAULT_SYNC_PATHS:
-        resolved_path = os.path.expanduser(p["path"])
-        exists = os.path.isdir(resolved_path)
-        resolved.append({
-            "label": p["label"],
-            "path": resolved_path,
-            "enabled": p["enabled"] and exists,
-            "exists": exists,
-        })
-    return resolved
-
-
 @router.get("/sync/defaults", response_model=SyncDefaultsResponse)
 async def get_sync_defaults(
     current_user: User = Depends(get_current_user),
@@ -326,7 +311,7 @@ async def start_sync(
         db.close()
 
 
-@router.post("/sync/validate-path")
+@router.post("/sync/validate-path", response_model=SyncValidatePathResponse)
 async def validate_sync_path(
     payload: SyncValidatePathPayload,
     current_user: User = Depends(get_current_user),
@@ -342,7 +327,7 @@ async def validate_sync_path(
     }
 
 
-@router.post("/sync/stop")
+@router.post("/sync/stop", response_model=SyncStopResponse)
 async def stop_sync(
     payload: SyncStopPayload,
     current_user: User = Depends(get_current_user),

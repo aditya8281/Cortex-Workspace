@@ -39,8 +39,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
             if current["count"] > self.max_requests:
                 return Response(status_code=429, content="Rate limit exceeded")
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Rate limiter Redis failure, rejecting request: %s", e)
+            return Response(
+                status_code=429,
+                content="Rate limit service unavailable",
+                headers={"Retry-After": "60"},
+            )
 
         return await call_next(request)
 
