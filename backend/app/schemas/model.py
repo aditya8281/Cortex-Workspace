@@ -23,7 +23,7 @@ class ModelCatalogEntry(BaseModel):
     capabilities: list[str]
     description: str
     downloaded: bool
-    variants: list[str]
+    variants: list[str] = []
     hardware_requirements: dict
 
 
@@ -32,6 +32,8 @@ class ModelListResponse(BaseModel):
     total_count: int
     downloaded_count: int
     available_from_providers: list[ModelProviderInfo]
+    type_counts: dict[str, int] = {}
+    size_counts: dict[str, int] = {}
 
 
 class RecommendationVariant(BaseModel):
@@ -90,13 +92,17 @@ class RecommendedModelsAllResponse(BaseModel):
 
 
 class HardwareInfo(BaseModel):
-    cpu_cores: int = 0
+    ram_gb: float = 0.0
+    ram_available_gb: float = 0.0
+    ram_percent: float = 0.0
+    cpu_count: int = 0
     cpu_threads: int = 0
-    ram_total_gb: float = 0.0
-    gpu_name: str | None = None
-    gpu_memory_gb: float | None = None
-    gpu_type: str | None = None
-    platform: str = ""
+    cpu_freq_mhz: float = 0.0
+    cpu_arch: str = ""
+    gpu: dict = {}
+    disk_free_gb: float = 0.0
+    supports_cuda: bool = False
+    supports_metal: bool = False
 
 
 class LLMHealthResponse(BaseModel):
@@ -117,6 +123,7 @@ class DownloadModelResponse(BaseModel):
     status: str
     model: str
     variant: str | None = None
+    download_id: str | None = None
 
 
 class DownloadProgressResponse(BaseModel):
@@ -210,8 +217,16 @@ class CatalogueRefreshResponse(BaseModel):
     models_added: int
 
 
+class ModelUpdate(BaseModel):
+    model_id: str
+    display_name: str
+    installed_version: str | None = None
+    available_version: str | None = None
+    update_type: str  # "version", "tag", "new"
+
+
 class ModelUpdatesResponse(BaseModel):
-    updates: list[dict]
+    updates: list[ModelUpdate]
 
 
 class StorageUsageResponse(BaseModel):
@@ -253,3 +268,17 @@ class ModelComparisonResponse(BaseModel):
     dimension_wins: dict[str, str]
     dimensions: list[DimensionComparisonResponse]
     summary: str
+
+
+class ModelSettingsResponse(BaseModel):
+    inference_backend: str = "auto"
+    huggingface_token: str | None = None
+    auto_download: bool = True
+    max_concurrent_downloads: int = 2
+
+
+class ModelSettingsUpdate(BaseModel):
+    inference_backend: str | None = None
+    huggingface_token: str | None = None
+    auto_download: bool | None = None
+    max_concurrent_downloads: int | None = None

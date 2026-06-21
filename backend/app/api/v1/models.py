@@ -12,9 +12,7 @@ from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.model_catalog import ModelCatalog, ModelVariant
 from backend.app.models.user import User
-from backend.app.services.catalogue import CatalogueManager
-from backend.app.services.hardware import detect_hardware as _detect_hardware_full
-from backend.app.services.llm.manager import MODEL_CATALOG, LLMManager, llm_manager
+from backend.app.models.user_settings import UserModelSettings
 from backend.app.schemas.model import (
     AutocompleteResponse,
     CancelDownloadResponse,
@@ -22,13 +20,14 @@ from backend.app.schemas.model import (
     DeleteModelResponse,
     DownloadModelResponse,
     DownloadProgressResponse,
-    HardwareInfo,
     InstalledModelsResponse,
-    LLMMetricsResponse,
     ModelComparisonResponse,
     ModelDetailResponse,
     ModelListResponse,
     ModelSearchResponse,
+    ModelSettingsResponse,
+    ModelSettingsUpdate,
+    ModelUpdate,
     ModelUpdatesResponse,
     RecommendedModelsAllResponse,
     RecommendedModelsSingleResponse,
@@ -38,6 +37,9 @@ from backend.app.schemas.model import (
     UsageStatsResponse,
     WorkloadRecommendations,
 )
+from backend.app.services.catalogue import CatalogueManager
+from backend.app.services.hardware import detect_hardware as _detect_hardware_full
+from backend.app.services.llm.manager import MODEL_CATALOG, LLMManager, llm_manager
 from backend.app.services.model_comparison import ModelComparisonService
 from backend.app.services.model_downloader import model_downloader
 from backend.app.services.model_search import ModelSearchService
@@ -113,6 +115,8 @@ async def list_models(
             }
             for m in available_models
         ],
+        "type_counts": _compute_type_counts(catalog),
+        "size_counts": _compute_size_counts(catalog),
     }
 
 
@@ -120,6 +124,7 @@ async def list_models(
 async def recommended_models(
     workload: str | None = None,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Return hardware-appropriate model recommendations."""
     from backend.app.services.hardware import detect_hardware as detect_hw
@@ -128,39 +133,34 @@ async def recommended_models(
     hardware = detect_hw()
     engine = RecommendationEngine(hardware)
 
-    # Get all catalogue models
-    db = next(get_db())
-    try:
-        catalogue_mgr = CatalogueManager(db)
-        all_models = catalogue_mgr.get_all_catalogue()
+    catalogue_mgr = CatalogueManager(db)
+    all_models = catalogue_mgr.get_all_catalogue()
 
-        if workload and workload in WORKLOADS:
-            # Single workload
-            recs = engine.recommend_for_workload(workload, all_models)
-            return RecommendedModelsSingleResponse(
-                hardware=hardware.to_dict(),
-                workload=workload,
+    if workload and workload in WORKLOADS:
+        # Single workload
+        recs = engine.recommend_for_workload(workload, all_models)
+        return RecommendedModelsSingleResponse(
+            hardware=hardware.to_dict(),
+            workload=workload,
+            recommendations=_format_recommendations(recs),
+        )
+    else:
+        # All workloads
+        all_recs = engine.recommend_all(all_models)
+        formatted = {}
+        for wl_id, recs in all_recs.items():
+            formatted[wl_id] = WorkloadRecommendations(
+                label=WORKLOADS[wl_id]["label"],
+                description=WORKLOADS[wl_id]["description"],
                 recommendations=_format_recommendations(recs),
             )
-        else:
-            # All workloads
-            all_recs = engine.recommend_all(all_models)
-            formatted = {}
-            for wl_id, recs in all_recs.items():
-                formatted[wl_id] = WorkloadRecommendations(
-                    label=WORKLOADS[wl_id]["label"],
-                    description=WORKLOADS[wl_id]["description"],
-                    recommendations=_format_recommendations(recs),
-                )
-            return RecommendedModelsAllResponse(
-                hardware=hardware.to_dict(),
-                workloads=formatted,
-            )
-    finally:
-        db.close()
+        return RecommendedModelsAllResponse(
+            hardware=hardware.to_dict(),
+            workloads=formatted,
+        )
 
 
-@router.get("/models/hardware", response_model=HardwareInfo)
+@router.get("/models/hardware")
 async def detect_hardware(
     current_user: User = Depends(get_current_user),
 ):
@@ -573,15 +573,277 @@ async def refresh_catalogue(
 @router.get("/models/updates", response_model=ModelUpdatesResponse)
 async def check_model_updates(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    """Check for available model updates."""
-    # For now, return empty — this will be implemented in lifecycle management
-    return {"updates": []}
+    """Check for available model updates by comparing installed versions against catalogue."""
+    updates: list[ModelUpdate] = []
+
+    try:
+        import httpx
+        async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=5.0) as client:
+            resp = await client.get("/api/tags")
+            resp.raise_for_status()
+            installed = resp.json().get("models", [])
+    except Exception:
+        return {"updates": []}
+
+    for model in installed:
+        tag = model.get("name", "")
+        base_name = tag.split(":")[0] if ":" in tag else tag
+        installed_version = tag.split(":")[1] if ":" in tag else "latest"
+
+        # Look up in catalogue
+        catalog_entry = db.execute(
+            select(ModelCatalog).where(ModelCatalog.model_id == base_name)
+        ).scalar_one_or_none()
+
+        if not catalog_entry:
+            # Model not in catalogue — might be new
+            updates.append(ModelUpdate(
+                model_id=base_name,
+                display_name=base_name.replace("-", " ").title(),
+                installed_version=installed_version,
+                available_version=None,
+                update_type="new",
+            ))
+            continue
+
+        # Compare versions
+        catalog_version = catalog_entry.version
+        if catalog_version and installed_version != catalog_version and installed_version != "latest":
+            updates.append(ModelUpdate(
+                model_id=base_name,
+                display_name=catalog_entry.display_name,
+                installed_version=installed_version,
+                available_version=catalog_version,
+                update_type="version",
+            ))
+
+    return {"updates": updates}
+
+
+@router.get("/models/settings", response_model=ModelSettingsResponse)
+async def get_model_settings(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get user model settings."""
+    settings_row = db.execute(
+        select(UserModelSettings).where(UserModelSettings.user_id == current_user.id)
+    ).scalar_one_or_none()
+
+    if not settings_row:
+        return ModelSettingsResponse()
+
+    return {
+        "inference_backend": settings_row.inference_backend,
+        "huggingface_token": settings_row.huggingface_token,
+        "auto_download": settings_row.auto_download,
+        "max_concurrent_downloads": settings_row.max_concurrent_downloads,
+    }
+
+
+@router.put("/models/settings", response_model=ModelSettingsResponse)
+async def update_model_settings(
+    body: ModelSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update user model settings."""
+    settings_row = db.execute(
+        select(UserModelSettings).where(UserModelSettings.user_id == current_user.id)
+    ).scalar_one_or_none()
+
+    if not settings_row:
+        settings_row = UserModelSettings(user_id=current_user.id)
+        db.add(settings_row)
+
+    updates = body.model_dump(exclude_unset=True)
+    for key, value in updates.items():
+        setattr(settings_row, key, value)
+
+    db.commit()
+    db.refresh(settings_row)
+
+    return {
+        "inference_backend": settings_row.inference_backend,
+        "huggingface_token": settings_row.huggingface_token,
+        "auto_download": settings_row.auto_download,
+        "max_concurrent_downloads": settings_row.max_concurrent_downloads,
+    }
+
+
+@router.get("/models/downloads/queue")
+async def get_download_queue(
+    current_user: User = Depends(get_current_user),
+):
+    """Get current download queue status with active, queued, completed, and failed downloads."""
+    from backend.app.services.model_downloader import download_manager
+
+    records = download_manager.list_downloads()
+
+    # Categorize records by status
+    active = []
+    queued = []
+    completed = []
+    failed = []
+
+    for rec in records:
+        rec_dict = {
+            "job_id": rec.download_id,
+            "model_id": rec.model_name,
+            "status": rec.status.value,
+            "progress": rec.progress,
+            "speed_bytes_sec": rec.speed_bytes_sec,
+            "downloaded_bytes": rec.bytes_downloaded,
+            "total_bytes": rec.total_bytes,
+            "eta_seconds": rec.eta_seconds,
+            "queue_position": None,
+            "error": rec.error_message,
+        }
+
+        if rec.status.value == "downloading":
+            active.append(rec_dict)
+        elif rec.status.value == "queued":
+            queued.append(rec_dict)
+        elif rec.status.value == "completed":
+            completed.append(rec_dict)
+        elif rec.status.value in ("failed", "cancelled"):
+            failed.append(rec_dict)
+
+    # Add queue positions
+    for i, job in enumerate(queued):
+        job["queue_position"] = i + 1
+
+    return {
+        "active": active,
+        "queued": queued,
+        "completed": completed,
+        "failed": failed,
+    }
+
+
+@router.get("/models/downloads/history")
+async def get_download_history(
+    limit: int = 20,
+    current_user: User = Depends(get_current_user),
+):
+    """Get download history (completed and failed downloads)."""
+    from backend.app.services.model_downloader import download_manager
+
+    records = download_manager.list_downloads()
+
+    # Filter to completed and failed, sort by completion time
+    history = []
+    for rec in records:
+        if rec.status.value in ("completed", "failed", "cancelled"):
+            history.append({
+                "job_id": rec.download_id,
+                "model_id": rec.model_name,
+                "status": rec.status.value,
+                "progress": rec.progress if rec.status.value != "completed" else 1.0,
+                "downloaded_bytes": rec.bytes_downloaded,
+                "total_bytes": rec.total_bytes,
+                "error": rec.error_message,
+                "completed_at": rec.completed_at,
+                "created_at": rec.created_at,
+            })
+
+    # Sort by completed_at descending
+    history.sort(key=lambda x: x.get("completed_at") or 0, reverse=True)
+
+    return {"history": history[:limit]}
+
+
+@router.get("/models/{model_id}/inference-config")
+async def get_inference_config(
+    model_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Get inference configuration for a model."""
+    db = next(get_db())
+    try:
+        model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == model_id)).scalar_one_or_none()
+
+        if not model:
+            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+
+        # Return inference config based on model capabilities
+        config = {
+            "model_id": model.model_id,
+            "context_length": model.context_length_default,
+            "temperature": 0.7,
+            "top_p": 0.9,
+            "top_k": 40,
+            "repeat_penalty": 1.1,
+            "seed": -1,
+            "num_predict": 2048,
+            "num_ctx": model.context_length_default,
+        }
+
+        # Add capability-specific defaults
+        if model.capabilities:
+            if "vision" in model.capabilities:
+                config["image_resolution"] = 1024
+            if "code" in model.capabilities:
+                config["temperature"] = 0.3
+                config["top_p"] = 0.95
+
+        return config
+    finally:
+        db.close()
 
 
 def _guess_param_count(name: str) -> str | None:
     """Extract parameter count from model name. Delegates to LLMManager helper."""
     return LLMManager._guess_parameter_count(name)
+
+
+def _compute_type_counts(catalog: list[dict]) -> dict[str, int]:
+    """Compute model type counts from catalog entries."""
+    counts: dict[str, int] = {}
+    for entry in catalog:
+        model_type = entry.get("model_type", "chat")
+        counts[model_type] = counts.get(model_type, 0) + 1
+    return counts
+
+
+def _compute_size_counts(catalog: list[dict]) -> dict[str, int]:
+    """Compute model size category counts from catalog entries."""
+    counts: dict[str, int] = {"small": 0, "medium": 0, "large": 0}
+    for entry in catalog:
+        param_str = entry.get("parameter_count") or ""
+        tags = entry.get("tags", []) or []
+        param_val = _parse_param_count(param_str)
+        if param_val is None:
+            # Check tags for lightweight
+            if "lightweight" in tags:
+                counts["small"] += 1
+            else:
+                counts["medium"] += 1
+        elif param_val <= 4.0:
+            counts["small"] += 1
+        elif param_val <= 14.0:
+            counts["medium"] += 1
+        else:
+            counts["large"] += 1
+    return counts
+
+
+def _parse_param_count(param_str: str | None) -> float | None:
+    """Parse parameter count string like '7B', '3.8B', '137M' to numeric value in billions."""
+    if not param_str:
+        return None
+    param_str = param_str.strip().upper()
+    try:
+        if param_str.endswith("B"):
+            return float(param_str[:-1])
+        elif param_str.endswith("M"):
+            return float(param_str[:-1]) / 1000.0
+        else:
+            return float(param_str)
+    except (ValueError, IndexError):
+        return None
 
 
 def _extract_variants(model_name: str, existing_catalog: list[dict]) -> list[str]:
