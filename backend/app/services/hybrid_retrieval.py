@@ -31,6 +31,9 @@ class RetrievalResult:
     chunk_type: str | None = None
     context: str = ""
     rank: int = 0
+    line_start: int | None = None
+    line_end: int | None = None
+    symbol_name: str | None = None
 
 
 class HybridRetrievalV2:
@@ -69,7 +72,8 @@ class HybridRetrievalV2:
             all_results["graph"] = self._graph_search(query, limit)
 
         merged = self._rrf_merge(all_results, limit * 3)
-        diverse = self._mmr_rerank(merged, limit, diversity_penalty)
+        deduped = self._deduplicate_by_file(merged)
+        diverse = self._mmr_rerank(deduped, limit, diversity_penalty)
         return diverse
 
     def _vector_search(
@@ -100,6 +104,9 @@ class HybridRetrievalV2:
                         chunk_id=payload.get("chunk_id"),
                         language=payload.get("language"),
                         chunk_type=payload.get("chunk_type"),
+                        line_start=payload.get("line_start"),
+                        line_end=payload.get("line_end"),
+                        symbol_name=payload.get("symbol_name"),
                     ))
             except Exception as e:
                 logger.warning("Vector search failed on %s: %s", collection, e)
@@ -244,8 +251,46 @@ class HybridRetrievalV2:
         if result.document_id:
             return f"doc_{result.document_id}_{result.file_path}"
         if result.file_path:
-            return f"file_{result.file_path}"
+            line_info = ""
+            if result.line_start is not None:
+                line_info = f":L{result.line_start}-{result.line_end or result.line_start}"
+            return f"file_{result.file_path}{line_info}"
         return f"node_{result.node_id}_{result.content[:50]}"
+
+    @staticmethod
+    def _deduplicate_by_file(results: list[RetrievalResult]) -> list[RetrievalResult]:
+        seen: dict[str, list[RetrievalResult]] = {}
+        for r in results:
+            if not r.file_path:
+                seen.setdefault("__no_file__", []).append(r)
+                continue
+            seen.setdefault(r.file_path, []).append(r)
+
+        deduped: list[RetrievalResult] = []
+        for file_path, file_results in seen.items():
+            if file_path == "__no_file__":
+                deduped.extend(file_results)
+                continue
+            file_results.sort(key=lambda r: r.score, reverse=True)
+            keep: list[RetrievalResult] = []
+            for r in file_results:
+                if r.line_start is None or r.line_end is None:
+                    keep.append(r)
+                    continue
+                overlapping = False
+                for k in keep:
+                    if k.line_start is None or k.line_end is None:
+                        continue
+                    if r.line_start <= k.line_end and r.line_end >= k.line_start:
+                        overlap_len = min(r.line_end, k.line_end) - max(r.line_start, k.line_start) + 1
+                        shorter = min(r.line_end - r.line_start + 1, k.line_end - k.line_start + 1)
+                        if overlap_len / max(shorter, 1) > 0.5:
+                            overlapping = True
+                            break
+                if not overlapping:
+                    keep.append(r)
+            deduped.extend(keep)
+        return deduped
 
     @staticmethod
     def _text_similarity(a: str, b: str) -> float:

@@ -47,9 +47,18 @@ SKIP_DIRS: set[str] = {
 
 _SYMBOL_RE = re.compile(
     r"^\s*"
-    r"(?:(?:async|export|default|public|private|protected|static)\s+)*?"
-    r"(def|function|class|struct|enum|trait|fn|func)"
+    r"(?:@\w+(?:\([^)]*\))?\s+)*"
+    r"(?:(?:async|export|default|public|private|protected|abstract|static|readonly)\s+)*?"
+    r"(def|function|class|struct|enum|trait|fn|func|type|interface)"
     r"(?:\s+|\s*\()(\w*)"
+)
+
+_ARROW_FUNC_RE = re.compile(
+    r"^\s*(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*=>"
+)
+
+_PYTHON_DECORATED_RE = re.compile(
+    r"^\s*@\w+(?:\([^)]*\))?\s*$"
 )
 
 _TYPE_MAP: dict[str, str] = {
@@ -87,13 +96,19 @@ def detect_language(file_path: str) -> str | None:
 
 
 def _extract_symbol(line: str) -> tuple[str | None, str | None]:
-    """Extract symbol type and name from a code line."""
     m = _SYMBOL_RE.match(line)
-    if not m:
-        return None, None
-    keyword = m.group(1)
-    name = m.group(2) or None
-    return _TYPE_MAP.get(keyword), name
+    if m:
+        keyword = m.group(1)
+        name = m.group(2) or None
+        return _TYPE_MAP.get(keyword), name
+    arrow_m = _ARROW_FUNC_RE.match(line)
+    if arrow_m:
+        return "function", arrow_m.group(1)
+    return None, None
+
+
+def _is_decorator_line(line: str) -> bool:
+    return bool(_PYTHON_DECORATED_RE.match(line))
 
 
 def _estimate_tokens(text: str) -> int:
@@ -134,8 +149,15 @@ def chunk_code(content: str, file_path: str, max_tokens: int = 500) -> list[Chun
         current_sym_type = None
         current_sym_name = None
 
+    pending_decorator: list[str] = []
+
     for i, line in enumerate(lines, start=1):
         line_tokens = _estimate_tokens(line)
+
+        if _is_decorator_line(line):
+            pending_decorator.append(line)
+            continue
+
         sym_type, sym_name = _extract_symbol(line)
 
         if sym_type and current_chunk:
@@ -146,12 +168,20 @@ def chunk_code(content: str, file_path: str, max_tokens: int = 500) -> list[Chun
             current_sym_type = sym_type
             current_sym_name = sym_name
 
+        if pending_decorator:
+            current_chunk.extend(pending_decorator)
+            current_tokens += sum(_estimate_tokens(d) for d in pending_decorator)
+            pending_decorator = []
+
         current_chunk.append(line)
         current_tokens += line_tokens
 
         if current_tokens >= max_tokens:
             _flush()
             current_start = i + 1
+
+    if pending_decorator and current_chunk:
+        current_chunk.extend(pending_decorator)
 
     if current_chunk:
         _flush()

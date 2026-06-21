@@ -56,7 +56,13 @@ class RAGPipeline:
         source_count = 0
 
         for i, result in enumerate(results):
-            ref = f"[{i + 1}] {result.file_path or 'knowledge'}"
+            ref = f"[{i + 1}] "
+            if result.file_path:
+                ref += result.file_path
+                if result.line_start is not None:
+                    ref += f":L{result.line_start}-{result.line_end or result.line_start}"
+            else:
+                ref += "knowledge"
             if result.language:
                 ref += f" ({result.language})"
             ref += f"\n{result.content[:500]}"
