@@ -150,6 +150,26 @@ export interface MemorySearchResponse {
   results: MemorySearchResult[];
 }
 
+// ── Long-Term Memory ────────────────────────────────────────────
+
+export interface LongTermMemory {
+  id: number;
+  category: "preference" | "pattern" | "correction" | "fact" | "context";
+  title: string;
+  content: string;
+  confidence: number;
+  access_count: number;
+  source: string | null;
+  created_at: string | null;
+}
+
+export interface MemoryStats {
+  total: number;
+  active: number;
+  by_category: Record<string, number>;
+  avg_confidence: number;
+}
+
 // ── System ──────────────────────────────────────────────────────
 
 export interface SystemProcess {

@@ -123,6 +123,71 @@ class ConversationService:
             conv.title = title
             self._db.commit()
 
+    async def extract_insights(
+        self, conversation_id: int, user_id: int, model: str | None = None
+    ) -> list[dict]:
+        try:
+            from backend.app.services.llm.manager import llm_manager
+            from backend.app.services.llm.provider import LLMMessage
+            from backend.app.services.long_term_memory import LongTermMemoryService
+
+            messages = self.get_messages(conversation_id, limit=50)
+            if len(messages) < 2:
+                return []
+
+            conversation_text = "\n".join(
+                f"{m.role}: {m.content}" for m in messages
+            )
+            extraction_prompt = (
+                "Analyze this conversation and extract key insights about the user. "
+                "For each insight, provide:\n"
+                "- category: one of preference, pattern, fact, context\n"
+                "- title: short title (max 50 chars)\n"
+                "- content: the insight (max 200 chars)\n\n"
+                "Return a JSON array of insights. Only include meaningful, actionable insights. "
+                "If no insights can be extracted, return an empty array [].\n\n"
+                f"Conversation:\n{conversation_text}"
+            )
+
+            llm_messages = [
+                LLMMessage(role="system", content="You are an insight extraction assistant. Return ONLY valid JSON."),
+                LLMMessage(role="user", content=extraction_prompt),
+            ]
+            result = await llm_manager.chat(llm_messages, model=model, max_tokens=1024, temperature=0.3)
+
+            import json
+            import re
+            raw = result.content.strip()
+            json_match = re.search(r"\[.*\]", raw, re.DOTALL)
+            if not json_match:
+                return []
+            insights = json.loads(json_match.group())
+
+            svc = LongTermMemoryService(self._db)
+            stored = []
+            for insight in insights:
+                if not isinstance(insight, dict):
+                    continue
+                category = insight.get("category", "fact")
+                if category not in ("preference", "pattern", "fact", "context"):
+                    category = "fact"
+                title = str(insight.get("title", ""))[:50]
+                content = str(insight.get("content", ""))[:200]
+                if not title or not content:
+                    continue
+                memory = svc.create(
+                    user_id=user_id,
+                    category=category,
+                    title=title,
+                    content=content,
+                    source="conversation",
+                    source_id=conversation_id,
+                )
+                stored.append({"id": memory.id, "category": category, "title": title})
+            return stored
+        except Exception:
+            return []
+
     async def generate_title(self, content: str, model: str | None = None) -> str:
         try:
             from backend.app.services.llm.manager import llm_manager

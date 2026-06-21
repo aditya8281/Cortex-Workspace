@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncGenerator
 
@@ -193,8 +194,18 @@ async def send_message(
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    async def _wrapped_stream():
+        async for event in _stream_chat_response(
+            conversation_id, payload.content, db, model=payload.model, user_id=current_user.id
+        ):
+            yield event
+        background_svc = ConversationService(db)
+        asyncio.create_task(
+            background_svc.extract_insights(conversation_id, current_user.id, model=payload.model)
+        )
+
     return StreamingResponse(
-        _stream_chat_response(conversation_id, payload.content, db, model=payload.model, user_id=current_user.id),
+        _wrapped_stream(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

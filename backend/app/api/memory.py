@@ -13,6 +13,8 @@ from backend.app.tasks.worker import enqueue_task
 
 router = APIRouter()
 
+VALID_CATEGORIES = ("preference", "pattern", "correction", "fact", "context", "conversation")
+
 
 class MemoryCreatePayload(BaseModel):
     title: str = Field(min_length=1, max_length=512)
@@ -21,6 +23,12 @@ class MemoryCreatePayload(BaseModel):
     source_path: str | None = Field(default=None, max_length=1024)
     tags: list[str] | None = None
 
+    def model_post_init(self, __context: object) -> None:
+        if self.category not in VALID_CATEGORIES:
+            raise ValueError(
+                f"Invalid category: {self.category}. Must be one of {VALID_CATEGORIES}"
+            )
+
 
 class MemoryUpdatePayload(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=512)
@@ -28,6 +36,12 @@ class MemoryUpdatePayload(BaseModel):
     category: str | None = Field(default=None, min_length=1, max_length=64)
     source_path: str | None = None
     tags: list[str] | None = None
+
+    def model_post_init(self, __context: object) -> None:
+        if self.category is not None and self.category not in VALID_CATEGORIES:
+            raise ValueError(
+                f"Invalid category: {self.category}. Must be one of {VALID_CATEGORIES}"
+            )
 
 
 class MemorySearchPayload(BaseModel):
