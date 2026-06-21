@@ -58,6 +58,10 @@ class GraphEdge(Base):
     edge_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     weight: Mapped[int] = mapped_column(Integer, default=1)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    first_seen: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    last_seen: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     source = relationship("GraphNode", foreign_keys=[source_id], back_populates="outgoing_edges")

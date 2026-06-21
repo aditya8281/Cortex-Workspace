@@ -109,6 +109,82 @@ class GraphBuilder:
         )
         return result
 
+    def build_document_graph(self, document_id: int) -> dict:
+        """Build graph nodes and edges from a Document's chunks."""
+        from datetime import datetime
+
+        from backend.app.models.document import Document, DocumentChunk
+        from backend.app.services.entity_extractor import EntityExtractor
+
+        extractor = EntityExtractor()
+        doc = self.db.query(Document).filter(Document.id == document_id).first()
+        if not doc:
+            return {"nodes": 0, "edges": 0}
+
+        chunks = (
+            self.db.query(DocumentChunk)
+            .filter(DocumentChunk.document_id == document_id)
+            .all()
+        )
+
+        node_count = 0
+        edge_count = 0
+        entity_nodes: dict[str, GraphNode] = {}
+
+        for chunk in chunks:
+            if doc.doc_type.value in ("markdown", "text"):
+                entities, relationships = extractor.extract_from_text(
+                    chunk.content, doc.path
+                )
+            else:
+                entities, relationships = extractor.extract_from_code(
+                    chunk.content, doc.path
+                )
+
+            for ent in entities:
+                if ent.name not in entity_nodes:
+                    node = GraphNode(
+                        chunk_id=chunk.id,
+                        repo_id=0,
+                        node_type=ent.entity_type,
+                        name=ent.name,
+                        file_path=doc.path,
+                        metadata_json=f'{{"source": "document", "document_id": {document_id}}}',
+                    )
+                    self.db.add(node)
+                    self.db.flush()
+                    entity_nodes[ent.name] = node
+                    node_count += 1
+
+            for rel in relationships:
+                source_node = entity_nodes.get(rel.source)
+                target_node = entity_nodes.get(rel.target)
+                if source_node and target_node:
+                    existing = (
+                        self.db.query(GraphEdge)
+                        .filter(
+                            GraphEdge.source_id == source_node.id,
+                            GraphEdge.target_id == target_node.id,
+                            GraphEdge.edge_type == rel.relationship_type,
+                        )
+                        .first()
+                    )
+                    if existing:
+                        existing.weight += rel.weight
+                        existing.last_seen = datetime.utcnow()
+                    else:
+                        edge = GraphEdge(
+                            source_id=source_node.id,
+                            target_id=target_node.id,
+                            edge_type=rel.relationship_type,
+                            weight=rel.weight,
+                        )
+                        self.db.add(edge)
+                        edge_count += 1
+
+        self.db.commit()
+        return {"nodes": node_count, "edges": edge_count}
+
     def _clear_graph(self, repo_id: int) -> None:
         """Remove existing graph data for a repo."""
         node_ids = [
