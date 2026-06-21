@@ -142,6 +142,17 @@ class LLMManager:
                 return p
         raise RuntimeError("No LLM provider available. Install llama-cpp-python or start Ollama.")
 
+    @staticmethod
+    def _is_retryable(exc: Exception) -> bool:
+        if isinstance(exc, (ConnectionError, TimeoutError)):
+            return True
+        if isinstance(exc, OSError):
+            return True
+        if hasattr(exc, "request"):
+            return True
+        msg = str(exc).lower()
+        return any(kw in msg for kw in ("connection", "timeout", "connect", "eof", "reset"))
+
     async def _check_available(self, provider: LLMProvider) -> bool:
         try:
             if isinstance(provider, OllamaProvider):
@@ -162,44 +173,58 @@ class LLMManager:
         temperature: float = 0.7,
     ) -> LLMResponse:
         provider = await self._get_active()
-        try:
-            result = await provider.chat_direct(
-                messages=messages,
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-            )
-            self._total_requests += 1
-            self._total_prompt_tokens += result.get("tokens_prompt", 0)
-            self._total_completion_tokens += result.get("tokens_completion", 0)
+        max_retries = 3
+        last_error = None
 
-            # Record usage (fire and forget)
+        for attempt in range(max_retries + 1):
             try:
-                from backend.app.db import SessionLocal
-                from backend.app.services.usage_tracker import UsageTracker
+                result = await provider.chat_direct(
+                    messages=messages,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                self._total_requests += 1
+                self._total_prompt_tokens += result.get("tokens_prompt", 0)
+                self._total_completion_tokens += result.get("tokens_completion", 0)
 
-                db = SessionLocal()
-                tracker = UsageTracker(db)
-                tracker.record_usage(
-                    model_name=result.get("model", "unknown"),
-                    usage_type="chat",
+                try:
+                    from backend.app.db import SessionLocal
+                    from backend.app.services.usage_tracker import UsageTracker
+
+                    db = SessionLocal()
+                    tracker = UsageTracker(db)
+                    tracker.record_usage(
+                        model_name=result.get("model", "unknown"),
+                        usage_type="chat",
+                        tokens_prompt=result.get("tokens_prompt", 0),
+                        tokens_completion=result.get("tokens_completion", 0),
+                    )
+                    db.close()
+                except Exception:
+                    pass
+
+                return LLMResponse(
+                    content=result["content"],
+                    model=result.get("model", "unknown"),
                     tokens_prompt=result.get("tokens_prompt", 0),
                     tokens_completion=result.get("tokens_completion", 0),
+                    finish_reason=result.get("finish_reason", "stop"),
                 )
-                db.close()
-            except Exception:
-                pass  # Don't fail chat on usage tracking errors
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries and self._is_retryable(e):
+                    delay = 2 ** attempt
+                    logger.warning(
+                        "LLM chat attempt %d/%d failed: %s. Retrying in %ds...",
+                        attempt + 1, max_retries + 1, e, delay,
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    break
 
-            return LLMResponse(
-                content=result["content"],
-                model=result.get("model", "unknown"),
-                tokens_prompt=result.get("tokens_prompt", 0),
-                tokens_completion=result.get("tokens_completion", 0),
-                finish_reason=result.get("finish_reason", "stop"),
-            )
-        except Exception as e:
-            self._total_errors += 1
-            raise RuntimeError(f"LLM chat failed: {e}") from e
+        self._total_errors += 1
+        raise RuntimeError(f"LLM chat failed after {max_retries + 1} attempts: {last_error}") from last_error
 
     async def chat_stream(
         self,
@@ -209,36 +234,56 @@ class LLMManager:
         temperature: float = 0.7,
     ):
         provider = await self._get_active()
-        full_response = ""
-        async for token in provider.chat_stream(
-            [{"role": m.role, "content": m.content} for m in messages],
-            tools=[],
-            config={"model": model, "max_tokens": max_tokens, "temperature": temperature},
-        ):
-            full_response += token
-            yield token
+        max_retries = 3
+        last_error = None
 
-        self._total_requests += 1
-        prompt_tokens = sum(len(m.content) for m in messages) // 4
-        completion_tokens = len(full_response) // 4
-        self._total_prompt_tokens += prompt_tokens
-        self._total_completion_tokens += completion_tokens
+        for attempt in range(max_retries + 1):
+            full_response = ""
+            try:
+                async for token in provider.chat_stream(
+                    [{"role": m.role, "content": m.content} for m in messages],
+                    tools=[],
+                    config={"model": model, "max_tokens": max_tokens, "temperature": temperature},
+                ):
+                    full_response += token
+                    yield token
 
-        try:
-            from backend.app.db import SessionLocal
-            from backend.app.services.usage_tracker import UsageTracker
+                self._total_requests += 1
+                prompt_tokens = sum(len(m.content) for m in messages) // 4
+                completion_tokens = len(full_response) // 4
+                self._total_prompt_tokens += prompt_tokens
+                self._total_completion_tokens += completion_tokens
 
-            db = SessionLocal()
-            tracker = UsageTracker(db)
-            tracker.record_usage(
-                model_name=model or "unknown",
-                usage_type="chat_stream",
-                tokens_prompt=prompt_tokens,
-                tokens_completion=completion_tokens,
-            )
-            db.close()
-        except Exception:
-            pass
+                try:
+                    from backend.app.db import SessionLocal
+                    from backend.app.services.usage_tracker import UsageTracker
+
+                    db = SessionLocal()
+                    tracker = UsageTracker(db)
+                    tracker.record_usage(
+                        model_name=model or "unknown",
+                        usage_type="chat_stream",
+                        tokens_prompt=prompt_tokens,
+                        tokens_completion=completion_tokens,
+                    )
+                    db.close()
+                except Exception:
+                    pass
+                return
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries and self._is_retryable(e):
+                    delay = 2 ** attempt
+                    logger.warning(
+                        "LLM stream attempt %d/%d failed: %s. Retrying in %ds...",
+                        attempt + 1, max_retries + 1, e, delay,
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    break
+
+        self._total_errors += 1
+        raise RuntimeError(f"LLM stream failed after {max_retries + 1} attempts: {last_error}") from last_error
 
     async def fetch_ollama_catalog(self, force_refresh: bool = False) -> list[LLMModelInfo]:
         """Fetch the Ollama model catalog with a multi-source fallback chain:

@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     LLM_CONTEXT_SIZE: int = 4096
     LLM_GPU_LAYERS: int = 0
+    LLM_TIMEOUT: float = 120.0
 
     # Rate limiting
     RATE_LIMIT_ENABLED: bool = True

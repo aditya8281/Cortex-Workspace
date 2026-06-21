@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 
+from backend.app.core.config import settings
 from backend.app.services.llm.provider import LLMModelInfo, LLMProvider
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,8 @@ logger = logging.getLogger(__name__)
 class OllamaProvider(LLMProvider):
     def __init__(self, base_url: str = "http://localhost:11434"):
         self._base_url = base_url.rstrip("/")
-        self._client = httpx.AsyncClient(base_url=self._base_url, timeout=120.0)
+        timeout = getattr(settings, "LLM_TIMEOUT", 120.0)
+        self._client = httpx.AsyncClient(base_url=self._base_url, timeout=timeout)
 
     async def chat(self, messages: list[dict], tools: list[dict], config: Any) -> tuple[str, list[dict] | None]:
         model = "llama3.2"

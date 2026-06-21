@@ -134,11 +134,5 @@ class RAGPipeline:
         return facts[:5]
 
 
-_rag_pipeline: RAGPipeline | None = None
-
-
 def get_rag_pipeline(db: Session) -> RAGPipeline:
-    global _rag_pipeline
-    if _rag_pipeline is None:
-        _rag_pipeline = RAGPipeline(db)
-    return _rag_pipeline
+    return RAGPipeline(db)
