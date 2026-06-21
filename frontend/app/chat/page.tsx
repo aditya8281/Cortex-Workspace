@@ -15,6 +15,7 @@ interface Message {
   content: string;
   tokens?: number;
   created_at: string;
+  sources?: Array<{ file_path: string; score: number; content: string }>;
 }
 
 interface Conversation {
@@ -23,6 +24,19 @@ interface Conversation {
   message_count: number;
   total_tokens: number;
   updated_at: string;
+}
+
+function SourceReferences({ sources }: { sources: Array<{ file_path: string; score: number; content: string }> }) {
+  if (!sources || sources.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {sources.map((s, i) => (
+        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">
+          [{i + 1}] {s.file_path.split("/").pop()}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default function ChatPage() {
@@ -132,6 +146,7 @@ export default function ChatPage() {
             if (event.type === "chunk") {
               setStreamingContent((prev) => prev + event.content);
             } else if (event.type === "done") {
+              const finalSources = event.sources || [];
               setStreamingContent((prevContent) => {
                 const content = prevContent || event.content || "";
                 setMessages((prev) => [
@@ -141,6 +156,7 @@ export default function ChatPage() {
                     content,
                     tokens: event.total_tokens,
                     created_at: new Date().toISOString(),
+                    sources: finalSources,
                   },
                 ]);
                 return "";
@@ -242,6 +258,9 @@ export default function ChatPage() {
                   }`}
                 >
                   <p className="text-text whitespace-pre-wrap">{msg.content}</p>
+                  {msg.sources && msg.sources.length > 0 && (
+                    <SourceReferences sources={msg.sources} />
+                  )}
                   {msg.tokens && (
                     <p className="text-[10px] text-text-muted mt-1">
                       {msg.tokens} tokens
