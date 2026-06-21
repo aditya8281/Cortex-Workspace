@@ -129,6 +129,8 @@ All pages share a unified neural network canvas background (`NeuralNetwork.tsx`)
 | Dashboard (`/app`) | `medium` | 50 neurons |
 | Auth (`/auth`) | `low` | Subtle, 30 neurons |
 | Memory (`/memory`) | `low` | Subtle, 30 neurons |
+| Chat (`/chat`) | `medium` | Conversation interface |
+| Models (`/models`) | `medium` | Model catalog + downloads |
 | Vault/Settings/Profile/Admin | `medium` | Inherited through transparent DashboardShell |
 
 **Page wrappers use `bg-transparent`** to let the canvas show through. Cards and panels use `bg-bg-elevated` (#111118) for layering depth against the warm dark base.
@@ -151,6 +153,8 @@ All pages share a unified neural network canvas background (`NeuralNetwork.tsx`)
 - **MetricRing**: Animated SVG ring chart with counter (CPU/RAM/Disk)
 - **TabGroup**: Tabs with animated indicator + TabPanel context
 - **CollapsiblePanel**: Animated collapsible sidebar panel
+- **ModelCard**: Model info card with download/install actions
+- **DownloadQueuePanel**: Active download list with progress bars
 
 ### Feedback
 - **Toast**: Sonner notifications

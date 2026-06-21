@@ -72,6 +72,7 @@ Think of Cortex as a person — a friend to its users.
 - CSRF, CORS, WebSocket security tightened
 - Foreign key constraints added to repo models
 - CSRF exemptions for authenticated API endpoints (vault, profile photo)
+- IDOR vulnerabilities patched (ownership checks on all user-scoped resources)
 
 **Phase 2 (Indexing & Knowledge Graph)** — Complete
 
@@ -92,15 +93,54 @@ Think of Cortex as a person — a friend to its users.
 - Frontend: Agent chat interface, Agents management page
 - Navigation: sidebar + command palette integration
 
+**Phase 4A (LLM Integration & Local Models)** — Partially Complete
+
+- LLM manager with provider abstraction (llama.cpp, Ollama)
+- Model catalog with providers, variants, capabilities, benchmarks
+- Hardware detection and quantization recommendations
+- Model download manager with progress tracking
+- User model settings (persisted per-user)
+- Model comparison endpoint
+- Frontend: Models page with catalogue, installed models, download queue
+
+**Phase 4B (Smart Indexing & Retrieval)** — Partially Complete
+
+- Semantic chunker with language-aware splitting
+- Indexing configuration (include/exclude paths, file types)
+- Full-text search (PostgreSQL ts_vector)
+- Hybrid retrieval (vector + keyword + graph)
+- Document indexer for non-code files (markdown, PDF, notebooks, etc.)
+- Retrieval quality metrics
+- File watcher v2 with sync state persistence
+- Batch indexer for bulk operations
+
+**Phase 5 (Conversation & Context)** — Partially Complete
+
+- Conversation model with message history and token tracking
+- Conversation-to-memory pipeline (extract insights from chats)
+- Long-term memory model with decay, confidence, and access tracking
+- SSE streaming for real-time agent responses
+- Conversation service with context building
+
+**Phase 6 (Agent Intelligence)** — Partially Complete
+
+- Agent SSE streaming
+- Expanded tool registry
+- RAG pipeline integration
+- Entity extraction service
+- Search clustering and recommendations
+
 | Area | State |
 |------|-------|
-| Tests | 156+ (backend pytest + frontend vitest) |
+| Tests | 486+ passing (backend pytest + frontend vitest) |
 | Frontend build | Passes |
 | Linting | ruff + ESLint + mypy — all clean |
 | Auth + vault backend | Production-quality foundation |
 | Vault UI | Full file browser with table/list/grid views |
 | Neural Dark redesign | Complete (OLED black, Neural Pulse sidebar) |
 | CLI | Scaffolded (command stubs) |
+| LLM Integration | llama.cpp + Ollama with provider abstraction |
+| Model Catalog | Full catalogue with providers, variants, benchmarks |
 
 ---
 
@@ -151,6 +191,7 @@ Think of Cortex as a person — a friend to its users.
 | Foreign key constraints on all relations | ✅ |
 | Request ID correlation (contextvars) | ✅ |
 | Health check returns 503 when degraded | ✅ |
+| IDOR prevention (ownership checks on user-scoped resources) | ✅ |
 
 ### CLI (Scaffolded)
 
@@ -178,6 +219,62 @@ Think of Cortex as a person — a friend to its users.
 | Metrics endpoint | ✅ |
 | Frontend test framework (Vitest) | ✅ |
 
+### Phase 4A: LLM Integration & Local Models (Partial)
+
+| Feature | Status |
+|---------|--------|
+| LLM manager with provider abstraction | ✅ |
+| llama.cpp integration | ✅ |
+| Ollama integration | ✅ |
+| Model catalog (providers, variants, capabilities) | ✅ |
+| Hardware detection (CPU/RAM/GPU) | ✅ |
+| Quantization recommendations | ✅ |
+| Model download manager | ✅ |
+| User model settings (per-user persistence) | ✅ |
+| Model comparison | ✅ |
+| Frontend: Models page | ✅ |
+| Model detail scraping | ✅ |
+| Catalogue refresh from Ollama | ✅ |
+
+### Phase 4B: Smart Indexing & Retrieval (Partial)
+
+| Feature | Status |
+|---------|--------|
+| Semantic chunker | ✅ |
+| Indexing configuration (include/exclude) | ✅ |
+| Full-text search (ts_vector) | ✅ |
+| Hybrid retrieval (vector + keyword) | ✅ |
+| Document indexer (markdown, PDF, notebooks, etc.) | ✅ |
+| Retrieval quality metrics | ✅ |
+| File watcher v2 with sync state | ✅ |
+| Batch indexer | ✅ |
+| Path index tracking | ✅ |
+| Deletion pipeline | ✅ |
+| Search clustering | ✅ |
+
+### Phase 5: Conversation & Context (Partial)
+
+| Feature | Status |
+|---------|--------|
+| Conversation model + message history | ✅ |
+| Conversation API (CRUD + SSE streaming) | ✅ |
+| Conversation-to-memory pipeline | ✅ |
+| Long-term memory (decay, confidence, access tracking) | ✅ |
+| Long-term memory API | ✅ |
+| Entity extraction | ✅ |
+| Usage tracking | ✅ |
+
+### Phase 6: Agent Intelligence (Partial)
+
+| Feature | Status |
+|---------|--------|
+| Agent SSE streaming | ✅ |
+| Expanded tool registry | ✅ |
+| RAG pipeline | ✅ |
+| Knowledge system health/stats | ✅ |
+| Recommendation engine | ✅ |
+| Threaded scanner | ✅ |
+
 ### UI Refactor (Implemented)
 
 | Feature | Status |
@@ -192,6 +289,9 @@ Think of Cortex as a person — a friend to its users.
 | MetricRing, TabGroup, CollapsiblePanel components | ✅ |
 | Profile/Settings with hero headers | ✅ |
 | System metrics with real-time processes | ✅ |
+| Chat page (conversations UI) | ✅ |
+| Models page (catalogue, installed, downloads) | ✅ |
+| Downloads page (model download queue) | ✅ |
 
 ---
 
@@ -201,11 +301,11 @@ Think of Cortex as a person — a friend to its users.
 
 | Phase | Name | Focus | Status |
 |-------|------|-------|--------|
-| 4A | LLM Integration & Local Models | Local LLM inference, model management, hardware detection | ⬜ Next |
-| 4B | Smart Indexing & Retrieval | Intelligent exclusion, file watching, hybrid retrieval | ⬜ |
-| 5 | Conversation & Context | Persistent chat, context builder, conversation history | ⬜ |
-| 6 | Agent Intelligence | Multi-step reasoning, tool chaining, workflows, SSE streaming | ⬜ |
-| 7 | Desktop Preparation | Service abstraction, filesystem abstraction, Tauri readiness | ⬜ |
+| 4A | LLM Integration & Local Models | Local LLM inference, model management, hardware detection | 🟡 Partial |
+| 4B | Smart Indexing & Retrieval | Intelligent exclusion, file watching, hybrid retrieval | 🟡 Partial |
+| 5 | Conversation & Context | Persistent chat, context builder, conversation history | 🟡 Partial |
+| 6 | Agent Intelligence | Multi-step reasoning, tool chaining, workflows, SSE streaming | 🟡 Partial |
+| 7 | Desktop Preparation | Service abstraction, filesystem abstraction, Tauri readiness | ⬜ Next |
 | 8 | Learning Loop | Pattern recognition, correction tracking, proactive assistant | ⬜ |
 | 9 | Observability & Monitoring | Dashboards, metrics, health monitoring | ⬜ |
 | 10 | Production Hardening | Test coverage, security, performance, Docker, CI/CD | ⬜ |
@@ -222,11 +322,14 @@ Think of Cortex as a person — a friend to its users.
 │  - Auth, Profile, Vault, Memory, Admin         │
 │  - Neural Dark UI, Neural Network background   │
 │  - Neural Pulse sidebar, Command Palette (⌘K)  │
+│  - Models, Chat, Downloads pages               │
 └──────────────────────┬─────────────────────────┘
                        │ Direct requests to backend (CORS)
 ┌──────────────────────▼─────────────────────────┐
 │  Backend (FastAPI)    http://localhost:8000    │
 │  - Auth, Vault, Memory, Storage, Intelligence  │
+│  - LLM Manager (llama.cpp, Ollama)            │
+│  - Model Catalog, Conversations, Sync          │
 └──────┬───────────────────────────┬─────────────┘
        │                           │
   ┌────▼────┐  ┌──────────┐  ┌────▼─────┐
@@ -255,6 +358,7 @@ Filesystem:
 | Encryption | Fernet + PBKDF2 (vault), Fernet (GitHub token) |
 | Vector DB | Qdrant (embedded) |
 | Embeddings | ONNX Runtime (BGE-M3) |
+| LLM | llama.cpp, Ollama (provider abstraction) |
 | Task Queue | arq (Redis-based) |
 | CLI | TypeScript, Commander.js |
 
@@ -318,6 +422,42 @@ Override root with `CORTEX_ROOT` env var.
 
 **`agent_feedback`** — User feedback on agent runs (rating, comment).
 
+**`conversations`** — Conversation sessions (title, repo_id, model_used, token counts).
+
+**`conversation_messages`** — Individual messages within conversations (role, content, tokens).
+
+**`long_term_memories`** — Persistent memories with decay, confidence, access tracking, tags.
+
+**`documents`** — Non-code knowledge files (markdown, PDF, notebooks, etc.) with type enum.
+
+**`document_chunks`** — Chunked document content with embeddings.
+
+**`model_catalog`** — LLM model metadata (family, provider, capabilities, benchmarks).
+
+**`model_variants`** — Quantization variants per model (size, speed, quality tradeoffs).
+
+**`model_downloads`** — Download tracking (status, progress, file path).
+
+**`model_usage`** — Per-user model usage statistics.
+
+**`providers`** — LLM providers (Ollama, llama.cpp, etc.).
+
+**`provider_models`** — Models available per provider.
+
+**`capabilities`** — Model capability tags (chat, code, vision, etc.).
+
+**`quantizations`** — Quantization level definitions (Q4, Q8, FP16, etc.).
+
+**`hardware_profiles`** — Detected hardware configurations.
+
+**`sync_states`** — File watcher sync state per repo per user.
+
+**`user_model_settings`** — Per-user model preferences (provider, model, context size, etc.).
+
+**`indexing_configs`** — Indexing rules (include/exclude paths, file types).
+
+**`embedding_cache`** — Cached embeddings to avoid recomputation.
+
 ### API Structure
 
 Base URL: `http://localhost:8000`
@@ -338,8 +478,16 @@ Base URL: `http://localhost:8000`
 | `/api/v1/search` | Unified search across all data types | Required |
 | `/api/v1/repos` | Repository CRUD + indexing + graph | Required |
 | `/api/v1/agents` | Agent CRUD + runs + steps + feedback | Required |
+| `/api/v1/models` | Model catalog, download, compare, settings | Required |
+| `/api/v1/conversations` | Conversation CRUD + SSE streaming | Required |
+| `/api/v1/long-term-memory` | Long-term memory CRUD + decay | Required |
+| `/api/v1/knowledge` | Knowledge system health + stats | Required |
+| `/api/v1/indexing` | Indexing config CRUD + preview | Required |
+| `/api/v1/sync` | File watcher start/stop + validation | Required |
 | `/api/v1/system/*` | System status, metrics | Varies |
 | `/ws` | WebSocket echo + demo + system metrics | None |
+| `/ws/models` | WebSocket for model download progress | None |
+| `/ws/system` | WebSocket for system metrics stream | None |
 
 Interactive docs: `http://localhost:8000/docs`
 
@@ -381,6 +529,9 @@ First registered user is auto-promoted to `admin`.
 | Memory | `/memory` | Knowledge base viewer and creator |
 | Search | `/search` | Unified search with filters, results, graph view |
 | Agents | `/agents` | Agent management + chat interface |
+| Chat | `/chat` | Conversation interface with SSE streaming |
+| Models | `/models` | Model catalog, installed models, download queue |
+| Downloads | `/downloads` | Active model downloads with progress |
 
 **Global:** Command palette available via `⌘K` (or `Ctrl+K`) on any page.
 
@@ -394,6 +545,11 @@ First registered user is auto-promoted to `admin`.
 | `CORTEX_ROOT` | `ProjectRoot/CortexMemory` | System storage root |
 | `NEXT_PUBLIC_API_BASE_URL` | — | Optional: bypass proxy, hit backend directly (breaks cookie auth if not configured) |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | JWT access token lifetime |
+| `LLM_PROVIDER` | `auto` | LLM provider: `auto`, `llama.cpp`, `ollama`, `none` |
+| `LLM_MODEL_PATH` | — | Path to local GGUF model file |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `LLM_CONTEXT_SIZE` | `4096` | LLM context window size |
+| `LLM_GPU_LAYERS` | `0` | GPU layers for llama.cpp |
 
 ---
 
@@ -457,7 +613,7 @@ make dev-frontend  # Frontend only
 ```bash
 make install       # uv sync + npm install
 make migrate       # alembic upgrade head
-make test          # 156 tests (147 backend pytest + 9 frontend vitest)
+make test          # 486+ tests (backend pytest + frontend vitest)
 make lint          # ruff + mypy
 make format        # ruff format
 make check         # lint + test
@@ -557,19 +713,22 @@ Cortex-Workspace/
 ├── backend/app/
 │   ├── main.py          # Entry point, lifespan, CORS, routers
 │   ├── core/            # Config, security, paths, storage, Redis, middleware, vector_db, websocket, rate_limit, csrf
-│   ├── auth/            # Register/login/refresh/logout, tokens, rate limit, audit
+│   ├── auth/            # Register/login/refresh/logout, tokens, rate limit, audit, dependencies
 │   ├── db/              # Bootstrap, session factory
-│   ├── models/          # User, AuthEvent, StorageRegistry, RepoIndex, CodeChunk, GraphNode, GraphEdge, IndexedFile, Agent, AgentRun, AgentStep, AgentFeedback, Notification ORM
+│   ├── models/          # ORM models (see below)
 │   ├── schemas/         # Pydantic request/response models
-│   ├── services/        # user, vault, memory_manager, storage_registry, health, embedding_service, repo_scanner, chunker, notification, incremental_indexer, graph_builder, cross_file_search
+│   ├── services/        # Business logic (see below)
 │   ├── intelligence/    # KnowledgeEntry model
 │   ├── agents/          # BaseAgent, PlannerAgent, ExecutorAgent, AgentRunManager
 │   ├── tasks/           # arq worker, memory_tasks
-│   └── api/             # Routers: auth, memory, metrics, agents, search, repos, v1 (profile, vault, github, notifications, system)
+│   └── api/             # Routers: auth, memory, metrics, deps, ws, v1/*
 ├── frontend/
 │   ├── app/             # Next.js pages (App Router) with error.tsx boundaries
 │   │   ├── search/      # Unified search page
-│   │   └── agents/      # Agent management + chat
+│   │   ├── agents/      # Agent management + chat
+│   │   ├── chat/        # Conversation interface
+│   │   ├── models/      # Model catalog + downloads
+│   │   └── downloads/   # Download queue
 │   └── src/
 │       ├── lib/         # utils.ts (cn helper)
 │       └── shared/
@@ -583,8 +742,8 @@ Cortex-Workspace/
 │   └── src/
 │       ├── index.ts     # CLI entry point (Commander.js)
 │       └── commands/    # init, install, build, start, dev, setup, doctor, etc.
-├── migrations/          # Alembic revisions (PostgreSQL, 14 migrations)
-├── tests/               # 147+ pytest tests (SQLite) + frontend tests
+├── migrations/          # Alembic revisions (PostgreSQL, 25 migrations)
+├── tests/               # 486+ pytest tests (SQLite) + frontend tests
 ├── scripts/             # Docker helpers, backup
 ├── docker-compose.yml   # PostgreSQL + Redis + Qdrant
 ├── Dockerfile           # Multi-stage build (frontend + backend)
@@ -595,6 +754,74 @@ Cortex-Workspace/
 ├── README.md            # This file
 └── .agents/             # Agent skills, plans, and workflow definitions
 ```
+
+### Backend Models
+
+| Model | File | Purpose |
+|-------|------|---------|
+| User, AuthEvent | `models/user.py`, `models/auth_event.py` | Auth + audit |
+| StorageRegistry | `models/storage_registry.py` | Per-user storage paths |
+| RepoIndex, CodeChunk | `models/repo_index.py` | Repository indexing |
+| GraphNode, GraphEdge | `models/graph.py` | Knowledge graph |
+| IndexedFile | `models/file_index.py` | Incremental indexing tracking |
+| Notification | `models/notification.py` | System notifications |
+| Agent, AgentRun, AgentStep, AgentFeedback | `models/agent.py` | Agent system |
+| Conversation, ConversationMessage | `models/conversation.py` | Chat history |
+| LongTermMemory | `models/long_term_memory.py` | Persistent memories with decay |
+| Document, DocumentChunk | `models/document.py` | Non-code knowledge files |
+| ModelCatalog, ModelVariant, ModelDownload, etc. | `models/model_catalog.py` | LLM model metadata |
+| Provider, ProviderModel, Capability, Quantization | `models/model_catalog.py` | Provider + capability system |
+| HardwareProfile | `models/model_catalog.py` | Hardware detection |
+| SyncState | `models/sync_state.py` | File watcher state |
+| UserModelSettings | `models/user_settings.py` | Per-user model preferences |
+| IndexingConfig | `models/indexing_config.py` | Indexing rules |
+| EmbeddingCache | `models/embedding_cache.py` | Cached embeddings |
+| KnowledgeEntry | `intelligence/` | Text memory with embeddings |
+
+### Backend Services
+
+| Service | File | Purpose |
+|---------|------|---------|
+| embedding_service | `services/embedding_service.py` | ONNX/BGE-M3 embeddings |
+| repo_scanner | `services/repo_scanner.py` | Repository walk + chunk + embed |
+| chunker | `services/chunker.py` | Code chunking |
+| semantic_chunker | `services/semantic_chunker.py` | Language-aware semantic chunking |
+| memory_manager | `services/memory_manager.py` | Knowledge entry CRUD + search |
+| graph_builder | `services/graph_builder.py` | Knowledge graph construction |
+| cross_file_search | `services/cross_file_search.py` | Vector + graph search |
+| incremental_indexer | `services/incremental_indexer.py` | Hash-based change detection |
+| path_index | `services/path_index.py` | Path tracking for files |
+| document_indexer | `services/document_indexer.py` | Non-code file indexing |
+| indexing_orchestrator | `services/indexing_orchestrator.py` | Coordinates indexing pipeline |
+| batch_indexer | `services/batch_indexer.py` | Bulk indexing operations |
+| file_watcher_v2 | `services/file_watcher_v2.py` | File system watcher |
+| sync_service | `services/sync_service.py` | Sync state management |
+| llm/manager | `services/llm/manager.py` | LLM provider abstraction |
+| llm/llama_cpp | `services/llm/llama_cpp.py` | llama.cpp provider |
+| llm/ollama | `services/llm/ollama.py` | Ollama provider |
+| model_downloader | `services/model_downloader.py` | Model download management |
+| ollama_catalog | `services/ollama_catalog.py` | Ollama model catalog |
+| catalogue | `services/catalogue.py` | Model catalog management |
+| model_comparison | `services/model_comparison.py` | Model benchmarking |
+| model_search | `services/model_search.py` | Model search + recommendations |
+| hardware | `services/hardware.py` | Hardware detection |
+| conversation_service | `services/conversation_service.py` | Chat + context building |
+| long_term_memory | `services/long_term_memory.py` | Persistent memory with decay |
+| entity_extractor | `services/entity_extractor.py` | Extract entities from text |
+| rag_pipeline | `services/rag_pipeline.py` | Retrieval-augmented generation |
+| hybrid_retrieval | `services/hybrid_retrieval.py` | Multi-strategy search |
+| fulltext_search | `services/fulltext_search.py` | PostgreSQL ts_vector search |
+| search_clustering | `services/search_clustering.py` | Cluster search results |
+| recommendation | `services/recommendation.py` | Recommendation engine |
+| retrieval_metrics | `services/retrieval_metrics.py` | Search quality metrics |
+| embedding_cache | `services/embedding_cache.py` | Cache embeddings |
+| deletion_pipeline | `services/deletion_pipeline.py` | Cascade deletion |
+| threaded_scanner | `services/threaded_scanner.py` | Multi-threaded file scanning |
+| quantization_db | `services/quantization_db.py` | Quantization data |
+| indexing_rules | `services/indexing_rules.py` | Indexing include/exclude rules |
+| document_statistics | `services/document_statistics.py` | Document stats |
+| seed_data | `services/seed_data.py` | Seed data for catalog |
+| usage_tracker | `services/usage_tracker.py` | Model usage tracking |
 
 ---
 
@@ -615,7 +842,7 @@ Cortex-Workspace/
 
 **Prerequisites — Complete:** Vector DB, embeddings, task queue, WebSocket, rate limiting, soft delete, JWT cookies, CSP, TLS, logging, metrics, backups, frontend tests.
 
-**Security Audit — Complete:** P0/P1 fixes applied (auth enforcement, path traversal, token expiry, CSRF, CORS, FK constraints).
+**Security Audit — Complete:** P0/P1 fixes applied (auth enforcement, path traversal, token expiry, CSRF, CORS, FK constraints, IDOR prevention).
 
 **Phase 2 (Indexing & Knowledge Graph) — Complete:**
 1. ~~Repo scanner~~ — walk, chunk, embed, store pipeline complete
@@ -636,6 +863,26 @@ Cortex-Workspace/
 5. ~~Agent API~~ — CRUD + runs + steps + feedback
 6. ~~Agent frontend~~ — chat interface, agents management page
 7. ~~Navigation~~ — sidebar + command palette integration
+
+**Phase 4A (LLM Integration) — Partially Complete:**
+1. ~~LLM manager~~ — provider abstraction (llama.cpp, Ollama)
+2. ~~Model catalog~~ — providers, variants, capabilities, benchmarks
+3. ~~Hardware detection~~ — CPU/RAM/GPU profiling
+4. ~~Model downloads~~ — download manager with progress tracking
+5. ~~User settings~~ — per-user model preferences
+6. ~~Frontend~~ — Models page with catalogue, installed, downloads
+7. Conversation-to-memory pipeline — ✅ done
+8. Long-term memory with decay — ✅ done
+
+**Phase 4B (Smart Indexing) — Partially Complete:**
+1. ~~Semantic chunker~~ — language-aware splitting
+2. ~~Indexing config~~ — include/exclude paths, file types
+3. ~~Full-text search~~ — PostgreSQL ts_vector
+4. ~~Hybrid retrieval~~ — vector + keyword + graph
+5. ~~Document indexer~~ — markdown, PDF, notebooks
+6. ~~File watcher v2~~ — sync state persistence
+7. ~~Batch indexer~~ — bulk operations
+8. ~~Retrieval metrics~~ — search quality tracking
 
 ---
 
