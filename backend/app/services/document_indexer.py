@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import os
 from pathlib import Path
@@ -84,7 +83,7 @@ class DocumentIndexer:
             return False
 
         try:
-            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+            with open(file_path, encoding="utf-8", errors="replace") as f:
                 content = f.read()
         except Exception as e:
             logger.warning("Failed to read %s: %s", file_path, e)
@@ -197,7 +196,7 @@ class DocumentIndexer:
         embeddings = self._embedder.embed_batch(texts)
 
         points = []
-        for db_chunk, embedding in zip(db_chunks, embeddings):
+        for db_chunk, embedding in zip(db_chunks, embeddings, strict=False):
             embedding_id = self._embedder.compute_embedding_id(db_chunk.content)
             db_chunk.embedding_id = embedding_id
             points.append({

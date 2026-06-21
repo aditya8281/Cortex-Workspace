@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from backend.app.models.document import DocumentType
 from backend.app.services.document_indexer import DocumentIndexer
 from backend.app.services.file_watcher_v2 import FileChange, FileWatcherV2, get_file_watcher_v2
 

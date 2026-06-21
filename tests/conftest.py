@@ -133,6 +133,12 @@ def _mock_external_services():
     mock_cache.put.return_value = None
     mock_cache.invalidate.return_value = 0
 
+    mock_file_watcher = MagicMock()
+    mock_file_watcher.watch.return_value = True
+    mock_file_watcher.unwatch.return_value = True
+    mock_file_watcher.start.return_value = None
+    mock_file_watcher.stop.return_value = None
+
     with (
         patch("backend.app.services.memory_manager.get_vector_db", return_value=mock_vector_db),
         patch("backend.app.services.memory_manager.get_embedding_service", return_value=mock_embedder),
@@ -141,5 +147,9 @@ def _mock_external_services():
         patch("backend.app.services.embedding_cache.get_embedding_cache", return_value=mock_cache),
         patch("backend.app.services.deletion_pipeline.get_vector_db", return_value=mock_vector_db),
         patch("backend.app.services.deletion_pipeline.get_embedding_cache", return_value=mock_cache),
+        patch("backend.app.services.document_indexer.get_vector_db", return_value=mock_vector_db),
+        patch("backend.app.services.document_indexer.get_embedding_service", return_value=mock_embedder),
+        patch("backend.app.services.document_indexer.get_embedding_cache", return_value=mock_cache),
+        patch("backend.app.services.indexing_orchestrator.get_file_watcher_v2", return_value=mock_file_watcher),
     ):
         yield

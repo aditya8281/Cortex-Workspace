@@ -62,7 +62,7 @@ class SemanticChunker:
             paras = [p.strip() for p in section.split("\n\n") if p.strip()]
             for para in paras:
                 para_tokens = estimate_tokens(para)
-                heading_match = re.match(r'^(#{1,6})\s+(.+)', para)
+                _heading_match = re.match(r'^(#{1,6})\s+(.+)', para)
 
                 if current_tokens + para_tokens > self._max_tokens and current_paras:
                     chunk_text = "\n\n".join(current_paras)
@@ -138,7 +138,7 @@ class SemanticChunker:
         chunks: list[SemanticChunk] = []
         offset = 0
 
-        for i, cell in enumerate(cells):
+        for _i, cell in enumerate(cells):
             cell_type = cell.get("cell_type", "code")
             source = "".join(cell.get("source", []))
             if not source.strip():
