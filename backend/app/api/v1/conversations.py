@@ -5,11 +5,20 @@ from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.app.core.db import get_current_user, get_db
+from backend.app.models.conversation import Conversation
 from backend.app.models.user import User
+from backend.app.schemas.conversation import (
+    ConversationDetailResponse,
+    ConversationListResponse,
+    ConversationMessageResponse,
+    ConversationResponse,
+    CreateConversationRequest,
+    SendMessageRequest,
+)
 from backend.app.services.conversation_service import (
     ConversationService,
     estimate_tokens,
@@ -19,20 +28,10 @@ from backend.app.services.rag_pipeline import get_rag_pipeline
 router = APIRouter()
 
 
-class CreateConversationPayload(BaseModel):
-    title: str = "New Conversation"
-    repo_id: int | None = None
-
-
-class SendMessagePayload(BaseModel):
-    content: str = Field(min_length=1, max_length=10000)
-    model: str | None = None
-
-
 # ── CRUD Endpoints ──────────────────────────────────────────────────
 
 
-@router.get("/conversations")
+@router.get("/conversations", response_model=ConversationListResponse)
 async def list_conversations(
     limit: int = 50,
     offset: int = 0,
@@ -41,35 +40,29 @@ async def list_conversations(
 ):
     svc = ConversationService(db)
     convs = svc.list(current_user.id, limit, offset)
-    return {
-        "conversations": [
-            {
-                "id": c.id,
-                "title": c.title,
-                "repo_id": c.repo_id,
-                "model_used": c.model_used,
-                "message_count": c.message_count,
-                "total_tokens": c.total_tokens,
-                "created_at": c.created_at.isoformat(),
-                "updated_at": c.updated_at.isoformat(),
-            }
-            for c in convs
-        ]
-    }
+    total = (
+        db.query(func.count(Conversation.id))
+        .filter(Conversation.user_id == current_user.id)
+        .scalar()
+    )
+    return ConversationListResponse(
+        conversations=[ConversationResponse.model_validate(c) for c in convs],
+        total=total,
+    )
 
 
-@router.post("/conversations")
+@router.post("/conversations", response_model=ConversationResponse)
 async def create_conversation(
-    payload: CreateConversationPayload,
+    payload: CreateConversationRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     svc = ConversationService(db)
     conv = svc.create(current_user.id, payload.title, payload.repo_id)
-    return {"id": conv.id, "title": conv.title}
+    return ConversationResponse.model_validate(conv)
 
 
-@router.get("/conversations/{conversation_id}")
+@router.get("/conversations/{conversation_id}", response_model=ConversationDetailResponse)
 async def get_conversation(
     conversation_id: int,
     db: Session = Depends(get_db),
@@ -80,21 +73,17 @@ async def get_conversation(
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
     messages = svc.get_messages(conversation_id)
-    return {
-        "id": conv.id,
-        "title": conv.title,
-        "model_used": conv.model_used,
-        "total_tokens": conv.total_tokens,
-        "messages": [
-            {
-                "role": m.role,
-                "content": m.content,
-                "tokens": m.tokens,
-                "created_at": m.created_at.isoformat(),
-            }
-            for m in messages
-        ],
-    }
+    return ConversationDetailResponse(
+        id=conv.id,
+        title=conv.title,
+        repo_id=conv.repo_id,
+        model_used=conv.model_used,
+        message_count=conv.message_count,
+        total_tokens=conv.total_tokens,
+        created_at=conv.created_at,
+        updated_at=conv.updated_at,
+        messages=[ConversationMessageResponse.model_validate(m) for m in messages],
+    )
 
 
 @router.delete("/conversations/{conversation_id}")
@@ -174,7 +163,7 @@ async def _stream_chat_response(
 @router.post("/conversations/{conversation_id}/messages")
 async def send_message(
     conversation_id: int,
-    payload: SendMessagePayload,
+    payload: SendMessageRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
