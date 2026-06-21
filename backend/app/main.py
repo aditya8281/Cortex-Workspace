@@ -16,6 +16,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 from backend.app.api.auth import router as auth_router
 from backend.app.api.memory import router as memory_router
@@ -150,6 +151,8 @@ app.add_middleware(
 )
 
 app.add_middleware(RequestLoggingMiddleware)
+
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 setup_rate_limiting(app)
 setup_csrf_protection(app)
