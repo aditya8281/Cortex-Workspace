@@ -1,0 +1,147 @@
+"""Event-driven file watcher using watchdog for OS-level filesystem events."""
+
+from __future__ import annotations
+
+import logging
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.observers import Observer
+
+from backend.app.services.chunker import SKIP_DIRS
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FileChange:
+    path: str
+    event_type: str  # "created", "modified", "deleted", "moved"
+    old_path: str | None = None
+    timestamp: float = field(default_factory=time.time)
+
+
+class _ChangeHandler(FileSystemEventHandler):
+    def __init__(self, callback: Callable[[FileChange], None], debounce_seconds: float = 2.0):
+        self._callback = callback
+        self._debounce = debounce_seconds
+        self._pending: dict[str, float] = {}
+
+    def _should_ignore(self, path: str) -> bool:
+        parts = Path(path).parts
+        return any(d in SKIP_DIRS for d in parts)
+
+    def _schedule(self, change: FileChange) -> None:
+        if self._should_ignore(change.path):
+            return
+        now = time.time()
+        last = self._pending.get(change.path, 0)
+        if now - last >= self._debounce:
+            self._pending[change.path] = now
+            self._callback(change)
+
+    def on_created(self, event: FileSystemEvent) -> None:
+        if not event.is_directory:
+            self._schedule(FileChange(path=event.src_path, event_type="created"))
+
+    def on_modified(self, event: FileSystemEvent) -> None:
+        if not event.is_directory:
+            self._schedule(FileChange(path=event.src_path, event_type="modified"))
+
+    def on_deleted(self, event: FileSystemEvent) -> None:
+        if not event.is_directory:
+            self._schedule(FileChange(path=event.src_path, event_type="deleted"))
+
+    def on_moved(self, event: FileSystemEvent) -> None:
+        if not event.is_directory:
+            self._schedule(
+                FileChange(
+                    path=event.dest_path,
+                    event_type="moved",
+                    old_path=event.src_path,
+                )
+            )
+
+
+class FileWatcherV2:
+    """Event-driven file watcher using watchdog for OS-level filesystem events."""
+
+    def __init__(self, debounce_seconds: float = 2.0):
+        self._observer: Observer | None = None
+        self._watched: dict[str, bool] = {}
+        self._debounce = debounce_seconds
+        self._on_change: Callable[[FileChange], None] | None = None
+
+    def set_callback(self, callback: Callable[[FileChange], None]) -> None:
+        self._on_change = callback
+
+    def watch(self, repo_path: str) -> bool:
+        if not self._observer:
+            self._observer = Observer()
+
+        if repo_path in self._watched:
+            return False
+
+        handler = _ChangeHandler(self._on_change or self._default_handler, self._debounce)
+        path = Path(repo_path)
+        if not path.exists():
+            logger.warning("Path does not exist: %s", repo_path)
+            return False
+
+        self._observer.schedule(handler, str(path), recursive=True)
+        self._watched[repo_path] = True
+        logger.info("Watching: %s", repo_path)
+        return True
+
+    def unwatch(self, repo_path: str) -> bool:
+        if repo_path not in self._watched:
+            return False
+
+        if self._observer:
+            for subscription in self._observer.emitters:
+                if subscription.path == repo_path:
+                    subscription.stop()
+                    break
+
+        del self._watched[repo_path]
+        logger.info("Stopped watching: %s", repo_path)
+        return True
+
+    def start(self) -> None:
+        if not self._observer:
+            self._observer = Observer()
+        if not self._observer.is_alive():
+            self._observer.start()
+            logger.info("File watcher started")
+
+    def stop(self) -> None:
+        if self._observer and self._observer.is_alive():
+            self._observer.stop()
+            self._observer.join()
+            logger.info("File watcher stopped")
+        self._watched.clear()
+
+    @property
+    def is_running(self) -> bool:
+        return self._observer is not None and self._observer.is_alive()
+
+    @property
+    def watched_count(self) -> int:
+        return len(self._watched)
+
+    @staticmethod
+    def _default_handler(change: FileChange) -> None:
+        logger.info("File change: %s %s", change.event_type, change.path)
+
+
+_file_watcher_v2: FileWatcherV2 | None = None
+
+
+def get_file_watcher_v2() -> FileWatcherV2:
+    global _file_watcher_v2
+    if _file_watcher_v2 is None:
+        _file_watcher_v2 = FileWatcherV2()
+    return _file_watcher_v2
