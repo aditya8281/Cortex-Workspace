@@ -114,6 +114,8 @@ def get_repo(
     repo = db.query(RepoIndex).filter(RepoIndex.id == repo_id).first()
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
+    if repo.user_id is not None and repo.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Repository not found")
     return {"repo": _serialize_repo(repo)}
 
 
@@ -127,6 +129,8 @@ def update_repo(
     """Update repository metadata."""
     repo = db.query(RepoIndex).filter(RepoIndex.id == repo_id).first()
     if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    if repo.user_id is not None and repo.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Repository not found")
 
     if payload.name is not None:
@@ -146,6 +150,8 @@ def delete_repo(
     """Delete a repository and its indexed data."""
     repo = db.query(RepoIndex).filter(RepoIndex.id == repo_id).first()
     if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    if repo.user_id is not None and repo.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Repository not found")
 
     db.delete(repo)
@@ -167,6 +173,8 @@ async def index_repo(
     """Trigger repository indexing (default: background task)."""
     repo = db.query(RepoIndex).filter(RepoIndex.id == repo_id).first()
     if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    if repo.user_id is not None and repo.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Repository not found")
 
     if background:
@@ -229,6 +237,8 @@ def build_graph(
     repo = db.query(RepoIndex).filter(RepoIndex.id == repo_id).first()
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
+    if repo.user_id is not None and repo.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Repository not found")
 
     builder = GraphBuilder(db)
     result = builder.build_graph(repo_id)
@@ -249,6 +259,8 @@ def get_graph(
     repo = db.query(RepoIndex).filter(RepoIndex.id == repo_id).first()
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
+    if repo.user_id is not None and repo.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Repository not found")
 
     builder = GraphBuilder(db)
     return builder.get_graph(repo_id)
@@ -262,6 +274,12 @@ def get_node_context(
     current_user: User = Depends(get_current_user),
 ):
     """Get graph context for a specific node."""
+    repo = db.query(RepoIndex).filter(RepoIndex.id == repo_id).first()
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    if repo.user_id is not None and repo.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
     builder = GraphBuilder(db)
     context = builder.get_node_context(node_id)
     if not context:

@@ -45,6 +45,15 @@ from backend.app.models.storage_registry import StorageRegistry  # noqa: F401, E
 from backend.app.models.user import User  # noqa: F401, E402
 from backend.app.models.document import Document, DocumentChunk  # noqa: F401, E402
 from backend.app.models.embedding_cache import EmbeddingCache  # noqa: F401, E402
+from backend.app.models.conversation import Conversation, ConversationMessage  # noqa: F401, E402
+from backend.app.models.long_term_memory import LongTermMemory  # noqa: F401, E402
+from backend.app.models.model_catalog import (  # noqa: F401, E402
+    Capability, HardwareProfile, ModelCatalog, ModelDownload, ModelStatistics,
+    ModelUsage, ModelVariant, Provider, ProviderModel, Quantization, SyncJob,
+)
+from backend.app.models.path_index import PathIndex  # noqa: F401, E402
+from backend.app.models.sync_state import SyncState  # noqa: F401, E402
+from backend.app.models.user_settings import UserModelSettings  # noqa: F401, E402
 
 target_metadata = Base.metadata
 

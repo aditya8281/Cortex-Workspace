@@ -39,7 +39,7 @@ from backend.app.schemas.model import (
 )
 from backend.app.services.catalogue import CatalogueManager
 from backend.app.services.hardware import detect_hardware as _detect_hardware_full
-from backend.app.services.llm.manager import MODEL_CATALOG, LLMManager, llm_manager
+from backend.app.services.llm.manager import LLMManager, llm_manager
 from backend.app.services.model_comparison import ModelComparisonService
 from backend.app.services.model_downloader import model_downloader
 from backend.app.services.model_search import ModelSearchService
@@ -58,49 +58,49 @@ async def list_models(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List models from catalog and available providers."""
-    # Merge catalog with provider-detected models
+    """List models from the unified Ollama catalog and available providers."""
+    from backend.app.services.ollama_catalog import get_ollama_catalog
+
+    # Fetch from unified three-source catalog
+    catalog_models = await get_ollama_catalog()
+
+    # Get locally installed models from providers
     available_models = await llm_manager.list_all_models()
     available_names = {m.name for m in available_models}
 
-    catalog = list(MODEL_CATALOG)
-    if model_type:
-        catalog = [m for m in catalog if m.get("model_type") == model_type]
+    catalog = []
+    seen_bases: set[str] = set()
+    for model in catalog_models:
+        name = model.get("name", "")
+        base = name.split(":")[0]
 
-    # Enrich catalog entries with provider status
-    for entry in catalog:
-        entry["downloaded"] = entry["name"] in available_names
+        # One entry per base model family
+        if base in seen_bases:
+            continue
+        seen_bases.add(base)
 
-    # Merge in dynamic Ollama models not already in static catalog
-    dynamic = await llm_manager.fetch_ollama_catalog()
-    static_names = {m["name"] for m in catalog}
-    for dm in dynamic:
-        if dm.name and dm.name not in static_names:
-            # Infer model_type from capabilities
-            inferred_type = "chat"
-            if "code" in dm.capabilities and "chat" not in dm.capabilities:
-                inferred_type = "code"
-            elif "vision" in dm.capabilities:
-                inferred_type = "vision"
-            elif "embedding" in dm.capabilities:
-                inferred_type = "embedding"
+        inferred_type = _infer_model_type(model)
+        if model_type and inferred_type != model_type:
+            continue
 
-            catalog.append(
-                {
-                    "name": dm.name,
-                    "display_name": dm.name.split(":")[0].replace("-", " ").title(),
-                    "provider": "ollama",
-                    "model_type": inferred_type,
-                    "parameter_count": _guess_param_count(dm.name),
-                    "size_bytes": dm.size_bytes,
-                    "context_length": dm.context_length,
-                    "capabilities": dm.capabilities,
-                    "description": dm.description,
-                    "downloaded": dm.name in available_names,
-                    "variants": _extract_variants(dm.name, catalog),
-                    "hardware_requirements": _estimate_hardware(dm.size_bytes),
-                }
-            )
+        downloaded = any(n.split(":")[0] == base for n in available_names)
+
+        catalog.append(
+            {
+                "name": base,
+                "display_name": base.replace("-", " ").title(),
+                "provider": "ollama",
+                "model_type": inferred_type,
+                "parameter_count": _guess_param_count(base),
+                "size_bytes": model.get("size", 0),
+                "context_length": 4096,
+                "capabilities": model.get("capabilities", ["chat"]),
+                "description": model.get("description", f"Ollama model: {base}"),
+                "downloaded": downloaded,
+                "variants": _extract_variants(base, catalog),
+                "hardware_requirements": _estimate_hardware(model.get("size", 0)),
+            }
+        )
 
     return {
         "models": catalog,
@@ -196,112 +196,70 @@ async def get_usage_stats(
     return tracker.get_usage_stats()
 
 
-@router.post("/models/{model_name}/download", response_model=DownloadModelResponse)
-async def download_model(
-    model_name: str,
-    variant: str | None = None,
-    current_user: User = Depends(get_current_user),
-):
-    """Start downloading a model."""
-    try:
-        result = await model_downloader.download_model(model_name, MODEL_CATALOG, variant=variant)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
-@router.get("/models/{model_name}/progress", response_model=DownloadProgressResponse)
-async def download_progress(
-    model_name: str,
-    current_user: User = Depends(get_current_user),
-):
-    """Get download progress for a model."""
-    progress = model_downloader.get_progress(model_name)
-    return {"model": model_name, "progress": progress}
-
-
-@router.post("/models/{model_name}/cancel", response_model=CancelDownloadResponse)
-async def cancel_download(
-    model_name: str,
-    current_user: User = Depends(get_current_user),
-):
-    """Cancel an active download."""
-    cancelled = await model_downloader.cancel_download(model_name)
-    return {"cancelled": cancelled}
-
-
-@router.delete("/models/{model_name}", response_model=DeleteModelResponse)
-async def delete_model(
-    model_name: str,
-    current_user: User = Depends(get_current_user),
-):
-    """Delete an Ollama model."""
-    import httpx
-
-    async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL) as client:
-        resp = await client.delete("/api/delete", json={"name": model_name})
-        resp.raise_for_status()
-    return {"status": "deleted", "model": model_name}
-
-
 @router.get("/models/installed", response_model=InstalledModelsResponse)
 async def list_installed_models(
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """List installed/downloaded model variants."""
-    db = next(get_db())
+    catalogue_mgr = CatalogueManager(db)
+
+    # Get Ollama installed models
     try:
-        catalogue_mgr = CatalogueManager(db)
+        import httpx
 
-        # Get Ollama installed models
-        try:
-            import httpx
+        async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=5.0) as client:
+            resp = await client.get("/api/tags")
+            resp.raise_for_status()
+            installed = resp.json().get("models", [])
+    except Exception:
+        installed = []
 
-            async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=5.0) as client:
-                resp = await client.get("/api/tags")
-                resp.raise_for_status()
-                installed = resp.json().get("models", [])
-        except Exception:
-            installed = []
+    installed_names = {m["name"] for m in installed}
 
-        installed_names = {m["name"] for m in installed}
-
-        # Get all catalogue entries and mark downloaded ones
-        all_models = catalogue_mgr.get_all_catalogue()
-        result = []
-        for model in all_models:
-            variants = []
-            for tag in installed_names:
-                base = tag.split(":")[0]
-                if base in model.model_id or model.model_id.startswith(base):
-                    variants.append(
-                        {
-                            "variant_id": tag,
-                            "quantization": _guess_quant_from_tag(tag),
-                            "size_bytes": next((m.get("size", 0) for m in installed if m["name"] == tag), 0),
-                            "size_gb": round(
-                                next((m.get("size", 0) for m in installed if m["name"] == tag), 0) / (1024**3), 1
-                            ),
-                            "downloaded": True,
-                            "parameter_count": model.parameter_count,
-                            "quality_score": 90.0,
-                        }
-                    )
-            if variants:
-                result.append(
+    # Get all catalogue entries and mark downloaded ones
+    all_models = catalogue_mgr.get_all_catalogue()
+    result = []
+    for model in all_models:
+        variants = []
+        for tag in installed_names:
+            base = tag.split(":")[0]
+            if base in model.model_id or model.model_id.startswith(base):
+                variants.append(
                     {
-                        "model_id": model.model_id,
-                        "display_name": model.display_name,
-                        "family": model.family,
+                        "variant_id": tag,
+                        "quantization": _guess_quant_from_tag(tag),
+                        "size_bytes": next((m.get("size", 0) for m in installed if m["name"] == tag), 0),
+                        "size_gb": round(
+                            next((m.get("size", 0) for m in installed if m["name"] == tag), 0) / (1024**3), 1
+                        ),
+                        "downloaded": True,
                         "parameter_count": model.parameter_count,
-                        "capabilities": model.capabilities or [],
-                        "variants": variants,
+                        "quality_score": 90.0,
                     }
                 )
+        if variants:
+            result.append(
+                {
+                    "model_id": model.model_id,
+                    "display_name": model.display_name,
+                    "family": model.family,
+                    "parameter_count": model.parameter_count,
+                    "capabilities": model.capabilities or [],
+                    "variants": variants,
+                }
+            )
 
-        return {"models": result, "installed_count": len(result)}
-    finally:
-        db.close()
+    return {"models": result, "installed_count": len(result)}
+
+
+def _guess_quant_from_tag(tag: str) -> str:
+    """Guess quantization from Ollama tag."""
+    tag_lower = tag.lower()
+    for q in ["q4_k_m", "q5_k_m", "q8_0", "q4_k_s", "q6_k", "f16", "f32", "q4_0", "q3_k_m"]:
+        if q in tag_lower:
+            return q.upper()
+    return "UNKNOWN"
 
 
 @router.get("/models/search", response_model=ModelSearchResponse)
@@ -462,15 +420,6 @@ async def autocomplete_models(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-def _guess_quant_from_tag(tag: str) -> str:
-    """Guess quantization from Ollama tag."""
-    tag_lower = tag.lower()
-    for q in ["q4_k_m", "q5_k_m", "q8_0", "q4_k_s", "q6_k", "f16", "f32", "q4_0", "q3_k_m"]:
-        if q in tag_lower:
-            return q.upper()
-    return "UNKNOWN"
-
-
 @router.get("/models/storage", response_model=StorageUsageResponse)
 async def get_storage_usage(
     current_user: User = Depends(get_current_user),
@@ -502,72 +451,6 @@ async def get_storage_usage(
         "models": [],
         "cache_gb": 0.0,
     }
-
-
-@router.get("/models/{model_id}", response_model=ModelDetailResponse)
-async def get_model_detail(
-    model_id: str,
-    current_user: User = Depends(get_current_user),
-):
-    """Get detailed model info with variants."""
-    db = next(get_db())
-    try:
-        model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == model_id)).scalar_one_or_none()
-
-        if not model:
-            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
-
-        variants = db.execute(select(ModelVariant).where(ModelVariant.model_catalog_id == model.id)).scalars().all()
-
-        return {
-            "model_id": model.model_id,
-            "display_name": model.display_name,
-            "family": model.family,
-            "parameter_count": model.parameter_count,
-            "architecture": model.architecture,
-            "context_length_default": model.context_length_default,
-            "context_length_max": model.context_length_max,
-            "capabilities": model.capabilities or [],
-            "license": model.license,
-            "recommended_use_cases": model.recommended_use_cases or [],
-            "description": model.description,
-            "tags": model.tags or [],
-            "benchmarks": model.benchmarks,
-            "variants": [
-                {
-                    "variant_id": v.variant_id,
-                    "quantization": v.quantization,
-                    "quantization_level": v.quantization_level,
-                    "parameter_count": v.parameter_count,
-                    "size_bytes": v.size_bytes,
-                    "size_gb": round(v.size_gb, 1) if v.size_gb else None,
-                    "vram_required_gb": round(v.vram_required_gb, 1) if v.vram_required_gb else None,
-                    "quality_score": round(v.quality_score, 1) if v.quality_score else None,
-                    "downloaded": v.downloaded,
-                    "ollama_tag": v.ollama_tag,
-                }
-                for v in variants
-            ],
-        }
-    finally:
-        db.close()
-
-
-@router.post("/models/catalogue/refresh", response_model=CatalogueRefreshResponse)
-async def refresh_catalogue(
-    current_user: User = Depends(get_current_user),
-):
-    """Force refresh the model catalogue."""
-    db = next(get_db())
-    try:
-        catalogue_mgr = CatalogueManager(db)
-
-        # Re-seed curated models
-        added = catalogue_mgr.seed_curated_models()
-
-        return {"status": "refreshed", "models_added": added}
-    finally:
-        db.close()
 
 
 @router.get("/models/updates", response_model=ModelUpdatesResponse)
@@ -755,43 +638,160 @@ async def get_download_history(
     return {"history": history[:limit]}
 
 
+@router.post("/models/catalogue/refresh", response_model=CatalogueRefreshResponse)
+async def refresh_catalogue(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Force refresh the model catalogue."""
+    catalogue_mgr = CatalogueManager(db)
+
+    # Re-seed curated models
+    added = catalogue_mgr.seed_curated_models()
+
+    return {"status": "refreshed", "models_added": added}
+
+
+@router.post("/models/{model_name}/download", response_model=DownloadModelResponse)
+async def download_model(
+    model_name: str,
+    variant: str | None = None,
+    current_user: User = Depends(get_current_user),
+):
+    """Start downloading a model."""
+    try:
+        result = await model_downloader.download_model(model_name, [], variant=variant)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/models/{model_name}/progress", response_model=DownloadProgressResponse)
+async def download_progress(
+    model_name: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Get download progress for a model."""
+    progress = model_downloader.get_progress(model_name)
+    return {"model": model_name, "progress": progress}
+
+
+@router.post("/models/{model_name}/cancel", response_model=CancelDownloadResponse)
+async def cancel_download(
+    model_name: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Cancel an active download."""
+    cancelled = await model_downloader.cancel_download(model_name)
+    return {"cancelled": cancelled}
+
+
+@router.delete("/models/{model_name}", response_model=DeleteModelResponse)
+async def delete_model(
+    model_name: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Delete an Ollama model."""
+    import httpx
+
+    async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL) as client:
+        resp = await client.delete("/api/delete", json={"name": model_name})
+        resp.raise_for_status()
+    return {"status": "deleted", "model": model_name}
+
+
+@router.get("/models/{model_id}", response_model=ModelDetailResponse)
+async def get_model_detail(
+    model_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get detailed model info with variants."""
+    model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == model_id)).scalar_one_or_none()
+
+    if not model:
+        raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+
+    variants = db.execute(select(ModelVariant).where(ModelVariant.model_catalog_id == model.id)).scalars().all()
+
+    return {
+        "model_id": model.model_id,
+        "display_name": model.display_name,
+        "family": model.family,
+        "parameter_count": model.parameter_count,
+        "architecture": model.architecture,
+        "context_length_default": model.context_length_default,
+        "context_length_max": model.context_length_max,
+        "capabilities": model.capabilities or [],
+        "license": model.license,
+        "recommended_use_cases": model.recommended_use_cases or [],
+        "description": model.description,
+        "tags": model.tags or [],
+        "benchmarks": model.benchmarks,
+        "variants": [
+            {
+                "variant_id": v.variant_id,
+                "quantization": v.quantization,
+                "quantization_level": v.quantization_level,
+                "parameter_count": v.parameter_count,
+                "size_bytes": v.size_bytes,
+                "size_gb": round(v.size_gb, 1) if v.size_gb else None,
+                "vram_required_gb": round(v.vram_required_gb, 1) if v.vram_required_gb else None,
+                "quality_score": round(v.quality_score, 1) if v.quality_score else None,
+                "downloaded": v.downloaded,
+                "ollama_tag": v.ollama_tag,
+            }
+            for v in variants
+        ],
+    }
+
+
 @router.get("/models/{model_id}/inference-config")
 async def get_inference_config(
     model_id: str,
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Get inference configuration for a model."""
-    db = next(get_db())
-    try:
-        model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == model_id)).scalar_one_or_none()
+    model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == model_id)).scalar_one_or_none()
 
-        if not model:
-            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+    if not model:
+        raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
 
-        # Return inference config based on model capabilities
-        config = {
-            "model_id": model.model_id,
-            "context_length": model.context_length_default,
-            "temperature": 0.7,
-            "top_p": 0.9,
-            "top_k": 40,
-            "repeat_penalty": 1.1,
-            "seed": -1,
-            "num_predict": 2048,
-            "num_ctx": model.context_length_default,
-        }
+    # Return inference config based on model capabilities
+    config = {
+        "model_id": model.model_id,
+        "context_length": model.context_length_default,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "top_k": 40,
+        "repeat_penalty": 1.1,
+        "seed": -1,
+        "num_predict": 2048,
+        "num_ctx": model.context_length_default,
+    }
 
-        # Add capability-specific defaults
-        if model.capabilities:
-            if "vision" in model.capabilities:
-                config["image_resolution"] = 1024
-            if "code" in model.capabilities:
-                config["temperature"] = 0.3
-                config["top_p"] = 0.95
+    # Add capability-specific defaults
+    if model.capabilities:
+        if "vision" in model.capabilities:
+            config["image_resolution"] = 1024
+        if "code" in model.capabilities:
+            config["temperature"] = 0.3
+            config["top_p"] = 0.95
 
-        return config
-    finally:
-        db.close()
+    return config
+
+
+def _infer_model_type(model: dict) -> str:
+    """Infer model_type from catalog entry capabilities."""
+    caps = model.get("capabilities", [])
+    if "code" in caps and "chat" not in caps:
+        return "code"
+    if "vision" in caps:
+        return "vision"
+    if "embedding" in caps:
+        return "embedding"
+    return "chat"
 
 
 def _guess_param_count(name: str) -> str | None:

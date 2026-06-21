@@ -20,6 +20,7 @@ import type {
   SystemLogsResponse,
   NotificationListResponse,
 } from "../types";
+import { tryRefresh } from "../api/client";
 
 /** Backend base URL.
  *
@@ -47,28 +48,6 @@ interface RequestError extends Error {
 interface RequestOptions {
   body?: unknown;
   headers?: Record<string, string>;
-}
-
-let _refreshPromise: Promise<boolean> | null = null;
-
-async function tryRefresh(): Promise<boolean> {
-  if (_refreshPromise) return _refreshPromise;
-  _refreshPromise = (async () => {
-    try {
-      const res = await fetch(`${getBase()}/api/v1/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ refresh_token: "" }),
-      });
-      return res.ok;
-    } catch {
-      return false;
-    } finally {
-      _refreshPromise = null;
-    }
-  })();
-  return _refreshPromise;
 }
 
 function getCsrfToken(): string | undefined {

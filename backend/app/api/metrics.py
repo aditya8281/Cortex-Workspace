@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections import deque
 from threading import Lock
 
 import psutil
@@ -14,7 +15,7 @@ _start_time = time.time()
 # Request counters
 _request_count = 0
 _request_errors = 0
-_request_latencies: list[float] = []
+_request_latencies: deque[float] = deque(maxlen=1000)
 _metrics_lock = Lock()
 
 
@@ -26,9 +27,6 @@ def record_request(status_code: int, duration_ms: float) -> None:
         if status_code >= 500:
             _request_errors += 1
         _request_latencies.append(duration_ms)
-        # Keep only last 1000 latencies to bound memory
-        if len(_request_latencies) > 1000:
-            _request_latencies.pop(0)
 
 
 @router.api_route("/metrics", methods=["GET", "HEAD"])

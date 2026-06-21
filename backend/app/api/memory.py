@@ -13,7 +13,7 @@ from backend.app.tasks.worker import enqueue_task
 
 router = APIRouter()
 
-VALID_CATEGORIES = ("preference", "pattern", "correction", "fact", "context", "conversation")
+VALID_CATEGORIES = ("preference", "pattern", "correction", "fact", "context", "conversation", "note", "general")
 
 
 class MemoryCreatePayload(BaseModel):
@@ -105,7 +105,7 @@ def get_memory(
     """Get a single knowledge entry by ID."""
     manager = MemoryManager(db)
     entry = manager.get(entry_id)
-    if not entry:
+    if not entry or entry.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Memory entry not found")
     return manager._serialize(entry)
 
@@ -119,6 +119,9 @@ def update_memory(
 ):
     """Update a knowledge entry and re-embed if content changed."""
     manager = MemoryManager(db)
+    entry = manager.get(entry_id)
+    if not entry or entry.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Memory entry not found")
     entry = manager.update(
         entry_id=entry_id,
         title=payload.title,
@@ -127,8 +130,6 @@ def update_memory(
         source_path=payload.source_path,
         tags=payload.tags,
     )
-    if not entry:
-        raise HTTPException(status_code=404, detail="Memory entry not found")
     return {"status": "updated", "entry": manager._serialize(entry)}
 
 
@@ -140,9 +141,10 @@ def delete_memory(
 ):
     """Delete a knowledge entry and its vector embedding."""
     manager = MemoryManager(db)
-    deleted = manager.delete(entry_id)
-    if not deleted:
+    entry = manager.get(entry_id)
+    if not entry or entry.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Memory entry not found")
+    manager.delete(entry_id)
     return {"status": "deleted"}
 
 

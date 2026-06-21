@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -95,10 +95,13 @@ def reinforce_memory(
     user: User = Depends(get_current_user),
 ):
     service = LongTermMemoryService(db)
-    memory = service.reinforce(memory_id)
-    if not memory:
-        return {"error": "not found"}
-    return {"confidence": memory.confidence}
+    memory = db.get(LongTermMemory, memory_id)
+    if not memory or memory.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    reinforced = service.reinforce(memory_id)
+    if not reinforced:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return {"confidence": reinforced.confidence}
 
 
 @router.delete("/long-term-memory/{memory_id}")
@@ -108,7 +111,8 @@ def delete_memory(
     user: User = Depends(get_current_user),
 ):
     memory = db.get(LongTermMemory, memory_id)
-    if memory:
-        memory.is_active = False
-        db.commit()
+    if not memory or memory.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    memory.is_active = False
+    db.commit()
     return {"status": "deleted"}
