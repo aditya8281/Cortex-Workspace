@@ -30,6 +30,7 @@ class IndexingConfigSaveResponse(BaseModel):
 
 class IndexingPreviewResponse(BaseModel):
     total_files: int = 0
-    included_files: int = 0
-    excluded_files: int = 0
-    by_extension: dict[str, int] = {}
+    will_index: int = 0
+    excluded_by_directory: int = 0
+    excluded_by_pattern: int = 0
+    excluded_by_size: int = 0
