@@ -389,47 +389,58 @@ export interface RunDetailResponse {
 // ── Models ────────────────────────────────────────────────────────
 
 export interface ModelInfo {
+  model_id: string;
   name: string;
   display_name: string;
+  description: string;
   provider: string;
   model_type: "chat" | "code" | "vision" | "embedding";
   parameter_count: string;
   context_length: number;
   capabilities: string[];
-  description: string;
   hardware_requirements: {
     min_ram_gb: number;
     recommended_ram_gb: number;
-  };
+    min_vram_gb: number;
+    recommended_vram_gb: number;
+  } | null;
   recommended?: boolean;
   downloaded?: boolean;
   size_bytes?: number;
   variants?: string[];
+  family: string;
+  architecture: string;
+  license: string;
 }
 
 export interface HardwareInfo {
   ram_gb: number;
-  ram_used_gb: number;
+  ram_available_gb: number;
   ram_percent: number;
   cpu_count: number;
-  cpu_percent: number;
+  cpu_threads: number;
+  cpu_freq_mhz: number;
+  cpu_arch: string;
   gpu: {
     available: boolean;
     name: string | null;
+    type: string;
     vram_gb: number;
-    vram_used_gb: number;
-    gpu_percent: number;
+    vram_available_gb: number;
+    memory_bandwidth_gbps: number | null;
+    compute_capability: string | null;
+    arch: string | null;
   };
+  disk_free_gb: number;
+  supports_cuda: boolean;
+  supports_metal: boolean;
 }
 
 export interface ModelListResponse {
   models: ModelInfo[];
-  available_from_providers: {
-    name: string;
-    size_bytes: number;
-    context_length: number;
-    capabilities: string[];
-  }[];
+  available_from_providers: string[];
+  type_counts: Record<string, number>;
+  size_counts: Record<string, number>;
 }
 
 export interface RecommendedModelsResponse {
@@ -445,6 +456,7 @@ export interface DownloadProgressResponse {
 export interface DownloadResult {
   status: "started" | "already_downloading" | "already_downloaded";
   model: string;
+  download_id?: string;
 }
 
 // ── Enhanced Models ──────────────────────────────────────────────
@@ -631,6 +643,29 @@ export interface SyncJob {
   started_at: string | null;
   completed_at: string | null;
   created_at: string | null;
+}
+
+// ── Model Settings ───────────────────────────────────────────
+
+export interface ModelSettings {
+  inference_backend: string;
+  huggingface_token: string | null;
+  auto_download: boolean;
+  max_concurrent_downloads: number;
+}
+
+export type UserSettings = ModelSettings;
+
+export interface ModelUpdate {
+  model_id: string;
+  display_name: string;
+  current_version: string;
+  available_version: string;
+  update_size_gb: number;
+}
+
+export interface ModelUpdatesResponse {
+  updates: ModelUpdate[];
 }
 
 // ── Indexing Config ───────────────────────────────────────────

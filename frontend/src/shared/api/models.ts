@@ -19,6 +19,8 @@ import type {
   ModelUsageStats,
   DeleteModelResponse,
   SyncJob,
+  ModelSettings,
+  ModelUpdatesResponse,
 } from "../types";
 
 export const modelsApi = {
@@ -107,13 +109,18 @@ export const modelsApi = {
     return api.get(`/api/v1/models/${encodeURIComponent(modelId)}`);
   },
 
+  /** Get model detail by ID (alias for detail). */
+  getModelDetail: (modelId: string): Promise<ModelCatalogEntry> => {
+    return api.get(`/api/v1/models/${encodeURIComponent(modelId)}`);
+  },
+
   /** Get inference config for a model. */
   inferenceConfig: (modelId: string): Promise<Record<string, unknown>> => {
     return api.get(`/api/v1/models/${encodeURIComponent(modelId)}/inference-config`);
   },
 
   /** Check for model updates. */
-  checkUpdates: (): Promise<{ updates: Array<{ model_id: string; current: string; latest: string }> }> => {
+  checkUpdates: (): Promise<ModelUpdatesResponse> => {
     return api.get("/api/v1/models/updates");
   },
 
@@ -144,12 +151,28 @@ export const modelsApi = {
   },
 
   /** Get model usage statistics. */
-  usageStats: (): Promise<ModelUsageStats> => {
-    return api.get("/api/v1/models/usage/stats");
+  usageStats: (modelId?: string): Promise<ModelUsageStats> => {
+    const qs = modelId ? `?model_id=${encodeURIComponent(modelId)}` : "";
+    return api.get(`/api/v1/models/usage/stats${qs}`);
+  },
+
+  /** Get usage stats for a specific model (alias with explicit param name). */
+  getUsageStats: (modelId: string): Promise<ModelUsageStats> => {
+    return api.get(`/api/v1/models/usage/stats?model_id=${encodeURIComponent(modelId)}`);
   },
 
   /** Delete an Ollama model. */
   delete: (modelName: string): Promise<DeleteModelResponse> => {
     return api.delete(`/api/v1/models/${encodeURIComponent(modelName)}`);
+  },
+
+  /** Get model settings. */
+  getSettings: (): Promise<ModelSettings> => {
+    return api.get("/api/v1/models/settings");
+  },
+
+  /** Update model settings. */
+  updateSettings: (settings: Partial<ModelSettings>): Promise<ModelSettings> => {
+    return api.put("/api/v1/models/settings", settings);
   },
 };
