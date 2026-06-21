@@ -209,12 +209,36 @@ class LLMManager:
         temperature: float = 0.7,
     ):
         provider = await self._get_active()
+        full_response = ""
         async for token in provider.chat_stream(
             [{"role": m.role, "content": m.content} for m in messages],
             tools=[],
             config={"model": model, "max_tokens": max_tokens, "temperature": temperature},
         ):
+            full_response += token
             yield token
+
+        self._total_requests += 1
+        prompt_tokens = sum(len(m.content) for m in messages) // 4
+        completion_tokens = len(full_response) // 4
+        self._total_prompt_tokens += prompt_tokens
+        self._total_completion_tokens += completion_tokens
+
+        try:
+            from backend.app.db import SessionLocal
+            from backend.app.services.usage_tracker import UsageTracker
+
+            db = SessionLocal()
+            tracker = UsageTracker(db)
+            tracker.record_usage(
+                model_name=model or "unknown",
+                usage_type="chat_stream",
+                tokens_prompt=prompt_tokens,
+                tokens_completion=completion_tokens,
+            )
+            db.close()
+        except Exception:
+            pass
 
     async def fetch_ollama_catalog(self, force_refresh: bool = False) -> list[LLMModelInfo]:
         """Fetch the Ollama model catalog with a multi-source fallback chain:

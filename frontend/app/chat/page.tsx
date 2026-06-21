@@ -9,6 +9,8 @@ import Card from "@/shared/ui/Card";
 import Dropdown, { DropdownItem } from "@/shared/ui/Dropdown";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { api } from "@/shared/api/client";
+import type { Conversation } from "@/shared/types";
+import { MarkdownRenderer } from "@/shared/components/MarkdownRenderer";
 
 interface Message {
   role: string;
@@ -16,14 +18,6 @@ interface Message {
   tokens?: number;
   created_at: string;
   sources?: Array<{ file_path: string; score: number; content: string }>;
-}
-
-interface Conversation {
-  id: number;
-  title: string;
-  message_count: number;
-  total_tokens: number;
-  updated_at: string;
 }
 
 function SourceReferences({ sources }: { sources: Array<{ file_path: string; score: number; content: string }> }) {
@@ -92,8 +86,11 @@ export default function ChatPage() {
       {
         id: data.id,
         title: "New Conversation",
+        repo_id: null,
+        model_used: null,
         message_count: 0,
         total_tokens: 0,
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
       ...prev,
@@ -257,7 +254,11 @@ export default function ChatPage() {
                     msg.role === "user" ? "bg-accent/10 border-accent/20" : ""
                   }`}
                 >
-                  <p className="text-text whitespace-pre-wrap">{msg.content}</p>
+                  {msg.role === "assistant" ? (
+                    <MarkdownRenderer content={msg.content} />
+                  ) : (
+                    <p className="text-text whitespace-pre-wrap">{msg.content}</p>
+                  )}
                   {msg.sources && msg.sources.length > 0 && (
                     <SourceReferences sources={msg.sources} />
                   )}
@@ -276,7 +277,7 @@ export default function ChatPage() {
                 className="flex justify-start"
               >
                 <Card className="max-w-2xl px-4 py-3 text-sm">
-                  <p className="text-text whitespace-pre-wrap">{streamingContent}</p>
+                  <MarkdownRenderer content={streamingContent} />
                   <div className="flex items-center gap-1 mt-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                   </div>

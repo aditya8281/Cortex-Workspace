@@ -112,3 +112,33 @@ class ConversationService:
             self._db.commit()
             return True
         return False
+
+    def update_title(self, conversation_id: int, title: str) -> None:
+        conv = (
+            self._db.query(Conversation)
+            .filter(Conversation.id == conversation_id)
+            .first()
+        )
+        if conv:
+            conv.title = title
+            self._db.commit()
+
+    async def generate_title(self, content: str, model: str | None = None) -> str:
+        try:
+            from backend.app.services.llm.manager import llm_manager
+            from backend.app.services.llm.provider import LLMMessage
+
+            messages = [
+                LLMMessage(
+                    role="system",
+                    content="Generate a short conversation title (3-5 words) from the user's message. Reply with ONLY the title, no quotes or punctuation.",
+                ),
+                LLMMessage(role="user", content=content),
+            ]
+            result = await llm_manager.chat(messages, model=model, max_tokens=20, temperature=0.3)
+            title = result.content.strip().strip('"').strip("'")
+            if 3 <= len(title) <= 80:
+                return title
+        except Exception:
+            pass
+        return content[:50].strip()

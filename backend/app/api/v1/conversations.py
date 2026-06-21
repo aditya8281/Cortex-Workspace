@@ -115,6 +115,9 @@ async def _stream_chat_response(
 
     svc = ConversationService(db)
 
+    conv_before = svc.get(conversation_id, user_id) if user_id else None
+    is_first_message = conv_before and (conv_before.message_count or 0) == 0
+
     # Save user message with token count
     user_tokens = estimate_tokens(user_content)
     svc.add_message(conversation_id, "user", user_content, tokens=user_tokens)
@@ -130,7 +133,21 @@ async def _stream_chat_response(
     rag = get_rag_pipeline(db)
     conv = svc.get(conversation_id, user_id) if user_id else None
     repo_id = conv.repo_id if conv else None
-    raw_messages = rag.build_messages(conversation_id, user_content, repo_id=repo_id)
+    rag_context = rag.retrieve_context(user_content, repo_id=repo_id)
+    sources = [
+        {"file_path": r.file_path, "score": r.score, "content": r.content[:300]}
+        for r in rag_context.results
+    ]
+
+    history = svc.get_context_messages(conversation_id, max_tokens=28000)
+    system_parts = ["You are Cortex, a helpful AI assistant with access to the user's codebase and knowledge."]
+    if rag_context.formatted_context:
+        system_parts.append(f"Relevant context from the codebase:\n\n{rag_context.formatted_context}")
+        system_parts.append("\nUse this context to answer the user's question. Cite sources using [1], [2], etc. when referencing specific files.")
+    raw_messages = [{"role": "system", "content": "\n\n".join(system_parts)}]
+    for msg in history:
+        raw_messages.append({"role": msg.role, "content": msg.content})
+    raw_messages.append({"role": "user", "content": user_content})
     messages = [LLMMessage(role=m["role"], content=m["content"]) for m in raw_messages]
 
     full_response = ""
@@ -156,8 +173,12 @@ async def _stream_chat_response(
     # Save assistant message with token count
     svc.add_message(conversation_id, "assistant", full_response, tokens=response_tokens)
 
+    if is_first_message:
+        title = await svc.generate_title(user_content, model=model)
+        svc.update_title(conversation_id, title)
+
     # Send completion event
-    yield f"data: {json.dumps({'type': 'done', 'total_tokens': response_tokens})}\n\n"
+    yield f"data: {json.dumps({'type': 'done', 'total_tokens': response_tokens, 'sources': sources})}\n\n"
 
 
 @router.post("/conversations/{conversation_id}/messages")

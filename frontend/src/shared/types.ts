@@ -649,3 +649,28 @@ export interface IndexingPreview {
   excluded_by_pattern: number;
   excluded_by_size: number;
 }
+
+// ── Conversations ──────────────────────────────────────────────────
+
+export interface Conversation {
+  id: number;
+  title: string;
+  repo_id: number | null;
+  model_used: string | null;
+  message_count: number;
+  total_tokens: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface ConversationMessage {
+  id: number;
+  role: "system" | "user" | "assistant";
+  content: string;
+  tokens: number;
+  created_at: string | null;
+}
+
+export interface ConversationDetail extends Conversation {
+  messages: ConversationMessage[];
+}
