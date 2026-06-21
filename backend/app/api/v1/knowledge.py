@@ -13,6 +13,7 @@ from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.document import Document, DocumentChunk
 from backend.app.models.graph import GraphEdge, GraphNode
 from backend.app.models.repo_index import CodeChunk, RepoIndex
+from backend.app.services.retrieval_metrics import get_retrieval_metrics
 
 router = APIRouter()
 
@@ -98,3 +99,18 @@ async def knowledge_stats(
         avg_chunks_per_document=round(avg_chunks, 1),
         graph_edge_types=graph_edge_types,
     )
+
+
+class RetrievalMetricsResponse(BaseModel):
+    total_searches: int
+    avg_results: float
+    avg_latency_ms: float
+    avg_top_score: float
+    zero_result_rate: float
+
+
+@router.get("/knowledge/retrieval-metrics", response_model=RetrievalMetricsResponse)
+async def retrieval_metrics(
+    _user: Any = Depends(get_current_user),
+):
+    return get_retrieval_metrics().get_stats()

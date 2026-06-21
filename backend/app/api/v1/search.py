@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
 from backend.app.services.hybrid_retrieval import HybridRetrievalV2
+from backend.app.services.retrieval_metrics import get_retrieval_metrics
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -49,12 +51,24 @@ async def unified_search(
 ):
     try:
         retrieval = HybridRetrievalV2(db)
+        start_time = time.time()
         results = retrieval.retrieve(
             query=request.query,
             repo_id=request.repo_id,
             limit=request.max_results,
             sources=request.sources,
             diversity_penalty=request.diversity,
+        )
+        latency_ms = (time.time() - start_time) * 1000
+
+        sources_used = list(set(r.source for r in results)) if results else []
+        top_score = results[0].score if results else 0.0
+        get_retrieval_metrics().log_search(
+            query=request.query,
+            result_count=len(results),
+            sources_used=sources_used,
+            latency_ms=latency_ms,
+            top_score=top_score,
         )
 
         return SearchResponse(
