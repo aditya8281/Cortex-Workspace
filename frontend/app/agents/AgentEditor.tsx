@@ -42,11 +42,7 @@ export default function AgentEditor({ agent, open, onClose, onSaved }: AgentEdit
       setModelId(agent.model_id);
       setError(null);
 
-      try {
-        setSelectedTools(agent.tools ? JSON.parse(agent.tools) : []);
-      } catch {
-        setSelectedTools([]);
-      }
+      setSelectedTools(agent.tools ?? []);
 
       modelsApi
         .list({ downloaded_only: true })
@@ -79,7 +75,7 @@ export default function AgentEditor({ agent, open, onClose, onSaved }: AgentEdit
         description: description.trim() || null,
         system_prompt: systemPrompt.trim(),
         model_id: modelId,
-        tools: selectedTools.length > 0 ? JSON.stringify(selectedTools) : null,
+        tools: selectedTools,
       });
       onClose();
     } catch (err) {

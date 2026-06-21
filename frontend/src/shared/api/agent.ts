@@ -7,8 +7,15 @@ import type { Agent, AgentListResponse, AgentRun, AgentStep, RunDetailResponse, 
 
 export const agentApi = {
   /** List all agents. */
-  list: (): Promise<AgentListResponse> => {
-    return api.get("/api/v1/agents");
+  list: async (): Promise<AgentListResponse> => {
+    const res = await api.get<AgentListResponse>("/api/v1/agents");
+    return {
+      ...res,
+      agents: res.agents.map((a) => ({
+        ...a,
+        tools: typeof a.tools === "string" ? JSON.parse(a.tools) : (a.tools ?? []),
+      })),
+    };
   },
 
   /** Create a new agent. */
@@ -23,8 +30,16 @@ export const agentApi = {
   },
 
   /** Get a specific agent. */
-  get: (agentId: number): Promise<{ agent: Agent }> => {
-    return api.get(`/api/v1/agents/${agentId}`);
+  get: async (agentId: number): Promise<{ agent: Agent }> => {
+    const res = await api.get<{ agent: Agent }>(`/api/v1/agents/${agentId}`);
+    return {
+      agent: {
+        ...res.agent,
+        tools: typeof res.agent.tools === "string"
+          ? JSON.parse(res.agent.tools)
+          : (res.agent.tools ?? []),
+      },
+    };
   },
 
   /** Update an agent. */

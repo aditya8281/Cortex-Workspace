@@ -111,7 +111,6 @@ export interface MemoryEntry {
   source_path: string | null;
   tags: string[];
   embedding_id: string | null;
-  vector_collection: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -122,7 +121,6 @@ export interface MemorySearchResult {
 }
 
 export interface MemoryListResponse {
-  timestamp: string;
   count: number;
   total?: number;
   offset?: number;
@@ -302,7 +300,7 @@ export interface Agent {
   description: string | null;
   system_prompt: string;
   model_id: string;
-  tools: string | null;
+  tools: string[];
   is_active: boolean;
   created_at: string | null;
   updated_at: string | null;
@@ -581,8 +579,11 @@ export interface SyncJob {
   status: string;
   models_discovered: number;
   models_added: number;
+  models_updated: number;
+  error_message: string | null;
   started_at: string | null;
   completed_at: string | null;
+  created_at: string | null;
 }
 
 // ── Indexing Config ───────────────────────────────────────────
