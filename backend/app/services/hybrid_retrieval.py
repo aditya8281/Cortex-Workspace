@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
@@ -186,7 +186,7 @@ class HybridRetrievalV2:
         doc_scores: dict[str, float] = {}
         doc_results: dict[str, RetrievalResult] = {}
 
-        for source_name, results in source_results.items():
+        for _source_name, results in source_results.items():
             for rank, result in enumerate(results):
                 key = self._result_key(result)
                 rrf_score = 1.0 / (K_RRF + rank + 1)
