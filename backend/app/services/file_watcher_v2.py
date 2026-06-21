@@ -111,17 +111,18 @@ class FileWatcherV2:
         return True
 
     def start(self) -> None:
-        if not self._observer:
-            self._observer = Observer()
-        if not self._observer.is_alive():
-            self._observer.start()
-            logger.info("File watcher started")
+        if self._observer and self._observer.is_alive():
+            return
+        self._observer = Observer()
+        self._observer.start()
+        logger.info("File watcher started")
 
     def stop(self) -> None:
         if self._observer and self._observer.is_alive():
             self._observer.stop()
             self._observer.join()
             logger.info("File watcher stopped")
+        self._observer = None
         self._watched.clear()
 
     @property

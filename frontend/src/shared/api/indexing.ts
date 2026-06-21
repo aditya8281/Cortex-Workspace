@@ -3,7 +3,7 @@
  */
 
 import { api } from "./client";
-import type { IndexingConfig, IndexingConfigPayload, IndexingPreview } from "../types";
+import type { IndexingConfig, IndexingConfigPayload, IndexingPreview, IndexingStatus } from "../types";
 
 export const indexingApi = {
   get: (): Promise<{ config: IndexingConfig | null; defaults: boolean }> => {
@@ -16,5 +16,9 @@ export const indexingApi = {
 
   preview: (repoPath: string): Promise<IndexingPreview> => {
     return api.post(`/api/v1/indexing/preview?repo_path=${encodeURIComponent(repoPath)}`);
+  },
+
+  status: (): Promise<IndexingStatus> => {
+    return api.get("/api/v1/sync/status");
   },
 };

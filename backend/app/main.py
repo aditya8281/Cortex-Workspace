@@ -79,9 +79,27 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("Failed to initialize system database on startup: %s", e)
 
-    from backend.app.services.file_watcher import file_watcher
-    await file_watcher.start()
+    from backend.app.services.file_watcher_v2 import get_file_watcher_v2
+    get_file_watcher_v2().start()
     logger.info("File watcher started")
+
+    if "pytest" not in sys.modules:
+        try:
+            from backend.app.db.session import SessionLocal as _SyncSession
+            from backend.app.models.sync_state import SyncState as _SyncState
+
+            _sdb = _SyncSession()
+            try:
+                active_states = _sdb.query(_SyncState).filter(_SyncState.status == "active").all()
+                _watcher = get_file_watcher_v2()
+                for state in active_states:
+                    _watcher.watch(state.repo_path)
+                if active_states:
+                    logger.info("Recovered %d active sync state(s)", len(active_states))
+            finally:
+                _sdb.close()
+        except Exception as e:
+            logger.warning("Failed to recover sync states on startup: %s", e)
 
     # Clean up orphaned agent runs left behind by a previous crash/restart
     if "pytest" not in sys.modules:
@@ -105,7 +123,8 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    await file_watcher.stop()
+    from backend.app.services.file_watcher_v2 import get_file_watcher_v2
+    get_file_watcher_v2().stop()
     logger.info("File watcher stopped")
 
     try:

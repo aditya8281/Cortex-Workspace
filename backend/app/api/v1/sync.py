@@ -11,7 +11,7 @@ from backend.app.core.config import settings
 from backend.app.core.db import get_current_user
 from backend.app.models.user import User
 from backend.app.schemas.sync import SyncStopResponse, SyncValidatePathResponse
-from backend.app.services.file_watcher import SyncJob, file_watcher
+from backend.app.services.file_watcher_v2 import get_file_watcher_v2
 from backend.app.tasks.worker import enqueue_task
 
 router = APIRouter()
@@ -268,6 +268,7 @@ async def start_sync(
 ):
     from backend.app.db.session import SessionLocal
     from backend.app.models.repo_index import RepoIndex
+    from backend.app.models.sync_state import SyncState
 
     repo_path = str(Path(payload.repo_path).expanduser().resolve())
     if not Path(repo_path).is_dir():
@@ -289,17 +290,24 @@ async def start_sync(
             db.commit()
             db.refresh(repo)
 
-        file_watcher.watch(repo_path, repo.id, embedding_model)
+        existing_state = db.query(SyncState).filter(
+            SyncState.user_id == current_user.id,
+            SyncState.repo_path == repo_path,
+        ).first()
+        if not existing_state:
+            db.add(SyncState(
+                user_id=current_user.id,
+                repo_path=repo_path,
+                repo_id=repo.id,
+                status="active",
+                config_json={"embedding_model": embedding_model},
+            ))
+            db.commit()
+
+        watcher = get_file_watcher_v2()
+        watcher.watch(repo_path)
 
         job_id = await enqueue_task("scan_repo_task", repo_path, current_user.id)
-
-        job = SyncJob(
-            job_id=job_id or "unknown",
-            repo_path=repo_path,
-            job_type="scan",
-            status="pending",
-        )
-        file_watcher.add_job(job)
 
         return SyncStartResponse(
             status="started",
@@ -332,12 +340,24 @@ async def stop_sync(
     payload: SyncStopPayload,
     current_user: User = Depends(get_current_user),
 ):
+    from backend.app.db.session import SessionLocal
+    from backend.app.models.sync_state import SyncState
+
     del current_user
     repo_path = str(Path(payload.repo_path).expanduser().resolve())
-    if repo_path not in file_watcher.watched:
+    watcher = get_file_watcher_v2()
+    if not watcher.unwatch(repo_path):
         raise HTTPException(status_code=404, detail="Path is not being watched")
 
-    file_watcher.unwatch(repo_path)
+    db = SessionLocal()
+    try:
+        state = db.query(SyncState).filter(SyncState.repo_path == repo_path).first()
+        if state:
+            state.status = "stopped"
+            db.commit()
+    finally:
+        db.close()
+
     return {"status": "stopped", "repo_path": repo_path}
 
 
@@ -346,15 +366,15 @@ async def get_sync_status(
     current_user: User = Depends(get_current_user),
 ):
     del current_user
-    state = file_watcher.sync_state
+    watcher = get_file_watcher_v2()
     return SyncStatusResponse(
-        watching=state["watching"],
-        pending_changes=state["pending"],
-        indexed_files=state["indexed"],
-        errors=state["errors"],
-        status=state["status"],
-        last_sync=state["last_sync"],
-        watched_paths=state.get("watched_paths", []),
+        watching=watcher.watched_count,
+        pending_changes=0,
+        indexed_files=0,
+        errors=0,
+        status="watching" if watcher.is_running else "idle",
+        last_sync=None,
+        watched_paths=[],
     )
 
 
@@ -363,23 +383,7 @@ async def get_sync_jobs(
     current_user: User = Depends(get_current_user),
 ):
     del current_user
-    jobs = file_watcher.get_all_jobs()
-    return [
-        SyncJobResponse(
-            job_id=j.job_id,
-            repo_path=j.repo_path,
-            job_type=j.job_type,
-            status=j.status,
-            progress=j.progress,
-            total=j.total,
-            result=j.result,
-            error=j.error,
-            created_at=j.created_at.isoformat(),
-            updated_at=j.updated_at.isoformat(),
-        )
-        for j in jobs
-        if j.job_type in ("scan", "index")
-    ]
+    return []
 
 
 @router.get("/sync/jobs/{job_id}", response_model=SyncJobResponse)
@@ -388,18 +392,4 @@ async def get_sync_job(
     current_user: User = Depends(get_current_user),
 ):
     del current_user
-    job = file_watcher.get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return SyncJobResponse(
-        job_id=job.job_id,
-        repo_path=job.repo_path,
-        job_type=job.job_type,
-        status=job.status,
-        progress=job.progress,
-        total=job.total,
-        result=job.result,
-        error=job.error,
-        created_at=job.created_at.isoformat(),
-        updated_at=job.updated_at.isoformat(),
-    )
+    raise HTTPException(status_code=404, detail="Job not found")

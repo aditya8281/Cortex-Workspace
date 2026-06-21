@@ -31,6 +31,9 @@ from backend.app.models.model_catalog import (
 from backend.app.models.model_catalog import (
     SyncJob as SyncJob,
 )
+from backend.app.models.sync_state import (
+    SyncState as SyncState,
+)
 
 __all__ = [
     "ModelCatalog",
@@ -44,4 +47,5 @@ __all__ = [
     "HardwareProfile",
     "ModelStatistics",
     "SyncJob",
+    "SyncState",
 ]

@@ -650,6 +650,14 @@ export interface IndexingPreview {
   excluded_by_size: number;
 }
 
+export interface IndexingStatus {
+  watching_count: number;
+  pending_changes: number;
+  indexed_files: number;
+  errors: number;
+  watched_paths: string[];
+}
+
 // ── Conversations ──────────────────────────────────────────────────
 
 export interface Conversation {

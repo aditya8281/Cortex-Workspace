@@ -133,8 +133,9 @@ class IncrementalIndexer:
 
         If rules is provided, applies additional IndexingRules filtering.
         """
+        followlinks = bool(rules and rules._config and rules._config.follow_symlinks)
         files: list[Path] = []
-        for root, dirs, filenames in path.walk():
+        for root, dirs, filenames in path.walk(followlinks=followlinks):
             dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
             for filename in filenames:
                 file_path = Path(root) / filename

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { indexingApi } from "@/shared/api/indexing";
-import type { IndexingConfig, IndexingPreview } from "@/shared/types";
+import type { IndexingConfig, IndexingPreview, IndexingStatus } from "@/shared/types";
 import Card from "@/shared/ui/Card";
 import Input from "@/shared/ui/Input";
 import Button from "@/shared/ui/Button";
@@ -17,6 +17,7 @@ export default function IndexingConfigForm() {
   const [previewPath, setPreviewPath] = useState("");
   const [preview, setPreview] = useState<IndexingPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [status, setStatus] = useState<IndexingStatus | null>(null);
 
   const [includePaths, setIncludePaths] = useState("");
   const [excludePaths, setExcludePaths] = useState("");
@@ -44,6 +45,11 @@ export default function IndexingConfigForm() {
         setPriority(res.config.priority);
       }
       setLoading(false);
+    });
+    indexingApi.status().then((res) => {
+      setStatus(res);
+    }).catch(() => {
+      // silent
     });
   }, []);
 
@@ -94,6 +100,37 @@ export default function IndexingConfigForm() {
 
   return (
     <motion.div {...fadeUp}>
+      <Card gradient className="p-5 mb-5">
+        <h2 className="text-sm font-medium text-text mb-3">Indexing Status</h2>
+        {status ? (
+          <div className="grid grid-cols-4 gap-3 mb-3">
+            {[
+              { label: "Watching", value: status.watching_count },
+              { label: "Indexed Files", value: status.indexed_files },
+              { label: "Pending Changes", value: status.pending_changes },
+              { label: "Errors", value: status.errors },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-lg bg-bg-surface p-2 border border-border-subtle text-center">
+                <div className="text-sm font-semibold text-text">{stat.value}</div>
+                <div className="text-[10px] text-text-muted mt-0.5">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-text-muted">Loading status...</p>
+        )}
+        {status && status.watched_paths.length > 0 && (
+          <div className="mt-2">
+            <p className="text-xs text-text-secondary mb-1">Watched Paths:</p>
+            <div className="flex flex-wrap gap-1">
+              {status.watched_paths.map((p) => (
+                <span key={p} className="text-[10px] bg-bg-surface border border-border-subtle rounded px-1.5 py-0.5 text-text-muted">{p}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
       <Card gradient className="p-5">
         <h2 className="text-sm font-medium text-text mb-4">Indexing Configuration</h2>
         <p className="text-xs text-text-muted mb-4">
