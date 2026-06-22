@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Settings, MessageSquare, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Settings, MessageSquare, Trash2, RefreshCw } from "lucide-react";
+import Button from "@/shared/ui/Button";
 
 interface InstalledModel {
   model_id: string;
@@ -17,9 +18,11 @@ interface InstalledBarProps {
   onManage: () => void;
   onChat: (modelId: string) => void;
   onDelete: (modelId: string) => void;
+  onScan?: () => void;
+  scanning?: boolean;
 }
 
-export default function InstalledBar({ models, onManage, onChat, onDelete }: InstalledBarProps) {
+export default function InstalledBar({ models, onManage, onChat, onDelete, onScan, scanning }: InstalledBarProps) {
   const [expanded, setExpanded] = useState(false);
   const totalSize = models.reduce((sum, m) => sum + m.size_gb, 0);
 
@@ -46,6 +49,18 @@ export default function InstalledBar({ models, onManage, onChat, onDelete }: Ins
             <Settings size={12} />
             Manage
           </span>
+          {onScan && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onScan(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onScan(); } }}
+              className={`inline-flex items-center gap-1 text-[11px] transition-colors cursor-pointer ${scanning ? "text-muted" : "text-accent hover:text-accent-bright"}`}
+            >
+              <RefreshCw size={12} className={scanning ? "animate-spin" : ""} />
+              Scan
+            </span>
+          )}
           {expanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
         </div>
       </button>

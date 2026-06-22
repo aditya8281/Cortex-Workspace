@@ -67,6 +67,7 @@ export default function ModelsPage() {
   const [downloadingModels, setDownloadingModels] = useState<Set<string>>(new Set());
   const [downloadProgress, setDownloadProgress] = useState<Map<string, number>>(new Map());
   const [refreshKey, setRefreshKey] = useState(0);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/auth");
@@ -131,6 +132,21 @@ export default function ModelsPage() {
       });
     } catch (err) {
       console.error("Cancel failed:", err);
+    }
+  };
+
+  const handleScan = async () => {
+    setSyncing(true);
+    try {
+      await Promise.all([
+        modelsApi.refreshCatalogue(),
+        modelsApi.syncInstalled(),
+      ]);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      console.error("Scan failed:", err);
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -269,6 +285,8 @@ export default function ModelsPage() {
                   console.error("Delete failed:", err);
                 }
               }}
+              onScan={handleScan}
+              scanning={syncing}
             />
           </motion.div>
         )}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -738,13 +739,18 @@ async def refresh_catalogue(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Force refresh the model catalogue."""
-    catalogue_mgr = CatalogueManager(db)
+    """Refresh the Ollama catalog: re-scrape library, re-probe registry, update cache."""
+    from backend.app.services.library_scraper import scrape_library_background
+    from backend.app.services.ollama_catalog import get_catalog_service
 
-    # Re-seed curated models
-    added = catalogue_mgr.seed_curated_models()
+    # Re-scrape library.json in background
+    asyncio.create_task(scrape_library_background())
 
-    return {"status": "refreshed", "models_added": added}
+    # Force-refresh the catalog
+    service = get_catalog_service()
+    models, status = await service.fetch_catalog(force_refresh=True)
+
+    return {"status": "ok", "models_added": len(models)}
 
 
 @router.post("/models/{model_name}/download", response_model=DownloadModelResponse)

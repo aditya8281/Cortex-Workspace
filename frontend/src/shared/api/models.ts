@@ -104,6 +104,11 @@ export const modelsApi = {
     return api.post("/api/v1/models/catalogue/refresh");
   },
 
+  /** Sync locally installed Ollama models to the database. */
+  syncInstalled: (): Promise<{ matched: number; created: number; deleted: number; errors: string[] }> => {
+    return api.post("/api/v1/models/installed/sync");
+  },
+
   /** Get model detail with variants. */
   detail: (modelId: string): Promise<ModelCatalogEntry> => {
     return api.get(`/api/v1/models/${encodeURIComponent(modelId)}`);
