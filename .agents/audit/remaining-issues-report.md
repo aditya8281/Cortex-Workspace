@@ -1,11 +1,24 @@
 # Remaining P0/P1 Issues Report
 
 **Scan date:** 2026-06-22
+**Updated:** 2026-06-22 (all issues fixed)
 **Scope:** Backend + Frontend contract mismatches, missing imports, response model gaps
 
 ---
 
-## Issue 1 — P0: `logger` used but never imported in `vault.py`
+## Fixed Issues (2026-06-22)
+
+| # | Severity | Issue | Fix |
+|---|----------|-------|-----|
+| 1 | P0 | `logger` used but never imported in `vault.py` | Added `import logging` + `logger = logging.getLogger(__name__)` |
+| 3 | P1 | `SyncTriggerResponse.job_id: int` vs frontend `string` | Changed to `job_id: str`, cast `str(job.id)` |
+| 4 | P1 | `last_sync` always None, counters always 0 | Populated from `SyncState` DB fields |
+| 5 | P1 | Download queue/history missing `response_model` | Added `DownloadQueueResponse` + `DownloadHistoryResponse` schemas |
+| 6 | P1 | Long-term memory endpoints missing `response_model` | Added 5 response schemas + `response_model=` on all endpoints |
+| 7 | P1 | `SearchAnswerResponse` missing `total` | Confirmed frontend also doesn't have `total` — no fix needed |
+| 8 | P1 | `IndexResult` files_errors/status mismatch | Added `status` field, removed `files_errors` to match frontend |
+| 9 | P1 | `AgentRunInfo.updated_at` phantom field | Removed from schema |
+| 10 | P1 | Dead `VaultFileListResponse` schema | Removed |
 
 **File:** `backend/app/api/v1/vault.py:113`
 
