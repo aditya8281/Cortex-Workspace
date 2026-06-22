@@ -9,6 +9,8 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+import re
+
 import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -49,8 +51,6 @@ def _guess_quant_from_tag(tag: str) -> str:
 
 def _extract_param_count(model_name: str) -> float:
     """Extract parameter count from model name (e.g., 'llama3.1:8b' -> 8.0)."""
-    import re
-
     match = re.search(r"(\d+\.?\d*)[bB]", model_name)
     if match:
         return float(match.group(1))
@@ -71,72 +71,76 @@ class OllamaSyncService:
         installed_tags = {m["name"] for m in installed_models}
         installed_by_tag = {m["name"]: m for m in installed_models}
 
-        # 2. Match existing variants by ollama_tag
-        existing_variants = db.execute(
-            select(ModelVariant).where(
-                ModelVariant.ollama_tag.isnot(None),
-                ModelVariant.ollama_tag.in_(list(installed_tags)),
-            )
-        ).scalars().all()
-
-        matched_tags = set()
-        for variant in existing_variants:
-            if not variant.downloaded:
-                variant.downloaded = True
-                variant.last_downloaded_at = datetime.now(timezone.utc)
-                result.matched += 1
-            matched_tags.add(variant.ollama_tag)
-
-        # 3. Create unknown models
-        unmatched_tags = installed_tags - matched_tags
-        for tag in unmatched_tags:
-            model_info = installed_by_tag[tag]
-            base_name = tag.split(":")[0]
-
-            # Find or create ModelCatalog entry
-            catalog = db.execute(
-                select(ModelCatalog).where(ModelCatalog.model_id == base_name)
-            ).scalar_one_or_none()
-
-            if catalog is None:
-                catalog = ModelCatalog(
-                    model_id=base_name,
-                    display_name=base_name.replace("-", " ").title(),
-                    family="unknown",
-                    provider="ollama",
-                    parameter_count=_extract_param_count(base_name),
+        try:
+            # 2. Match existing variants by ollama_tag
+            existing_variants = db.execute(
+                select(ModelVariant).where(
+                    ModelVariant.ollama_tag.isnot(None),
+                    ModelVariant.ollama_tag.in_(list(installed_tags)),
                 )
-                db.add(catalog)
-                db.flush()
+            ).scalars().all()
+
+            matched_tags = set()
+            for variant in existing_variants:
+                if not variant.downloaded:
+                    variant.downloaded = True
+                    variant.last_downloaded_at = datetime.now(timezone.utc)
+                    result.matched += 1
+                matched_tags.add(variant.ollama_tag)
+
+            # 3. Create unknown models
+            unmatched_tags = installed_tags - matched_tags
+            for tag in unmatched_tags:
+                model_info = installed_by_tag[tag]
+                base_name = tag.split(":")[0]
+
+                # Find or create ModelCatalog entry
+                catalog = db.execute(
+                    select(ModelCatalog).where(ModelCatalog.model_id == base_name)
+                ).scalar_one_or_none()
+
+                if catalog is None:
+                    catalog = ModelCatalog(
+                        model_id=base_name,
+                        display_name=base_name.replace("-", " ").title(),
+                        family="unknown",
+                        provider="ollama",
+                        parameter_count=_extract_param_count(base_name),
+                    )
+                    db.add(catalog)
+                    db.flush()
+                    result.created += 1
+
+                # Create variant
+                variant = ModelVariant(
+                    model_catalog_id=catalog.id,
+                    variant_id=tag,
+                    ollama_tag=tag,
+                    quantization=_guess_quant_from_tag(tag),
+                    size_bytes=model_info.get("size", 0),
+                    downloaded=True,
+                    last_downloaded_at=datetime.now(timezone.utc),
+                )
+                db.add(variant)
                 result.created += 1
 
-            # Create variant
-            variant = ModelVariant(
-                model_catalog_id=catalog.id,
-                variant_id=tag,
-                ollama_tag=tag,
-                quantization=_guess_quant_from_tag(tag),
-                size_bytes=model_info.get("size", 0),
-                downloaded=True,
-                last_downloaded_at=datetime.now(timezone.utc),
-            )
-            db.add(variant)
-            result.created += 1
+            # 4. Detect deletions
+            downloaded_variants = db.execute(
+                select(ModelVariant).where(
+                    ModelVariant.downloaded,
+                    ModelVariant.ollama_tag.isnot(None),
+                )
+            ).scalars().all()
 
-        # 4. Detect deletions
-        downloaded_variants = db.execute(
-            select(ModelVariant).where(
-                ModelVariant.downloaded,
-                ModelVariant.ollama_tag.isnot(None),
-            )
-        ).scalars().all()
+            for variant in downloaded_variants:
+                if variant.ollama_tag not in installed_tags:
+                    variant.downloaded = False
+                    result.deleted += 1
 
-        for variant in downloaded_variants:
-            if variant.ollama_tag not in installed_tags:
-                variant.downloaded = False
-                result.deleted += 1
-
-        db.commit()
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
         return result
 
     async def _fetch_installed(self, result: SyncResult) -> list[dict] | None:
