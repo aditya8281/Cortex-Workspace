@@ -18,6 +18,8 @@ from typing import Any
 
 import httpx
 
+from backend.app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path("CortexMemory")
@@ -27,7 +29,7 @@ DEFAULT_CACHE_TTL_HOURS = 24
 
 REGISTRY_URL = "https://registry.ollama.ai"
 CLOUD_URL = "https://ollama.com"
-LOCAL_URL = "http://localhost:11434"
+LOCAL_URL = settings.OLLAMA_BASE_URL
 
 CONCURRENCY_LIMIT = 10
 
