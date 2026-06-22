@@ -86,7 +86,7 @@ def upgrade() -> None:
         sa.Column("ip_address", sa.String(), nullable=True),
         sa.Column("timestamp", sa.TIMESTAMP(), nullable=False),
         sa.Column("event_type", sa.String(), nullable=False),
-        sa.Column("metadata_json", sa.JSON(), nullable=False, server_default="{}"),
+        sa.Column("metadata_json", postgresql.JSONB(), nullable=False, server_default="{}"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
     )
     op.create_index("ix_auth_events_user_id", "auth_events", ["user_id"])
@@ -335,7 +335,7 @@ def upgrade() -> None:
         sa.Column("priority", sa.Integer(), server_default="0"),
         sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
         sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"]),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_indexing_configs_user_id", "indexing_configs", ["user_id"])
 

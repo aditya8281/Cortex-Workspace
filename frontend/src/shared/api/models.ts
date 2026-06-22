@@ -136,7 +136,7 @@ export const modelsApi = {
   },
 
   /** Trigger a sync of models from providers. */
-  sync: (provider?: string): Promise<{ job_id: number; status: string }> => {
+  sync: (provider?: string): Promise<{ job_id: string; status: string }> => {
     return api.post(`/api/v1/models/sync${provider ? `?provider=${provider}` : ""}`);
   },
 

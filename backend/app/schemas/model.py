@@ -128,7 +128,7 @@ class DownloadModelResponse(BaseModel):
 
 class DownloadProgressResponse(BaseModel):
     model: str
-    progress: dict
+    progress: float
 
 
 class CancelDownloadResponse(BaseModel):
@@ -239,7 +239,7 @@ class StorageUsageResponse(BaseModel):
 
 
 class SyncTriggerResponse(BaseModel):
-    job_id: str
+    job_id: int
     status: str
     models_discovered: int
     models_added: int

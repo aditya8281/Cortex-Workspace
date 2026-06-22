@@ -187,7 +187,7 @@ async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None)
         # Revoke all active refresh tokens for this user
         from backend.app.core.redis import redis_cache
         try:
-            await redis_cache.clear_pattern("refresh:*")
+            await redis_cache.clear_pattern(f"refresh:user:{info['user_id']}:*")
         except Exception:
             logger.warning("Failed to revoke all tokens for user %d on reuse", info["user_id"])
         raise HTTPException(status_code=401, detail="Refresh token already used")

@@ -23,7 +23,7 @@ from backend.app.schemas.vault import (
     VaultChangePasswordResponse,
     VaultDeleteResponse,
     VaultExportResponse,
-    VaultFileListResponse,
+    VaultFileInfo,
     VaultFolderResponse,
     VaultLockResponse,
     VaultMetadataResponse,
@@ -124,7 +124,7 @@ def vault_status(
 # ── File Operations ──────────────────────────────────────────────────
 
 
-@router.get("/files", response_model=VaultFileListResponse)
+@router.get("/files", response_model=list[VaultFileInfo])
 def list_files(
     folder: str = "/",
     recursive: bool = False,
@@ -134,7 +134,7 @@ def list_files(
     """List files in the vault. Requires unlocked vault."""
     vault_service._require_unlocked(current_user)
     files = vault_service.list_vault_files(db, current_user.id, folder, recursive)
-    return VaultFileListResponse(files=files)
+    return files
 
 
 @router.post("/files/upload", response_model=VaultUploadResponse)

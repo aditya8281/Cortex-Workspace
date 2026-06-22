@@ -4,16 +4,18 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AgentInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     description: str | None = None
     system_prompt: str
     model_id: str
-    tools: str | None = None
+    tools: str | None = Field(default=None, serialization_alias="tools_json")
     is_active: bool
     created_at: str | None = None
     updated_at: str | None = None
@@ -37,10 +39,12 @@ class AgentUpdateResponse(BaseModel):
 
 
 class AgentRunInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     agent_id: int
     user_id: int
-    input: str
+    input: str = Field(serialization_alias="input_text")
     status: str
     output: str | None = None
     error: str | None = None
@@ -50,12 +54,14 @@ class AgentRunInfo(BaseModel):
 
 
 class AgentStepInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     run_id: int
     step_number: int
     action: str
     thought: str | None = None
-    action_input: dict | None = None
+    action_input: dict | None = Field(default=None, serialization_alias="action_input_json")
     observation: str | None = None
     status: str
     created_at: str | None = None

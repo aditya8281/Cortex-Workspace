@@ -235,15 +235,17 @@ export interface SearchResult {
   source: string;
   score: number;
   file_path: string;
-  document_id: number;
-  language: string;
-  chunk_type: string;
+  document_id: number | null;
+  language: string | null;
+  chunk_type: string | null;
 }
 
 export interface SearchResponse {
   query: string;
   total: number;
   results: SearchResult[];
+  next_cursor: string | null;
+  has_more: boolean;
 }
 
 export interface SearchAnswerResponse {
@@ -636,7 +638,7 @@ export interface DeleteModelResponse {
 }
 
 export interface SyncJob {
-  id: number;
+  job_id: string;
   sync_type: string;
   status: string;
   models_discovered: number;

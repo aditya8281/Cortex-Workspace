@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from backend.app.api.memory import router as memory_router
 from backend.app.api.metrics import router as metrics_router
 from backend.app.api.v1.agents import router as agents_router
 from backend.app.api.v1.conversations import router as conversations_router
@@ -19,6 +20,8 @@ from backend.app.api.v1.users import router as users_router
 from backend.app.api.v1.vault import router as vault_router
 
 api_router = APIRouter()
+
+api_router.include_router(memory_router, tags=["Memory"])
 
 api_router.include_router(health_router, tags=["Health"])
 

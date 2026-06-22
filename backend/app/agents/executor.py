@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 from typing import Any
 
 from backend.app.agents.base import BaseAgent
@@ -50,9 +49,13 @@ class ExecutorAgent(BaseAgent):
             self.register_tool(name, entry["handler"])
 
     def approve_tool(self, tool_name: str) -> None:
+        """Approve a tool for execution. Must be called by human, not LLM."""
         self._approved_tools.add(tool_name)
 
     async def execute_tool(self, name: str, **kwargs: Any) -> Any:
+        # Block approve_tool from being called via LLM tool-calling
+        if name == "approve_tool":
+            return "Error: approve_tool cannot be called via tool calling. Human approval required."
         if requires_approval(name) and name not in self._approved_tools:
             return f"Tool '{name}' requires approval. Call approve_tool('{name}') first."
         return await super().execute_tool(name, **kwargs)
@@ -248,7 +251,9 @@ class ExecutorAgent(BaseAgent):
     async def _list_files_tool(self, path: str = ".") -> str:
         """List files in a directory."""
         try:
-            dir_path = Path(path)
+            from backend.app.agents.tools import _ensure_within_workspace
+
+            dir_path = _ensure_within_workspace(path)
             if not dir_path.is_dir():
                 return f"Not a directory: {path}"
             entries = sorted(dir_path.iterdir(), key=lambda p: (not p.is_dir(), p.name))

@@ -30,7 +30,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith(("/api/v1/health", "/metrics")):
             return await call_next(request)
 
-        is_auth_endpoint = request.url.path.startswith("/api/auth")
+        is_auth_endpoint = request.url.path.startswith("/api/v1/auth")
         client_ip = request.client.host if request.client else "unknown"
         key = f"ratelimit:{'auth:' if is_auth_endpoint else ''}{client_ip}"
 
