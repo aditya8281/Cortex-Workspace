@@ -48,6 +48,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+ref/
 
 # Runtime data (created at startup)
 CortexMemory/
