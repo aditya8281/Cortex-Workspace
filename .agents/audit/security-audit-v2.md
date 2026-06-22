@@ -1,14 +1,26 @@
 # Cortex Security & Reliability Audit Report (v2)
 
 Generated: 2026-06-22  
-Updated: 2026-06-22 (P0/P1 fixes applied)  
+Updated: 2026-06-22 (P0/P1 fixes applied across 2 sessions)  
 Auditor: Automated Security Analysis  
 Scope: Full codebase — `backend/`, infrastructure, configuration  
 Previous audit: `.agents/audit/security-audit-report.md`
 
 ---
 
-## Fixed Issues (2026-06-22)
+## Fixed Issues — Session 2 (2026-06-22)
+
+| ID | Issue | Fix |
+|----|-------|-----|
+| H-S7 | Repository registration has no path restrictions | Added path sandbox: rejects `..`, blocked system dirs, paths outside `~` |
+| H-S6 | `/metrics` unauthenticated and rate-limit exempt | Added `Depends(get_current_user)` — requires auth |
+| M-S2 | Password validation too weak (`password1` passes) | Now requires uppercase+lowercase+digit+special char |
+| H-D1 | ModelVariant FKs missing `ondelete` | Added `ondelete="SET NULL"` to 6 FK columns |
+| H-D3 | `Agent.user` missing `back_populates` | Added `back_populates="agents"` + `User.agents` |
+
+---
+
+## Fixed Issues — Session 1 (2026-06-22)
 
 | ID | Issue | Fix |
 |----|-------|-----|

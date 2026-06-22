@@ -1,12 +1,28 @@
 # Remaining P0/P1 Issues Report
 
 **Scan date:** 2026-06-22
-**Updated:** 2026-06-22 (all issues fixed)
-**Scope:** Backend + Frontend contract mismatches, missing imports, response model gaps
+**Updated:** 2026-06-22 (all issues fixed across 2 sessions)
+**Scope:** Backend + Frontend contract mismatches, missing imports, response model gaps, security, DB, quality
 
 ---
 
-## Fixed Issues (2026-06-22)
+## Session 2 Fixes (2026-06-22) — Commit `1a38b19`
+
+| # | Severity | Issue | Fix |
+|---|----------|-------|-----|
+| 11 | P1 | Repository path registration accepts arbitrary filesystem paths | Added path sandbox: rejects `..`, blocked system dirs (`/etc`, `/proc`, etc.), paths outside `~` |
+| 12 | P1 | `/metrics` endpoint unauthenticated | Added `Depends(get_current_user)` — requires auth |
+| 13 | P1 | Password validation too weak (`password1` passes) | Now requires: uppercase + lowercase + digit + special char |
+| 14 | P1 | ModelVariant/ModelDownload/ModelUsage FKs missing `ondelete` | Added `ondelete="SET NULL"` to all 6 FK columns |
+| 15 | P1 | `Agent.user` relationship missing `back_populates` | Added `back_populates="agents"` + `User.agents` relationship |
+| 16 | P1 | Health check only checks database | Added Redis and Ollama checks to `/health/deep` |
+| 17 | P1 | `SecurePasswordCache` not thread-safe internally | Added internal `Lock` to all methods |
+| 18 | P1 | CLI stub code (42 lines, abandoned) | Deleted 15 files from `cli/src/commands/` |
+| 19 | — | 8 backend services marked as "dead code" | Evaluated against vision — all 8 KEPT (see `deadcode-recommendation.md`) |
+
+---
+
+## Session 1 Fixes (2026-06-22) — Commit `d5660a9`
 
 | # | Severity | Issue | Fix |
 |---|----------|-------|-----|
