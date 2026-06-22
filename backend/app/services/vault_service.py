@@ -41,47 +41,56 @@ class SecurePasswordCache(dict):
     """Dict-like cache that stores passwords as bytearrays and wipes memory on pop.
 
     Accessors (`get`, `__getitem__`) return `str` for backwards compatibility.
+    Thread-safe via internal lock.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._lock = Lock()
+
     def __setitem__(self, key, value):
-        if isinstance(value, str):
-            value = bytearray(value.encode())
-        super().__setitem__(key, value)
+        with self._lock:
+            if isinstance(value, str):
+                value = bytearray(value.encode())
+            super().__setitem__(key, value)
 
     def get(self, key, default=None):
-        val = super().get(key, None)
-        if val is None:
-            return default
-        if isinstance(val, (bytes, bytearray)):
-            try:
-                return val.decode()
-            except Exception:
+        with self._lock:
+            val = super().get(key, None)
+            if val is None:
                 return default
-        return val
+            if isinstance(val, (bytes, bytearray)):
+                try:
+                    return val.decode()
+                except Exception:
+                    return default
+            return val
 
     def __getitem__(self, key):
-        val = super().__getitem__(key)
-        if isinstance(val, (bytes, bytearray)):
-            return val.decode()
-        return val
+        with self._lock:
+            val = super().__getitem__(key)
+            if isinstance(val, (bytes, bytearray)):
+                return val.decode()
+            return val
 
     def pop(self, key, default=None):
-        val = super().pop(key, default)
-        if val is default:
-            return default
-        ret = val
-        if isinstance(val, (bytes, bytearray)):
-            try:
-                ret = val.decode()
-            except Exception:
-                ret = default
-            # wipe underlying bytearray
-            try:
-                for i in range(len(val)):
-                    val[i] = 0
-            except Exception:
-                pass
-        return ret
+        with self._lock:
+            val = super().pop(key, default)
+            if val is default:
+                return default
+            ret = val
+            if isinstance(val, (bytes, bytearray)):
+                try:
+                    ret = val.decode()
+                except Exception:
+                    ret = default
+                # wipe underlying bytearray
+                try:
+                    for i in range(len(val)):
+                        val[i] = 0
+                except Exception:
+                    pass
+            return ret
 
 
 _vault_passwords: SecurePasswordCache = SecurePasswordCache()
@@ -424,7 +433,10 @@ def download_vault_file(db: Session, user_id: int, file_path: str) -> bytes:
         try:
             content = decrypt_bytes(content, password)
         except Exception as e:
-            logger.warning("Vault decryption failed for user %d file %s (may be unencrypted): %s", user_id, file_path, e)
+            logger.warning(
+                "Vault decryption failed for user %d file %s (may be unencrypted): %s",
+                user_id, file_path, e,
+            )
     return content
 
 

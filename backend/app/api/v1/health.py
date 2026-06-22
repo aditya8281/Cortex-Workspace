@@ -24,10 +24,15 @@ async def readiness():
 @router.get("/health/deep", status_code=status.HTTP_200_OK)
 async def deep_health():
     database_ok = HealthService.check_database()
+    redis_ok = HealthService.check_redis()
+    ollama_ok = HealthService.check_ollama()
 
+    all_ok = database_ok and redis_ok and ollama_ok
     return {
-        "status": "healthy" if database_ok else "degraded",
+        "status": "healthy" if all_ok else "degraded",
         "checks": {
             "database": database_ok,
+            "redis": redis_ok,
+            "ollama": ollama_ok,
         },
     }

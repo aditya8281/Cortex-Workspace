@@ -28,11 +28,23 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def validate_password_strength(password: str) -> bool:
+    """Validate password meets minimum strength requirements.
+
+    Requirements:
+    - Minimum 8 characters
+    - At least one uppercase letter
+    - At least one lowercase letter
+    - At least one digit
+    - At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)
+    """
     if not password or len(password) < 8:
         return False
-    has_alpha = any(c.isalpha() for c in password)
+    has_upper = any(c.isupper() for c in password)
+    has_lower = any(c.islower() for c in password)
     has_digit = any(c.isdigit() for c in password)
-    return has_alpha and has_digit
+    special_chars = set("!@#$%^&*()_+-=[]{}|;:,.<>?")
+    has_special = any(c in special_chars for c in password)
+    return has_upper and has_lower and has_digit and has_special
 
 
 # ── Access tokens ───────────────────────────────────────────────────────

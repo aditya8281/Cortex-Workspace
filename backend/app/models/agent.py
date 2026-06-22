@@ -28,7 +28,7 @@ class Agent(Base):
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    user = relationship("User")
+    user = relationship("User", back_populates="agents")
     runs = relationship("AgentRun", back_populates="agent", cascade="all, delete-orphan")
 
 

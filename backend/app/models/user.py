@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import JSON, DateTime, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.base import Base
 
@@ -46,6 +46,8 @@ class User(Base):
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=True
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+
+    agents: Mapped[list] = relationship("Agent", back_populates="user")
 
     @property
     def handles(self) -> dict:

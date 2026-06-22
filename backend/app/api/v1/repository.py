@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -83,6 +84,18 @@ def create_repo(
     from pathlib import Path
 
     path = Path(payload.path).expanduser().resolve()
+
+    # Path sandbox validation
+    path_str = str(path)
+    home_dir = os.path.expanduser("~")
+    if ".." in path.parts:
+        raise HTTPException(status_code=400, detail="Path must not contain '..' components")
+    blocked_prefixes = ("/etc", "/proc", "/sys", "/dev", "/root", "/boot")
+    if any(path_str.startswith(prefix + "/") or path_str == prefix for prefix in blocked_prefixes):
+        raise HTTPException(status_code=400, detail="Path is in a restricted system directory")
+    if not path_str.startswith(home_dir + "/") and path_str != home_dir:
+        raise HTTPException(status_code=400, detail="Path must be within your home directory")
+
     if not path.is_dir():
         raise HTTPException(status_code=400, detail=f"Path is not a directory: {payload.path}")
 
