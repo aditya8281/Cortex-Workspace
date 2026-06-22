@@ -55,7 +55,7 @@ class SyncService:
             try:
                 from backend.app.services.ollama_catalog import get_ollama_catalog
 
-                ollama_models = await get_ollama_catalog(force_refresh=True)
+                ollama_models, _source_status = await get_ollama_catalog(force_refresh=True)
                 for model in ollama_models:
                     model_info = ProviderModelInfo(
                         provider_model_id=model.get("name", ""),

@@ -220,7 +220,7 @@ class LLMManager:
         try:
             from backend.app.services.ollama_catalog import get_ollama_catalog
 
-            scraped = await get_ollama_catalog(force_refresh=force_refresh)
+            scraped, _source_status = await get_ollama_catalog(force_refresh=force_refresh)
             if scraped:
                 models_data = self._normalize_catalog_models(scraped)
                 logger.info("Ollama catalog from unified pipeline: %d models", len(models_data))

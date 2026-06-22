@@ -65,7 +65,7 @@ async def list_models(
     from backend.app.services.ollama_catalog import get_ollama_catalog
 
     # Fetch from unified three-source catalog
-    catalog_models = await get_ollama_catalog()
+    catalog_models, _source_status = await get_ollama_catalog()
 
     # Get locally installed models from providers
     available_models = await llm_manager.list_all_models()

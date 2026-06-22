@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 CACHE_DIR = Path("CortexMemory")
 CACHE_FILE = CACHE_DIR / "ollama_catalog.json"
+FALLBACK_FILE = CACHE_DIR / "ollama_catalog_fallback.json"
 DEFAULT_CACHE_TTL_HOURS = 24
 
 REGISTRY_URL = "https://registry.ollama.ai"
@@ -46,42 +48,53 @@ THINKING_MARKERS = [
     "reasoning_content",
 ]
 
-POPULAR_MODELS: list[dict[str, Any]] = [
-    {"name": "llama3.1", "tags": ["8b", "70b", "405b"]},
-    {"name": "llama3.2", "tags": ["1b", "3b", "11b"]},
-    {"name": "llama3.3", "tags": ["70b"]},
-    {"name": "qwen2.5", "tags": ["0.5b", "3b", "7b", "14b", "32b", "72b"]},
-    {"name": "qwen2.5-coder", "tags": ["0.5b", "3b", "7b", "14b", "32b"]},
-    {"name": "deepseek-r1", "tags": ["1.5b", "7b", "8b", "14b", "32b", "70b"]},
-    {"name": "deepseek-v2", "tags": ["16b"]},
-    {"name": "deepseek-coder-v2", "tags": ["16b"]},
-    {"name": "gemma2", "tags": ["2b", "9b", "27b"]},
-    {"name": "gemma3", "tags": ["1b", "4b", "12b", "27b"]},
-    {"name": "mistral", "tags": ["7b"]},
-    {"name": "mistral-nemo", "tags": ["12b"]},
-    {"name": "mixtral", "tags": ["8x7b", "8x22b"]},
-    {"name": "phi3", "tags": ["mini", "small", "medium"]},
-    {"name": "phi3.5", "tags": ["mini"]},
-    {"name": "codellama", "tags": ["7b", "13b", "34b", "70b"]},
-    {"name": "starcoder2", "tags": ["3b", "7b", "15b"]},
-    {"name": "nomic-embed-text", "tags": ["latest"]},
-    {"name": "mxbai-embed-large", "tags": ["latest"]},
-    {"name": "bge-large", "tags": ["latest"]},
-    {"name": "bge-base", "tags": ["latest"]},
-    {"name": "allminilm", "tags": ["latest"]},
-    {"name": "llava", "tags": ["7b", "13b"]},
-    {"name": "llava-llama3", "tags": ["8b"]},
-    {"name": "bakllava", "tags": ["latest"]},
-    {"name": "moondream", "tags": ["latest"]},
-    {"name": "command-r", "tags": ["35b"]},
-    {"name": "command-r-plus", "tags": ["104b"]},
-    {"name": "wizardlm2", "tags": ["8x22b"]},
-    {"name": "orca2", "tags": ["7b", "13b"]},
-    {"name": "neural-chat", "tags": ["7b"]},
-    {"name": "aya", "tags": ["8b", "35b"]},
-    {"name": "tinyllama", "tags": ["latest"]},
-    {"name": "falcon", "tags": ["7b", "40b"]},
-]
+_LIBRARY_JSON = Path(__file__).resolve().parent.parent / "data" / "library.json"
+
+
+def _load_library_json() -> list[dict[str, Any]]:
+    """Load full model list from backend/app/data/library.json.
+
+    Returns list of dicts with 'name' and 'tags' keys.
+    Falls back to empty list if file not found.
+    """
+    if not _LIBRARY_JSON.exists():
+        logger.warning("library.json not found at %s", _LIBRARY_JSON)
+        return []
+    try:
+        data = json.loads(_LIBRARY_JSON.read_text())
+        models = data.get("models", [])
+        total_tags = sum(len(m.get("tags", ["latest"])) for m in models)
+        logger.info(
+            "Loaded %d models (%d tags) from library.json",
+            len(models),
+            total_tags,
+        )
+        return models
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning("Failed to load library.json: %s", e)
+        return []
+
+
+@dataclass
+class CatalogSourceStatus:
+    """Track health status of each catalog source."""
+
+    cloud: str = "pending"  # "ok", "unavailable", "timeout", "pending"
+    local: str = "pending"
+    registry: str = "pending"
+    last_updated: str = ""
+    from_fallback: bool = False
+    errors: dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "cloud": self.cloud,
+            "local": self.local,
+            "registry": self.registry,
+            "last_updated": self.last_updated,
+            "from_fallback": self.from_fallback,
+            "errors": self.errors,
+        }
 
 
 class OllamaCatalogService:
@@ -114,27 +127,22 @@ class OllamaCatalogService:
         include_cloud: bool = True,
         include_local: bool = True,
         include_registry: bool = True,
-    ) -> list[dict[str, Any]]:
+    ) -> tuple[list[dict[str, Any]], CatalogSourceStatus]:
         """Fetch the unified model catalog from all enabled sources.
 
-        Checks cache first unless force_refresh is True. Deduplicates models
-        with cloud/local sources taking priority over registry entries.
-
-        Args:
-            force_refresh: If True, bypass cache and fetch fresh data.
-            include_cloud: Whether to probe the cloud API.
-            include_local: Whether to probe the local Ollama API.
-            include_registry: Whether to probe the OCI registry.
-
         Returns:
-            List of unified model dictionaries.
+            Tuple of (models list, source status).
         """
+        status = CatalogSourceStatus()
+
         if not force_refresh:
             cached = self._load_cache()
             if cached is not None and self._is_cache_valid(cached):
                 models = cached.get("models", [])
                 logger.debug("Returning %d cached catalog models", len(models))
-                return models
+                status.from_fallback = False
+                status.last_updated = cached.get("fetched_at", "")
+                return models, status
 
         tasks: list[asyncio.Task] = []
         source_priority: dict[str, int] = {}
@@ -152,10 +160,42 @@ class OllamaCatalogService:
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         merged: dict[str, dict[str, Any]] = {}
-        for result in results:
+        source_names = []
+        if include_cloud:
+            source_names.append("cloud")
+        if include_local:
+            source_names.append("local")
+        if include_registry:
+            source_names.append("registry")
+
+        for result, source_name in zip(results, source_names, strict=False):
             if isinstance(result, Exception):
-                logger.warning("Source failed: %s", result)
+                if source_name == "cloud":
+                    status.cloud = "error"
+                elif source_name == "local":
+                    status.local = "error"
+                elif source_name == "registry":
+                    status.registry = "error"
+                status.errors[source_name] = str(result)
+                logger.warning("Source %s failed: %s", source_name, result)
                 continue
+
+            if not result:
+                if source_name == "cloud":
+                    status.cloud = "unavailable"
+                elif source_name == "local":
+                    status.local = "unavailable"
+                elif source_name == "registry":
+                    status.registry = "unavailable"
+                continue
+
+            if source_name == "cloud":
+                status.cloud = "ok"
+            elif source_name == "local":
+                status.local = "ok"
+            elif source_name == "registry":
+                status.registry = "ok"
+
             for model in result:
                 key = model.get("name", "")
                 existing = merged.get(key)
@@ -170,9 +210,28 @@ class OllamaCatalogService:
         models = list(merged.values())
         models.sort(key=lambda m: m.get("name", ""))
 
-        self._save_cache(models)
-        logger.info("Fetched and cached %d unique models", len(models))
-        return models
+        if not models:
+            logger.warning("All catalog sources failed, attempting fallback")
+            fallback = self._load_fallback()
+            if fallback:
+                models = fallback
+                status.from_fallback = True
+                status.errors["_fallback"] = "All sources failed, using cached fallback"
+
+        if models:
+            self._save_cache(models)
+            self._save_fallback(models)
+            status.last_updated = datetime.now(timezone.utc).isoformat()
+
+        logger.info(
+            "Fetched %d unique models (cloud=%s, local=%s, registry=%s, fallback=%s)",
+            len(models),
+            status.cloud,
+            status.local,
+            status.registry,
+            status.from_fallback,
+        )
+        return models, status
 
     async def fetch_cloud_models(self) -> list[dict[str, Any]]:
         """Probe the cloud API (ollama.com) for available models.
@@ -205,9 +264,11 @@ class OllamaCatalogService:
             return []
 
     async def fetch_registry_models(self) -> list[dict[str, Any]]:
-        """Probe the OCI registry for popular models.
+        """Probe the OCI registry for ALL models from library.json.
 
-        Iterates over POPULAR_MODELS and probes each model:tag combination.
+        Iterates over all model families and their tags,
+        probing each model:tag combination via OCI manifest + blob.
+        No model weights are downloaded.
 
         Returns:
             List of model dicts from the registry source.
@@ -215,15 +276,38 @@ class OllamaCatalogService:
         await self.get_client()
         models: list[dict[str, Any]] = []
 
-        async def _probe_one(model_entry: dict[str, Any], tag: str) -> None:
+        library_models = _load_library_json()
+        if not library_models:
+            logger.warning("No library.json models available for registry probe")
+            return []
+
+        probe_list: list[tuple[str, str, list[str]]] = []
+        for m in library_models:
+            name = m["name"]
+            tags = m.get("tags", ["latest"])
+            for tag in tags:
+                probe_list.append((name, tag, tags))
+
+        logger.info(
+            "Probing %d model:tag pairs from registry (concurrency=%d)",
+            len(probe_list),
+            CONCURRENCY_LIMIT,
+        )
+
+        async def _probe_one(
+            model_name: str, tag: str, all_tags: list[str]
+        ) -> None:
             async with self._semaphore:
-                result = await self._probe_registry_model(model_entry["name"], tag)
-                if result is not None:
-                    models.append(result)
+                result = await self._probe_registry_model(model_name, tag)
+            if result is not None:
+                result["available_tags"] = all_tags
+                models.append(result)
 
-        tasks = [_probe_one(entry, tag) for entry in POPULAR_MODELS for tag in entry["tags"]]
+        await asyncio.gather(
+            *[_probe_one(name, tag, tags) for name, tag, tags in probe_list]
+        )
 
-        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info("Registry probe complete: %d models found", len(models))
         return models
 
     async def _probe_api_source(self, base_url: str, headers: dict[str, str]) -> list[dict[str, Any]]:
@@ -505,7 +589,36 @@ class OllamaCatalogService:
         except (ValueError, TypeError):
             return False
 
-    def fetch_catalog_sync(self, force_refresh: bool = False) -> list[dict[str, Any]]:
+    def _save_fallback(self, models: list[dict[str, Any]]) -> None:
+        """Save catalog to fallback file after successful fetch."""
+        try:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            data = {
+                "fetched_at": datetime.now(timezone.utc).isoformat(),
+                "models": models,
+            }
+            with open(FALLBACK_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            logger.debug("Saved fallback catalog (%d models)", len(models))
+        except OSError as e:
+            logger.warning("Failed to save fallback catalog: %s", e)
+
+    def _load_fallback(self) -> list[dict[str, Any]] | None:
+        """Load catalog from fallback file."""
+        try:
+            if FALLBACK_FILE.exists():
+                with open(FALLBACK_FILE, encoding="utf-8") as f:
+                    data = json.load(f)
+                models = data.get("models", [])
+                logger.info("Loaded fallback catalog (%d models)", len(models))
+                return models
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Failed to load fallback catalog: %s", e)
+        return None
+
+    def fetch_catalog_sync(
+        self, force_refresh: bool = False
+    ) -> tuple[list[dict[str, Any]], CatalogSourceStatus]:
         """Sync wrapper for backward compatibility.
 
         Runs fetch_catalog in a new event loop if no loop is running,
@@ -515,7 +628,7 @@ class OllamaCatalogService:
             force_refresh: If True, bypass cache and fetch fresh data.
 
         Returns:
-            List of model dicts.
+            Tuple of (models list, source status).
         """
         try:
             loop = asyncio.get_running_loop()
@@ -552,27 +665,27 @@ def get_catalog_service() -> OllamaCatalogService:
 
 async def get_ollama_catalog(
     force_refresh: bool = False,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], CatalogSourceStatus]:
     """Async convenience function to get the Ollama catalog.
 
     Args:
         force_refresh: If True, bypass cache and fetch fresh data.
 
     Returns:
-        List of model dicts.
+        Tuple of (models list, source status).
     """
     return await get_catalog_service().fetch_catalog(force_refresh=force_refresh)
 
 
 def get_ollama_catalog_sync(
     force_refresh: bool = False,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], CatalogSourceStatus]:
     """Sync convenience function to get the Ollama catalog.
 
     Args:
         force_refresh: If True, bypass cache and fetch fresh data.
 
     Returns:
-        List of model dicts.
+        Tuple of (models list, source status).
     """
     return get_catalog_service().fetch_catalog_sync(force_refresh=force_refresh)
