@@ -1,27 +1,18 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import {
-  Brain,
-  Code,
-  Eye,
-  Wrench,
-  Database,
-  Zap,
-  Star,
-  Search,
-  RefreshCw,
-} from "lucide-react";
+import { Brain, RefreshCw } from "lucide-react";
 import DashboardShell from "@/shared/layout/DashboardShell";
 import NeuralNetwork from "@/shared/ui/NeuralNetwork";
 import Card from "@/shared/ui/Card";
 import Button from "@/shared/ui/Button";
 import HardwareBar from "./components/HardwareBar";
-import SearchBar from "./components/SearchBar";
-import RecommendedRow from "./components/RecommendedRow";
-import CategorySection from "./components/CategorySection";
+import TopPicksCarousel from "./components/TopPicksCarousel";
+import WorkloadColumns from "./components/WorkloadColumns";
+import CatalogTable from "./components/CatalogTable";
+import InstalledBar from "./components/InstalledBar";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { modelsApi } from "@/shared/api";
 import { useSystemWebSocket } from "@/shared/hooks/useSystemWebSocket";
@@ -29,64 +20,7 @@ import type {
   HardwareProfile,
   WorkloadRecommendations as WorkloadRecs,
   ModelInfo,
-  ModelRecommendation,
 } from "@/shared/types";
-
-const workloadIcons: Record<string, typeof Brain> = {
-  coding: Code,
-  reasoning: Brain,
-  agents: Wrench,
-  vision: Eye,
-  embeddings: Database,
-  lightweight: Zap,
-  high_quality: Star,
-  rag: Search,
-};
-
-function matchesSizeFilter(parameterCount: string, filter: string): boolean {
-  if (filter === "all") return true;
-  if (!parameterCount) return false;
-  const match = parameterCount.match(/([\d.]+)\s*[Bb]/i);
-  if (!match) return false;
-  const bn = parseFloat(match[1]);
-  switch (filter) {
-    case "<3B":
-      return bn < 3;
-    case "3-8B":
-      return bn >= 3 && bn <= 8;
-    case "8-14B":
-      return bn > 8 && bn <= 14;
-    case "14B+":
-      return bn > 14;
-    default:
-      return true;
-  }
-}
-
-function recommendationToModelInfo(rec: ModelRecommendation): ModelInfo {
-  return {
-    model_id: rec.model_id,
-    name: rec.model_id,
-    display_name: rec.display_name,
-    description: rec.description,
-    provider: "",
-    model_type: "chat",
-    parameter_count: String(rec.parameter_count),
-    context_length: rec.performance?.context_length_max ?? 0,
-    capabilities: rec.capabilities,
-    hardware_requirements: rec.variant
-      ? {
-          min_ram_gb: rec.variant.size_gb,
-          recommended_ram_gb: rec.variant.size_gb * 1.5,
-          min_vram_gb: rec.variant.vram_required_gb,
-          recommended_vram_gb: rec.variant.vram_required_gb * 1.2,
-        }
-      : null,
-    family: rec.family,
-    architecture: "",
-    license: "",
-  };
-}
 
 export default function ModelsPage() {
   const router = useRouter();
@@ -95,19 +29,13 @@ export default function ModelsPage() {
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
   const [workloads, setWorkloads] = useState<Record<string, WorkloadRecs>>({});
   const [allModels, setAllModels] = useState<ModelInfo[]>([]);
+  const [installedModels, setInstalledModels] = useState<Array<{ model_id: string; display_name: string; variant: string; size_gb: number; last_used: string; usage_count: number }>>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [downloadingModels, setDownloadingModels] = useState<Set<string>>(new Set());
   const [downloadProgress, setDownloadProgress] = useState<Map<string, number>>(new Map());
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTypeFilter, setActiveTypeFilter] = useState("all");
-  const [activeSizeFilter, setActiveSizeFilter] = useState("all");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [compareModels, setCompareModels] = useState<string[]>([]);
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/auth");
@@ -116,13 +44,22 @@ export default function ModelsPage() {
   const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const [recsData, listData] = await Promise.all([
+      const [recsData, listData, instData] = await Promise.all([
         modelsApi.recommendedEnhanced(),
         modelsApi.list(),
+        modelsApi.installed(),
       ]);
       setHardware(recsData.hardware);
       setWorkloads(recsData.workloads);
       setAllModels(listData.models);
+      setInstalledModels((instData.models || []).map((m) => ({
+        model_id: m.model_id,
+        display_name: m.display_name,
+        variant: m.variants?.[0]?.quantization || "default",
+        size_gb: m.variants?.[0]?.size_gb || 0,
+        last_used: "—",
+        usage_count: 0,
+      })));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load models");
     } finally {
@@ -133,25 +70,6 @@ export default function ModelsPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  useEffect(() => {
-    if (searchQuery.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await modelsApi.autocomplete(searchQuery);
-        setSuggestions(res.suggestions);
-      } catch {
-        setSuggestions([]);
-      }
-    }, 250);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [searchQuery]);
 
   const handleDownload = async (modelName: string, variant?: string) => {
     try {
@@ -207,62 +125,6 @@ export default function ModelsPage() {
     const all = Object.values(workloads).flatMap((w) => w.recommendations);
     return all.sort((a, b) => b.score - a.score).slice(0, 5);
   }, [workloads]);
-
-  const filteredModels = useMemo(() => {
-    return allModels.filter((m) => {
-      if (activeTypeFilter !== "all" && m.model_type !== activeTypeFilter) return false;
-      if (activeSizeFilter !== "all" && !matchesSizeFilter(m.parameter_count, activeSizeFilter)) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        return (
-          m.name.toLowerCase().includes(q) ||
-          m.display_name.toLowerCase().includes(q) ||
-          m.description.toLowerCase().includes(q) ||
-          m.family.toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [allModels, activeTypeFilter, activeSizeFilter, searchQuery]);
-
-  const typeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const m of allModels) {
-      counts[m.model_type] = (counts[m.model_type] || 0) + 1;
-    }
-    return counts;
-  }, [allModels]);
-
-  const sizeCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      all: allModels.length,
-      "<3B": 0,
-      "3-8B": 0,
-      "8-14B": 0,
-      "14B+": 0,
-    };
-    for (const m of allModels) {
-      if (matchesSizeFilter(m.parameter_count, "<3B")) counts["<3B"]++;
-      if (matchesSizeFilter(m.parameter_count, "3-8B")) counts["3-8B"]++;
-      if (matchesSizeFilter(m.parameter_count, "8-14B")) counts["8-14B"]++;
-      if (matchesSizeFilter(m.parameter_count, "14B+")) counts["14B+"]++;
-    }
-    return counts;
-  }, [allModels]);
-
-  const categoryModels = useMemo(() => {
-    const result: Record<string, ModelInfo[]> = {};
-    for (const [id, workload] of Object.entries(workloads)) {
-      const recModelIds = new Set(workload.recommendations.map((r) => r.model_id));
-      const recModels = filteredModels.filter((m) => recModelIds.has(m.model_id));
-      if (recModels.length > 0) {
-        result[id] = recModels;
-      } else {
-        result[id] = workload.recommendations.map(recommendationToModelInfo);
-      }
-    }
-    return result;
-  }, [workloads, filteredModels]);
 
   if (authLoading || !user) return null;
 
@@ -337,72 +199,40 @@ export default function ModelsPage() {
             transition={{ duration: 0.3, delay: 0.15 }}
             className="space-y-8 mt-6"
           >
-            {/* Search + Filters */}
-            <SearchBar
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              onSearchSubmit={() => {}}
-              activeTypeFilter={activeTypeFilter}
-              onTypeFilterChange={setActiveTypeFilter}
-              activeSizeFilter={activeSizeFilter}
-              onSizeFilterChange={setActiveSizeFilter}
-              typeCounts={typeCounts}
-              sizeCounts={sizeCounts}
-              suggestions={suggestions}
-              onSuggestionSelect={(s) => {
-                setSearchQuery(s);
-              }}
-              onCompare={() => {
-                if (compareModels.length > 0) {
-                  router.push(`/models/compare?ids=${compareModels.join(",")}`);
-                }
-              }}
-              compareCount={compareModels.length}
+            {/* Top Picks Carousel */}
+            {topRecs.length > 0 && (
+              <TopPicksCarousel
+                recommendations={topRecs}
+                onDownload={handleDownload}
+              />
+            )}
+
+            {/* Workload Columns */}
+            <WorkloadColumns
+              workloads={workloads}
+              onDownload={handleDownload}
             />
 
-            {/* Recommended Row */}
-            {topRecs.length > 0 && (
-              <RecommendedRow
-                recommendations={topRecs}
-                hardware={hardware}
-                onDownload={handleDownload}
-              />
-            )}
+            {/* Catalog Table */}
+            <CatalogTable
+              models={allModels}
+              onDownload={handleDownload}
+            />
 
-            {/* Category Sections */}
-            {Object.entries(workloads).map(([id, workload]) => {
-              const Icon = workloadIcons[id] || Brain;
-              const models = categoryModels[id] || [];
-              return (
-                <CategorySection
-                  key={id}
-                  icon={<Icon size={16} />}
-                  title={workload.label}
-                  count={workload.recommendations.length}
-                  models={models}
-                  hardware={hardware}
-                  onDownload={handleDownload}
-                  onCancel={handleCancel}
-                  downloadProgress={downloadProgress}
-                  downloadingModels={downloadingModels}
-                />
-              );
-            })}
-
-            {/* All Models Fallback (when no workloads match filters) */}
-            {Object.keys(categoryModels).length === 0 && filteredModels.length > 0 && (
-              <CategorySection
-                icon={<Search size={16} />}
-                title="All Models"
-                count={filteredModels.length}
-                models={filteredModels}
-                hardware={hardware}
-                onDownload={handleDownload}
-                onCancel={handleCancel}
-                downloadProgress={downloadProgress}
-                downloadingModels={downloadingModels}
-              />
-            )}
+            {/* Installed Bar */}
+            <InstalledBar
+              models={installedModels}
+              onManage={() => router.push("/settings")}
+              onChat={(modelId) => router.push(`/chat?model=${modelId}`)}
+              onDelete={async (modelId) => {
+                try {
+                  await modelsApi.delete(modelId);
+                  fetchData();
+                } catch (err) {
+                  console.error("Delete failed:", err);
+                }
+              }}
+            />
           </motion.div>
         )}
       </div>

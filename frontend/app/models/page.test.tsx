@@ -40,6 +40,7 @@ vi.mock("@/shared/api", () => ({
     list: (...args: unknown[]) => mockList(...args),
     installed: (...args: unknown[]) => mockInstalled(...args),
     download: vi.fn().mockResolvedValue({ status: "started" }),
+    delete: vi.fn().mockResolvedValue({ deleted: true }),
     autocomplete: vi.fn().mockResolvedValue({ suggestions: [] }),
     hardware: vi.fn().mockResolvedValue({}),
     health: vi.fn().mockResolvedValue({}),
@@ -180,7 +181,7 @@ describe("ModelsPage", () => {
     mockInstalled.mockRejectedValue(new Error("Network error"));
     render(<ModelsPage />);
     await waitFor(() => {
-      expect(screen.getByText("Failed to load models. Please try again.")).toBeInTheDocument();
+      expect(screen.getByText("Network error")).toBeInTheDocument();
     });
   });
 });
