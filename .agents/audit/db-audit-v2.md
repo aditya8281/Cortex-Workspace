@@ -1,7 +1,20 @@
 # Cortex Database Audit Report — v2
 
-Generated: 2026-06-22  
+Generated: 2026-06-22
+Updated: 2026-06-22 (P0/P1 fixes applied)  
 Scope: Full database layer — migrations, models, schemas, configuration
+
+---
+
+## Fixed Issues (2026-06-22)
+
+| ID | Issue | Fix |
+|----|-------|-----|
+| MOD-CRIT-1 | `auth_events.metadata_json` JSONB/JSON mismatch | Changed migration from `sa.JSON()` to `postgresql.JSONB()` |
+| SCH-CRIT-1 | `AgentInfo.tools` field name mismatch with ORM `tools_json` | Added `ConfigDict(from_attributes=True)` and `serialization_alias="tools_json"` |
+| SCH-HIGH-1 | `AgentRunInfo.input` mismatch with ORM `input_text` | Added `serialization_alias="input_text"` |
+| SCH-HIGH-2 | `AgentStepInfo.action_input` mismatch with ORM `action_input_json` | Added `serialization_alias="action_input_json"` |
+| M-MED-3 | `indexing_configs.user_id` FK missing `ondelete` | Added `ondelete="CASCADE"` |
 
 ---
 

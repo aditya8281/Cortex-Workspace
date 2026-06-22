@@ -1,7 +1,19 @@
 # Cortex Codebase Cleanup Audit
 
 **Date:** 2026-06-22
+**Updated:** 2026-06-22 (P0/P1 fixes applied)
 **Scope:** Full codebase — frontend/, backend/, cli/, tests/
+
+---
+
+## Fixed Issues (2026-06-22)
+
+| Issue | Fix |
+|-------|-----|
+| Unused import `pathlib.Path` in `executor.py` | Removed unused import |
+| Unused import `VaultFileListResponse` in `vault.py` | Removed after vault list response fix |
+
+---
 
 ---
 

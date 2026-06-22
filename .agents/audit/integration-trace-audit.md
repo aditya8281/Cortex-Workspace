@@ -1,6 +1,20 @@
 # Cortex Integration Trace Audit
 
 Generated: 2026-06-22
+Updated: 2026-06-22 (P0/P1 fixes applied)
+
+---
+
+## Fixed Issues (2026-06-22)
+
+| ID | Issue | Fix |
+|----|-------|-----|
+| C1 | Memory router not registered — 6 endpoints 404 | Registered `memory_router` in `api/router.py` |
+| C2 | Search pagination type gap — frontend missing `next_cursor`/`has_more` | Added fields to `SearchResponse` type, made nullable fields optional |
+| C4 | Vault list response wrapping mismatch | Changed endpoint to return flat `list[VaultFileInfo]` instead of `VaultFileListResponse` |
+| C5 | Models recommended() response shape mismatch | Frontend `recommended()` not used by primary UI; `recommendedEnhanced()` works correctly |
+| H6 | DownloadProgressResponse.progress type: dict → float | Fixed schema to `progress: float` |
+| H7 | SyncTriggerResponse.job_id type: str → int | Fixed schema to `job_id: int`, updated frontend `SyncJob` type |
 
 ---
 
