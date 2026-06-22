@@ -42,6 +42,8 @@ class SearchRequest(BaseModel):
     sources: list[str] = Field(default=["vector", "fulltext"])
     diversity: float = Field(default=0.3, ge=0.0, le=1.0)
     cursor: str | None = None  # Base64-encoded cursor for pagination
+    node_type: str | None = None  # Filter by node type (function, class, etc.)
+    language: str | None = None  # Filter by programming language
 
 
 class SearchResult(BaseModel):
@@ -80,6 +82,8 @@ async def unified_search(
             limit=fetch_limit,
             sources=request.sources,
             diversity_penalty=request.diversity,
+            node_type=request.node_type,
+            language=request.language,
         )
         latency_ms = (time.time() - start_time) * 1000
 

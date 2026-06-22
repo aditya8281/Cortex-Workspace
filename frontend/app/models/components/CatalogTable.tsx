@@ -2,11 +2,12 @@
 
 import { useState, useMemo } from "react";
 import { Search, MessageSquare, Code, Eye, Sparkles } from "lucide-react";
-import type { ModelInfo } from "@/shared/types";
+import type { ModelInfo, HardwareProfile } from "@/shared/types";
 
 interface CatalogTableProps {
   models: ModelInfo[];
   onDownload: (modelName: string) => void;
+  hardware?: HardwareProfile | null;
 }
 
 const TYPE_FILTERS = ["All", "Chat", "Code", "Vision", "Embed"] as const;
@@ -32,7 +33,7 @@ function formatSize(bytes: number | undefined | null): string {
   return `${(bytes / 1e9).toFixed(1)} GB`;
 }
 
-export default function CatalogTable({ models, onDownload }: CatalogTableProps) {
+export default function CatalogTable({ models, onDownload, hardware }: CatalogTableProps) {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("All");
   const [sizeFilter, setSizeFilter] = useState<string>("All");
@@ -129,7 +130,19 @@ export default function CatalogTable({ models, onDownload }: CatalogTableProps) 
                   </td>
                   <td className="px-4 py-2.5 font-mono text-[11px] text-secondary">{m.parameter_count || "—"}</td>
                   <td className="px-4 py-2.5 font-mono text-[11px] text-secondary">{formatSize(m.size_bytes)}</td>
-                  <td className="px-4 py-2.5 font-mono text-[11px] text-muted">—</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px]">
+                    {(() => {
+                      const vramAvail = hardware?.gpu?.vram_available_gb ?? 0;
+                      if (vramAvail <= 0 || !m.hardware_requirements) return <span className="text-muted">—</span>;
+                      const minVram = m.hardware_requirements.min_vram_gb;
+                      if (minVram <= 0) return <span className="text-muted">—</span>;
+                      const ratio = minVram / vramAvail;
+                      if (ratio <= 0.6) return <span className="text-success">Good</span>;
+                      if (ratio <= 0.85) return <span className="text-accent">OK</span>;
+                      if (ratio <= 1.0) return <span className="text-warning">Tight</span>;
+                      return <span className="text-error">No</span>;
+                    })()}
+                  </td>
                   <td className="px-4 py-2.5">
                     <button
                       onClick={() => onDownload(m.name)}

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+import threading
 import warnings
 from typing import Any
 
 from backend.app.core.config import settings
+from backend.app.services.circuit_breaker import ollama_circuit_breaker
 
 logger = logging.getLogger(__name__)
 
@@ -122,20 +124,28 @@ class EmbeddingService:
         return asyncio.run(coro)
 
     async def _embed_via_ollama(self, texts: list[str]) -> list[list[float]]:
+        if not ollama_circuit_breaker.allow_request():
+            raise RuntimeError("Ollama circuit breaker is OPEN — service unavailable")
+
         import httpx
 
         vectors = []
-        async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=30.0) as client:
-            for text in texts:
-                resp = await client.post(
-                    "/api/embeddings",
-                    json={
-                        "model": settings.EMBEDDING_MODEL_NAME,
-                        "prompt": text,
-                    },
-                )
-                resp.raise_for_status()
-                vectors.append(resp.json()["embedding"])
+        try:
+            async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=30.0) as client:
+                for text in texts:
+                    resp = await client.post(
+                        "/api/embeddings",
+                        json={
+                            "model": settings.EMBEDDING_MODEL_NAME,
+                            "prompt": text,
+                        },
+                    )
+                    resp.raise_for_status()
+                    vectors.append(resp.json()["embedding"])
+            ollama_circuit_breaker.record_success()
+        except Exception:
+            ollama_circuit_breaker.record_failure()
+            raise
         return vectors
 
     def _tokenize(self, text: str) -> dict[str, Any]:
@@ -166,30 +176,10 @@ class EmbeddingService:
         """Embed a single text into a vector (alias for embed)."""
         return self.embed(text)
 
-    def embed_with_cache(self, text: str, cache_service: Any) -> list[float]:
-        """Embed text using cache when available, computing only on miss."""
-        import hashlib
-
-        content_hash = hashlib.sha256(text.encode()).hexdigest()[:32]
-        cached = cache_service.get(content_hash, model_name=self._get_model_name())
-        if cached is not None:
-            return cached
-
-        embedding = self.embed(text)
-        cache_service.put(
-            content_hash=content_hash,
-            embedding=embedding,
-            model_name=self._get_model_name(),
-            token_count=len(text) // 4,
-        )
-        return embedding
-
     def _get_model_name(self) -> str:
         if self._backend == "onnx":
             return "onnx-nomic-embed-text"
         elif self._backend == "ollama":
-            from backend.app.core.config import settings
-
             return settings.EMBEDDING_MODEL_NAME
         return "mock-embedding"
 
@@ -201,11 +191,14 @@ class EmbeddingService:
 
 
 _embedding_service: EmbeddingService | None = None
+_embedding_service_lock = threading.Lock()
 
 
 def get_embedding_service() -> EmbeddingService:
-    """Get or create the global EmbeddingService singleton."""
+    """Get or create the global EmbeddingService singleton (thread-safe)."""
     global _embedding_service
     if _embedding_service is None:
-        _embedding_service = EmbeddingService()
+        with _embedding_service_lock:
+            if _embedding_service is None:
+                _embedding_service = EmbeddingService()
     return _embedding_service

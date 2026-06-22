@@ -30,10 +30,13 @@ _is_dev = settings.ENV in ("development", "test")
 _SECURITY_HEADERS: list[tuple[bytes, bytes]] = [
     (b"x-content-type-options", b"nosniff"),
     (b"x-frame-options", b"DENY"),
-    (b"x-xss-protection", b"1; mode=block"),
     (b"referrer-policy", b"strict-origin-when-cross-origin"),
+    (b"permissions-policy", b"camera=(), microphone=(), geolocation=(), payment=()"),
     (b"content-security-policy", _CSP_DEV if _is_dev else _CSP_PROD),
 ]
+
+# Paths that should have Cache-Control: no-store (auth-related)
+_AUTH_PATHS = ("/api/v1/auth/", "/api/v1/users/me")
 
 
 class RequestLoggingMiddleware:
@@ -49,6 +52,7 @@ class RequestLoggingMiddleware:
         RequestIdFilter.set(request_id)
         start = time.perf_counter()
         status_code = 500
+        path = scope.get("path", "/")
 
         async def send_wrapper(message):
             nonlocal status_code
@@ -61,6 +65,9 @@ class RequestLoggingMiddleware:
                 # Only send HSTS over HTTPS
                 if scope.get("scheme") == "https":
                     headers.append((b"strict-transport-security", b"max-age=31536000; includeSubDomains"))
+                # Add Cache-Control: no-store for auth-related responses
+                if any(path.startswith(p) for p in _AUTH_PATHS):
+                    headers.append((b"cache-control", b"no-store, no-cache, must-revalidate"))
                 message["headers"] = headers
 
             await send(message)

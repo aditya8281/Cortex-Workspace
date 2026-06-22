@@ -10,6 +10,7 @@ import Button from "../../src/shared/ui/Button";
 import Input from "../../src/shared/ui/Input";
 import Card from "../../src/shared/ui/Card";
 import IndexingConfigForm from "./IndexingConfigForm";
+import LLMSettingsForm from "./LLMSettingsForm";
 import { AlertTriangle, Trash2, User, Shield, Hash, HardDrive, ExternalLink } from "lucide-react";
 import { cn } from "../../src/lib/utils";
 import { toast } from "sonner";
@@ -210,6 +211,8 @@ export default function SettingsPage() {
           </motion.div>
 
           <IndexingConfigForm />
+
+          <LLMSettingsForm />
 
           <motion.div {...fadeUp} transition={{ ...fadeUp.transition, delay: 0.08 }}>
             <Card gradient className="p-5 border-error/20 bg-error/[0.02]">

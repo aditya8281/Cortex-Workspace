@@ -133,9 +133,11 @@ class AgentRunManager:
                     step.status = "completed"
                     results.append(result)
                 except Exception as e:
-                    step.observation = f"Error: {e}"
-                    step.status = "failed"
+                    # Sanitize error — don't store raw exception messages that may
+                    # contain internal paths, stack traces, or sensitive info
                     logger.error("Step %d failed: %s", i + 1, e)
+                    step.observation = "Step execution failed. Check logs for details."
+                    step.status = "failed"
 
                 self.db.commit()
 

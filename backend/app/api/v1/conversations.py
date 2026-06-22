@@ -5,7 +5,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -37,8 +37,8 @@ router = APIRouter()
 
 @router.get("/conversations", response_model=ConversationListResponse)
 async def list_conversations(
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -84,6 +84,27 @@ async def get_conversation(
         updated_at=conv.updated_at,
         messages=[ConversationMessageResponse.model_validate(m) for m in messages],
     )
+
+
+class RenameConversationPayload(BaseModel):
+    title: str
+
+
+@router.patch("/conversations/{conversation_id}/title")
+async def rename_conversation(
+    conversation_id: int,
+    payload: RenameConversationPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    svc = ConversationService(db)
+    conv = svc.get(conversation_id, current_user.id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if not payload.title or not payload.title.strip():
+        raise HTTPException(status_code=400, detail="Title is required")
+    svc.update_title(conversation_id, payload.title.strip())
+    return {"status": "updated", "title": payload.title.strip()}
 
 
 @router.delete("/conversations/{conversation_id}")

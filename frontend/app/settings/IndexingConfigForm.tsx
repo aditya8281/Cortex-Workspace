@@ -105,7 +105,7 @@ export default function IndexingConfigForm() {
         {status ? (
           <div className="grid grid-cols-4 gap-3 mb-3">
             {[
-              { label: "Watching", value: status.watching_count },
+              { label: "Watching", value: status.watching },
               { label: "Indexed Files", value: status.indexed_files },
               { label: "Pending Changes", value: status.pending_changes },
               { label: "Errors", value: status.errors },

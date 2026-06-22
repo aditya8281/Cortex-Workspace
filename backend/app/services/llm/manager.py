@@ -83,6 +83,7 @@ class LLMManager:
         model: str | None = None,
         max_tokens: int = 2048,
         temperature: float = 0.7,
+        db=None,
     ) -> LLMResponse:
         async with self._semaphore:
             provider = await self._get_active()
@@ -102,11 +103,14 @@ class LLMManager:
                 self._total_completion_tokens += result.get("tokens_completion", 0)
 
                 try:
-                    from backend.app.db import SessionLocal
-                    from backend.app.services.usage_tracker import UsageTracker
-
-                    db = SessionLocal()
+                    if db is None:
+                        from backend.app.db import SessionLocal
+                        db = SessionLocal()
+                        close_db = True
+                    else:
+                        close_db = False
                     try:
+                        from backend.app.services.usage_tracker import UsageTracker
                         tracker = UsageTracker(db)
                         tracker.record_usage(
                             model_name=result.get("model", "unknown"),
@@ -115,7 +119,8 @@ class LLMManager:
                             tokens_completion=result.get("tokens_completion", 0),
                         )
                     finally:
-                        db.close()
+                        if close_db:
+                            db.close()
                 except Exception:
                     logger.debug("Failed to record LLM usage tracking", exc_info=True)
 
@@ -150,6 +155,7 @@ class LLMManager:
         model: str | None = None,
         max_tokens: int = 2048,
         temperature: float = 0.7,
+        db=None,
     ):
         async with self._semaphore:
             provider = await self._get_active()
@@ -174,11 +180,14 @@ class LLMManager:
                 self._total_completion_tokens += completion_tokens
 
                 try:
-                    from backend.app.db import SessionLocal
-                    from backend.app.services.usage_tracker import UsageTracker
-
-                    db = SessionLocal()
+                    if db is None:
+                        from backend.app.db import SessionLocal
+                        db = SessionLocal()
+                        close_db = True
+                    else:
+                        close_db = False
                     try:
+                        from backend.app.services.usage_tracker import UsageTracker
                         tracker = UsageTracker(db)
                         tracker.record_usage(
                             model_name=model or "unknown",
@@ -187,7 +196,8 @@ class LLMManager:
                             tokens_completion=completion_tokens,
                         )
                     finally:
-                        db.close()
+                        if close_db:
+                            db.close()
                 except Exception:
                     logger.debug("Failed to record LLM stream usage tracking", exc_info=True)
                 return
@@ -220,7 +230,7 @@ class LLMManager:
         try:
             from backend.app.services.ollama_catalog import get_ollama_catalog
 
-            scraped = await get_ollama_catalog(force_refresh=force_refresh)
+            scraped, _source_status = await get_ollama_catalog(force_refresh=force_refresh)
             if scraped:
                 models_data = self._normalize_catalog_models(scraped)
                 logger.info("Ollama catalog from unified pipeline: %d models", len(models_data))

@@ -27,12 +27,24 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
+_COMMON_PASSWORDS = {
+    "password", "123456", "12345678", "qwerty", "abc123", "monkey", "1234567",
+    "letmein", "trustno1", "dragon", "baseball", "iloveyou", "master", "sunshine",
+    "ashley", "bailey", "passw0rd", "shadow", "123123", "654321", "superman",
+    "qazwsx", "michael", "football", "password1", "password123", "admin",
+}
+
+
 def validate_password_strength(password: str) -> bool:
     if not password or len(password) < 8:
         return False
-    has_alpha = any(c.isalpha() for c in password)
+    has_upper = any(c.isupper() for c in password)
+    has_lower = any(c.islower() for c in password)
     has_digit = any(c.isdigit() for c in password)
-    return has_alpha and has_digit
+    has_special = any(not c.isalnum() for c in password)
+    if password.lower() in _COMMON_PASSWORDS:
+        return False
+    return has_upper and has_lower and has_digit and has_special
 
 
 # ── Access tokens ───────────────────────────────────────────────────────
@@ -49,11 +61,19 @@ def create_access_token(data: dict) -> str:
 
 def decode_access_token(token: str) -> str:
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: str | None = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-        return user_id
+        # Try current key first, then previous keys for rotation support
+        last_error = None
+        for key in settings.all_secret_keys:
+            try:
+                payload = jwt.decode(token, key, algorithms=[settings.ALGORITHM])
+                user_id: str | None = payload.get("sub")
+                if user_id is None:
+                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+                return user_id
+            except JWTError as e:
+                last_error = e
+                continue
+        raise last_error or JWTError("No valid key found")
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired or invalid")
 
@@ -93,6 +113,12 @@ async def create_access_token_async(data: dict) -> str:
 REFRESH_EXPIRE_DAYS = getattr(settings, "REFRESH_TOKEN_EXPIRE_DAYS", 7)
 _TTL_SECONDS = REFRESH_EXPIRE_DAYS * 24 * 3600
 
+# NOTE: In-memory token stores are NOT process-safe. In a multi-worker setup
+# (e.g. gunicorn with multiple workers), each worker has its own memory space.
+# Revocation and active-token state in _memory_active/_memory_revoked will NOT
+# be shared across workers. Redis is the authoritative store; in-memory dicts
+# are fast-lookup caches only. If Redis is unavailable, in-memory fallback may
+# allow revoked tokens to be accepted by a different worker process.
 _memory_active: dict[str, float] = {}
 _memory_revoked: dict[str, float] = {}
 _memory_lock = threading.Lock()
@@ -200,7 +226,16 @@ async def verify_refresh_token(token: str) -> dict | None:
     if not token:
         return None
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        # Try current key first, then previous keys for rotation support
+        payload = None
+        for key in settings.all_secret_keys:
+            try:
+                payload = jwt.decode(token, key, algorithms=[settings.ALGORITHM])
+                break
+            except JWTError:
+                continue
+        if payload is None:
+            return None
         jti = payload.get("jti")
         user_id = payload.get("sub")
         if not jti or not user_id:

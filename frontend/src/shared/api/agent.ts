@@ -2,7 +2,7 @@
  * Agent API client — CRUD, runs, steps, and feedback.
  */
 
-import { api } from "./client";
+import { api, getCsrfToken } from "./client";
 import type { Agent, AgentListResponse, AgentRun, AgentStep, RunDetailResponse, RunListResponse } from "../types";
 
 export const agentApi = {
@@ -101,6 +101,52 @@ export const agentApi = {
   /** Get a specific run with steps. */
   getRun: (runId: number): Promise<RunDetailResponse> => {
     return api.get(`/api/v1/agents/runs/${runId}`);
+  },
+
+  /** Stream SSE events for a run. */
+  streamRun: (
+    runId: number,
+    onEvent: (event: { type: string; [key: string]: unknown }) => void,
+    signal?: AbortSignal,
+  ): Promise<void> => {
+    const csrfToken = getCsrfToken();
+
+    return fetch(`/api/v1/agents/runs/${runId}/stream`, {
+      method: 'POST',
+      headers: {
+        ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+      },
+      credentials: 'include',
+      signal,
+    }).then(async (res) => {
+      if (!res.ok) throw new Error('Failed to stream agent run');
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type !== '_done') {
+              onEvent(event);
+            }
+          } catch {
+            // skip malformed SSE lines
+          }
+        }
+      }
+    });
   },
 
   /** Get steps for a run. */

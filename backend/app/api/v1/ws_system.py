@@ -41,6 +41,26 @@ def collect_metrics() -> dict:
     }
 
 
+def collect_processes(n: int = 5) -> list[dict]:
+    """Collect top N processes by CPU usage."""
+    processes = []
+    for proc in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+        try:
+            info = proc.info
+            if info["cpu_percent"] and info["cpu_percent"] > 0:
+                processes.append({
+                    "pid": info["pid"],
+                    "name": info["name"],
+                    "cpu_percent": round(info["cpu_percent"], 1),
+                    "memory_percent": round(info["memory_percent"], 1)
+                })
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
+    processes.sort(key=lambda x: x["cpu_percent"], reverse=True)
+    return processes[:n]
+
+
 # ── Logs ─────────────────────────────────────────────────────────────
 
 
@@ -59,7 +79,12 @@ def collect_logs(n: int = 15) -> dict:
 
 @router.websocket("/ws/system")
 async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
-    """Push real-time metrics (every 2s) and activity logs (every 5s)."""
+    """Push real-time metrics (every 500ms) and activity logs (every 3s)."""
+    # Accept token from sec-websocket-protocol header (preferred) or query param (legacy)
+    if not token:
+        protocols = ws.headers.get("sec-websocket-protocol", "")
+        if protocols:
+            token = protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
     if not token:
         await ws.close(code=4001, reason="Authentication required")
         return
@@ -73,16 +98,21 @@ async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
     try:
         while True:
             tick += 1
-            # Metrics: every iteration (2s)
+            # Metrics: every iteration (500ms)
             metrics = collect_metrics()
             await ws.send_text(json.dumps(metrics))
 
-            # Logs: every ~6 seconds (every 3rd tick; tick 1 covers cold-start)
-            if tick % 3 == 1:
+            # Logs: every ~3 seconds (every 6th tick)
+            if tick % 6 == 1:
                 logs = collect_logs(15)
                 await ws.send_text(json.dumps(logs))
 
-            await asyncio.sleep(2)
+            # Processes: every ~5 seconds (every 10th tick) - heavier operation
+            if tick % 10 == 0:
+                processes = collect_processes()
+                await ws.send_text(json.dumps({"type": "processes", "processes": processes}))
+
+            await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         pass
     except Exception:

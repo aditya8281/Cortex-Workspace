@@ -416,6 +416,10 @@ async def get_sync_status(
     ]
 
     # Compute last_sync from most recent SyncState.last_sync_at
+    # NOTE: pending_changes and indexed_files pull from SyncState.files_changed and
+    # SyncState.files_watched respectively. These fields default to 0 and may not be
+    # accurately updated by all sync job types. If they always return 0, the sync
+    # task needs to update SyncState.files_changed/files_watched on completion.
     last_sync = None
     total_pending = 0
     total_indexed = 0

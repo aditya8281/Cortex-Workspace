@@ -50,12 +50,12 @@ class Document(Base):
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     language: Mapped[str | None] = mapped_column(String(64), nullable=True)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    last_indexed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     embedding_model_version: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
     chunks: Mapped[list[DocumentChunk]] = relationship(
@@ -82,7 +82,7 @@ class DocumentChunk(Base):
     context_before: Mapped[str | None] = mapped_column(Text, nullable=True)
     context_after: Mapped[str | None] = mapped_column(Text, nullable=True)
     embedding_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     document: Mapped[Document] = relationship("Document", back_populates="chunks")
 

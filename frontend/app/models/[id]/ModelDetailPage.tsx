@@ -28,6 +28,7 @@ import Button from "@/shared/ui/Button";
 import Skeleton from "@/shared/ui/Skeleton";
 import { modelsApi } from "@/shared/api";
 import { useAuth } from "@/shared/auth/AuthProvider";
+import { useLiveMetrics } from "@/shared/hooks/useLiveMetrics";
 import type { ModelCatalogEntry, HardwareProfile, ModelVariantInfo } from "@/shared/types";
 
 /* ── Helpers ── */
@@ -236,6 +237,7 @@ export default function ModelDetailPage() {
 
   const [model, setModel] = useState<ModelCatalogEntry | null>(null);
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
+  const liveMetrics = useLiveMetrics();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingVariant, setDownloadingVariant] = useState<string | null>(null);
@@ -299,7 +301,9 @@ export default function ModelDetailPage() {
   if (authLoading || loading) return <ModelDetailSkeleton />;
   if (!model) return null;
 
-  const vramAvail = hardware?.gpu?.vram_available_gb ?? 0;
+  const vramAvail = liveMetrics?.gpu_percent != null && hardware?.gpu?.vram_gb
+    ? hardware.gpu.vram_gb * (1 - liveMetrics.gpu_percent / 100)
+    : hardware?.gpu?.vram_available_gb ?? 0;
   const bandwidth = hardware?.gpu?.memory_bandwidth_gbps ?? null;
   const recVariant = recommendedVariant;
   const recTps = recVariant ? estimateTps(recVariant.size_gb, bandwidth) : 0;
@@ -315,12 +319,7 @@ export default function ModelDetailPage() {
     ...(model.capabilities?.slice(0, 3) || []),
   ].filter(Boolean);
 
-  const benchmarks: { score: number; name: string }[] = [
-    { score: 85.2, name: "HumanEval" },
-    { score: 68.4, name: "MBPP" },
-    { score: 72.1, name: "MMLU" },
-    { score: 61.3, name: "GSM8K" },
-  ];
+  const benchmarks = model.benchmarks ?? [];
 
   return (
     <DashboardShell>
@@ -385,7 +384,19 @@ export default function ModelDetailPage() {
                 )}
               </Button>
             )}
-            <Button variant="secondary" size="md">
+            <Button variant="secondary" size="md" onClick={() => {
+              try {
+                const compareIds: string[] = JSON.parse(sessionStorage.getItem('compareModels') || '[]');
+                if (!compareIds.includes(model.model_id)) {
+                  compareIds.push(model.model_id);
+                  sessionStorage.setItem('compareModels', JSON.stringify(compareIds.slice(-3)));
+                }
+                router.push('/models/compare');
+              } catch {
+                sessionStorage.setItem('compareModels', JSON.stringify([model.model_id]));
+                router.push('/models/compare');
+              }
+            }}>
               <ArrowLeftRight size={14} />
               Add to Compare
             </Button>

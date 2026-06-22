@@ -4,6 +4,7 @@ Entrypoint for the FastAPI app — Auth + Memory only.
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from pathlib import Path
 
@@ -132,6 +133,36 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("Failed to recover sync states on startup: %s", e)
 
+    # Background library scrape (non-blocking — updates library.json once)
+    if "pytest" not in sys.modules:
+        try:
+            from backend.app.services.library_scraper import scrape_library_background
+
+            asyncio.create_task(scrape_library_background())
+            logger.info("Library scrape started in background")
+        except Exception as e:
+            logger.warning("Failed to start library scrape: %s", e)
+
+    # Auto-detect Ollama models on startup
+    if "pytest" not in sys.modules:
+        try:
+            from backend.app.services.ollama_sync import OllamaSyncService
+            from backend.app.db.session import SessionLocal as _SyncSessionLocal
+
+            _sync_db = _SyncSessionLocal()
+            try:
+                _sync_result = await OllamaSyncService().sync_installed_models(_sync_db)
+                logger.info(
+                    "Ollama model sync: matched=%d created=%d deleted=%d",
+                    _sync_result.matched,
+                    _sync_result.created,
+                    _sync_result.deleted,
+                )
+            finally:
+                _sync_db.close()
+        except Exception as e:
+            logger.warning("Ollama model sync failed on startup: %s", e)
+
     # Clean up orphaned agent runs left behind by a previous crash/restart
     if "pytest" not in sys.modules:
         from backend.app.db.session import SessionLocal as _SessionLocal
@@ -151,6 +182,26 @@ async def lifespan(app: FastAPI):
             db.rollback()
         finally:
             db.close()
+
+    # Periodic Ollama model sync (every 60 seconds)
+    if "pytest" not in sys.modules:
+        async def _periodic_ollama_sync():
+            while True:
+                await asyncio.sleep(60)
+                try:
+                    from backend.app.services.ollama_sync import OllamaSyncService
+                    from backend.app.db.session import SessionLocal as _PeriodicSession
+
+                    _pdb = _PeriodicSession()
+                    try:
+                        await OllamaSyncService().sync_installed_models(_pdb)
+                    finally:
+                        _pdb.close()
+                except Exception as e:
+                    logger.warning("Periodic Ollama sync failed: %s", e)
+
+        asyncio.create_task(_periodic_ollama_sync())
+        logger.info("Periodic Ollama model sync started (60s interval)")
 
     yield
 

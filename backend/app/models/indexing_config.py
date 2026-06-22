@@ -25,5 +25,5 @@ class IndexingConfig(Base):
     sync_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     sync_interval_seconds: Mapped[int] = mapped_column(Integer, default=300)
     priority: Mapped[int] = mapped_column(Integer, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

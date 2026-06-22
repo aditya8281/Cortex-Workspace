@@ -24,6 +24,8 @@ export default function MemoryEditor({ open, onOpenChange, onSaved, entry }: Mem
   const [title, setTitle] = useState(entry?.title ?? "");
   const [content, setContent] = useState(entry?.content ?? "");
   const [category, setCategory] = useState(entry?.category ?? "general");
+
+  const CATEGORIES = ["code", "document", "note", "idea", "project", "general"];
   const [sourcePath, setSourcePath] = useState(entry?.source_path ?? "");
   const [tagsText, setTagsText] = useState(entry?.tags?.join(", ") ?? "");
   const [saving, setSaving] = useState(false);
@@ -107,13 +109,15 @@ export default function MemoryEditor({ open, onOpenChange, onSaved, entry }: Mem
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelClass}>Category</label>
-            <input
-              type="text"
+            <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="general"
               className={inputClass}
-            />
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className={labelClass}>Source path (optional)</label>

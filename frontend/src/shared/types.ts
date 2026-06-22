@@ -438,6 +438,15 @@ export interface HardwareInfo {
   supports_metal: boolean;
 }
 
+export interface CatalogStatus {
+  cloud: string;
+  local: string;
+  registry: string;
+  last_updated: string;
+  from_fallback: boolean;
+  errors: Record<string, string>;
+}
+
 export interface ModelListResponse {
   models: ModelInfo[];
   total_count: number;
@@ -445,6 +454,7 @@ export interface ModelListResponse {
   available_from_providers: { name: string; size_bytes: number; context_length: number; capabilities: string[] }[];
   type_counts: Record<string, number>;
   size_counts: Record<string, number>;
+  catalog_status?: CatalogStatus;
 }
 
 export interface RecommendedModelsResponse {
@@ -547,6 +557,19 @@ export interface DownloadJob {
   error: string | null;
 }
 
+/** Download history entry as returned by GET /models/downloads/history */
+export interface DownloadHistoryEntry {
+  job_id: string;
+  model_id: string;
+  status: string;
+  progress: number;
+  downloaded_bytes: number;
+  total_bytes: number;
+  error: string | null;
+  completed_at: number | null;
+  created_at: number | null;
+}
+
 export interface DownloadQueueResponse {
   active: DownloadJob[];
   queued: DownloadJob[];
@@ -587,6 +610,7 @@ export interface ModelCatalogEntry {
   description: string;
   tags: string[];
   variants: ModelVariantInfo[];
+  benchmarks?: { score: number; name: string }[];
 }
 
 export interface ModelVariantInfo {
@@ -606,8 +630,21 @@ export interface ModelVariantInfo {
 
 // ── Model Search / Comparison / Sync ───────────────────────
 
+export interface ModelSearchItem {
+  model_id: string;
+  display_name: string;
+  family: string;
+  provider: string;
+  parameter_count: number | null;
+  architecture: string | null;
+  context_length: number | null;
+  capabilities: string[];
+  description: string | null;
+  tags: string[];
+}
+
 export interface ModelSearchResult {
-  models: ModelInfo[];
+  models: ModelSearchItem[];
   total_count: number;
 }
 
@@ -651,6 +688,25 @@ export interface SyncJob {
 }
 
 // ── Model Settings ───────────────────────────────────────────
+
+export interface InstalledVariant {
+  variant_id: string;
+  quantization: string;
+  size_bytes: number;
+  size_gb: number;
+  downloaded: boolean;
+  parameter_count: number | null;
+  quality_score: number;
+}
+
+export interface InstalledModel {
+  model_id: string;
+  display_name: string;
+  family: string;
+  parameter_count: number | null;
+  capabilities: string[];
+  variants: InstalledVariant[];
+}
 
 export interface ModelSettings {
   inference_backend: string;
@@ -711,7 +767,7 @@ export interface IndexingPreview {
 }
 
 export interface IndexingStatus {
-  watching_count: number;
+  watching: number;
   pending_changes: number;
   indexed_files: number;
   errors: number;

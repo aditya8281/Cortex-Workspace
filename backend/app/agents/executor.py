@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
+import secrets
+import time
 from typing import Any
 
 from backend.app.agents.base import BaseAgent
@@ -39,6 +43,7 @@ class ExecutorAgent(BaseAgent):
         self._llm_chat = llm_chat
         self._agent = agent
         self._approved_tools: set[str] = set()
+        self._approval_secret = secrets.token_hex(32)
 
         self.register_tool("search", self._search_tool)
         self.register_tool("read_file", self._read_file_tool)
@@ -48,16 +53,58 @@ class ExecutorAgent(BaseAgent):
         for name, entry in TOOL_REGISTRY.items():
             self.register_tool(name, entry["handler"])
 
-    def approve_tool(self, tool_name: str) -> None:
-        """Approve a tool for execution. Must be called by human, not LLM."""
+    def _generate_approval_token(self, tool_name: str, user_id: int) -> str:
+        """Generate an HMAC-signed approval token for a tool."""
+        payload = f"{tool_name}:{user_id}:{int(time.time())}"
+        signature = hmac.new(
+            self._approval_secret.encode(), payload.encode(), hashlib.sha256
+        ).hexdigest()
+        return f"{payload}:{signature}"
+
+    def _verify_approval_token(self, token: str, tool_name: str, user_id: int) -> bool:
+        """Verify an HMAC-signed approval token."""
+        try:
+            parts = token.split(":")
+            if len(parts) != 4:
+                return False
+            t_tool, t_user, t_ts, t_sig = parts
+            if t_tool != tool_name or int(t_user) != user_id:
+                return False
+            # Check token age (max 5 minutes)
+            if time.time() - int(t_ts) > 300:
+                return False
+            expected = hmac.new(
+                self._approval_secret.encode(),
+                f"{t_tool}:{t_user}:{t_ts}".encode(),
+                hashlib.sha256,
+            ).hexdigest()
+            return hmac.compare_digest(expected, t_sig)
+        except (ValueError, TypeError):
+            return False
+
+    def approve_tool(self, tool_name: str, user_id: int | None = None) -> str:
+        """Approve a tool for execution. Returns a signed token that must be
+        presented to actually execute the tool. If user_id is provided, generates
+        an HMAC-signed token; otherwise falls back to in-process approval (legacy)."""
+        if user_id is not None:
+            self._approved_tools.add(tool_name)
+            return self._generate_approval_token(tool_name, user_id)
         self._approved_tools.add(tool_name)
+        return ""
 
     async def execute_tool(self, name: str, **kwargs: Any) -> Any:
         # Block approve_tool from being called via LLM tool-calling
         if name == "approve_tool":
             return "Error: approve_tool cannot be called via tool calling. Human approval required."
-        if requires_approval(name) and name not in self._approved_tools:
-            return f"Tool '{name}' requires approval. Call approve_tool('{name}') first."
+        # Verify HMAC token if present in kwargs
+        approval_token = kwargs.pop("_approval_token", None)
+        if requires_approval(name):
+            if approval_token:
+                user_id = kwargs.get("_user_id")
+                if user_id is None or not self._verify_approval_token(approval_token, name, int(user_id)):
+                    return f"Tool '{name}' requires valid approval token."
+            elif name not in self._approved_tools:
+                return f"Tool '{name}' requires approval. Call approve_tool('{name}') first."
         return await super().execute_tool(name, **kwargs)
 
     def _default_prompt(self) -> str:

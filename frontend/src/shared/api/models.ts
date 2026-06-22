@@ -10,9 +10,10 @@ import type {
   HardwareInfo,
   DownloadProgressResponse,
   DownloadResult,
-  DownloadJob,
+  DownloadHistoryEntry,
   DownloadQueueResponse,
   StorageUsage,
+  InstalledModel,
   ModelCatalogEntry,
   ModelSearchResult,
   ModelComparisonResult,
@@ -79,7 +80,7 @@ export const modelsApi = {
   },
 
   /** Get installed models with status. */
-  installed: (): Promise<{ models: ModelCatalogEntry[]; installed_count: number }> => {
+  installed: (): Promise<{ models: InstalledModel[]; installed_count: number }> => {
     return api.get("/api/v1/models/installed");
   },
 
@@ -89,7 +90,7 @@ export const modelsApi = {
   },
 
   /** Get download history. */
-  downloadHistory: (limit?: number): Promise<{ history: DownloadJob[] }> => {
+  downloadHistory: (limit?: number): Promise<{ history: DownloadHistoryEntry[] }> => {
     const qs = limit ? `?limit=${limit}` : "";
     return api.get(`/api/v1/models/downloads/history${qs}`);
   },
@@ -102,6 +103,11 @@ export const modelsApi = {
   /** Refresh catalogue. */
   refreshCatalogue: (): Promise<{ status: string; models_added: number }> => {
     return api.post("/api/v1/models/catalogue/refresh");
+  },
+
+  /** Sync locally installed Ollama models to the database. */
+  syncInstalled: (): Promise<{ matched: number; created: number; deleted: number; errors: string[] }> => {
+    return api.post("/api/v1/models/installed/sync");
   },
 
   /** Get model detail with variants. */

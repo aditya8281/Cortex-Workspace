@@ -28,10 +28,10 @@ class GraphNode(Base):
     start_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    chunk = relationship("CodeChunk", backref="graph_nodes")
-    repo = relationship("RepoIndex", backref="graph_nodes")
+    chunk = relationship("CodeChunk", back_populates="graph_nodes")
+    repo = relationship("RepoIndex", back_populates="graph_nodes")
     outgoing_edges = relationship("GraphEdge", foreign_keys="GraphEdge.source_id", back_populates="source")
     incoming_edges = relationship("GraphEdge", foreign_keys="GraphEdge.target_id", back_populates="target")
 
@@ -54,11 +54,11 @@ class GraphEdge(Base):
     edge_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     weight: Mapped[int] = mapped_column(Integer, default=1)
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    first_seen: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_seen: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     source = relationship("GraphNode", foreign_keys=[source_id], back_populates="outgoing_edges")
     target = relationship("GraphNode", foreign_keys=[target_id], back_populates="incoming_edges")

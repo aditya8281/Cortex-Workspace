@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Awaitable, Callable
+from threading import Lock
 
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -13,10 +14,15 @@ from backend.app.core.redis import redis_cache
 
 logger = logging.getLogger(__name__)
 
+# In-memory fallback for when Redis is down
+_fallback_store: dict[str, dict] = {}
+_fallback_lock = Lock()
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Global rate limiting middleware using Redis sliding window.
 
+    Falls back to in-memory tracking when Redis is unavailable.
     Configured via ``RATE_LIMIT_REQUESTS`` and ``RATE_LIMIT_WINDOW_SECONDS``
     environment variables (see ``backend.app.core.config.Settings``).
     """
@@ -33,6 +39,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         is_auth_endpoint = request.url.path.startswith("/api/v1/auth")
         client_ip = request.client.host if request.client else "unknown"
         key = f"ratelimit:{'auth:' if is_auth_endpoint else ''}{client_ip}"
+        max_req = min(self.max_requests, 10) if is_auth_endpoint else self.max_requests
 
         try:
             current = await redis_cache.get(key) or {"count": 0, "window_start": time.time()}
@@ -41,12 +48,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             current["count"] += 1
             await redis_cache.set(key, current, expire_seconds=self.window)
 
-            max_req = min(self.max_requests, 10) if is_auth_endpoint else self.max_requests
             if current["count"] > max_req:
                 return Response(status_code=429, content="Rate limit exceeded")
         except Exception as e:
-            logger.warning("Rate limiter Redis failure for %s %s: %s", request.method, request.url.path, e)
-            return await call_next(request)
+            logger.warning("Rate limiter Redis failure, using in-memory fallback: %s", e)
+            # In-memory fallback
+            now = time.time()
+            with _fallback_lock:
+                entry = _fallback_store.get(key, {"count": 0, "window_start": now})
+                if now - entry["window_start"] > self.window:
+                    entry = {"count": 0, "window_start": now}
+                entry["count"] += 1
+                _fallback_store[key] = entry
+                if entry["count"] > max_req:
+                    return Response(status_code=429, content="Rate limit exceeded")
 
         return await call_next(request)
 

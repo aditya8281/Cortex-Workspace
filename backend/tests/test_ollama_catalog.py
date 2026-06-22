@@ -10,6 +10,7 @@ import pytest
 
 from backend.app.services.ollama_catalog import (
     OllamaCatalogService,
+    CatalogSourceStatus,
     get_catalog_service,
     get_ollama_catalog,
     get_ollama_catalog_sync,
@@ -27,6 +28,7 @@ def service(tmp_path: Path) -> OllamaCatalogService:
     # Override cache path to use tmp
     mod.CACHE_DIR = tmp_path
     mod.CACHE_FILE = tmp_path / "ollama_catalog.json"
+    mod.FALLBACK_FILE = tmp_path / "ollama_catalog_fallback.json"
     return svc
 
 
@@ -255,8 +257,9 @@ class TestCacheIntegration:
         cached = [{"name": "llama3.1:8b", "source": "cached"}]
         service._save_cache(cached)
 
-        result = await service.fetch_catalog(force_refresh=False)
+        result, status = await service.fetch_catalog(force_refresh=False)
         assert result == cached
+        assert not status.from_fallback
 
     @pytest.mark.asyncio
     async def test_fetch_catalog_force_refresh(self, service: OllamaCatalogService) -> None:
@@ -266,9 +269,10 @@ class TestCacheIntegration:
         with patch.object(service, "fetch_cloud_models", return_value=[]):
             with patch.object(service, "fetch_local_models", return_value=[]):
                 with patch.object(service, "fetch_registry_models", return_value=[]):
-                    result = await service.fetch_catalog(force_refresh=True)
+                    result, status = await service.fetch_catalog(force_refresh=True)
 
         assert result == []
+        assert not status.from_fallback
 
 
 # ── Deduplication tests ──────────────────────────────────────────
@@ -283,7 +287,7 @@ class TestDeduplication:
         with patch.object(service, "fetch_cloud_models", return_value=cloud):
             with patch.object(service, "fetch_local_models", return_value=[]):
                 with patch.object(service, "fetch_registry_models", return_value=registry):
-                    result = await service.fetch_catalog(force_refresh=True)
+                    result, _status = await service.fetch_catalog(force_refresh=True)
 
         assert len(result) == 1
         assert result[0]["source"] == "cloud"
@@ -298,8 +302,10 @@ class TestSyncWrapper:
         service._save_cache(cached)
 
         result = service.fetch_catalog_sync(force_refresh=False)
-        assert isinstance(result, list)
-        assert result == cached
+        assert isinstance(result, tuple)
+        models, status = result
+        assert models == cached
+        assert not status.from_fallback
 
 
 # ── Module-level function tests ──────────────────────────────────
@@ -308,9 +314,13 @@ class TestSyncWrapper:
 class TestModuleFunctions:
     def test_get_ollama_catalog_sync(self) -> None:
         result = get_ollama_catalog_sync(force_refresh=False)
-        assert isinstance(result, list)
+        assert isinstance(result, tuple)
+        models, status = result
+        assert isinstance(models, list)
 
     @pytest.mark.asyncio
     async def test_get_ollama_catalog(self) -> None:
         result = await get_ollama_catalog(force_refresh=False)
-        assert isinstance(result, list)
+        assert isinstance(result, tuple)
+        models, status = result
+        assert isinstance(models, list)

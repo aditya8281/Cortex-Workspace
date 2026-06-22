@@ -23,11 +23,6 @@ async def readiness():
 
 @router.get("/health/deep", status_code=status.HTTP_200_OK)
 async def deep_health():
-    database_ok = HealthService.check_database()
-
-    return {
-        "status": "healthy" if database_ok else "degraded",
-        "checks": {
-            "database": database_ok,
-        },
-    }
+    result = HealthService.check_all()
+    status_code = 200 if result["status"] == "healthy" else 503
+    return JSONResponse(status_code=status_code, content=result)

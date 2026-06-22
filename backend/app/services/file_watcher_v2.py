@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -142,10 +143,13 @@ class FileWatcherV2:
 
 
 _file_watcher_v2: FileWatcherV2 | None = None
+_file_watcher_v2_lock = threading.Lock()
 
 
 def get_file_watcher_v2() -> FileWatcherV2:
     global _file_watcher_v2
     if _file_watcher_v2 is None:
-        _file_watcher_v2 = FileWatcherV2()
+        with _file_watcher_v2_lock:
+            if _file_watcher_v2 is None:
+                _file_watcher_v2 = FileWatcherV2()
     return _file_watcher_v2

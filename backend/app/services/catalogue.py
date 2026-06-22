@@ -121,7 +121,7 @@ class CatalogueManager:
         try:
             from backend.app.services.ollama_catalog import get_ollama_catalog_sync
 
-            models = get_ollama_catalog_sync(force_refresh=force_refresh)
+            models, _source_status = get_ollama_catalog_sync(force_refresh=force_refresh)
         except Exception as e:
             logger.warning("Failed to fetch catalog: %s", e)
             return 0

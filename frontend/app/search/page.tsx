@@ -16,6 +16,24 @@ export default function SearchPage() {
   const [aiAnswer, setAiAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const data = await searchApi.unified(query, { max_results: 20, cursor: nextCursor });
+      setResults((prev) => [...prev, ...(data.results || [])]);
+      setNextCursor(data.next_cursor);
+      setHasMore(data.has_more);
+    } catch {
+      // silently fail on load more
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [query, nextCursor, loadingMore]);
 
   const handleSearch = useCallback(
     async (q: string) => {
@@ -25,6 +43,8 @@ export default function SearchPage() {
       try {
         const data = await searchApi.unified(q, { max_results: 20 });
         setResults(data.results || []);
+        setNextCursor(data.next_cursor);
+        setHasMore(data.has_more);
 
         // Fetch LLM-powered answer from backend
         try {
@@ -175,6 +195,17 @@ export default function SearchPage() {
                 </Card>
               ))}
             </div>
+            {hasMore && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-4 py-2 rounded-xl text-sm font-medium border border-border-subtle bg-bg-elevated text-text-secondary hover:border-accent/30 hover:text-accent transition-colors disabled:opacity-50"
+                >
+                  {loadingMore ? "Loading..." : "Load more results"}
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
 

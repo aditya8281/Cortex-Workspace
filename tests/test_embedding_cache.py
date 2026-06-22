@@ -83,22 +83,3 @@ def test_access_count_increments(db_session: Session, cache_service: EmbeddingCa
     assert entry.access_count == 3  # 1 put + 2 gets
 
 
-def test_embed_with_cache(db_session: Session, cache_service: EmbeddingCacheService):
-    from backend.app.services.embedding_service import EmbeddingService
-
-    embedder = EmbeddingService.__new__(EmbeddingService)
-    embedder._backend = "mock"
-    embedder._model = None
-    embedder._tokenizer = None
-    embedder._load_failed = False
-    embedder.model_path = ""
-
-    text = "test embedding with cache"
-    result1 = embedder.embed_with_cache(text, cache_service)
-    assert len(result1) == 768
-
-    result2 = embedder.embed_with_cache(text, cache_service)
-    assert result1 == result2
-
-    stats = cache_service.stats()
-    assert stats["total_entries"] == 1

@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Brain, Search, RefreshCw, Hash, LayoutGrid, Network, List, ChevronDown, ChevronRight, FolderSync, Loader2, Check, X, Sparkles, TrendingUp, Trash2 } from "lucide-react";
+import { Plus, Brain, Search, RefreshCw, Hash, LayoutGrid, Network, List, ChevronDown, ChevronRight, FolderSync, Loader2, Check, X, Sparkles, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Button from "../../src/shared/ui/Button";
 import PageTransition from "../../src/shared/ui/PageTransition";
 import DashboardShell from "../../src/shared/layout/DashboardShell";
-import type { MemoryEntry, MemorySearchResult, LongTermMemory, MemoryStats } from "../../src/shared/types";
+import type { MemoryEntry, MemorySearchResult, MemoryStats, LongTermMemory } from "../../src/shared/types";
 import {
   apiListMemory,
   apiSearchMemory,
@@ -18,6 +18,8 @@ import { api } from "@/shared/api/client";
 import MemorySearch from "./MemorySearch";
 import MemoryEditor from "./MemoryEditor";
 import MemoryDetail from "./MemoryDetail";
+import MemoryGraphView from "./components/MemoryGraphView";
+import MemoryLearningView from "./components/MemoryLearningView";
 
 type ViewMode = "list" | "search";
 type DisplayView = "graph" | "list" | "learning";
@@ -63,13 +65,6 @@ const categoryColors: Record<string, string> = {
   note: "bg-amber-500/10 text-amber-400 border-amber-500/20",
   idea: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   default: "bg-accent/10 text-accent border-accent/20",
-};
-
-const categoryNodeColors: Record<string, string> = {
-  code: "#3b82f6",
-  document: "#a855f7",
-  note: "#f59e0b",
-  idea: "#10b981",
 };
 
 const categoryChipColors: Record<string, string> = {
@@ -383,74 +378,6 @@ export default function MemoryPage() {
 
   const categoryList = useMemo(() => Object.keys(categories), [categories]);
 
-  const graphNodes = useMemo(() => {
-    const nodes: { id: string; label: string; x: number; y: number; color: string; count: number; type: "category" }[] = [];
-    const catEntries = categoryList;
-    const cx = 400;
-    const cy = 250;
-    const radius = 160;
-    catEntries.forEach((cat, i) => {
-      const angle = (2 * Math.PI * i) / catEntries.length - Math.PI / 2;
-      nodes.push({
-        id: `cat-${cat}`,
-        label: cat,
-        x: cx + radius * Math.cos(angle),
-        y: cy + radius * Math.sin(angle),
-        color: categoryNodeColors[cat] || "#06b6d4",
-        count: categories[cat] || 0,
-        type: "category",
-      });
-    });
-    return nodes;
-  }, [categoryList, categories]);
-
-  const graphEdges = useMemo(() => {
-    const edges: { from: string; to: string; color: string }[] = [];
-    displayEntries.forEach((entry) => {
-      const catNode = graphNodes.find(n => n.id === `cat-${entry.category}`);
-      if (catNode) {
-        edges.push({
-          from: catNode.id,
-          to: String(entry.id),
-          color: catNode.color,
-        });
-      }
-    });
-    return edges;
-  }, [displayEntries, graphNodes]);
-
-  const graphEntryNodes = useMemo(() => {
-    const entryNodes: { id: string; label: string; x: number; y: number; color: string; entry: MemoryEntry }[] = [];
-    const catPositions: Record<string, { x: number; y: number }> = {};
-    graphNodes.forEach(n => { catPositions[n.id] = { x: n.x, y: n.y }; });
-
-    const grouped: Record<string, MemoryEntry[]> = {};
-    displayEntries.forEach(e => {
-      const catKey = `cat-${e.category}`;
-      if (!grouped[catKey]) grouped[catKey] = [];
-      grouped[catKey].push(e);
-    });
-
-    Object.entries(grouped).forEach(([catKey, catEntries]) => {
-      const catPos = catPositions[catKey];
-      if (!catPos) return;
-      const catColor = categoryNodeColors[catKey.replace("cat-", "")] || "#06b6d4";
-      catEntries.forEach((entry, i) => {
-        const angle = (2 * Math.PI * i) / catEntries.length + Math.PI / 6;
-        const dist = 100 + (i % 3) * 20;
-        entryNodes.push({
-          id: String(entry.id),
-          label: entry.title.length > 20 ? entry.title.slice(0, 20) + "…" : entry.title,
-          x: catPos.x + dist * Math.cos(angle),
-          y: catPos.y + dist * Math.sin(angle),
-          color: catColor,
-          entry,
-        });
-      });
-    });
-    return entryNodes;
-  }, [displayEntries, graphNodes]);
-
   return (
     <DashboardShell>
       <PageTransition>
@@ -463,15 +390,32 @@ export default function MemoryPage() {
                   <Brain className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-text">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-lg font-bold text-text">
                     {selectedCategory ? (
                       <span className="capitalize">{selectedCategory}</span>
                     ) : (
                       "Memory"
                     )}
                   </h1>
+                  </div>
                   <p className="text-xs text-text-muted">
-                    {total} {total === 1 ? "entry" : "entries"} · Knowledge Graph
+                    {total} {total === 1 ? "entry" : "entries"}
+                    {syncStatus && syncStatus.watching > 0 && (
+                      <>
+                        {' · '}
+                        <span className="inline-flex items-center gap-1">
+                          {activeJob ? (
+                            <Loader2 className="h-3 w-3 animate-spin text-accent inline" />
+                          ) : (
+                            <FolderSync className="h-3 w-3 text-success inline" />
+                          )}
+                          <span className={activeJob ? "text-accent" : "text-success"}>
+                            {activeJob ? "Syncing" : `${syncStatus.indexed_files} indexed`}
+                          </span>
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -703,129 +647,13 @@ export default function MemoryPage() {
                   )}
                 </div>
               ) : displayView === "graph" ? (
-                /* ── Graph View ── */
-                <div className="w-full h-full min-h-[500px] rounded-xl border border-border-subtle bg-bg-elevated/50 overflow-hidden">
-                  <svg
-                    viewBox="0 0 800 500"
-                    className="w-full h-full"
-                    preserveAspectRatio="xMidYMid meet"
-                  >
-                    <defs>
-                      <filter id="glow">
-                        <feGaussianBlur stdDeviation="3" result="blur" />
-                        <feMerge>
-                          <feMergeNode in="blur" />
-                          <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                      </filter>
-                      {categoryList.map((cat) => (
-                        <radialGradient key={cat} id={`grad-${cat}`}>
-                          <stop offset="0%" stopColor={categoryNodeColors[cat] || "#06b6d4"} stopOpacity="0.3" />
-                          <stop offset="100%" stopColor={categoryNodeColors[cat] || "#06b6d4"} stopOpacity="0" />
-                        </radialGradient>
-                      ))}
-                    </defs>
-
-                    {/* Edges */}
-                    {graphEdges.map((edge, i) => {
-                      const entryNode = graphEntryNodes.find(n => n.id === edge.to);
-                      const catNode = graphNodes.find(n => n.id === edge.from);
-                      if (!entryNode || !catNode) return null;
-                      return (
-                        <line
-                          key={`edge-${i}`}
-                          x1={catNode.x}
-                          y1={catNode.y}
-                          x2={entryNode.x}
-                          y2={entryNode.y}
-                          stroke={edge.color}
-                          strokeOpacity="0.15"
-                          strokeWidth="1"
-                        />
-                      );
-                    })}
-
-                    {/* Category glow halos */}
-                    {graphNodes.map((node) => (
-                      <circle
-                        key={`halo-${node.id}`}
-                        cx={node.x}
-                        cy={node.y}
-                        r={50}
-                        fill={`url(#grad-${node.label})`}
-                      />
-                    ))}
-
-                    {/* Category nodes */}
-                    {graphNodes.map((node) => (
-                      <g
-                        key={node.id}
-                        className="cursor-pointer"
-                        onClick={() => setSelectedCategory(selectedCategory === node.label ? null : node.label)}
-                      >
-                        <circle
-                          cx={node.x}
-                          cy={node.y}
-                          r={28}
-                          fill="#0a0a0f"
-                          stroke={node.color}
-                          strokeWidth={selectedCategory === node.label ? 2.5 : 1.5}
-                          filter="url(#glow)"
-                          opacity={selectedCategory && selectedCategory !== node.label ? 0.4 : 1}
-                        />
-                        <text
-                          x={node.x}
-                          y={node.y - 2}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          fill={node.color}
-                          fontSize="11"
-                          fontWeight="600"
-                          fontFamily="Inter, sans-serif"
-                          className="capitalize"
-                        >
-                          {node.label}
-                        </text>
-                        <text
-                          x={node.x}
-                          y={node.y + 12}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                          fill="#555566"
-                          fontSize="9"
-                          fontFamily="JetBrains Mono, monospace"
-                        >
-                          {node.count}
-                        </text>
-                      </g>
-                    ))}
-
-                    {/* Entry nodes */}
-                    {graphEntryNodes.map((node) => (
-                      <g
-                        key={node.id}
-                        className="cursor-pointer"
-                        onClick={() => openDetail(node.entry)}
-                      >
-                        <circle
-                          cx={node.x}
-                          cy={node.y}
-                          r={5}
-                          fill={node.color}
-                          opacity={selectedCategory && selectedCategory !== node.entry.category ? 0.2 : 0.7}
-                          className="transition-opacity hover:opacity-100"
-                        />
-                        <title>{node.entry.title}</title>
-                      </g>
-                    ))}
-
-                    {graphNodes.length === 0 && (
-                      <text x="400" y="250" textAnchor="middle" fill="#555566" fontSize="13" fontFamily="Inter, sans-serif">
-                        No categories to display
-                      </text>
-                    )}
-                  </svg>
-                </div>
+                <MemoryGraphView
+                  entries={displayEntries}
+                  categories={categories}
+                  selectedCategory={selectedCategory}
+                  onSelectCategory={(cat) => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                  onSelectEntry={openDetail}
+                />
               ) : (
                 /* ── List View ── */
                 <div className="space-y-2">
@@ -894,122 +722,13 @@ export default function MemoryPage() {
               )}
 
               {displayView === "learning" && (
-                <div className="space-y-6">
-                  {ltmLoading && !ltmStats ? (
-                    <div className="space-y-3">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="h-20 animate-pulse rounded-xl bg-bg-elevated border border-border-subtle" />
-                      ))}
-                    </div>
-                  ) : ltmStats ? (
-                    <>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="rounded-xl border border-border-subtle bg-bg-elevated p-4">
-                          <p className="text-xs text-text-muted mb-1">Total Memories</p>
-                          <p className="text-2xl font-bold text-text">{ltmStats.total}</p>
-                        </div>
-                        <div className="rounded-xl border border-border-subtle bg-bg-elevated p-4">
-                          <p className="text-xs text-text-muted mb-1">Active</p>
-                          <p className="text-2xl font-bold text-success">{ltmStats.active}</p>
-                        </div>
-                        <div className="rounded-xl border border-border-subtle bg-bg-elevated p-4">
-                          <p className="text-xs text-text-muted mb-1">Avg Confidence</p>
-                          <p className="text-2xl font-bold text-accent">{(ltmStats.avg_confidence * 100).toFixed(0)}%</p>
-                        </div>
-                        <div className="rounded-xl border border-border-subtle bg-bg-elevated p-4">
-                          <p className="text-xs text-text-muted mb-1">Categories</p>
-                          <p className="text-2xl font-bold text-text">{Object.keys(ltmStats.by_category).length}</p>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-border-subtle bg-bg-elevated p-4">
-                        <h3 className="text-sm font-semibold text-text mb-3 flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4 text-accent" />
-                          By Category
-                        </h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {Object.entries(ltmStats.by_category).map(([cat, count]) => (
-                            <div key={cat} className="flex items-center justify-between rounded-lg bg-bg-surface px-3 py-2 border border-border-subtle">
-                              <span className="text-xs font-medium text-text capitalize">{cat}</span>
-                              <span className="text-xs font-mono text-text-muted">{count}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {Object.entries(ltmMemories).map(([cat, memories]) =>
-                        memories.length > 0 ? (
-                          <div key={cat} className="rounded-xl border border-border-subtle bg-bg-elevated p-4">
-                            <h3 className="text-sm font-semibold text-text mb-3 capitalize flex items-center gap-2">
-                              <span className={cn(
-                                "rounded-full px-2 py-0.5 text-[10px] font-mono font-medium uppercase tracking-wider border",
-                                categoryColors[cat] || categoryColors.default
-                              )}>
-                                {cat}
-                              </span>
-                              <span className="text-xs text-text-muted font-normal">({memories.length})</span>
-                            </h3>
-                            <div className="space-y-2">
-                              {memories.map((m) => (
-                                <div key={m.id} className="flex items-start gap-3 rounded-lg bg-bg-surface p-3 border border-border-subtle">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold text-text truncate">{m.title}</p>
-                                    <p className="text-[11px] text-text-muted mt-0.5 line-clamp-2">{m.content}</p>
-                                    <div className="flex items-center gap-3 mt-2">
-                                      <div className="flex-1 h-1.5 bg-bg-elevated rounded-full overflow-hidden">
-                                        <div
-                                          className="h-full bg-accent rounded-full transition-all"
-                                          style={{ width: `${m.confidence * 100}%` }}
-                                        />
-                                      </div>
-                                      <span className="text-[10px] font-mono text-text-muted shrink-0">
-                                        {(m.confidence * 100).toFixed(0)}%
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col gap-1 shrink-0">
-                                    <button
-                                      onClick={() => handleReinforce(m.id)}
-                                      className="text-[10px] text-accent hover:text-accent/80 transition-colors px-1.5 py-0.5 rounded hover:bg-accent/10"
-                                      title="Reinforce"
-                                    >
-                                      <TrendingUp className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteLtm(m.id)}
-                                      className="text-[10px] text-error/60 hover:text-error transition-colors px-1.5 py-0.5 rounded hover:bg-error/10"
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null
-                      )}
-
-                      {Object.values(ltmMemories).every((m) => m.length === 0) && (
-                        <div className="flex flex-col items-center py-12 text-center">
-                          <Sparkles className="h-12 w-12 text-accent/30 mb-3" />
-                          <p className="text-sm font-medium text-text mb-1">No learned memories yet</p>
-                          <p className="text-xs text-text-muted max-w-xs">
-                            Cortex will automatically extract insights from your conversations.
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center py-12 text-center">
-                      <Sparkles className="h-12 w-12 text-accent/30 mb-3" />
-                      <p className="text-sm font-medium text-text mb-1">No learned memories yet</p>
-                      <p className="text-xs text-text-muted max-w-xs">
-                        Cortex will automatically extract insights from your conversations.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <MemoryLearningView
+                  stats={ltmStats}
+                  memories={ltmMemories}
+                  loading={ltmLoading}
+                  onReinforce={handleReinforce}
+                  onDelete={handleDeleteLtm}
+                />
               )}
             </div>
 

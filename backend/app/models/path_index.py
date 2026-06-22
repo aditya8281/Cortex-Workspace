@@ -23,7 +23,7 @@ class PathIndex(Base):
     is_dir: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     file_count: Mapped[int] = mapped_column(Integer, default=0)
     total_size: Mapped[int] = mapped_column(BigInteger, default=0)
-    last_modified: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_modified: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     repo_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("repo_indexes.id", ondelete="CASCADE"), nullable=False, index=True
     )

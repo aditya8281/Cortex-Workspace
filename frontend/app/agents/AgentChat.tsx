@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Loader2, ChevronDown, ChevronUp, Clock, Play, CheckCircle, XCircle } from "lucide-react";
+import { Send, Bot, User, Loader2, ChevronDown, ChevronUp, Clock, Play, CheckCircle, XCircle, Square, ThumbsUp, ThumbsDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../src/lib/utils";
 import type { Agent, AgentRun, AgentStep } from "../../src/shared/types";
@@ -45,11 +45,18 @@ export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
+  const [feedbackGiven, setFeedbackGiven] = useState<Set<number>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const runIdRef = useRef<number | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
 
   function toggleStep(key: string) {
     setExpandedSteps((prev) => {
@@ -68,38 +75,52 @@ export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
     setInput("");
     setLoading(true);
 
+    const abortController = new AbortController();
+    abortRef.current = abortController;
+
     try {
       const result = await agentApi.run({ agent_id: agent.id, input: userMessage.content });
-      const runId = result.run_id;
+      runIdRef.current = result.run_id;
 
-      // Poll for completion
-      let runData: { run: AgentRun; steps: AgentStep[] } | null = null;
-      for (let attempts = 0; attempts < 120; attempts++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const statusRes = await agentApi.getRunStatus(runId);
-        if (statusRes.status === "completed" || statusRes.status === "failed" || statusRes.status === "unknown") {
-          // Fetch full run details
-          runData = await agentApi.getRun(runId);
-          break;
-        }
-      }
+      const assistantMsg: Message = { role: "assistant", content: "", steps: [] };
+      setMessages((prev) => [...prev, assistantMsg]);
 
-      if (!runData) {
-        throw new Error("Timed out waiting for agent run");
-      }
-
-      const run = runData.run;
-      const steps = runData.steps || [];
-
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: run.output || run.error || "No output",
-        steps,
-        timestamp: run.completed_at || undefined,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      onRunComplete?.(run);
+      await agentApi.streamRun(
+        result.run_id,
+        (event) => {
+          if (event.type === "step_update") {
+            const step = event.step as AgentStep;
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last?.role === "assistant") {
+                const steps = last.steps || [];
+                const idx = steps.findIndex((s) => s.id === step.id);
+                const newSteps = idx >= 0
+                  ? steps.map((s, i) => (i === idx ? step : s))
+                  : [...steps, step];
+                return [...prev.slice(0, -1), { ...last, steps: newSteps }];
+              }
+              return prev;
+            });
+          } else if (event.type === "run_update") {
+            const run = event.run as AgentRun;
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last?.role === "assistant") {
+                return [...prev.slice(0, -1), { ...last, content: run.output || last.content, timestamp: run.completed_at || undefined }];
+              }
+              return prev;
+            });
+            if (run.status === "completed" || run.status === "failed") {
+              runIdRef.current = run.id;
+              onRunComplete?.(run);
+            }
+          }
+        },
+        abortController.signal,
+      );
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       const errorMessage: Message = {
         role: "assistant",
         content: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
@@ -107,6 +128,7 @@ export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
   }
 
@@ -152,6 +174,37 @@ export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-text whitespace-pre-wrap">{msg.content}</p>
+
+                {msg.role === "assistant" && msg.content && i === messages.length - 1 && !loading && runIdRef.current && !feedbackGiven.has(runIdRef.current) && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <button
+                      onClick={async () => {
+                        if (!runIdRef.current) return;
+                        try {
+                          await agentApi.addFeedback(runIdRef.current, { rating: 5 });
+                          setFeedbackGiven((prev) => new Set(prev).add(runIdRef.current!));
+                        } catch {}
+                      }}
+                      className="p-1 rounded-md hover:bg-success/10 text-text-muted hover:text-success transition-colors"
+                      title="Helpful"
+                    >
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!runIdRef.current) return;
+                        try {
+                          await agentApi.addFeedback(runIdRef.current, { rating: 1 });
+                          setFeedbackGiven((prev) => new Set(prev).add(runIdRef.current!));
+                        } catch {}
+                      }}
+                      className="p-1 rounded-md hover:bg-error/10 text-text-muted hover:text-error transition-colors"
+                      title="Not helpful"
+                    >
+                      <ThumbsDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
 
                 {/* Structured Steps */}
                 {msg.steps && msg.steps.length > 0 && (
@@ -281,18 +334,28 @@ export default function AgentChat({ agent, onRunComplete }: AgentChatProps) {
             disabled={loading}
             className="flex-1 rounded-xl bg-bg-surface border border-border-subtle px-4 py-2.5 text-sm text-text placeholder:text-text-muted outline-none transition-all duration-200 focus:border-accent/40 focus:ring-2 focus:ring-accent/10 disabled:opacity-50"
           />
-          <button
-            onClick={sendMessage}
-            disabled={loading || !input.trim()}
-            className={cn(
-              "rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200",
-              loading || !input.trim()
-                ? "bg-bg-surface text-text-muted border border-border-subtle"
-                : "bg-accent text-black hover:bg-accent-hover",
-            )}
-          >
-            <Send className="h-4 w-4" />
-          </button>
+          {loading ? (
+            <button
+              onClick={() => abortRef.current?.abort()}
+              className="rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 bg-error/10 text-error border border-error/20 hover:bg-error/20"
+              title="Stop generation"
+            >
+              <Square className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              onClick={sendMessage}
+              disabled={!input.trim()}
+              className={cn(
+                "rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200",
+                !input.trim()
+                  ? "bg-bg-surface text-text-muted border border-border-subtle"
+                  : "bg-accent text-black hover:bg-accent-hover",
+              )}
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -23,9 +23,9 @@ class Agent(Base):
     model_id: Mapped[str] = mapped_column(String(100), nullable=False)
     tools_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
     user = relationship("User")
@@ -46,8 +46,8 @@ class AgentRun(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     output: Mapped[str | None] = mapped_column(Text, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     agent = relationship("Agent", back_populates="runs")
     steps = relationship("AgentStep", back_populates="run", cascade="all, delete-orphan")
@@ -71,7 +71,7 @@ class AgentStep(Base):
     action_input_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     observation: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     run = relationship("AgentRun", back_populates="steps")
 
@@ -88,6 +88,6 @@ class AgentFeedback(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     rating: Mapped[int] = mapped_column(Integer, nullable=False)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     run = relationship("AgentRun", back_populates="feedback")
