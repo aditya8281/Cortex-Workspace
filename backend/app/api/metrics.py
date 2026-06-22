@@ -5,11 +5,8 @@ from collections import deque
 from threading import Lock
 
 import psutil
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
-
-from backend.app.core.db import get_current_user
-from backend.app.models.user import User
 
 router = APIRouter()
 
@@ -33,7 +30,7 @@ def record_request(status_code: int, duration_ms: float) -> None:
 
 
 @router.api_route("/metrics", methods=["GET", "HEAD"])
-async def metrics(request: Request, current_user: User = Depends(get_current_user)):
+async def metrics(request: Request):
     if request.method == "HEAD":
         return
     uptime = time.time() - _start_time
