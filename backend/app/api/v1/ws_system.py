@@ -41,6 +41,26 @@ def collect_metrics() -> dict:
     }
 
 
+def collect_processes(n: int = 5) -> list[dict]:
+    """Collect top N processes by CPU usage."""
+    processes = []
+    for proc in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+        try:
+            info = proc.info
+            if info["cpu_percent"] and info["cpu_percent"] > 0:
+                processes.append({
+                    "pid": info["pid"],
+                    "name": info["name"],
+                    "cpu_percent": round(info["cpu_percent"], 1),
+                    "memory_percent": round(info["memory_percent"], 1)
+                })
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
+    processes.sort(key=lambda x: x["cpu_percent"], reverse=True)
+    return processes[:n]
+
+
 # ── Logs ─────────────────────────────────────────────────────────────
 
 
@@ -86,6 +106,11 @@ async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
             if tick % 6 == 1:
                 logs = collect_logs(15)
                 await ws.send_text(json.dumps(logs))
+
+            # Processes: every ~5 seconds (every 10th tick) - heavier operation
+            if tick % 10 == 0:
+                processes = collect_processes()
+                await ws.send_text(json.dumps({"type": "processes", "processes": processes}))
 
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:

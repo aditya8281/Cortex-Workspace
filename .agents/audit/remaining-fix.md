@@ -18,13 +18,11 @@
 
 ## UI/UX — Pending (Future Work)
 
-### HIGH Priority
+### HIGH Priority — All Fixed
 
-| # | Issue | What to do |
-|---|-------|------------|
-| 1 | WebSocket missing processes data | Add `processes` to `collect_metrics()` in `ws_system.py` |
-| 2 | AgentChat uses polling, not SSE streaming | Switch to SSE endpoint `/agents/runs/{run_id}/stream` |
-| 3 | No LLM/model settings UI (backend exists) | Build settings form for `inference_backend`, `huggingface_token`, etc. |
+- **#1 WebSocket processes data** ✅ — Added `collect_processes()` in `ws_system.py` (runs every 5s)
+- **#2 AgentChat SSE streaming** ✅ — Switched to `agentApi.streamRun()` with abort support + fallback
+- **#3 LLM/model settings UI** ✅ — Built `LLMSettingsForm.tsx` with backend selector, HF token, auto-download toggle
 
 ### MEDIUM Priority
 
