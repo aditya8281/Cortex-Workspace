@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.base import Base
 
@@ -28,6 +28,9 @@ class RepoIndex(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
+    graph_nodes: Mapped[list] = relationship("GraphNode", back_populates="repo")
+    indexed_files: Mapped[list] = relationship("IndexedFile", back_populates="repo")
+
 
 class CodeChunk(Base):
     __tablename__ = "code_chunks"
@@ -46,3 +49,5 @@ class CodeChunk(Base):
     end_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
     embedding_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    graph_nodes: Mapped[list] = relationship("GraphNode", back_populates="chunk")

@@ -58,6 +58,8 @@ class HybridRetrievalV2:
         limit: int = 10,
         sources: list[str] | None = None,
         diversity_penalty: float = 0.3,
+        node_type: str | None = None,
+        language: str | None = None,
     ) -> list[RetrievalResult]:
         if sources is None:
             sources = ["vector", "fulltext"]

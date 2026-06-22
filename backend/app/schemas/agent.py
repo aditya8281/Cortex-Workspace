@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AgentInfo(BaseModel):
@@ -15,10 +15,21 @@ class AgentInfo(BaseModel):
     description: str | None = None
     system_prompt: str
     model_id: str
-    tools: str | None = Field(default=None, serialization_alias="tools_json")
+    tools: list[str] | None = Field(default=None, serialization_alias="tools_json")
     is_active: bool
     created_at: str | None = None
     updated_at: str | None = None
+
+    @field_validator("tools", mode="before")
+    @classmethod
+    def parse_tools(cls, v):
+        if isinstance(v, str):
+            try:
+                import json
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return v
 
 
 class AgentListResponse(BaseModel):

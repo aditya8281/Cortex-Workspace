@@ -27,7 +27,7 @@ class IndexedFile(Base):
     status: Mapped[str] = mapped_column(String(20), default="indexed")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
-    repo = relationship("RepoIndex", backref="indexed_files")
+    repo = relationship("RepoIndex", back_populates="indexed_files")
 
     __table_args__ = (Index("idx_indexed_files_repo_path", "repo_id", "file_path", unique=True),)
 

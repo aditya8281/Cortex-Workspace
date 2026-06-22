@@ -35,6 +35,11 @@ class Settings(BaseSettings):
         "http://localhost:8000",
         "http://localhost:8080",
     ]
+    CORS_ORIGINS: str = ""  # Comma-separated list of allowed CORS origins for production
+
+    def model_post_init(self, __context) -> None:
+        if self.CORS_ORIGINS:
+            self.ALLOWED_ORIGINS = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
     EMBEDDING_DIM: int = 768
     EMBEDDING_MODEL_PATH: str = ""

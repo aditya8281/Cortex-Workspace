@@ -711,7 +711,7 @@ export interface IndexingPreview {
 }
 
 export interface IndexingStatus {
-  watching_count: number;
+  watching: number;
   pending_changes: number;
   indexed_files: number;
   errors: number;

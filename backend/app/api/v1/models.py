@@ -526,9 +526,33 @@ async def get_model_settings(
     if not settings_row:
         return ModelSettingsResponse()
 
+    # Decrypt the HuggingFace token before returning
+    decrypted_hf_token = settings_row.huggingface_token
+    if settings_row.huggingface_token:
+        try:
+            import base64 as _b64
+
+            from cryptography.fernet import Fernet
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
+            from backend.app.core.config import settings as _cfg
+
+            hkdf = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b"huggingface-token-encryption",
+            )
+            key = hkdf.derive(_cfg.SECRET_KEY.encode())
+            fernet_key = Fernet(_b64.urlsafe_b64encode(key))
+            decrypted_hf_token = fernet_key.decrypt(settings_row.huggingface_token.encode()).decode()
+        except Exception:
+            pass  # Token may be unencrypted (legacy)
+
     return {
         "inference_backend": settings_row.inference_backend,
-        "huggingface_token": settings_row.huggingface_token,
+        "huggingface_token": decrypted_hf_token,
         "auto_download": settings_row.auto_download,
         "max_concurrent_downloads": settings_row.max_concurrent_downloads,
     }
@@ -550,15 +574,60 @@ async def update_model_settings(
         db.add(settings_row)
 
     updates = body.model_dump(exclude_unset=True)
+
+    # Encrypt the HuggingFace token before storing if provided
+    if "huggingface_token" in updates and updates["huggingface_token"]:
+        import base64 as _b64
+
+        from cryptography.fernet import Fernet
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
+        from backend.app.core.config import settings as _cfg
+
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=None,
+            info=b"huggingface-token-encryption",
+        )
+        key = hkdf.derive(_cfg.SECRET_KEY.encode())
+        fernet_key = Fernet(_b64.urlsafe_b64encode(key))
+        updates["huggingface_token"] = fernet_key.encrypt(updates["huggingface_token"].encode()).decode()
+
     for key, value in updates.items():
         setattr(settings_row, key, value)
 
     db.commit()
     db.refresh(settings_row)
 
+    # Decrypt the HuggingFace token before returning
+    decrypted_hf_token = settings_row.huggingface_token
+    if settings_row.huggingface_token:
+        try:
+            import base64 as _b64
+
+            from cryptography.fernet import Fernet
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
+            from backend.app.core.config import settings as _cfg
+
+            hkdf = HKDF(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=None,
+                info=b"huggingface-token-encryption",
+            )
+            key = hkdf.derive(_cfg.SECRET_KEY.encode())
+            fernet_key = Fernet(_b64.urlsafe_b64encode(key))
+            decrypted_hf_token = fernet_key.decrypt(settings_row.huggingface_token.encode()).decode()
+        except Exception:
+            pass  # Token may be unencrypted (legacy)
+
     return {
         "inference_backend": settings_row.inference_backend,
-        "huggingface_token": settings_row.huggingface_token,
+        "huggingface_token": decrypted_hf_token,
         "auto_download": settings_row.auto_download,
         "max_concurrent_downloads": settings_row.max_concurrent_downloads,
     }

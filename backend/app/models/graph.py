@@ -30,8 +30,8 @@ class GraphNode(Base):
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
-    chunk = relationship("CodeChunk", backref="graph_nodes")
-    repo = relationship("RepoIndex", backref="graph_nodes")
+    chunk = relationship("CodeChunk", back_populates="graph_nodes")
+    repo = relationship("RepoIndex", back_populates="graph_nodes")
     outgoing_edges = relationship("GraphEdge", foreign_keys="GraphEdge.source_id", back_populates="source")
     incoming_edges = relationship("GraphEdge", foreign_keys="GraphEdge.target_id", back_populates="target")
 

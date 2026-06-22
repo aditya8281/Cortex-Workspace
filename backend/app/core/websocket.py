@@ -9,6 +9,7 @@ from fastapi import WebSocket
 logger = logging.getLogger(__name__)
 
 MAX_CONNECTIONS_PER_CHANNEL = 100
+MAX_CONNECTIONS_PER_USER = 10
 MAX_MESSAGE_SIZE = 65536  # 64KB
 
 
@@ -17,19 +18,35 @@ class ConnectionManager:
 
     def __init__(self) -> None:
         self.active: dict[str, set[WebSocket]] = {}
+        self._user_connections: dict[int, set[WebSocket]] = {}
 
-    async def connect(self, ws: WebSocket, channel: str = "default") -> None:
+    async def connect(self, ws: WebSocket, channel: str = "default", user_id: int | None = None) -> None:
         channel_conns = self.active.get(channel, set())
         if len(channel_conns) >= MAX_CONNECTIONS_PER_CHANNEL:
             await ws.close(code=1013, reason="Too many connections")
             logger.warning("WebSocket connection rejected: channel '%s' full", channel)
             return
+
+        if user_id is not None:
+            user_conns = self._user_connections.get(user_id, set())
+            if len(user_conns) >= MAX_CONNECTIONS_PER_USER:
+                await ws.close(code=1013, reason="Too many connections for user")
+                logger.warning("WebSocket connection rejected: user %d exceeded limit", user_id)
+                return
+
         await ws.accept()
         self.active.setdefault(channel, set()).add(ws)
+        if user_id is not None:
+            self._user_connections.setdefault(user_id, set()).add(ws)
         logger.info("WebSocket connected to channel '%s' (%d active)", channel, len(self.active[channel]))
 
-    def disconnect(self, ws: WebSocket, channel: str = "default") -> None:
+    def disconnect(self, ws: WebSocket, channel: str = "default", user_id: int | None = None) -> None:
         self.active.get(channel, set()).discard(ws)
+        if user_id is not None:
+            conns = self._user_connections.get(user_id, set())
+            conns.discard(ws)
+            if not conns:
+                self._user_connections.pop(user_id, None)
         logger.info("WebSocket disconnected from channel '%s'", channel)
 
     async def send(self, ws: WebSocket, data: dict[str, Any]) -> None:

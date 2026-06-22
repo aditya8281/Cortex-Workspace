@@ -405,7 +405,7 @@ def upload_vault_file(db: Session, user_id: int, file_path: str, content: bytes)
     return {
         "name": target.name,
         "path": str(target.relative_to(vault_dir)),
-        "size": len(encrypted_content),
+        "size": len(content),
     }
 
 
@@ -424,7 +424,10 @@ def download_vault_file(db: Session, user_id: int, file_path: str) -> bytes:
         try:
             content = decrypt_bytes(content, password)
         except Exception as e:
-            logger.warning("Vault decryption failed for user %d file %s (may be unencrypted): %s", user_id, file_path, e)
+            logger.warning(
+                "Vault decryption failed for user %d file %s (may be unencrypted): %s",
+                user_id, file_path, e,
+            )
     return content
 
 

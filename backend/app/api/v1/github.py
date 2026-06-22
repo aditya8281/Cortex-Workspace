@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import re
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -66,15 +65,23 @@ async def connect_github(
         raise HTTPException(status_code=409, detail="This GitHub account is already connected to another user")
 
     # Encrypt the token with Fernet so it can be recovered later for API calls
-    import hashlib
+    import base64 as _b64
 
     from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
     from backend.app.core.config import settings
 
-    # Derive a Fernet key from the app secret (deterministic, same across restarts)
-    key = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
-    fernet_key = Fernet(base64.urlsafe_b64encode(key))
+    # Derive a Fernet key from the app secret using HKDF (deterministic, same across restarts)
+    hkdf = HKDF(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=None,
+        info=b"github-token-encryption",
+    )
+    key = hkdf.derive(settings.SECRET_KEY.encode())
+    fernet_key = Fernet(_b64.urlsafe_b64encode(key))
     encrypted = fernet_key.encrypt(body.token.encode()).decode()
 
     current_user.github_username = gh_username

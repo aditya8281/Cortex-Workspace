@@ -4,9 +4,8 @@ On every GET request, sets a ``cortex_csrf`` cookie (non-httpOnly, readable
 by JavaScript). State-changing requests (POST, PUT, DELETE, PATCH) must include
 the token in an ``X-CSRF-Token`` header matching the cookie value.
 
-Endpoints under ``/api/auth/``, ``/api/v1/health/``, and ``/api/v1/me/vault/``
-are exempt. Auth endpoints are API-client-facing; vault endpoints are already
-protected by session authentication (get_current_user).
+Endpoints under ``/api/auth/`` and ``/api/v1/health/``
+are exempt. Auth endpoints are API-client-facing.
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ from backend.app.core.config import settings
 CSRF_COOKIE_NAME = "cortex_csrf"
 CSRF_HEADER_NAME = "x-csrf-token"
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
-EXEMPT_PREFIXES = ("/api/v1/auth/", "/api/v1/health/", "/metrics", "/ws", "/api/v1/me/vault/")
+EXEMPT_PREFIXES = ("/api/v1/auth/", "/api/v1/health/", "/metrics", "/ws")
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
