@@ -212,7 +212,8 @@ async def list_installed_models(
             resp = await client.get("/api/tags")
             resp.raise_for_status()
             installed = resp.json().get("models", [])
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to fetch installed models from Ollama: %s", e)
         installed = []
 
     installed_names = {m["name"] for m in installed}
@@ -433,7 +434,8 @@ async def get_storage_usage(
         total_gb = disk.total / (1024**3)
         used_gb = disk.used / (1024**3)
         free_gb = disk.free / (1024**3)
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to get disk usage: %s", e)
         total_gb = used_gb = free_gb = 0
 
     # Models directory size
@@ -468,7 +470,8 @@ async def check_model_updates(
             resp = await client.get("/api/tags")
             resp.raise_for_status()
             installed = resp.json().get("models", [])
-    except Exception:
+    except Exception as e:
+        logger.warning("Failed to check for model updates: %s", e)
         return {"updates": []}
 
     for model in installed:
@@ -699,7 +702,7 @@ async def delete_model(
     """Delete an Ollama model."""
     import httpx
 
-    async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL) as client:
+    async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=30.0) as client:
         resp = await client.delete("/api/delete", json={"name": model_name})
         resp.raise_for_status()
     return {"status": "deleted", "model": model_name}

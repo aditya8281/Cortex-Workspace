@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -7,6 +8,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
@@ -334,7 +337,11 @@ async def start_sync(
     watcher = get_file_watcher_v2()
     watcher.watch(repo_path)
 
-    job_id = await enqueue_task("scan_repo_task", repo_path, current_user.id)
+    try:
+        job_id = await enqueue_task("scan_repo_task", repo_path, current_user.id)
+    except Exception as e:
+        logger.error("Failed to enqueue scan task for %s: %s", repo_path, e)
+        raise HTTPException(status_code=500, detail="Failed to start scan task")
 
     return SyncStartResponse(
         status="started",

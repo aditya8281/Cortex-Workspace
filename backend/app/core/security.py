@@ -146,7 +146,7 @@ async def _store_token(jti: str, user_id: int) -> None:
             expire_seconds=_TTL_SECONDS,
         )
     except Exception:
-        logger.warning("Failed to store refresh token %s in Redis", jti, exc_info=True)
+        logger.error("Failed to store refresh token %s in Redis", jti, exc_info=True)
     # Always cache in memory for fast lookups
     _mem_store_active(jti)
 
@@ -161,7 +161,7 @@ async def _revoke_token(jti: str) -> None:
             expire_seconds=_TTL_SECONDS,
         )
     except Exception:
-        logger.warning("Failed to revoke refresh token %s in Redis", jti, exc_info=True)
+        logger.error("Failed to revoke refresh token %s in Redis", jti, exc_info=True)
     _mem_store_revoked(jti)
 
 

@@ -282,7 +282,7 @@ def get_vault_metadata(user_id: int, vault_dir: Path) -> dict:
 
         return json.loads(decrypted_bytes.decode())
     except Exception as e:
-        logger.error("Error reading vault metadata: %s", e)
+        logger.error("Error reading vault metadata for user %d: %s", user_id, e)
         return {"favorites": [], "tags": {}}
 
 
@@ -299,7 +299,7 @@ def save_vault_metadata(user_id: int, vault_dir: Path, metadata: dict) -> None:
         encrypted_bytes = encrypt_bytes(data_bytes, password)
         metadata_file.write_bytes(encrypted_bytes)
     except Exception as e:
-        logger.error("Error saving vault metadata: %s", e)
+        logger.error("Error saving vault metadata for user %d: %s", user_id, e)
 
 
 def update_vault_metadata(
@@ -423,8 +423,8 @@ def download_vault_file(db: Session, user_id: int, file_path: str) -> bytes:
     if password:
         try:
             content = decrypt_bytes(content, password)
-        except Exception:
-            pass  # File may not be encrypted (backward compat)
+        except Exception as e:
+            logger.warning("Vault decryption failed for user %d file %s (may be unencrypted): %s", user_id, file_path, e)
     return content
 
 
@@ -589,10 +589,11 @@ def change_vault_password(db: Session, user: User, old_pw: str, new_pw: str) -> 
         try:
             decrypted = decrypt_bytes(content, old_pw)
             decrypted_files[item] = decrypted
-        except Exception:
+        except Exception as e:
+            logger.error("Failed to decrypt vault file during password change: %s", e)
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to decrypt file {item.name} with old password. Password change aborted to prevent data loss.",
+                detail="Failed to re-encrypt vault. Password change aborted to prevent data loss.",
             )
 
     decrypted_metadata = None

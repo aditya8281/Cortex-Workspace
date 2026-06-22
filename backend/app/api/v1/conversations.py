@@ -164,7 +164,8 @@ async def _stream_chat_response(
         response_tokens = estimate_tokens(fallback)
         yield f"data: {json.dumps({'type': 'chunk', 'content': fallback, 'tokens': response_tokens})}\n\n"
     except Exception as e:
-        error_msg = f"Error: {str(e)[:200]}"
+        logger.error("Chat stream error for conversation %s: %s", conversation_id, e)
+        error_msg = "An error occurred while generating a response. Please try again."
         full_response = error_msg
         response_tokens = estimate_tokens(error_msg)
         yield f"data: {json.dumps({'type': 'chunk', 'content': error_msg, 'tokens': response_tokens})}\n\n"

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
@@ -13,10 +13,10 @@ router = APIRouter()
 
 
 class CreateMemoryRequest(BaseModel):
-    category: str
-    title: str
-    content: str
-    source: str | None = None
+    category: str = Field(min_length=1, max_length=64)
+    title: str = Field(min_length=1, max_length=256)
+    content: str = Field(min_length=1, max_length=10000)
+    source: str | None = Field(default=None, max_length=512)
     source_id: int | None = None
     tags: list[str] | None = None
 

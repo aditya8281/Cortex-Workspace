@@ -120,8 +120,11 @@ class FileWatcherV2:
     def stop(self) -> None:
         if self._observer and self._observer.is_alive():
             self._observer.stop()
-            self._observer.join()
-            logger.info("File watcher stopped")
+            self._observer.join(timeout=5.0)
+            if self._observer.is_alive():
+                logger.warning("File watcher did not stop within timeout")
+            else:
+                logger.info("File watcher stopped")
         self._observer = None
         self._watched.clear()
 

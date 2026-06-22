@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from backend.app.auth import service as auth_service
 from backend.app.core.config import settings
@@ -146,8 +150,8 @@ async def logout(body: RefreshRequest, request: Request, response: Response, db:
             jti = payload.get("jti")
             if jti:
                 await revoke_access_token(jti, expires_in_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to revoke access token during logout: %s", e)
 
     _clear_auth_cookies(response)
     return {"message": "Logged out"}

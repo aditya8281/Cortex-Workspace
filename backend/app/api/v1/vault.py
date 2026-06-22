@@ -109,8 +109,21 @@ async def unlock_vault(
             raise HTTPException(status_code=429, detail="Too many vault unlock attempts. Try again later.")
     except HTTPException:
         raise
-    except Exception:
-        pass  # If Redis is unavailable, allow the attempt
+    except Exception as e:
+        logger.warning("Vault rate limiter Redis failure, falling back to in-memory: %s", e)
+        # In-memory fallback when Redis is down
+        import time as _time
+        now = _time.time()
+        if not hasattr(unlock_vault, '_attempts'):
+            unlock_vault._attempts = {}
+        user_key = str(current_user.id)
+        attempts = unlock_vault._attempts.get(user_key, {"count": 0, "window_start": now})
+        if now - attempts["window_start"] > 60:
+            attempts = {"count": 0, "window_start": now}
+        attempts["count"] += 1
+        unlock_vault._attempts[user_key] = attempts
+        if attempts["count"] > 5:
+            raise HTTPException(status_code=429, detail="Too many vault unlock attempts. Try again later.")
 
     success = vault_service.unlock_vault(db, current_user, body.vault_password)
     if not success:
