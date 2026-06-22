@@ -32,19 +32,22 @@ vi.mock("@/shared/auth/AuthProvider", () => ({
 
 const mockRecommendedEnhanced = vi.fn();
 const mockList = vi.fn();
-const mockAutocomplete = vi.fn();
-const mockDownload = vi.fn();
-const mockCancel = vi.fn();
+const mockInstalled = vi.fn();
 
 vi.mock("@/shared/api", () => ({
   modelsApi: {
     recommendedEnhanced: (...args: unknown[]) => mockRecommendedEnhanced(...args),
     list: (...args: unknown[]) => mockList(...args),
-    autocomplete: (...args: unknown[]) => mockAutocomplete(...args),
-    download: (...args: unknown[]) => mockDownload(...args),
-    cancel: (...args: unknown[]) => mockCancel(...args),
-    getSettings: vi.fn().mockResolvedValue({ inference_backend: "auto", huggingface_token: null, auto_download: true, max_concurrent_downloads: 2 }),
-    updateSettings: vi.fn().mockResolvedValue({}),
+    installed: (...args: unknown[]) => mockInstalled(...args),
+    download: vi.fn().mockResolvedValue({ status: "started" }),
+    autocomplete: vi.fn().mockResolvedValue({ suggestions: [] }),
+    hardware: vi.fn().mockResolvedValue({}),
+    health: vi.fn().mockResolvedValue({}),
+    metrics: vi.fn().mockResolvedValue({}),
+    progress: vi.fn().mockResolvedValue({ model: "", progress: 0 }),
+    cancel: vi.fn().mockResolvedValue({ cancelled: true }),
+    storage: vi.fn().mockResolvedValue({ total_disk_gb: 0, used_disk_gb: 0, free_disk_gb: 0, models_total_gb: 0, models: [], cache_gb: 0 }),
+    refreshCatalogue: vi.fn().mockResolvedValue({ status: "ok", models_added: 0 }),
   },
 }));
 
@@ -56,18 +59,6 @@ vi.mock("@/shared/layout/DashboardShell", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid="dashboard-shell">{children}</div>,
 }));
 
-vi.mock("@/shared/ui/NeuralNetwork", () => ({
-  default: () => <div data-testid="neural-network" />,
-}));
-
-vi.mock("@/shared/ui/Card", () => ({
-  default: ({ children, ...props }: any) => <div data-testid="card">{children}</div>,
-}));
-
-vi.mock("@/shared/ui/Button", () => ({
-  default: ({ children, ...props }: any) => <button {...props}>{children}</button>,
-}));
-
 vi.mock("./components/HardwareBar", () => ({
   default: ({ hardware, activeDownloads }: any) => (
     <div data-testid="hardware-bar">
@@ -76,36 +67,40 @@ vi.mock("./components/HardwareBar", () => ({
   ),
 }));
 
-vi.mock("./components/SearchBar", () => ({
-  default: (props: any) => (
-    <div data-testid="search-bar">
-      <input data-testid="search-input" value={props.searchQuery} onChange={(e: any) => props.onSearchChange(e.target.value)} />
-    </div>
-  ),
-}));
-
-vi.mock("./components/RecommendedRow", () => ({
+vi.mock("./components/TopPicksCarousel", () => ({
   default: ({ recommendations }: any) => (
-    <div data-testid="recommended-row">
+    <div data-testid="top-picks-carousel">
       {recommendations.map((rec: any) => (
-        <span key={rec.model_id} data-testid={`rec-${rec.model_id}`}>{rec.display_name}</span>
+        <span key={rec.model_id} data-testid={`pick-${rec.model_id}`}>{rec.display_name}</span>
       ))}
     </div>
   ),
 }));
 
-vi.mock("./components/CategorySection", () => ({
-  default: ({ title, models }: any) => (
-    <div data-testid="category-section" data-title={title}>
-      {models.map((m: any) => (
-        <span key={m.model_id} data-testid={`model-${m.model_id}`}>{m.display_name || m.name}</span>
+vi.mock("./components/WorkloadColumns", () => ({
+  default: ({ workloads }: any) => (
+    <div data-testid="workload-columns">
+      {Object.entries(workloads).map(([id, wl]: [string, any]) => (
+        <div key={id} data-testid={`workload-${id}`}>{wl.label}</div>
       ))}
     </div>
   ),
 }));
 
-vi.mock("./components/ModelCard", () => ({
-  default: ({ model }: any) => <div data-testid="model-card">{model.display_name}</div>,
+vi.mock("./components/CatalogTable", () => ({
+  default: ({ models }: any) => (
+    <div data-testid="catalog-table">
+      Browse all models
+    </div>
+  ),
+}));
+
+vi.mock("./components/InstalledBar", () => ({
+  default: ({ models }: any) => (
+    <div data-testid="installed-bar">
+      {models.length} installed
+    </div>
+  ),
 }));
 
 const mockHardware = {
@@ -122,87 +117,70 @@ const mockWorkloads = {
   coding: { label: "Coding", description: "Code generation", recommendations: [] },
 };
 
-const mockListResponse = {
-  models: [
-    { name: "llama3.1", display_name: "Llama 3.1", provider: "ollama", model_type: "chat", parameter_count: "8B", context_length: 128000, capabilities: ["chat"], description: "Meta Llama 3.1", downloaded: false, variants: ["llama3.1:8b", "llama3.1:70b"], hardware_requirements: { min_ram_gb: 8, recommended_ram_gb: 16 }, model_id: "llama3.1", family: "llama", architecture: "transformer", license: "llama3.1" },
-  ],
-  total_count: 1, downloaded_count: 0, available_from_providers: [],
-  type_counts: { chat: 1 }, size_counts: { all: 1, "<3B": 0, "3-8B": 0, "8-14B": 1, "14B+": 0 },
-};
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  mockRecommendedEnhanced.mockResolvedValue({
-    hardware: mockHardware,
-    workloads: mockWorkloads,
+describe("ModelsPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRecommendedEnhanced.mockResolvedValue({
+      hardware: mockHardware,
+      workloads: mockWorkloads,
+    });
+    mockList.mockResolvedValue({ models: [], total_count: 0, downloaded_count: 0, available_from_providers: [], type_counts: {}, size_counts: {} });
+    mockInstalled.mockResolvedValue({ models: [], installed_count: 0 });
   });
-  mockList.mockResolvedValue(mockListResponse);
-  mockAutocomplete.mockResolvedValue({ suggestions: ["llama3.1", "llama3.2"] });
-  mockDownload.mockResolvedValue({ download_id: "dl-1" });
-  mockCancel.mockResolvedValue({ cancelled: true });
-});
 
-describe("Models Page", () => {
-  it("renders the Models heading", async () => {
+  it("renders the page title", async () => {
     render(<ModelsPage />);
     await waitFor(() => {
-      expect(screen.getByText("Models")).toBeInTheDocument();
+      expect(screen.getByText("Models")).toBeDefined();
+    });
+  });
+
+  it("renders hardware bar with GPU info", async () => {
+    render(<ModelsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("hardware-bar")).toBeDefined();
+      expect(screen.getByTestId("hardware-bar")).toHaveTextContent("RTX 3080");
+    });
+  });
+
+  it("renders catalog section", async () => {
+    render(<ModelsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("catalog-table")).toBeDefined();
+      expect(screen.getByText(/Browse all models/)).toBeDefined();
+    });
+  });
+
+  it("renders workload columns", async () => {
+    render(<ModelsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("workload-columns")).toBeDefined();
+      expect(screen.getByTestId("workload-general")).toHaveTextContent("General");
+    });
+  });
+
+  it("renders installed bar", async () => {
+    render(<ModelsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("installed-bar")).toBeDefined();
     });
   });
 
   it("shows loading state initially", () => {
     mockRecommendedEnhanced.mockReturnValue(new Promise(() => {}));
     mockList.mockReturnValue(new Promise(() => {}));
+    mockInstalled.mockReturnValue(new Promise(() => {}));
     render(<ModelsPage />);
     expect(document.querySelector(".shimmer-bg")).toBeInTheDocument();
-  });
-
-  it("shows hardware bar when hardware data is available", async () => {
-    render(<ModelsPage />);
-    await waitFor(() => {
-      expect(screen.getByTestId("hardware-bar")).toBeInTheDocument();
-      expect(screen.getByTestId("hardware-bar")).toHaveTextContent("RTX 3080");
-    });
-  });
-
-  it("shows recommended row when recommendations exist", async () => {
-    render(<ModelsPage />);
-    await waitFor(() => {
-      expect(screen.getByTestId("recommended-row")).toBeInTheDocument();
-      expect(screen.getByTestId("rec-llama3.1:8b")).toHaveTextContent("Llama 3.1 8B");
-    });
-  });
-
-  it("shows category sections for each workload", async () => {
-    render(<ModelsPage />);
-    await waitFor(() => {
-      const sections = screen.getAllByTestId("category-section");
-      expect(sections.length).toBeGreaterThanOrEqual(2);
-      expect(sections[0]).toHaveAttribute("data-title", "General");
-      expect(sections[1]).toHaveAttribute("data-title", "Coding");
-    });
-  });
-
-  it("shows search bar", async () => {
-    render(<ModelsPage />);
-    await waitFor(() => {
-      expect(screen.getByTestId("search-bar")).toBeInTheDocument();
-    });
   });
 
   it("displays error state when API fails", async () => {
     mockRecommendedEnhanced.mockRejectedValue(new Error("Network error"));
     mockList.mockRejectedValue(new Error("Network error"));
+    mockInstalled.mockRejectedValue(new Error("Network error"));
     render(<ModelsPage />);
     await waitFor(() => {
-      expect(screen.getByText("Network error")).toBeInTheDocument();
-    });
-  });
-
-  it("renders inside DashboardShell", async () => {
-    render(<ModelsPage />);
-    await waitFor(() => {
-      expect(screen.getByTestId("dashboard-shell")).toBeInTheDocument();
+      expect(screen.getByText("Failed to load models. Please try again.")).toBeInTheDocument();
     });
   });
 });

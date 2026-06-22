@@ -45,6 +45,7 @@ const workloadIcons: Record<string, typeof Brain> = {
 
 function matchesSizeFilter(parameterCount: string, filter: string): boolean {
   if (filter === "all") return true;
+  if (!parameterCount) return false;
   const match = parameterCount.match(/([\d.]+)\s*[Bb]/i);
   if (!match) return false;
   const bn = parseFloat(match[1]);
