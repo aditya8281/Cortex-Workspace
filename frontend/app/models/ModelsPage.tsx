@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Brain, RefreshCw } from "lucide-react";
+import { AlertTriangle, Brain, RefreshCw } from "lucide-react";
 import DashboardShell from "@/shared/layout/DashboardShell";
 import NeuralNetwork from "@/shared/ui/NeuralNetwork";
 import Card from "@/shared/ui/Card";
@@ -16,21 +16,51 @@ import InstalledBar from "./components/InstalledBar";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { modelsApi } from "@/shared/api";
 import { useSystemWebSocket } from "@/shared/hooks/useSystemWebSocket";
+import { useLiveMetrics } from "@/shared/hooks/useLiveMetrics";
 import type {
+  CatalogStatus,
   HardwareProfile,
   WorkloadRecommendations as WorkloadRecs,
   ModelInfo,
+  SystemMetrics,
 } from "@/shared/types";
+
+function CatalogStatusBanner({ status }: { status?: CatalogStatus }) {
+  if (!status) return null;
+
+  const isDegraded =
+    status.from_fallback ||
+    status.cloud !== "ok" ||
+    status.registry !== "ok";
+
+  if (!isDegraded) return null;
+
+  const issues: string[] = [];
+  if (status.from_fallback) issues.push("Using cached catalog (all sources unavailable)");
+  if (status.cloud !== "ok") issues.push(`Cloud: ${status.cloud}`);
+  if (status.registry !== "ok") issues.push(`Registry: ${status.registry}`);
+
+  return (
+    <div className="glass-panel rounded-xl px-4 py-2 mb-4 border border-warning/20 bg-warning/5">
+      <div className="flex items-center gap-2 text-[11px] text-warning">
+        <AlertTriangle size={14} />
+        <span>Catalog degraded — {issues.join("; ")}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function ModelsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
+  const liveMetrics = useLiveMetrics();
   const [workloads, setWorkloads] = useState<Record<string, WorkloadRecs>>({});
   const [allModels, setAllModels] = useState<ModelInfo[]>([]);
   const [installedModels, setInstalledModels] = useState<Array<{ model_id: string; display_name: string; variant: string; size_gb: number; last_used: string; usage_count: number }>>([]);
 
+  const [catalogStatus, setCatalogStatus] = useState<CatalogStatus | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +86,7 @@ export default function ModelsPage() {
         setHardware(recsData.hardware);
         setWorkloads(recsData.workloads);
         setAllModels(listData.models);
+        setCatalogStatus(listData.catalog_status);
         setInstalledModels((instData.models || []).map((m) => ({
           model_id: m.model_id,
           display_name: m.display_name,
@@ -155,9 +186,12 @@ export default function ModelsPage() {
           </div>
         </motion.div>
 
+        {/* Catalog Status Banner */}
+        <CatalogStatusBanner status={catalogStatus} />
+
         {/* Hardware Status Bar */}
         {hardware && (
-          <HardwareBar hardware={hardware} activeDownloads={downloadingModels.size} />
+          <HardwareBar hardware={hardware} activeDownloads={downloadingModels.size} liveMetrics={liveMetrics} />
         )}
 
         {/* Loading State */}
