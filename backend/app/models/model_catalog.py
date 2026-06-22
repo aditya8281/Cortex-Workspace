@@ -34,7 +34,7 @@ class ModelCatalog(Base):
     huggingface_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     tags: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=list)
-    primary_provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("providers.id"), nullable=True, index=True)
+    primary_provider_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("providers.id", ondelete="SET NULL"), nullable=True, index=True)
     popularity_score: Mapped[float] = mapped_column(Float, default=0)
     recency_score: Mapped[float] = mapped_column(Float, default=0)
     efficiency_score: Mapped[float] = mapped_column(Float, default=0)

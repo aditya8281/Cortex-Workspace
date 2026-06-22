@@ -6,9 +6,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
-from backend.app.core.db import get_current_user
+from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
 from backend.app.schemas.sync import SyncStopResponse, SyncValidatePathResponse
 from backend.app.services.file_watcher_v2 import get_file_watcher_v2
@@ -280,10 +281,10 @@ async def get_sync_defaults(
 @router.post("/sync/start", response_model=SyncStartResponse)
 async def start_sync(
     payload: SyncStartPayload,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     from backend.app.core.system_paths import get_blocked_system_paths
-    from backend.app.db.session import SessionLocal
     from backend.app.models.repo_index import RepoIndex
     from backend.app.models.sync_state import SyncState
 
@@ -298,53 +299,49 @@ async def start_sync(
 
     embedding_model = payload.embedding_model or settings.EMBEDDING_MODEL_NAME
 
-    db = SessionLocal()
-    try:
-        repo = db.query(RepoIndex).filter(RepoIndex.repo_path == repo_path).first()
-        if not repo:
-            repo = RepoIndex(
+    repo = db.query(RepoIndex).filter(RepoIndex.repo_path == repo_path).first()
+    if not repo:
+        repo = RepoIndex(
+            user_id=current_user.id,
+            repo_path=repo_path,
+            repo_name=Path(repo_path).name,
+            status="pending",
+        )
+        db.add(repo)
+        db.commit()
+        db.refresh(repo)
+
+    existing_state = (
+        db.query(SyncState)
+        .filter(
+            SyncState.user_id == current_user.id,
+            SyncState.repo_path == repo_path,
+        )
+        .first()
+    )
+    if not existing_state:
+        db.add(
+            SyncState(
                 user_id=current_user.id,
                 repo_path=repo_path,
-                repo_name=Path(repo_path).name,
-                status="pending",
+                repo_id=repo.id,
+                status="active",
+                config_json={"embedding_model": embedding_model},
             )
-            db.add(repo)
-            db.commit()
-            db.refresh(repo)
-
-        existing_state = (
-            db.query(SyncState)
-            .filter(
-                SyncState.user_id == current_user.id,
-                SyncState.repo_path == repo_path,
-            )
-            .first()
         )
-        if not existing_state:
-            db.add(
-                SyncState(
-                    user_id=current_user.id,
-                    repo_path=repo_path,
-                    repo_id=repo.id,
-                    status="active",
-                    config_json={"embedding_model": embedding_model},
-                )
-            )
-            db.commit()
+        db.commit()
 
-        watcher = get_file_watcher_v2()
-        watcher.watch(repo_path)
+    watcher = get_file_watcher_v2()
+    watcher.watch(repo_path)
 
-        job_id = await enqueue_task("scan_repo_task", repo_path, current_user.id)
+    job_id = await enqueue_task("scan_repo_task", repo_path, current_user.id)
 
-        return SyncStartResponse(
-            status="started",
-            repo_path=repo_path,
-            embedding_model=embedding_model,
-            initial_scan_job_id=job_id,
-        )
-    finally:
-        db.close()
+    return SyncStartResponse(
+        status="started",
+        repo_path=repo_path,
+        embedding_model=embedding_model,
+        initial_scan_job_id=job_id,
+    )
 
 
 @router.post("/sync/validate-path", response_model=SyncValidatePathResponse)
@@ -365,9 +362,9 @@ async def validate_sync_path(
 @router.post("/sync/stop", response_model=SyncStopResponse)
 async def stop_sync(
     payload: SyncStopPayload,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from backend.app.db.session import SessionLocal
     from backend.app.models.sync_state import SyncState
 
     repo_path = str(Path(payload.repo_path).expanduser().resolve())
@@ -375,39 +372,41 @@ async def stop_sync(
     if not watcher.unwatch(repo_path):
         raise HTTPException(status_code=404, detail="Path is not being watched")
 
-    db = SessionLocal()
-    try:
-        state = (
-            db.query(SyncState)
-            .filter(
-                SyncState.user_id == current_user.id,
-                SyncState.repo_path == repo_path,
-            )
-            .first()
+    state = (
+        db.query(SyncState)
+        .filter(
+            SyncState.user_id == current_user.id,
+            SyncState.repo_path == repo_path,
         )
-        if state:
-            state.status = "stopped"
-            db.commit()
-    finally:
-        db.close()
+        .first()
+    )
+    if state:
+        state.status = "stopped"
+        db.commit()
 
     return {"status": "stopped", "repo_path": repo_path}
 
 
 @router.get("/sync/status", response_model=SyncStatusResponse)
 async def get_sync_status(
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from backend.app.db.session import SessionLocal
     from backend.app.models.sync_state import SyncState
 
     watcher = get_file_watcher_v2()
-    db = SessionLocal()
-    try:
-        user_states = db.query(SyncState).filter(SyncState.user_id == current_user.id).all()
-        watched_paths = [{"path": s.repo_path, "status": s.status} for s in user_states]
-    finally:
-        db.close()
+    user_states = db.query(SyncState).filter(SyncState.user_id == current_user.id).all()
+    watched_paths = [
+        {
+            "path": s.repo_path,
+            "repo_id": s.repo_id,
+            "embedding_model": (s.config_json or {}).get("embedding_model", ""),
+            "sync_enabled": s.status == "active",
+            "initial_scan_job_id": None,
+            "initial_scan_status": s.status,
+        }
+        for s in user_states
+    ]
 
     return SyncStatusResponse(
         watching=watcher.watched_count,
