@@ -27,6 +27,15 @@ class ModelCatalogEntry(BaseModel):
     hardware_requirements: dict
 
 
+class CatalogSourceStatusResponse(BaseModel):
+    cloud: str = "pending"
+    local: str = "pending"
+    registry: str = "pending"
+    last_updated: str = ""
+    from_fallback: bool = False
+    errors: dict[str, str] = {}
+
+
 class ModelListResponse(BaseModel):
     models: list[ModelCatalogEntry]
     total_count: int
@@ -34,6 +43,7 @@ class ModelListResponse(BaseModel):
     available_from_providers: list[ModelProviderInfo]
     type_counts: dict[str, int] = {}
     size_counts: dict[str, int] = {}
+    catalog_status: CatalogSourceStatusResponse | None = None
 
 
 class RecommendationVariant(BaseModel):

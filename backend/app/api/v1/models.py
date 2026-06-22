@@ -16,6 +16,7 @@ from backend.app.models.user_settings import UserModelSettings
 from backend.app.schemas.model import (
     AutocompleteResponse,
     CancelDownloadResponse,
+    CatalogSourceStatusResponse,
     CatalogueRefreshResponse,
     DeleteModelResponse,
     DownloadHistoryResponse,
@@ -65,7 +66,7 @@ async def list_models(
     from backend.app.services.ollama_catalog import get_ollama_catalog
 
     # Fetch from unified three-source catalog
-    catalog_models, _source_status = await get_ollama_catalog()
+    catalog_models, source_status = await get_ollama_catalog()
 
     # Get locally installed models from providers
     available_models = await llm_manager.list_all_models()
@@ -120,6 +121,7 @@ async def list_models(
         ],
         "type_counts": _compute_type_counts(catalog),
         "size_counts": _compute_size_counts(catalog),
+        "catalog_status": CatalogSourceStatusResponse(**source_status.to_dict()),
     }
 
 

@@ -438,6 +438,15 @@ export interface HardwareInfo {
   supports_metal: boolean;
 }
 
+export interface CatalogStatus {
+  cloud: string;
+  local: string;
+  registry: string;
+  last_updated: string;
+  from_fallback: boolean;
+  errors: Record<string, string>;
+}
+
 export interface ModelListResponse {
   models: ModelInfo[];
   total_count: number;
@@ -445,6 +454,7 @@ export interface ModelListResponse {
   available_from_providers: { name: string; size_bytes: number; context_length: number; capabilities: string[] }[];
   type_counts: Record<string, number>;
   size_counts: Record<string, number>;
+  catalog_status?: CatalogStatus;
 }
 
 export interface RecommendedModelsResponse {
