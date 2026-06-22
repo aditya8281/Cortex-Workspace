@@ -197,5 +197,5 @@ class ConversationService:
             if 3 <= len(title) <= 80:
                 return title
         except Exception:
-            pass
+            logger.debug("LLM title generation failed, using fallback", exc_info=True)
         return content[:50].strip()

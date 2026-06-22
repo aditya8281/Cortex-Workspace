@@ -71,7 +71,7 @@ async def revoke_access_token(jti: str, expires_in_minutes: int = 30) -> None:
             expire_seconds=expires_in_minutes * 60,
         )
     except Exception:
-        logger.warning("Failed to revoke access token %s in Redis", jti)
+        logger.error("Failed to revoke access token %s in Redis — token may remain valid", jti, exc_info=True)
 
 
 async def is_access_token_revoked(jti: str) -> bool:
@@ -80,7 +80,7 @@ async def is_access_token_revoked(jti: str) -> bool:
         val = await redis_cache.get(f"revoked_access:{jti}")
         return bool(val)
     except Exception:
-        logger.warning("Redis unavailable checking revoked token %s — rejecting", jti)
+        logger.error("Redis unavailable checking revoked token %s — rejecting request", jti, exc_info=True)
         return True
 
 
@@ -146,7 +146,7 @@ async def _store_token(jti: str, user_id: int) -> None:
             expire_seconds=_TTL_SECONDS,
         )
     except Exception:
-        pass
+        logger.warning("Failed to store refresh token %s in Redis", jti, exc_info=True)
     # Always cache in memory for fast lookups
     _mem_store_active(jti)
 
@@ -161,7 +161,7 @@ async def _revoke_token(jti: str) -> None:
             expire_seconds=_TTL_SECONDS,
         )
     except Exception:
-        pass
+        logger.warning("Failed to revoke refresh token %s in Redis", jti, exc_info=True)
     _mem_store_revoked(jti)
 
 
@@ -172,7 +172,7 @@ async def _is_revoked(jti: str) -> bool:
         if val:
             return True
     except Exception:
-        pass
+        logger.debug("Redis unavailable checking revoked token %s", jti, exc_info=True)
     return bool(_mem_is_revoked(jti))
 
 
@@ -183,7 +183,7 @@ async def _is_active(jti: str) -> bool:
         if stored:
             return True
     except Exception:
-        pass
+        logger.debug("Redis unavailable checking active token %s", jti, exc_info=True)
     return bool(_mem_is_active(jti))
 
 

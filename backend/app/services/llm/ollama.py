@@ -98,27 +98,31 @@ class OllamaProvider(LLMProvider):
                         yield chunk["message"]["content"]
 
     def list_models(self) -> list[dict[str, Any]]:
-        try:
-            resp = httpx.get(f"{self._base_url}/api/tags", timeout=5.0)
-            resp.raise_for_status()
-            data = resp.json()
-            models = []
-            for m in data.get("models", []):
-                name = m["name"]
-                quantization = self._parse_quantization(name)
-                models.append(
-                    {
-                        "name": name,
-                        "size_bytes": m.get("size", 0),
-                        "quantization": quantization,
-                        "context_length": 4096,
-                        "capabilities": self._infer_capabilities(name),
-                        "description": f"Ollama model: {name}",
-                    }
-                )
-            return models
-        except Exception:
-            return []
+        for attempt in range(3):
+            try:
+                resp = httpx.get(f"{self._base_url}/api/tags", timeout=5.0)
+                resp.raise_for_status()
+                data = resp.json()
+                models = []
+                for m in data.get("models", []):
+                    name = m["name"]
+                    quantization = self._parse_quantization(name)
+                    models.append(
+                        {
+                            "name": name,
+                            "size_bytes": m.get("size", 0),
+                            "quantization": quantization,
+                            "context_length": 4096,
+                            "capabilities": self._infer_capabilities(name),
+                            "description": f"Ollama model: {name}",
+                        }
+                    )
+                return models
+            except Exception:
+                if attempt == 2:
+                    logger.warning("Failed to list Ollama models after 3 attempts", exc_info=True)
+                    return []
+        return []
 
     def _parse_quantization(self, name: str) -> str | None:
         """Parse quantization from Ollama model tag."""
@@ -129,34 +133,41 @@ class OllamaProvider(LLMProvider):
         return None
 
     async def list_models_async(self) -> list[LLMModelInfo]:
-        try:
-            resp = await self._client.get("/api/tags")
-            resp.raise_for_status()
-            data = resp.json()
-            models = []
-            for m in data.get("models", []):
-                name = m["name"]
-                quantization = self._parse_quantization(name)
-                models.append(
-                    LLMModelInfo(
-                        name=name,
-                        size_bytes=m.get("size", 0),
-                        quantization=quantization,
-                        context_length=4096,
-                        capabilities=self._infer_capabilities(name),
-                        description=f"Ollama model: {name}",
+        for attempt in range(3):
+            try:
+                resp = await self._client.get("/api/tags")
+                resp.raise_for_status()
+                data = resp.json()
+                models = []
+                for m in data.get("models", []):
+                    name = m["name"]
+                    quantization = self._parse_quantization(name)
+                    models.append(
+                        LLMModelInfo(
+                            name=name,
+                            size_bytes=m.get("size", 0),
+                            quantization=quantization,
+                            context_length=4096,
+                            capabilities=self._infer_capabilities(name),
+                            description=f"Ollama model: {name}",
+                        )
                     )
-                )
-            return models
-        except Exception:
-            return []
+                return models
+            except Exception:
+                if attempt == 2:
+                    logger.warning("Failed to list Ollama models (async) after 3 attempts", exc_info=True)
+                    return []
+        return []
 
     async def is_available(self) -> bool:
-        try:
-            resp = await self._client.get("/api/tags")
-            return resp.status_code == 200
-        except Exception:
-            return False
+        for attempt in range(3):
+            try:
+                resp = await self._client.get("/api/tags")
+                return resp.status_code == 200
+            except Exception:
+                if attempt == 2:
+                    return False
+        return False
 
     def provider_name(self) -> str:
         return "ollama"

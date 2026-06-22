@@ -719,7 +719,7 @@ def export_vault_items(db: Session, user_id: int, paths: list[str], destination_
             try:
                 content = decrypt_bytes(content, password)
             except Exception:
-                pass
+                logger.warning("Failed to decrypt vault file during export: %s", path_str, exc_info=True)
 
             dest_file = dest_path / src.name
             dest_file.parent.mkdir(parents=True, exist_ok=True)
@@ -734,7 +734,7 @@ def export_vault_items(db: Session, user_id: int, paths: list[str], destination_
                     try:
                         content = decrypt_bytes(content, password)
                     except Exception:
-                        pass
+                        logger.warning("Failed to decrypt vault file during export: %s", item, exc_info=True)
 
                     rel_to_parent = item.relative_to(src.parent)
                     dest_file = dest_path / rel_to_parent

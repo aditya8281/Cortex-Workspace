@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +13,8 @@ from sqlalchemy.orm import Session
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.conversation import Conversation
 from backend.app.models.user import User
+
+logger = logging.getLogger(__name__)
 from backend.app.schemas.conversation import (
     ConversationDetailResponse,
     ConversationListResponse,
@@ -195,7 +198,15 @@ async def send_message(
         ):
             yield event
         background_svc = ConversationService(db)
-        asyncio.create_task(background_svc.extract_insights(conversation_id, current_user.id, model=payload.model))
+
+        async def _extract_with_logging():
+            try:
+                await background_svc.extract_insights(conversation_id, current_user.id, model=payload.model)
+            except Exception:
+                logger.error("Background insight extraction failed for conversation %d", conversation_id, exc_info=True)
+
+        task = asyncio.create_task(_extract_with_logging())
+        task.add_done_callback(lambda t: None if not t.exception() else logger.error("Unhandled error in background task: %s", t.exception()))
 
     return StreamingResponse(
         _wrapped_stream(),

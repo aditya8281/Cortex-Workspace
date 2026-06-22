@@ -114,6 +114,11 @@ def _build_weighted_tsquery(
     return " + ".join(parts)
 
 
+def _safe_snippet_length(length: int) -> int:
+    """Clamp snippet_length to a safe range to prevent SQL injection."""
+    return max(60, min(length, 1000))
+
+
 class FullTextSearch:
     """PostgreSQL full-text search using tsvector/tsquery with GIN indexes."""
 
@@ -129,13 +134,14 @@ class FullTextSearch:
         snippet_length: int = 300,
     ) -> list[FullTextResult]:
         try:
+            safe_snippet = _safe_snippet_length(snippet_length)
             expanded = _expand_query(query)
             rank_expr = _build_weighted_tsquery(expanded, DEFAULT_CODE_WEIGHTS)
 
             snippet_expr = (
                 f"ts_headline('english', COALESCE(content, ''), "
                 f"plainto_tsquery('english', :query), "
-                f"'StartSel=<<, StopSel=>>, MaxWords={snippet_length}, "
+                f"'StartSel=<<, StopSel=>>, MaxWords={safe_snippet}, "
                 f"MinWords=60, MaxFragments=3')"
             )
 
@@ -212,7 +218,7 @@ class FullTextSearch:
                 for row in rows
             ]
         except Exception as e:
-            logger.warning("Full-text search on code_chunks failed: %s", e)
+            logger.error("Full-text search on code_chunks failed: %s", e, exc_info=True)
             return []
 
     def search_documents(
@@ -223,13 +229,14 @@ class FullTextSearch:
         snippet_length: int = 300,
     ) -> list[FullTextResult]:
         try:
+            safe_snippet = _safe_snippet_length(snippet_length)
             expanded = _expand_query(query)
             rank_expr = _build_weighted_tsquery(expanded, DEFAULT_DOC_WEIGHTS)
 
             snippet_expr = (
                 f"ts_headline('english', COALESCE(dc.content, ''), "
                 f"plainto_tsquery('english', :query), "
-                f"'StartSel=<<, StopSel=>>, MaxWords={snippet_length}, "
+                f"'StartSel=<<, StopSel=>>, MaxWords={safe_snippet}, "
                 f"MinWords=60, MaxFragments=3')"
             )
 
@@ -270,7 +277,7 @@ class FullTextSearch:
                 for row in rows
             ]
         except Exception as e:
-            logger.warning("Full-text search on document_chunks failed: %s", e)
+            logger.error("Full-text search on document_chunks failed: %s", e, exc_info=True)
             return []
 
 

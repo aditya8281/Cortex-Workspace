@@ -124,6 +124,10 @@ class ArchiveParser(BaseParser):
                     lines.append(f"{info.filename:<50} {size_str:>10} {mod_time:<20}")
 
                     if _is_text_file(info.filename) and info.file_size < 1_000_000:
+                        # Reject path traversal attempts
+                        if ".." in info.filename or info.filename.startswith("/") or info.filename.startswith("\\"):
+                            logger.warning("Skipping zip member with suspicious path: %s", info.filename)
+                            continue
                         try:
                             raw = zf.read(info.filename)
                             for enc in ("utf-8", "latin-1"):
@@ -181,6 +185,10 @@ class ArchiveParser(BaseParser):
                     lines.append(f"{m.name:<50} {size_str:>10} {mod_time:<20} {ftype:<6}")
 
                     if m.isfile() and _is_text_file(m.name) and m.size < 1_000_000:
+                        # Reject path traversal attempts
+                        if ".." in m.name or m.name.startswith("/") or m.name.startswith("\\"):
+                            logger.warning("Skipping tar member with suspicious path: %s", m.name)
+                            continue
                         try:
                             f = tf.extractfile(m)
                             if f:

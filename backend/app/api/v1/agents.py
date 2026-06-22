@@ -84,7 +84,15 @@ async def create_run(
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
         run = manager.create_run(payload.agent_id, current_user.id, payload.input)
-        asyncio.create_task(run_agent_background(run.id, payload.agent_id, current_user.id, payload.input))
+
+        async def _run_with_logging():
+            try:
+                await run_agent_background(run.id, payload.agent_id, current_user.id, payload.input)
+            except Exception:
+                logger.error("Background agent run %d failed", run.id, exc_info=True)
+
+        task = asyncio.create_task(_run_with_logging())
+        task.add_done_callback(lambda t: None if not t.exception() else logger.error("Unhandled error in agent task: %s", t.exception()))
         return {"status": "started", "run_id": run.id}
     except ValueError:
         raise HTTPException(status_code=404, detail="Agent not found")

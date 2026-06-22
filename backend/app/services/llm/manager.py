@@ -84,7 +84,8 @@ class LLMManager:
         max_tokens: int = 2048,
         temperature: float = 0.7,
     ) -> LLMResponse:
-        provider = await self._get_active()
+        async with self._semaphore:
+            provider = await self._get_active()
         max_retries = 3
         last_error = None
 
@@ -105,16 +106,18 @@ class LLMManager:
                     from backend.app.services.usage_tracker import UsageTracker
 
                     db = SessionLocal()
-                    tracker = UsageTracker(db)
-                    tracker.record_usage(
-                        model_name=result.get("model", "unknown"),
-                        usage_type="chat",
-                        tokens_prompt=result.get("tokens_prompt", 0),
-                        tokens_completion=result.get("tokens_completion", 0),
-                    )
-                    db.close()
+                    try:
+                        tracker = UsageTracker(db)
+                        tracker.record_usage(
+                            model_name=result.get("model", "unknown"),
+                            usage_type="chat",
+                            tokens_prompt=result.get("tokens_prompt", 0),
+                            tokens_completion=result.get("tokens_completion", 0),
+                        )
+                    finally:
+                        db.close()
                 except Exception:
-                    pass
+                    logger.debug("Failed to record LLM usage tracking", exc_info=True)
 
                 return LLMResponse(
                     content=result["content"],
@@ -148,7 +151,8 @@ class LLMManager:
         max_tokens: int = 2048,
         temperature: float = 0.7,
     ):
-        provider = await self._get_active()
+        async with self._semaphore:
+            provider = await self._get_active()
         max_retries = 3
         last_error = None
 
@@ -174,16 +178,18 @@ class LLMManager:
                     from backend.app.services.usage_tracker import UsageTracker
 
                     db = SessionLocal()
-                    tracker = UsageTracker(db)
-                    tracker.record_usage(
-                        model_name=model or "unknown",
-                        usage_type="chat_stream",
-                        tokens_prompt=prompt_tokens,
-                        tokens_completion=completion_tokens,
-                    )
-                    db.close()
+                    try:
+                        tracker = UsageTracker(db)
+                        tracker.record_usage(
+                            model_name=model or "unknown",
+                            usage_type="chat_stream",
+                            tokens_prompt=prompt_tokens,
+                            tokens_completion=completion_tokens,
+                        )
+                    finally:
+                        db.close()
                 except Exception:
-                    pass
+                    logger.debug("Failed to record LLM stream usage tracking", exc_info=True)
                 return
             except Exception as e:
                 last_error = e
