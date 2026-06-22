@@ -26,10 +26,6 @@ class VaultFileInfo(BaseModel):
     tags: list[str] = []
 
 
-class VaultFileListResponse(BaseModel):
-    files: list[VaultFileInfo]
-
-
 class VaultUploadResponse(BaseModel):
     path: str
     name: str

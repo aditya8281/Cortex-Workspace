@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Brain, RefreshCw } from "lucide-react";
@@ -36,40 +36,43 @@ export default function ModelsPage() {
 
   const [downloadingModels, setDownloadingModels] = useState<Set<string>>(new Set());
   const [downloadProgress, setDownloadProgress] = useState<Map<string, number>>(new Map());
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) router.replace("/auth");
   }, [user, authLoading, router]);
 
-  const fetchData = useCallback(async () => {
-    if (!user) return;
-    try {
-      const [recsData, listData, instData] = await Promise.all([
-        modelsApi.recommendedEnhanced(),
-        modelsApi.list(),
-        modelsApi.installed(),
-      ]);
-      setHardware(recsData.hardware);
-      setWorkloads(recsData.workloads);
-      setAllModels(listData.models);
-      setInstalledModels((instData.models || []).map((m) => ({
-        model_id: m.model_id,
-        display_name: m.display_name,
-        variant: m.variants?.[0]?.quantization || "default",
-        size_gb: m.variants?.[0]?.size_gb || 0,
-        last_used: "—",
-        usage_count: 0,
-      })));
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load models");
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!user) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const [recsData, listData, instData] = await Promise.all([
+          modelsApi.recommendedEnhanced(),
+          modelsApi.list(),
+          modelsApi.installed(),
+        ]);
+        if (cancelled) return;
+        setHardware(recsData.hardware);
+        setWorkloads(recsData.workloads);
+        setAllModels(listData.models);
+        setInstalledModels((instData.models || []).map((m) => ({
+          model_id: m.model_id,
+          display_name: m.display_name,
+          variant: m.variants?.[0]?.quantization || "default",
+          size_gb: m.variants?.[0]?.size_gb || 0,
+          last_used: "—",
+          usage_count: 0,
+        })));
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load models");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [user, refreshKey]);
 
   const handleDownload = async (modelName: string, variant?: string) => {
     try {
@@ -114,7 +117,7 @@ export default function ModelsPage() {
               n.delete(m.name);
               return n;
             });
-            fetchData();
+            setRefreshKey((k) => k + 1);
           }
         }
       }
@@ -183,7 +186,7 @@ export default function ModelsPage() {
               onClick={() => {
                 setError(null);
                 setLoading(true);
-                fetchData();
+                setRefreshKey((k) => k + 1);
               }}
             >
               <RefreshCw size={14} /> Retry
@@ -227,7 +230,7 @@ export default function ModelsPage() {
               onDelete={async (modelId) => {
                 try {
                   await modelsApi.delete(modelId);
-                  fetchData();
+                  setRefreshKey((k) => k + 1);
                 } catch (err) {
                   console.error("Delete failed:", err);
                 }

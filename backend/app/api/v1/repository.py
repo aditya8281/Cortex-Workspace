@@ -188,10 +188,10 @@ async def index_repo(
         return {
             "status": "completed",
             "result": {
+                "status": "completed",
                 "files_scanned": result.files_scanned,
                 "files_indexed": result.files_indexed,
                 "files_skipped": result.files_skipped,
-                "files_errors": result.files_errors,
                 "chunks_created": result.chunks_created,
             },
         }

@@ -21,7 +21,56 @@ class CreateMemoryRequest(BaseModel):
     tags: list[str] | None = None
 
 
-@router.get("/long-term-memory")
+class LongTermMemoryItem(BaseModel):
+    id: int
+    category: str
+    title: str
+    content: str
+    confidence: float
+    access_count: int
+    source: str | None = None
+    created_at: str | None = None
+
+
+class LongTermMemoryListResponse(BaseModel):
+    memories: list[LongTermMemoryItem] | None = None
+    grouped: dict[str, list[LongTermMemoryItem]] | None = None
+
+
+class LongTermMemoryStatsResponse(BaseModel):
+    total: int
+    active: int
+    by_category: dict[str, int]
+    avg_confidence: float
+
+
+class LongTermMemoryCreateResponse(BaseModel):
+    id: int
+    status: str
+
+
+class LongTermMemoryReinforceResponse(BaseModel):
+    confidence: float
+
+
+class LongTermMemoryDeleteResponse(BaseModel):
+    status: str
+
+
+def _serialize_memory(m: LongTermMemory) -> dict:
+    return {
+        "id": m.id,
+        "category": m.category,
+        "title": m.title,
+        "content": m.content,
+        "confidence": m.confidence,
+        "access_count": m.access_count,
+        "source": m.source,
+        "created_at": m.created_at.isoformat() if m.created_at else None,
+    }
+
+
+@router.get("/long-term-memory", response_model=LongTermMemoryListResponse)
 def list_memories(
     category: str | None = None,
     db: Session = Depends(get_db),
@@ -29,43 +78,19 @@ def list_memories(
 ):
     service = LongTermMemoryService(db)
     if category:
-        return {
-            "memories": [
-                {
-                    "id": m.id,
-                    "category": m.category,
-                    "title": m.title,
-                    "content": m.content,
-                    "confidence": m.confidence,
-                    "access_count": m.access_count,
-                    "source": m.source,
-                    "created_at": m.created_at.isoformat() if m.created_at else None,
-                }
-                for m in service.search(user.id, category=category)
-            ]
-        }
+        return LongTermMemoryListResponse(
+            memories=[_serialize_memory(m) for m in service.search(user.id, category=category)]
+        )
     grouped = service.list_by_category(user.id)
-    return {
-        "grouped": {
-            cat: [
-                {
-                    "id": m.id,
-                    "category": m.category,
-                    "title": m.title,
-                    "content": m.content,
-                    "confidence": m.confidence,
-                    "access_count": m.access_count,
-                    "source": m.source,
-                    "created_at": m.created_at.isoformat() if m.created_at else None,
-                }
-                for m in memories
-            ]
+    return LongTermMemoryListResponse(
+        grouped={
+            cat: [_serialize_memory(m) for m in memories]
             for cat, memories in grouped.items()
         }
-    }
+    )
 
 
-@router.get("/long-term-memory/stats")
+@router.get("/long-term-memory/stats", response_model=LongTermMemoryStatsResponse)
 def memory_stats(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -73,7 +98,7 @@ def memory_stats(
     return LongTermMemoryService(db).get_stats(user.id)
 
 
-@router.post("/long-term-memory")
+@router.post("/long-term-memory", response_model=LongTermMemoryCreateResponse)
 def create_memory(
     payload: CreateMemoryRequest,
     db: Session = Depends(get_db),
@@ -92,7 +117,7 @@ def create_memory(
     return {"id": memory.id, "status": "created"}
 
 
-@router.post("/long-term-memory/{memory_id}/reinforce")
+@router.post("/long-term-memory/{memory_id}/reinforce", response_model=LongTermMemoryReinforceResponse)
 def reinforce_memory(
     memory_id: int,
     db: Session = Depends(get_db),
@@ -108,7 +133,7 @@ def reinforce_memory(
     return {"confidence": reinforced.confidence}
 
 
-@router.delete("/long-term-memory/{memory_id}")
+@router.delete("/long-term-memory/{memory_id}", response_model=LongTermMemoryDeleteResponse)
 def delete_memory(
     memory_id: int,
     db: Session = Depends(get_db),

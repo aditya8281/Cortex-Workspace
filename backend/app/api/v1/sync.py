@@ -415,13 +415,26 @@ async def get_sync_status(
         for s in user_states
     ]
 
+    # Compute last_sync from most recent SyncState.last_sync_at
+    last_sync = None
+    total_pending = 0
+    total_indexed = 0
+    total_errors = 0
+    for s in user_states:
+        if s.last_sync_at:
+            last_sync = max(last_sync, s.last_sync_at.isoformat()) if last_sync else s.last_sync_at.isoformat()
+        total_pending += s.files_changed or 0
+        total_indexed += s.files_watched or 0
+        if s.error_message:
+            total_errors += 1
+
     return SyncStatusResponse(
         watching=watcher.watched_count,
-        pending_changes=0,
-        indexed_files=0,
-        errors=0,
+        pending_changes=total_pending,
+        indexed_files=total_indexed,
+        errors=total_errors,
         status="watching" if watcher.is_running else "idle",
-        last_sync=None,
+        last_sync=last_sync,
         watched_paths=watched_paths,
     )
 

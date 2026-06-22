@@ -11,8 +11,11 @@ Two-password architecture:
 from __future__ import annotations
 
 import io
+import logging
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+
+logger = logging.getLogger(__name__)
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session

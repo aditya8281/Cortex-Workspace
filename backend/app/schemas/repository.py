@@ -42,10 +42,10 @@ class RepoDeleteResponse(BaseModel):
 
 
 class IndexResult(BaseModel):
+    status: str = "completed"
     files_scanned: int
     files_indexed: int
     files_skipped: int
-    files_errors: int
     chunks_created: int
 
 

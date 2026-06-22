@@ -18,8 +18,10 @@ from backend.app.schemas.model import (
     CancelDownloadResponse,
     CatalogueRefreshResponse,
     DeleteModelResponse,
+    DownloadHistoryResponse,
     DownloadModelResponse,
     DownloadProgressResponse,
+    DownloadQueueResponse,
     InstalledModelsResponse,
     ModelComparisonResponse,
     ModelDetailResponse,
@@ -376,7 +378,7 @@ async def trigger_sync(
         service = SyncService(db)
         job = await service.sync_library(provider_name=provider)
         return {
-            "job_id": job.id,
+            "job_id": str(job.id),
             "status": job.status,
             "models_discovered": job.models_discovered,
             "models_added": job.models_added,
@@ -562,7 +564,7 @@ async def update_model_settings(
     }
 
 
-@router.get("/models/downloads/queue")
+@router.get("/models/downloads/queue", response_model=DownloadQueueResponse)
 async def get_download_queue(
     current_user: User = Depends(get_current_user),
 ):
@@ -612,7 +614,7 @@ async def get_download_queue(
     }
 
 
-@router.get("/models/downloads/history")
+@router.get("/models/downloads/history", response_model=DownloadHistoryResponse)
 async def get_download_history(
     limit: int = 20,
     current_user: User = Depends(get_current_user),

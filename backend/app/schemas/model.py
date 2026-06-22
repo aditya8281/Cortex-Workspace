@@ -131,6 +131,42 @@ class DownloadProgressResponse(BaseModel):
     progress: float
 
 
+class DownloadJobInfo(BaseModel):
+    job_id: str
+    model_id: str
+    status: str
+    progress: float
+    speed_bytes_sec: float | None = None
+    downloaded_bytes: int
+    total_bytes: int
+    eta_seconds: float | None = None
+    queue_position: int | None = None
+    error: str | None = None
+
+
+class DownloadQueueResponse(BaseModel):
+    active: list[DownloadJobInfo]
+    queued: list[DownloadJobInfo]
+    completed: list[DownloadJobInfo]
+    failed: list[DownloadJobInfo]
+
+
+class DownloadHistoryItem(BaseModel):
+    job_id: str
+    model_id: str
+    status: str
+    progress: float
+    downloaded_bytes: int
+    total_bytes: int
+    error: str | None = None
+    completed_at: float | None = None
+    created_at: float | None = None
+
+
+class DownloadHistoryResponse(BaseModel):
+    history: list[DownloadHistoryItem]
+
+
 class CancelDownloadResponse(BaseModel):
     cancelled: bool
 
@@ -239,7 +275,7 @@ class StorageUsageResponse(BaseModel):
 
 
 class SyncTriggerResponse(BaseModel):
-    job_id: int
+    job_id: str
     status: str
     models_discovered: int
     models_added: int

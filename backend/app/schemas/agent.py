@@ -50,7 +50,6 @@ class AgentRunInfo(BaseModel):
     error: str | None = None
     completed_at: datetime | None = None
     created_at: str | None = None
-    updated_at: str | None = None
 
 
 class AgentStepInfo(BaseModel):
