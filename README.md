@@ -1,44 +1,29 @@
 # Cortex
 
-**A machine intelligence layer that gives a computer its own brain.**
+## Vision
 
-Cortex is not a chatbot. Cortex is not primarily a RAG platform. Cortex is not primarily a repository assistant.
+**The cognitive operating layer for personal computing.**
 
-Cortex is intended to become a system where users ask questions **without knowing exact filenames or locations**, because **Cortex continuously understands the machine**.
+Cortex is an attempt to give computers a persistent mind.
 
----
+Modern operating systems manage files, processes, memory, and hardware. They execute commands efficiently, but they do not understand the machine they run on.
 
-## The Vision
+Cortex exists to change that.
 
-A user should eventually be able to ask Cortex:
+Its purpose is to build a continuously evolving understanding of the entire system—its files, repositories, applications, workflows, history, knowledge, and user intent. Instead of treating information as isolated fragments, Cortex connects them into a coherent model of the machine and its world.
 
-> Find a file that explains attention mechanisms.
->
-> Find the repository handling authentication.
->
-> Tell me where this project is located.
->
-> Explain this codebase.
->
-> Summarize what changed on this machine.
->
-> Open a document related to this topic.
->
-> Execute a development task.
+This is not a chatbot, a search engine, or a repository assistant.
 
-**Without knowing exact filenames or locations.**
-**Cortex should know because it continuously understands the machine.**
+Cortex is a long-term effort to create a machine intelligence layer that can remember, reason, learn, and act with context.
 
-### Mental Model: Cortex as a Friend
+The goal is simple:
 
-Think of Cortex as a person — a friend to its users.
+**Transform a computer from a tool that executes instructions into a companion that understands.**
 
-- **Cortex has its own brain** (`CortexMemory/`) — shared understanding of the system
-- **Users have private storage** — their vault, settings, chat history
-- **Vaults are secrets** — never automatically indexed, embedded, or added to shared memory
-- **All users benefit from shared knowledge** — without exposing private data
+A system that grows with its user, accumulates knowledge over time, maintains continuity across years of work, and serves as the persistent intelligence behind everything happening on the machine.
 
----
+**Cortex is building the foundation for truly intelligent personal computing.**
+
 
 ## Current Status
 
