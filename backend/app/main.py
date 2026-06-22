@@ -197,8 +197,8 @@ async def lifespan(app: FastAPI):
                         await OllamaSyncService().sync_installed_models(_pdb)
                     finally:
                         _pdb.close()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Periodic Ollama sync failed: %s", e)
 
         asyncio.create_task(_periodic_ollama_sync())
         logger.info("Periodic Ollama model sync started (60s interval)")
