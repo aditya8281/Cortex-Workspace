@@ -21,10 +21,11 @@ import { MetricRing } from "@/shared/ui/MetricRing";
 import { TabGroup, TabPanel } from "@/shared/ui/TabGroup";
 import NeuralNetwork from "@/shared/ui/NeuralNetwork";
 import { useAuth } from "@/shared/auth/AuthProvider";
-import { apiSystemMetrics, apiSystemLogs } from "@/shared/auth/cortexApi";
+import { apiSystemLogs } from "@/shared/auth/cortexApi";
 import { memoryApi } from "@/shared/api";
 import { agentApi } from "@/shared/api";
 import { useSystemWebSocket, type WebSocketStatus } from "@/shared/hooks/useSystemWebSocket";
+import { useLiveMetrics } from "@/shared/hooks/useLiveMetrics";
 import Link from "next/link";
 import type { SystemMetrics, SystemLog } from "@/shared/types";
 import SyncStatus from "@/shared/components/SyncStatus";
@@ -32,7 +33,7 @@ import SyncStatus from "@/shared/components/SyncStatus";
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const metrics = useLiveMetrics();
   const [recentActivity, setRecentActivity] = useState<SystemLog[]>([]);
   const [memoryCount, setMemoryCount] = useState<number | null>(null);
   const [agentCount, setAgentCount] = useState<number | null>(null);
@@ -45,7 +46,7 @@ export default function DashboardPage() {
     if (!loading && !user) router.replace("/auth");
   }, [user, loading, router]);
 
-  // ── WebSocket for live metrics + logs ──
+  // ── WebSocket for live logs only (metrics come from useLiveMetrics) ──
   useSystemWebSocket({
     path: "/ws/system",
     enabled: !!user,
@@ -53,39 +54,29 @@ export default function DashboardPage() {
     onMessage(event) {
       try {
         const { type: _type, ...payload } = JSON.parse(event.data);
-        if (_type === "metrics") {
-          setMetrics((prev) => ({ ...prev, ...payload }));
-        } else if (_type === "logs" && Array.isArray(payload.logs)) {
+        if (_type === "logs" && Array.isArray(payload.logs)) {
           setRecentActivity(payload.logs);
         }
       } catch {}
     },
   });
 
-  // ── Cold-start HTTP fetch + fallback when WS is down ──
+  // ── Cold-start HTTP fetch + fallback for logs when WS is down ──
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
 
-    // Cold-start: fetch immediately so UI isn't empty
-    apiSystemMetrics()
-      .then((data) => { if (!cancelled) setMetrics(data); })
-      .catch(() => {});
     apiSystemLogs(15)
       .then((data) => { if (!cancelled) setRecentActivity(data.logs); })
       .catch(() => {});
 
-    // Slow HTTP fallback when WebSocket is disconnected
     const startFallback = () => {
       if (httpFallbackRef.current) clearInterval(httpFallbackRef.current);
       httpFallbackRef.current = setInterval(() => {
-        apiSystemMetrics()
-          .then((data) => { if (!cancelled) setMetrics(data); })
-          .catch(() => {});
         apiSystemLogs(15)
           .then((data) => { if (!cancelled) setRecentActivity(data.logs); })
           .catch(() => {});
-      }, 30000);
+      }, 3000);
     };
 
     const stopFallback = () => {

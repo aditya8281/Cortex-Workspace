@@ -1,16 +1,19 @@
 "use client";
 
-import type { HardwareProfile } from "@/shared/types";
+import type { HardwareProfile, SystemMetrics } from "@/shared/types";
 
 interface HardwareBarProps {
   hardware: HardwareProfile;
   activeDownloads: number;
+  liveMetrics?: SystemMetrics | null;
 }
 
-export default function HardwareBar({ hardware, activeDownloads }: HardwareBarProps) {
+export default function HardwareBar({ hardware, activeDownloads, liveMetrics }: HardwareBarProps) {
   const gpu = hardware.gpu;
-  const ramUsed = hardware.ram_gb - hardware.ram_available_gb;
-  const ramPercent = Math.round((ramUsed / hardware.ram_gb) * 100);
+  const ramUsed = liveMetrics?.ram_used_gb ?? (hardware.ram_gb - hardware.ram_available_gb);
+  const ramPercent = liveMetrics?.ram_percent ?? Math.round((ramUsed / hardware.ram_gb) * 100);
+  const vramUsed = liveMetrics?.gpu_percent != null ? Math.round((liveMetrics.gpu_percent / 100) * gpu.vram_gb) : null;
+  const vramPercent = liveMetrics?.gpu_percent ?? null;
 
   return (
     <div className="glass-panel rounded-xl px-5 py-3 flex items-center gap-8 mb-6">
@@ -21,15 +24,30 @@ export default function HardwareBar({ hardware, activeDownloads }: HardwareBarPr
         </div>
       </div>
 
+      {vramPercent != null && (
+        <>
+          <div className="w-px h-6 bg-white/[0.06]" />
+          <div className="flex items-center gap-2">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-wider text-muted">VRAM</div>
+              <div className="text-[13px] font-medium">{vramUsed}/{gpu.vram_gb} GB</div>
+            </div>
+            <div className="w-[60px] h-1 bg-surface rounded-full overflow-hidden">
+              <div className="h-full bg-purple-500 rounded-full transition-all duration-300" style={{ width: `${vramPercent}%` }} />
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="w-px h-6 bg-white/[0.06]" />
 
       <div className="flex items-center gap-2">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-wider text-muted">RAM</div>
-          <div className="text-[13px] font-medium">{ramUsed}/{hardware.ram_gb} GB</div>
+          <div className="text-[13px] font-medium">{Math.round(ramUsed * 10) / 10}/{hardware.ram_gb} GB</div>
         </div>
         <div className="w-[60px] h-1 bg-surface rounded-full overflow-hidden">
-          <div className="h-full bg-accent rounded-full" style={{ width: `${ramPercent}%` }} />
+          <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${ramPercent}%` }} />
         </div>
       </div>
 

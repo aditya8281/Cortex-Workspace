@@ -28,6 +28,7 @@ import Button from "@/shared/ui/Button";
 import Skeleton from "@/shared/ui/Skeleton";
 import { modelsApi } from "@/shared/api";
 import { useAuth } from "@/shared/auth/AuthProvider";
+import { useLiveMetrics } from "@/shared/hooks/useLiveMetrics";
 import type { ModelCatalogEntry, HardwareProfile, ModelVariantInfo } from "@/shared/types";
 
 /* ── Helpers ── */
@@ -236,6 +237,7 @@ export default function ModelDetailPage() {
 
   const [model, setModel] = useState<ModelCatalogEntry | null>(null);
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
+  const liveMetrics = useLiveMetrics();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingVariant, setDownloadingVariant] = useState<string | null>(null);
@@ -299,7 +301,9 @@ export default function ModelDetailPage() {
   if (authLoading || loading) return <ModelDetailSkeleton />;
   if (!model) return null;
 
-  const vramAvail = hardware?.gpu?.vram_available_gb ?? 0;
+  const vramAvail = liveMetrics?.gpu_percent != null && hardware?.gpu?.vram_gb
+    ? hardware.gpu.vram_gb * (1 - liveMetrics.gpu_percent / 100)
+    : hardware?.gpu?.vram_available_gb ?? 0;
   const bandwidth = hardware?.gpu?.memory_bandwidth_gbps ?? null;
   const recVariant = recommendedVariant;
   const recTps = recVariant ? estimateTps(recVariant.size_gb, bandwidth) : 0;
