@@ -8,10 +8,11 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     SECRET_KEY: str = ""
+    PREVIOUS_SECRET_KEYS: str = ""  # Comma-separated list of previous keys for rotation
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes, refresh token rotation handles session续
 
-    DATABASE_URL: str = "postgresql://cortex:cortex@localhost:5432/cortex"
+    DATABASE_URL: str = ""  # Must be set via environment variable
     REDIS_URL: str = "redis://localhost:6379/0"
     ENV: str = "development"
     CORTEX_ROOT: str | None = Field(
@@ -79,6 +80,14 @@ class Settings(BaseSettings):
         return value
 
     WORKSPACE_ROOT: str = "."
+
+    @property
+    def all_secret_keys(self) -> list[str]:
+        """Return current key plus all previous keys for JWT rotation verification."""
+        keys = [self.SECRET_KEY] if self.SECRET_KEY else []
+        if self.PREVIOUS_SECRET_KEYS:
+            keys.extend(k.strip() for k in self.PREVIOUS_SECRET_KEYS.split(",") if k.strip())
+        return keys
 
     @field_validator("DEBUG", mode="before")
     @classmethod

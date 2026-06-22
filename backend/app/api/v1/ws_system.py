@@ -60,6 +60,11 @@ def collect_logs(n: int = 15) -> dict:
 @router.websocket("/ws/system")
 async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
     """Push real-time metrics (every 500ms) and activity logs (every 3s)."""
+    # Accept token from sec-websocket-protocol header (preferred) or query param (legacy)
+    if not token:
+        protocols = ws.headers.get("sec-websocket-protocol", "")
+        if protocols:
+            token = protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
     if not token:
         await ws.close(code=4001, reason="Authentication required")
         return

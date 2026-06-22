@@ -34,6 +34,14 @@ MAX_VAULT_FILE_SIZE = 50 * 1024 * 1024
 # After unlock, the password is cached in memory so upload/download can
 # encrypt/decrypt with per-file salt derivation without re-sending the
 # password on every request.  The cache is cleared on lock/logout.
+#
+# SECURITY NOTE: This cache stores vault passwords in plaintext in memory.
+# This is an inherent limitation of Fernet encryption — the password must
+# be available for per-file encryption/decryption. The SecurePasswordCache
+# stores values as bytearrays and wipes them on pop(), but the password
+# remains accessible while the vault is unlocked. This is acceptable for
+# single-server deployments. For multi-server or high-security setups,
+# consider using an HSM or external key management service.
 _vault_cache_lock = Lock()
 
 
@@ -561,7 +569,10 @@ def search_vault_files(db: Session, user_id: int, query: str) -> list[dict]:
 
 
 def change_vault_password(db: Session, user: User, old_pw: str, new_pw: str) -> bool:
-    """Safely rotate the vault password and re-encrypt all files and metadata."""
+    """Safely rotate the vault password and re-encrypt all files and metadata.
+
+    Creates backups of all files before re-encryption and rolls back on failure.
+    """
     if not verify_vault_password(db, user, old_pw):
         return False
 
@@ -585,6 +596,21 @@ def change_vault_password(db: Session, user: User, old_pw: str, new_pw: str) -> 
     metadata_file = vault_dir / ".metadata.bin"
     has_metadata = metadata_file.exists()
 
+    # Create backups before re-encryption
+    backup_dir = vault_dir / ".backup_pre_rekey"
+    try:
+        backup_dir.mkdir(exist_ok=True)
+        for item in files_to_rekey:
+            rel = item.relative_to(vault_dir)
+            backup_path = backup_dir / rel
+            backup_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(item, backup_path)
+        if has_metadata:
+            shutil.copy2(metadata_file, backup_dir / ".metadata.bin")
+    except Exception as e:
+        logger.error("Failed to create backup before password change: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to create backup. Password change aborted.")
+
     # Decrypt all files into memory first to ensure no partial updates
     decrypted_files = {}
     for item in files_to_rekey:
@@ -594,9 +620,11 @@ def change_vault_password(db: Session, user: User, old_pw: str, new_pw: str) -> 
             decrypted_files[item] = decrypted
         except Exception as e:
             logger.error("Failed to decrypt vault file during password change: %s", e)
+            # Rollback: restore from backup
+            _restore_from_backup(vault_dir, backup_dir)
             raise HTTPException(
                 status_code=500,
-                detail="Failed to re-encrypt vault. Password change aborted to prevent data loss.",
+                detail="Failed to re-encrypt vault. Password change aborted — backup restored.",
             )
 
     decrypted_metadata = None
@@ -605,16 +633,25 @@ def change_vault_password(db: Session, user: User, old_pw: str, new_pw: str) -> 
             metadata_content = metadata_file.read_bytes()
             decrypted_metadata = decrypt_bytes(metadata_content, old_pw)
         except Exception:
-            raise HTTPException(status_code=500, detail="Failed to decrypt vault metadata. Password change aborted.")
+            _restore_from_backup(vault_dir, backup_dir)
+            raise HTTPException(status_code=500, detail="Failed to decrypt vault metadata. Password change aborted — backup restored.")
 
     # Re-encrypt and write everything with the new password
-    for item, decrypted_content in decrypted_files.items():
-        encrypted = encrypt_bytes(decrypted_content, new_pw)
-        item.write_bytes(encrypted)
+    try:
+        for item, decrypted_content in decrypted_files.items():
+            encrypted = encrypt_bytes(decrypted_content, new_pw)
+            item.write_bytes(encrypted)
 
-    if decrypted_metadata:
-        encrypted_metadata = encrypt_bytes(decrypted_metadata, new_pw)
-        metadata_file.write_bytes(encrypted_metadata)
+        if decrypted_metadata:
+            encrypted_metadata = encrypt_bytes(decrypted_metadata, new_pw)
+            metadata_file.write_bytes(encrypted_metadata)
+    except Exception as e:
+        logger.error("Failed to re-encrypt vault during password change: %s", e)
+        _restore_from_backup(vault_dir, backup_dir)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to re-encrypt vault. Password change aborted — backup restored.",
+        )
 
     # Update password hash in DB
     user.vault_password_hash = hash_password(new_pw)
@@ -626,7 +663,27 @@ def change_vault_password(db: Session, user: User, old_pw: str, new_pw: str) -> 
         if user.id in _vault_passwords:
             _vault_passwords[user.id] = new_pw
 
+    # Clean up backup on success
+    try:
+        shutil.rmtree(backup_dir)
+    except Exception:
+        logger.warning("Failed to clean up backup dir: %s", backup_dir)
+
     return True
+
+
+def _restore_from_backup(vault_dir: Path, backup_dir: Path) -> None:
+    """Restore vault files from backup directory."""
+    try:
+        for item in backup_dir.rglob("*"):
+            if item.is_file():
+                rel = item.relative_to(backup_dir)
+                dest = vault_dir / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(item, dest)
+        shutil.rmtree(backup_dir)
+    except Exception as e:
+        logger.error("CRITICAL: Failed to restore vault from backup: %s", e)
 
 
 def move_vault_item(db: Session, user_id: int, source_path: str, destination_folder: str) -> dict:

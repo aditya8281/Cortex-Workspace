@@ -50,7 +50,16 @@ async def get_current_user(
         )
 
     try:
-        payload = jwt.decode(raw_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        # Try current key first, then previous keys for rotation support
+        payload = None
+        for key in settings.all_secret_keys:
+            try:
+                payload = jwt.decode(raw_token, key, algorithms=[settings.ALGORITHM])
+                break
+            except JWTError:
+                continue
+        if payload is None:
+            raise JWTError("No valid key found")
         jti = payload.get("jti")
         if jti and await is_access_token_revoked(jti):
             raise HTTPException(
@@ -89,7 +98,16 @@ async def get_current_user_optional(
     except Exception:
         return None
     try:
-        payload = jwt.decode(raw_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        # Try current key first, then previous keys for rotation support
+        payload = None
+        for key in settings.all_secret_keys:
+            try:
+                payload = jwt.decode(raw_token, key, algorithms=[settings.ALGORITHM])
+                break
+            except JWTError:
+                continue
+        if payload is None:
+            return None
         jti = payload.get("jti")
         if jti and await is_access_token_revoked(jti):
             return None

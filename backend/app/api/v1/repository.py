@@ -66,7 +66,7 @@ def list_repos(
     """List all repositories for the current user."""
     repos = (
         db.query(RepoIndex)
-        .filter((RepoIndex.user_id == current_user.id) | (RepoIndex.user_id.is_(None)))
+        .filter(RepoIndex.user_id == current_user.id)
         .order_by(RepoIndex.updated_at.desc())
         .all()
     )
@@ -85,6 +85,20 @@ def create_repo(
     path = Path(payload.path).expanduser().resolve()
     if not path.is_dir():
         raise HTTPException(status_code=400, detail=f"Path is not a directory: {payload.path}")
+
+    # Validate repo path is within user's storage root
+    from backend.app.services.storage_registry import get_registry_for_user
+
+    registry = get_registry_for_user(db, current_user.id)
+    if registry:
+        storage_root = Path(registry.storage_root).resolve()
+        try:
+            path.relative_to(storage_root)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Repository path must be within storage root: {storage_root}",
+            )
 
     # Check for duplicate path
     existing = db.query(RepoIndex).filter(RepoIndex.repo_path == str(path)).first()

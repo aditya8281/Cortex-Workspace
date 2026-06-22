@@ -18,7 +18,14 @@ router = APIRouter()
 
 @router.websocket("/ws/demo")
 async def websocket_demo(ws: WebSocket) -> None:
-    token = ws.query_params.get("token")
+    # Accept token from sec-websocket-protocol header (preferred) or query param (legacy)
+    token = None
+    protocols = ws.headers.get("sec-websocket-protocol", "")
+    if protocols:
+        # Token is sent as the first subprotocol
+        token = protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
+    if not token:
+        token = ws.query_params.get("token")
     if not token:
         await ws.close(code=4001, reason="Missing authentication token")
         return

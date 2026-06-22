@@ -21,10 +21,11 @@ services:
     image: redis:7-alpine
     container_name: cortex-redis
     restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-cortex_redis_secret}
     ports:
       - "127.0.0.1:6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-cortex_redis_secret}", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
