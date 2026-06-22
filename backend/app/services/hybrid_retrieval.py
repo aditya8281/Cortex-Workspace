@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from backend.app.core.vector_db import VectorDB, get_vector_db
+from backend.app.services.circuit_breaker import qdrant_circuit_breaker
 from backend.app.services.embedding_service import EmbeddingService, get_embedding_service
 from backend.app.services.fulltext_search import FullTextSearch, get_fulltext_search
 
@@ -79,6 +80,10 @@ class HybridRetrievalV2:
         return diverse
 
     def _vector_search(self, query: str, repo_id: int | None, limit: int) -> list[RetrievalResult]:
+        if not qdrant_circuit_breaker.allow_request():
+            logger.warning("Qdrant circuit breaker is OPEN — skipping vector search")
+            return []
+
         query_vector = self._embedder.embed_single(query)
         results = []
 
@@ -112,7 +117,9 @@ class HybridRetrievalV2:
                             symbol_name=payload.get("symbol_name"),
                         )
                     )
+                qdrant_circuit_breaker.record_success()
             except Exception as e:
+                qdrant_circuit_breaker.record_failure()
                 logger.warning("Vector search failed on %s: %s", collection, e)
 
         return results

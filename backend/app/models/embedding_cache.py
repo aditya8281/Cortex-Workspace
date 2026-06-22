@@ -18,9 +18,9 @@ class EmbeddingCache(Base):
     model_version: Mapped[str] = mapped_column(String(128), nullable=False, default="default")
     embedding: Mapped[str] = mapped_column(Text, nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_accessed_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
     access_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     ttl_seconds: Mapped[int] = mapped_column(Integer, default=2592000, nullable=False)

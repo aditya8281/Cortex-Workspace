@@ -23,10 +23,10 @@ class RepoIndex(Base):
     total_files: Mapped[int] = mapped_column(Integer, default=0)
     total_chunks: Mapped[int] = mapped_column(Integer, default=0)
     last_commit: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    last_indexed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="pending")
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     graph_nodes: Mapped[list] = relationship("GraphNode", back_populates="repo")
     indexed_files: Mapped[list] = relationship("IndexedFile", back_populates="repo")
@@ -48,6 +48,6 @@ class CodeChunk(Base):
     start_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
     embedding_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     graph_nodes: Mapped[list] = relationship("GraphNode", back_populates="chunk")

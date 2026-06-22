@@ -42,6 +42,10 @@ class Settings(BaseSettings):
         if self.CORS_ORIGINS:
             self.ALLOWED_ORIGINS = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
+        if not self.SECRET_KEY:
+            import secrets
+            self.SECRET_KEY = secrets.token_hex(32)
+
     EMBEDDING_DIM: int = 768
     EMBEDDING_MODEL_PATH: str = ""
     EMBEDDING_MODEL_NAME: str = "nomic-embed-text"

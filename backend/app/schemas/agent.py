@@ -109,7 +109,7 @@ class AgentFeedbackInfo(BaseModel):
 
 class AgentFeedbackCreateResponse(BaseModel):
     status: str
-    feedback: dict
+    feedback: AgentFeedbackInfo
 
 
 class AgentFeedbackListResponse(BaseModel):

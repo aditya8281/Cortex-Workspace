@@ -17,7 +17,7 @@ class ModelCatalogEntry(BaseModel):
     display_name: str
     provider: str
     model_type: str
-    parameter_count: str | None = None
+    parameter_count: float | None = None
     size_bytes: int | None = None
     context_length: int | None = None
     capabilities: list[str]
@@ -75,7 +75,7 @@ class ModelRecommendation(BaseModel):
     model_id: str
     display_name: str
     family: str
-    parameter_count: str | None = None
+    parameter_count: float | None = None
     capabilities: list[str]
     description: str | None = None
     score: float
@@ -101,7 +101,7 @@ class RecommendedModelsAllResponse(BaseModel):
     workloads: dict[str, WorkloadRecommendations]
 
 
-class HardwareInfo(BaseModel):
+class HardwareInfoResponse(BaseModel):
     ram_gb: float = 0.0
     ram_available_gb: float = 0.0
     ram_percent: float = 0.0
@@ -116,11 +116,15 @@ class HardwareInfo(BaseModel):
 
 
 class LLMHealthResponse(BaseModel):
-    pass
+    status: str = "unknown"
+    latency_ms: float = 0.0
+    error: str | None = None
 
 
 class LLMMetricsResponse(BaseModel):
-    pass
+    total_requests: int = 0
+    total_tokens: int = 0
+    avg_latency: float = 0.0
 
 
 class UsageStatsResponse(BaseModel):
@@ -192,7 +196,7 @@ class InstalledVariant(BaseModel):
     size_bytes: int
     size_gb: float
     downloaded: bool
-    parameter_count: str | None = None
+    parameter_count: float | None = None
     quality_score: float = 90.0
 
 
@@ -200,7 +204,7 @@ class InstalledModel(BaseModel):
     model_id: str
     display_name: str
     family: str
-    parameter_count: str | None = None
+    parameter_count: float | None = None
     capabilities: list[str]
     variants: list[InstalledVariant]
 
@@ -223,7 +227,7 @@ class ModelSearchResult(BaseModel):
     display_name: str
     family: str
     provider: str
-    parameter_count: str | None = None
+    parameter_count: float | None = None
     architecture: str | None = None
     context_length: int | None = None
     capabilities: list[str]
@@ -240,7 +244,7 @@ class ModelVariantInfo(BaseModel):
     variant_id: str
     quantization: str
     quantization_level: str | None = None
-    parameter_count: str | None = None
+    parameter_count: float | None = None
     size_bytes: int | None = None
     size_gb: float | None = None
     vram_required_gb: float | None = None
@@ -253,7 +257,7 @@ class ModelDetailResponse(BaseModel):
     model_id: str
     display_name: str
     family: str
-    parameter_count: str | None = None
+    parameter_count: float | None = None
     architecture: str | None = None
     context_length_default: int | None = None
     context_length_max: int | None = None
@@ -336,3 +340,16 @@ class ModelSettingsUpdate(BaseModel):
     huggingface_token: str | None = None
     auto_download: bool | None = None
     max_concurrent_downloads: int | None = None
+
+
+class InferenceConfigResponse(BaseModel):
+    model_id: str
+    context_length: int | None = None
+    temperature: float = 0.7
+    top_p: float = 0.9
+    top_k: int = 40
+    repeat_penalty: float = 1.1
+    seed: int = -1
+    num_predict: int = 2048
+    num_ctx: int | None = None
+    image_resolution: int | None = None
