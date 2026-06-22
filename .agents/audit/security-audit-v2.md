@@ -15,8 +15,10 @@ Previous audit: `.agents/audit/security-audit-report.md`
 | C1 | Agent self-approval bypass | Added explicit block: `approve_tool` cannot be called via LLM tool-calling |
 | H1 | Auth rate limiter key mismatch (`/api/auth` vs `/api/v1/auth`) | Fixed prefix to `/api/v1/auth` in `rate_limit.py:33` |
 | H2 | Refresh token reuse clears ALL users' tokens | Scoped `clear_pattern` to `refresh:user:{user_id}:*` |
-| H4 | Vault brute-force unprotected | Added 5 attempts/minute rate limit on vault unlock endpoint |
+| H4 | Vault brute-force unprotected | Added 5 attempts/minute rate limit with in-memory fallback |
 | M1 | `_list_files_tool` has no path restriction | Added `_ensure_within_workspace()` call |
+| Q1 | Token revocation silently ignored on logout | Added logging |
+| Q2 | Security token store/revoke at warning level | Upgraded to error level |
 
 ---
 

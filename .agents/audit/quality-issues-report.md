@@ -1,8 +1,30 @@
 # Cortex Backend Code Quality Audit Report
 
 **Date:** 2026-06-22  
+**Updated:** 2026-06-22 (P0/P1 quality fixes applied)  
 **Scope:** `backend/app/api/v1/`, `backend/app/services/`, `backend/app/agents/`, `backend/app/core/`, `backend/app/auth/`  
 **Method:** Static analysis — read-only scan of all files
+
+---
+
+## Fixed Issues (2026-06-22)
+
+| Category | Issue | Fix | Files |
+|----------|-------|-----|-------|
+| Error Handling | LLM error messages leaked to clients | Generic error message, full error logged server-side | `conversations.py:166` |
+| Error Handling | HTTP call with no timeout on model delete | Added `timeout=30.0` | `models.py:702` |
+| Error Handling | Rate limit bypass on Redis failure | Added in-memory fallback + logging | `vault.py:112` |
+| Error Handling | Token revocation silently ignored on logout | Added `logger.warning` | `auth/router.py:149` |
+| Error Handling | Decryption failure silently returns encrypted data | Added `logger.warning` with context | `vault_service.py:426` |
+| Error Handling | No error handling around async task enqueue | Wrapped in try/except with logging | `sync.py:337` |
+| Error Handling | Internal file paths in error messages | Replaced with generic message | `vault_service.py:595` |
+| Logging | Silent except blocks in models.py | Added `logger.warning` to 3 locations | `models.py:215,437,473` |
+| Logging | Vault metadata logs missing user_id | Added user_id context | `vault_service.py:285,302` |
+| Logging | Security token store/revoke at warning level | Upgraded to `error` | `security.py:149,164` |
+| Logging | Missing logger import in sync.py | Added `logging.getLogger(__name__)` | `sync.py` |
+| Logging | Missing logger import in auth/router.py | Added `logging.getLogger(__name__)` | `auth/router.py` |
+| Validation | long_term_memory missing field constraints | Added `Field(min_length, max_length)` | `long_term_memory.py:15-21` |
+| Reliability | File watcher join blocks without timeout | Added `join(timeout=5.0)` | `file_watcher_v2.py:123` |
 
 ---
 
