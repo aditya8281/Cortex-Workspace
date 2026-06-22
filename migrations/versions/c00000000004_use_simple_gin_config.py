@@ -1,14 +1,14 @@
 """Use 'simple' config for GIN full-text search indexes.
 
-Revision ID: c00000000003
-Revises: c00000000002
+Revision ID: c00000000004
+Revises: c00000000003
 Create Date: 2026-06-22
 """
 
 from alembic import op
 
-revision = "c00000000003"
-down_revision = "c00000000002"
+revision = "c00000000004"
+down_revision = "c00000000003"
 branch_labels = None
 depends_on = None
 

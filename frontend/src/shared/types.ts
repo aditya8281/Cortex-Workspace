@@ -557,6 +557,19 @@ export interface DownloadJob {
   error: string | null;
 }
 
+/** Download history entry as returned by GET /models/downloads/history */
+export interface DownloadHistoryEntry {
+  job_id: string;
+  model_id: string;
+  status: string;
+  progress: number;
+  downloaded_bytes: number;
+  total_bytes: number;
+  error: string | null;
+  completed_at: number | null;
+  created_at: number | null;
+}
+
 export interface DownloadQueueResponse {
   active: DownloadJob[];
   queued: DownloadJob[];
@@ -616,8 +629,21 @@ export interface ModelVariantInfo {
 
 // ── Model Search / Comparison / Sync ───────────────────────
 
+export interface ModelSearchItem {
+  model_id: string;
+  display_name: string;
+  family: string;
+  provider: string;
+  parameter_count: number | null;
+  architecture: string | null;
+  context_length: number | null;
+  capabilities: string[];
+  description: string | null;
+  tags: string[];
+}
+
 export interface ModelSearchResult {
-  models: ModelInfo[];
+  models: ModelSearchItem[];
   total_count: number;
 }
 
@@ -661,6 +687,25 @@ export interface SyncJob {
 }
 
 // ── Model Settings ───────────────────────────────────────────
+
+export interface InstalledVariant {
+  variant_id: string;
+  quantization: string;
+  size_bytes: number;
+  size_gb: number;
+  downloaded: boolean;
+  parameter_count: number | null;
+  quality_score: number;
+}
+
+export interface InstalledModel {
+  model_id: string;
+  display_name: string;
+  family: string;
+  parameter_count: number | null;
+  capabilities: string[];
+  variants: InstalledVariant[];
+}
 
 export interface ModelSettings {
   inference_backend: string;
