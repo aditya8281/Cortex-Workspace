@@ -176,24 +176,6 @@ class EmbeddingService:
         """Embed a single text into a vector (alias for embed)."""
         return self.embed(text)
 
-    def embed_with_cache(self, text: str, cache_service: Any) -> list[float]:
-        """Embed text using cache when available, computing only on miss."""
-        import hashlib
-
-        content_hash = hashlib.sha256(text.encode()).hexdigest()[:32]
-        cached = cache_service.get(content_hash, model_name=self._get_model_name())
-        if cached is not None:
-            return cached
-
-        embedding = self.embed(text)
-        cache_service.put(
-            content_hash=content_hash,
-            embedding=embedding,
-            model_name=self._get_model_name(),
-            token_count=len(text) // 4,
-        )
-        return embedding
-
     def _get_model_name(self) -> str:
         if self._backend == "onnx":
             return "onnx-nomic-embed-text"
