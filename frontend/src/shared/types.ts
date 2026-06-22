@@ -610,6 +610,7 @@ export interface ModelCatalogEntry {
   description: string;
   tags: string[];
   variants: ModelVariantInfo[];
+  benchmarks?: { score: number; name: string }[];
 }
 
 export interface ModelVariantInfo {

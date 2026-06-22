@@ -3,6 +3,7 @@
  */
 
 export { agentApi } from "./agent";
+export { conversationsApi } from "./conversations";
 export { indexingApi } from "./indexing";
 export { api } from "./client";
 export { knowledgeApi } from "./knowledge";

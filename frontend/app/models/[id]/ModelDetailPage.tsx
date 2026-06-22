@@ -319,12 +319,7 @@ export default function ModelDetailPage() {
     ...(model.capabilities?.slice(0, 3) || []),
   ].filter(Boolean);
 
-  const benchmarks: { score: number; name: string }[] = [
-    { score: 85.2, name: "HumanEval" },
-    { score: 68.4, name: "MBPP" },
-    { score: 72.1, name: "MMLU" },
-    { score: 61.3, name: "GSM8K" },
-  ];
+  const benchmarks = model.benchmarks ?? [];
 
   return (
     <DashboardShell>
@@ -389,7 +384,19 @@ export default function ModelDetailPage() {
                 )}
               </Button>
             )}
-            <Button variant="secondary" size="md">
+            <Button variant="secondary" size="md" onClick={() => {
+              try {
+                const compareIds: string[] = JSON.parse(sessionStorage.getItem('compareModels') || '[]');
+                if (!compareIds.includes(model.model_id)) {
+                  compareIds.push(model.model_id);
+                  sessionStorage.setItem('compareModels', JSON.stringify(compareIds.slice(-3)));
+                }
+                router.push('/models/compare');
+              } catch {
+                sessionStorage.setItem('compareModels', JSON.stringify([model.model_id]));
+                router.push('/models/compare');
+              }
+            }}>
               <ArrowLeftRight size={14} />
               Add to Compare
             </Button>

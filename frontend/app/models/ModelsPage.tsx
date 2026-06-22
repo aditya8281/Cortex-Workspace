@@ -270,6 +270,7 @@ export default function ModelsPage() {
             <CatalogTable
               models={allModels}
               onDownload={handleDownload}
+              hardware={hardware}
             />
 
             {/* Installed Bar */}

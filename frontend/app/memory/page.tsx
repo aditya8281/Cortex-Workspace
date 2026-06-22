@@ -390,15 +390,32 @@ export default function MemoryPage() {
                   <Brain className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-text">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-lg font-bold text-text">
                     {selectedCategory ? (
                       <span className="capitalize">{selectedCategory}</span>
                     ) : (
                       "Memory"
                     )}
                   </h1>
+                  </div>
                   <p className="text-xs text-text-muted">
-                    {total} {total === 1 ? "entry" : "entries"} · Knowledge Graph
+                    {total} {total === 1 ? "entry" : "entries"}
+                    {syncStatus && syncStatus.watching > 0 && (
+                      <>
+                        {' · '}
+                        <span className="inline-flex items-center gap-1">
+                          {activeJob ? (
+                            <Loader2 className="h-3 w-3 animate-spin text-accent inline" />
+                          ) : (
+                            <FolderSync className="h-3 w-3 text-success inline" />
+                          )}
+                          <span className={activeJob ? "text-accent" : "text-success"}>
+                            {activeJob ? "Syncing" : `${syncStatus.indexed_files} indexed`}
+                          </span>
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>

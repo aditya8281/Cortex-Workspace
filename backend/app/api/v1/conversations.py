@@ -86,6 +86,27 @@ async def get_conversation(
     )
 
 
+class RenameConversationPayload(BaseModel):
+    title: str
+
+
+@router.patch("/conversations/{conversation_id}/title")
+async def rename_conversation(
+    conversation_id: int,
+    payload: RenameConversationPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    svc = ConversationService(db)
+    conv = svc.get(conversation_id, current_user.id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if not payload.title or not payload.title.strip():
+        raise HTTPException(status_code=400, detail="Title is required")
+    svc.update_title(conversation_id, payload.title.strip())
+    return {"status": "updated", "title": payload.title.strip()}
+
+
 @router.delete("/conversations/{conversation_id}")
 async def delete_conversation(
     conversation_id: int,

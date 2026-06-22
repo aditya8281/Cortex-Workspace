@@ -24,16 +24,25 @@
 - **#2 AgentChat SSE streaming** ✅ — Switched to `agentApi.streamRun()` with abort support + fallback
 - **#3 LLM/model settings UI** ✅ — Built `LLMSettingsForm.tsx` with backend selector, HF token, auto-download toggle
 
-### MEDIUM Priority — Partially Fixed
+### MEDIUM Priority — All Fixed
 
 | # | Issue | Status |
 |---|-------|--------|
 | 4 | Activity tab shows backend logs | ✅ Enhanced with level-based icons, color coding, module info |
 | 5 | Insights tab is static cards | ✅ Added agent runs count, replaced hardcoded cards with real links |
 | 6 | Memory page monolith (1310+ lines) | ✅ Extracted graph view → MemoryGraphView.tsx, learning view → MemoryLearningView.tsx |
-| 7 | MemoryEditor category free-text | Replace with dropdown of 8 valid categories |
+| 7 | MemoryEditor category free-text | ✅ Replaced with <select> dropdown of 6 valid categories |
 | 8 | Search orphaned components | ✅ Deleted SearchFilters.tsx, SearchResults.tsx, GraphView.tsx |
 | 9 | No pagination in search results | ✅ Added cursor-based Load More button |
+| 10 | No model/tool selection during agent creation | ✅ Already implemented (AgentEditor has model dropdown + tools selector) |
+| 11 | No feedback UI for agent runs | ✅ Added thumbs up/down on last assistant message via agentApi.addFeedback() |
+| 12 | No conversation renaming | ✅ Added PATCH /conversations/{id}/title endpoint + frontend conversationsApi.rename() |
+| 13 | No stop/cancel button for streaming | ✅ Added visible stop button in AgentChat using abortRef |
+| 14 | Model detail benchmarks hardcoded | ✅ Uses model.benchmarks from backend (typed optional field on ModelCatalogEntry) |
+| 15 | "Add to Compare" button non-functional | ✅ Wired to sessionStorage + /models/compare with try/catch |
+| 16 | Catalog "Fit" column always "—" | ✅ Computes VRAM fit from hardware_requirements.min_vram_gb vs gpu.vram_available_gb |
+| 17 | HardwareBar only static snapshot | ✅ Already implemented (accepts liveMetrics prop from WebSocket) |
+| 18 | No sync status indicator on memory page | ✅ Added sync badge in header showing indexed file count or syncing animation |
 | 10 | No model/tool selection during agent creation | Add model dropdown + tools selector |
 | 11 | No feedback UI for agent runs | Add thumbs up/down on responses |
 | 12 | No conversation renaming | Add inline edit on title |
