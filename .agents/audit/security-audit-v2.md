@@ -20,6 +20,21 @@ Previous audit: `.agents/audit/security-audit-report.md`
 | Q1 | Token revocation silently ignored on logout | Added logging |
 | Q2 | Security token store/revoke at warning level | Upgraded to error level |
 
+## Fixed Issues — Session 3 (2026-06-22)
+
+| ID | Issue | Fix |
+|----|-------|-----|
+| H-S5 | GitHub token encryption weak key derivation | Replaced SHA-256 with HKDF |
+| H-S8 | HuggingFace token stored in plaintext | Added Fernet encryption with HKDF |
+| H-S10 | Rate limiting fails open on Redis outage | Added in-memory fallback |
+| M-S1 | CSRF vault exemption unnecessary | Removed from exempt list |
+| M-S5 | WebSocket no per-user limits | Added per-user connection tracking |
+| M-S6 | CORS hardcoded to localhost | Added CORS_ORIGINS env var |
+| M-S8 | validate_storage_path not called | Added validation call |
+| M-C4 | Agent tools type mismatch | Added field_validator |
+| M-CL3 | Redundant auth/security.py | Deleted |
+| M-CL5 | Unused UI components (3 files) | Deleted |
+
 ---
 
 ## Executive Summary

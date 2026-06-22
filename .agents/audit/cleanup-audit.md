@@ -13,6 +13,14 @@
 | Unused import `pathlib.Path` in `executor.py` | Removed unused import |
 | Unused import `VaultFileListResponse` in `vault.py` | Removed after vault list response fix |
 
+## Fixed Issues — Session 3 (2026-06-22)
+
+| Issue | Fix |
+|-------|-----|
+| Redundant `auth/security.py` re-export (M4) | Deleted file — all imports updated to `core.security` |
+| Unused UI components: `Tooltip.tsx`, `StaggerChildren.tsx`, `Steps.tsx` (M7, M8, M11) | Deleted all 3 files |
+| CLI stubs — entire `cli/` directory non-functional (H5) | Deleted `cli/` directory (15 command stubs + entry point) |
+
 ---
 
 ---

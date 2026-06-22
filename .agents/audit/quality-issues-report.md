@@ -26,6 +26,19 @@
 | Validation | long_term_memory missing field constraints | Added `Field(min_length, max_length)` | `long_term_memory.py:15-21` |
 | Reliability | File watcher join blocks without timeout | Added `join(timeout=5.0)` | `file_watcher_v2.py:123` |
 
+## Fixed Issues — Session 3 (2026-06-22)
+
+| Category | Issue | Fix | Files |
+|----------|-------|-----|-------|
+| Reliability | Rate limiting fails open on Redis outage | Added in-memory fallback | `rate_limit.py` |
+| Validation | Missing input validation on conversations | Added Query constraints | `conversations.py` |
+| Thread Safety | WebSocket no per-user limits | Added per-user connection tracking | `websocket.py` |
+| Security | CSRF vault exemption unnecessary | Removed from exempt list | `csrf.py` |
+| Security | Storage path validation skipped | Added `validate_storage_path()` call | `storage_registry.py` |
+| Type Safety | Agent tools type mismatch | Added field_validator for JSON parsing | `schemas/agent.py` |
+| Cleanup | Redundant auth/security.py | Deleted re-export file | `auth/security.py` |
+| Cleanup | Unused UI components (3 files) | Deleted | `frontend/src/shared/ui/` |
+
 ---
 
 ## Executive Summary

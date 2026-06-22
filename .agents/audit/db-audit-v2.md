@@ -16,6 +16,13 @@ Scope: Full database layer — migrations, models, schemas, configuration
 | SCH-HIGH-2 | `AgentStepInfo.action_input` mismatch with ORM `action_input_json` | Added `serialization_alias="action_input_json"` |
 | M-MED-3 | `indexing_configs.user_id` FK missing `ondelete` | Added `ondelete="CASCADE"` |
 
+## Fixed Issues — Session 3 (2026-06-22)
+
+| ID | Issue | Fix |
+|----|-------|-----|
+| H-D4 | `backref` usage in graph/file_index models | Converted to `back_populates` with explicit relationships |
+| M-D4 | `User.deleted_at` missing index | Created migration `c00000000002` |
+
 ---
 
 ## Executive Summary

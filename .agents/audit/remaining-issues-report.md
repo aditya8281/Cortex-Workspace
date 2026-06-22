@@ -20,6 +20,27 @@
 | 9 | P1 | `AgentRunInfo.updated_at` phantom field | Removed from schema |
 | 10 | P1 | Dead `VaultFileListResponse` schema | Removed |
 
+## Session 3 Fixes (2026-06-22) — Commit `af1a823`
+
+| # | Severity | Issue | Fix |
+|---|----------|-------|-----|
+| 20 | P1 | Rate limiting fails open on Redis outage | Added in-memory fallback with `_fallback_store` dict + `_fallback_lock` |
+| 21 | P1 | Search filter params `node_type`/`language` silently ignored | Added both params to `SearchRequest` and passed to retrieval service |
+| 22 | P1 | Sync status field name mismatch (`watching_count` vs `watching`) | Aligned frontend type to `watching` |
+| 23 | P1 | Vault upload returns encrypted size, not original | Changed to return `len(content)` (plaintext size) |
+| 24 | P1 | Missing input validation on conversations endpoint | Added `Query(ge=1, le=200)` for limit, `Query(ge=0)` for offset |
+| 25 | P1 | CSRF vault exemption unnecessary | Removed `/api/v1/me/vault/` from `EXEMPT_PREFIXES` |
+| 26 | P1 | WebSocket no per-user connection limits | Added `MAX_CONNECTIONS_PER_USER=10` with per-user tracking |
+| 27 | P1 | `validate_storage_path()` not called on storage registration | Added validation call in `register_user_storage()` |
+| 28 | P1 | Agent `tools` type mismatch (JSON string vs array) | Added `field_validator` to parse JSON string into list |
+| 29 | P1 | Redundant `auth/security.py` re-export | Deleted — imports updated to `core.security` |
+| 30 | P1 | `User.deleted_at` missing index | Created migration `c00000000002` |
+| 31 | P1 | Unused UI components (Tooltip, StaggerChildren, Steps) | Deleted 3 files |
+| 32 | P1 | `backref` usage in graph/file_index models | Converted to `back_populates` with explicit relationships |
+| 33 | P1 | CORS hardcoded to localhost only | Added `CORS_ORIGINS` env var with `model_post_init` parser |
+| 34 | P1 | GitHub token encryption weak key derivation | Replaced SHA-256 with HKDF(SHA256, info=b"github-token-encryption") |
+| 35 | P1 | HuggingFace token stored in plaintext | Added Fernet encryption with HKDF key derivation |
+
 **File:** `backend/app/api/v1/vault.py:113`
 
 ```python
