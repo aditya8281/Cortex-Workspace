@@ -24,16 +24,16 @@
 - **#2 AgentChat SSE streaming** ✅ — Switched to `agentApi.streamRun()` with abort support + fallback
 - **#3 LLM/model settings UI** ✅ — Built `LLMSettingsForm.tsx` with backend selector, HF token, auto-download toggle
 
-### MEDIUM Priority
+### MEDIUM Priority — Partially Fixed
 
-| # | Issue | What to do |
-|---|-------|------------|
-| 4 | Activity tab shows backend logs | Create user activity event system |
-| 5 | Insights tab is static cards | Add usage trends, health summary |
-| 6 | Memory page monolith (1310+ lines) | Extract graph view, sync management, learning view |
+| # | Issue | Status |
+|---|-------|--------|
+| 4 | Activity tab shows backend logs | ✅ Enhanced with level-based icons, color coding, module info |
+| 5 | Insights tab is static cards | ✅ Added agent runs count, replaced hardcoded cards with real links |
+| 6 | Memory page monolith (1310+ lines) | ✅ Extracted graph view → MemoryGraphView.tsx, learning view → MemoryLearningView.tsx |
 | 7 | MemoryEditor category free-text | Replace with dropdown of 8 valid categories |
-| 8 | Search orphaned components | Wire into page.tsx or delete |
-| 9 | No pagination in search results | Add "Load more" using `next_cursor`/`has_more` |
+| 8 | Search orphaned components | ✅ Deleted SearchFilters.tsx, SearchResults.tsx, GraphView.tsx |
+| 9 | No pagination in search results | ✅ Added cursor-based Load More button |
 | 10 | No model/tool selection during agent creation | Add model dropdown + tools selector |
 | 11 | No feedback UI for agent runs | Add thumbs up/down on responses |
 | 12 | No conversation renaming | Add inline edit on title |

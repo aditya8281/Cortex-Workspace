@@ -14,6 +14,12 @@ import {
   Server,
   Shield,
   User,
+  Search,
+  Zap,
+  TrendingUp,
+  AlertTriangle,
+  Info,
+  CheckCircle,
 } from "lucide-react";
 import DashboardShell from "@/shared/layout/DashboardShell";
 import Card from "@/shared/ui/Card";
@@ -37,6 +43,8 @@ export default function DashboardPage() {
   const [recentActivity, setRecentActivity] = useState<SystemLog[]>([]);
   const [memoryCount, setMemoryCount] = useState<number | null>(null);
   const [agentCount, setAgentCount] = useState<number | null>(null);
+  const [agentRuns, setAgentRuns] = useState<number>(0);
+  const [searchCount, setSearchCount] = useState<number>(0);
   const [wsStatus, setWsStatus] = useState<WebSocketStatus>("disconnected");
   const httpFallbackRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -105,6 +113,9 @@ export default function DashboardPage() {
     agentApi.list().then((data) => {
       const agents = data.agents ?? data;
       setAgentCount(Array.isArray(agents) ? agents.length : 0);
+    }).catch(() => {});
+    agentApi.listRuns({ limit: 100 }).then((data) => {
+      setAgentRuns(data.runs?.length ?? 0);
     }).catch(() => {});
   }, [user]);
 
@@ -186,17 +197,26 @@ export default function DashboardPage() {
                     No recent activity. Start by searching, creating agents, or adding memories.
                   </p>
                 ) : (
-                  recentActivity.map((item: any, i: number) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-bg-surface/50">
-                      <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center">
-                        <Bot size={14} className="text-accent" />
+                  recentActivity.map((item: any, i: number) => {
+                    const levelIcon = item.level === "error" || item.level === "warning" ? AlertTriangle : item.level === "info" ? Info : CheckCircle;
+                    const LevelIcon = levelIcon;
+                    const levelColor = item.level === "error" ? "text-error" : item.level === "warning" ? "text-warning" : item.level === "info" ? "text-accent" : "text-text-muted";
+                    return (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-bg-surface/50 hover:bg-bg-hover/50 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                          <LevelIcon size={14} className={levelColor} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-text truncate">{item.message}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] font-mono text-text-muted">{item.module || item.logger}</span>
+                            <span className="text-[10px] text-text-muted">·</span>
+                            <span className="text-xs text-text-muted">{new Date(item.timestamp).toLocaleTimeString()}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-text truncate">{item.message}</p>
-                        <p className="text-xs text-text-muted">{new Date(item.timestamp).toLocaleTimeString()}</p>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </Card>
@@ -270,27 +290,30 @@ export default function DashboardPage() {
               <Link href="/memory">
                 <Card hover gradient className="p-5">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                      <Brain size={18} className="text-accent" />
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                      <Brain size={18} className="text-purple-400" />
                     </div>
                     <span className="micro-label">Memories</span>
                   </div>
                   <p className="text-2xl font-semibold text-text">{memoryCount ?? "—"}</p>
                 </Card>
               </Link>
-              <Card gradient className="p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                    <Bot size={18} className="text-accent" />
+              <Link href="/agents">
+                <Card hover gradient className="p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <Bot size={18} className="text-emerald-400" />
+                    </div>
+                    <span className="micro-label">Agent Runs</span>
                   </div>
-                  <span className="micro-label">Agents</span>
-                </div>
-                <p className="text-2xl font-semibold text-text">{agentCount ?? "—"}</p>
-              </Card>
+                  <p className="text-2xl font-semibold text-text">{agentRuns}</p>
+                  <p className="text-[10px] text-text-muted mt-1">{agentCount ?? 0} agents configured</p>
+                </Card>
+              </Link>
               <Card gradient className="p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                    <Clock size={18} className="text-accent" />
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                    <Clock size={18} className="text-amber-400" />
                   </div>
                   <span className="micro-label">Member Since</span>
                 </div>
@@ -300,6 +323,42 @@ export default function DashboardPage() {
                     : "—"}
                 </p>
               </Card>
+            </div>
+            {/* Quick Stats Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+              <Link href="/memory">
+                <Card gradient className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp size={14} className="text-accent" />
+                      <span className="text-xs font-medium text-text-secondary">Memory Entries</span>
+                    </div>
+                    <span className="text-xs font-mono text-text">{memoryCount ?? "—"}</span>
+                  </div>
+                </Card>
+              </Link>
+              <Link href="/search">
+                <Card gradient className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Search size={14} className="text-accent" />
+                      <span className="text-xs font-medium text-text-secondary">Search</span>
+                    </div>
+                    <span className="text-xs font-mono text-accent">Ready</span>
+                  </div>
+                </Card>
+              </Link>
+              <Link href="/agents">
+                <Card gradient className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bot size={14} className="text-accent" />
+                      <span className="text-xs font-medium text-text-secondary">Agent Runs</span>
+                    </div>
+                    <span className="text-xs font-mono text-text">{agentRuns}</span>
+                  </div>
+                </Card>
+              </Link>
             </div>
           </TabPanel>
         </TabGroup>

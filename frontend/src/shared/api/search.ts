@@ -14,6 +14,7 @@ export const searchApi = {
       node_type?: string;
       language?: string;
       max_results?: number;
+      cursor?: string;
     },
   ): Promise<SearchResponse> => {
     const searchParams = new URLSearchParams({ query });
@@ -21,6 +22,7 @@ export const searchApi = {
     if (params?.node_type) searchParams.set("node_type", params.node_type);
     if (params?.language) searchParams.set("language", params.language);
     if (params?.max_results) searchParams.set("max_results", String(params.max_results));
+    if (params?.cursor) searchParams.set("cursor", params.cursor);
     return api.get(`/api/v1/search?${searchParams.toString()}`);
   },
 
