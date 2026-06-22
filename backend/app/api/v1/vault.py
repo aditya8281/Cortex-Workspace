@@ -86,15 +86,42 @@ class VaultChangePasswordRequest(BaseModel):
 
 
 @router.post("/unlock", response_model=VaultUnlockResponse)
-def unlock_vault(
+async def unlock_vault(
     body: VaultUnlockRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Unlock the vault with the vault password."""
+    import time
+
+    from backend.app.core.redis import redis_cache
+
+    # Rate-limit vault attempts: max 5 per minute per user
+    rate_key = f"vault_unlock:{current_user.id}"
+    try:
+        raw = await redis_cache.get(rate_key)
+        attempts = raw if isinstance(raw, dict) and "count" in raw else {"count": 0, "window_start": time.time()}
+        if time.time() - attempts["window_start"] > 60:
+            attempts = {"count": 0, "window_start": time.time()}
+        attempts["count"] += 1
+        await redis_cache.set(rate_key, attempts, expire_seconds=60)
+        if attempts["count"] > 5:
+            raise HTTPException(status_code=429, detail="Too many vault unlock attempts. Try again later.")
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # If Redis is unavailable, allow the attempt
+
     success = vault_service.unlock_vault(db, current_user, body.vault_password)
     if not success:
         raise HTTPException(status_code=401, detail="Invalid vault password")
+
+    # Clear rate limit on successful unlock
+    try:
+        await redis_cache.delete(rate_key)
+    except Exception:
+        pass
+
     return VaultUnlockResponse(unlocked=True, message="Vault unlocked")
 
 
