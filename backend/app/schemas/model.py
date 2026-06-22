@@ -200,6 +200,14 @@ class InstalledModelsResponse(BaseModel):
     installed_count: int
 
 
+class SyncInstalledResponse(BaseModel):
+    """Response for Ollama model sync."""
+    matched: int = 0
+    created: int = 0
+    deleted: int = 0
+    errors: list[str] = []
+
+
 class ModelSearchResult(BaseModel):
     model_id: str
     display_name: str

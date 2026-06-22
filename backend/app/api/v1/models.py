@@ -34,6 +34,7 @@ from backend.app.schemas.model import (
     RecommendedModelsAllResponse,
     RecommendedModelsSingleResponse,
     StorageUsageResponse,
+    SyncInstalledResponse,
     SyncStatusListResponse,
     SyncTriggerResponse,
     UsageStatsResponse,
@@ -254,6 +255,19 @@ async def list_installed_models(
             )
 
     return {"models": result, "installed_count": len(result)}
+
+
+@router.post("/models/installed/sync", response_model=SyncInstalledResponse)
+async def sync_installed_models(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Sync locally installed Ollama models to the database."""
+    from backend.app.services.ollama_sync import OllamaSyncService
+
+    service = OllamaSyncService()
+    result = await service.sync_installed_models(db)
+    return result
 
 
 def _guess_quant_from_tag(tag: str) -> str:
