@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, Text, func
+from sqlalchemy import DateTime, Integer, String, Text, func, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.db.base import Base
@@ -24,3 +24,25 @@ class EmbeddingCache(Base):
     )
     access_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     ttl_seconds: Mapped[int] = mapped_column(Integer, default=2592000, nullable=False)
+
+    @classmethod
+    def clean_expired(cls, session) -> int:
+        """Remove cache entries where created_at + ttl_seconds < now().
+
+        Returns the number of deleted rows.
+
+        NOTE: This method provides the cleanup logic but does NOT schedule
+        itself.  A background job or cron task should call this periodically,
+        e.g.:
+            from backend.app.db.bootstrap import get_session_factory
+            session = get_session_factory()()
+            EmbeddingCache.clean_expired(session)
+            session.commit()
+        """
+        stmt = select(cls).where(
+            func.age(func.now(), cls.created_at) > cls.ttl_seconds
+        )
+        expired = session.execute(stmt).scalars().all()
+        for entry in expired:
+            session.delete(entry)
+        return len(expired)

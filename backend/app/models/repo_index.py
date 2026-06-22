@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.base import Base
@@ -49,5 +49,9 @@ class CodeChunk(Base):
     end_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
     embedding_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("repo_id", "file_path", "chunk_index", name="uq_code_chunks_repo_file_index"),
+    )
 
     graph_nodes: Mapped[list] = relationship("GraphNode", back_populates="chunk")

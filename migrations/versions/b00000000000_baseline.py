@@ -70,12 +70,14 @@ def upgrade() -> None:
         sa.Column("current_projects", sa.JSON(), nullable=False, server_default="[]"),
         sa.Column("contribution_style", sa.String(32), nullable=True),
         sa.Column("social_links", sa.JSON(), nullable=False, server_default="{}"),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("deleted_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("deleted_at", sa.TIMESTAMP(timezone=True), nullable=True),
     )
-    op.execute(
-        "ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('user', 'admin'))"
+    op.create_check_constraint(
+        "users_role_check",
+        "users",
+        "role IN ('user', 'admin')",
     )
 
     # ── 2. auth_events ──────────────────────────────────────────────────
@@ -84,7 +86,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("user_id", sa.Integer(), nullable=True),
         sa.Column("ip_address", sa.String(), nullable=True),
-        sa.Column("timestamp", sa.TIMESTAMP(), nullable=False),
+        sa.Column("timestamp", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("event_type", sa.String(), nullable=False),
         sa.Column("metadata_json", postgresql.JSONB(), nullable=False, server_default="{}"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
@@ -104,8 +106,8 @@ def upgrade() -> None:
         sa.Column("embedding_id", sa.String(128), nullable=True),
         sa.Column("tags", sa.Text(), nullable=True),
         sa.Column("vector_collection", sa.String(64), nullable=False, server_default="cortex_memory"),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
     )
     op.create_index("ix_knowledge_entries_user_id", "knowledge_entries", ["user_id"])
@@ -120,8 +122,8 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("storage_root", sa.String(), nullable=False),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_user_storage_registry_user_id", "user_storage_registry", ["user_id"])
@@ -137,10 +139,10 @@ def upgrade() -> None:
         sa.Column("total_files", sa.Integer(), server_default="0"),
         sa.Column("total_chunks", sa.Integer(), server_default="0"),
         sa.Column("last_commit", sa.String(64), nullable=True),
-        sa.Column("last_indexed_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("last_indexed_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("status", sa.String(32), server_default="pending"),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="SET NULL"),
     )
     op.create_index("ix_repo_indexes_user_id", "repo_indexes", ["user_id"])
@@ -159,7 +161,7 @@ def upgrade() -> None:
         sa.Column("start_line", sa.Integer(), nullable=True),
         sa.Column("end_line", sa.Integer(), nullable=True),
         sa.Column("embedding_id", sa.String(128), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["repo_id"], ["repo_indexes.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_code_chunks_repo_id", "code_chunks", ["repo_id"])
@@ -175,7 +177,7 @@ def upgrade() -> None:
         sa.Column("title", sa.String(256), nullable=False),
         sa.Column("message", sa.Text(), nullable=False),
         sa.Column("read", sa.Boolean(), nullable=False, server_default=sa.text("false")),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_notifications_user_id", "notifications", ["user_id"])
@@ -194,7 +196,7 @@ def upgrade() -> None:
         sa.Column("start_line", sa.Integer(), nullable=True),
         sa.Column("end_line", sa.Integer(), nullable=True),
         sa.Column("metadata_json", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["chunk_id"], ["code_chunks.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["repo_id"], ["repo_indexes.id"], ondelete="CASCADE"),
     )
@@ -215,9 +217,9 @@ def upgrade() -> None:
         sa.Column("edge_type", sa.String(50), nullable=False),
         sa.Column("weight", sa.Integer(), server_default="1"),
         sa.Column("metadata_json", sa.Text(), nullable=True),
-        sa.Column("first_seen", sa.TIMESTAMP(), nullable=False),
-        sa.Column("last_seen", sa.TIMESTAMP(), nullable=False),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("first_seen", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("last_seen", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["source_id"], ["graph_nodes.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["target_id"], ["graph_nodes.id"], ondelete="CASCADE"),
     )
@@ -236,10 +238,10 @@ def upgrade() -> None:
         sa.Column("file_hash", sa.String(64), nullable=False),
         sa.Column("file_size", sa.BigInteger(), server_default="0"),
         sa.Column("mtime", sa.Float(), server_default="0.0"),
-        sa.Column("last_indexed_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("last_indexed_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("chunk_count", sa.Integer(), server_default="0"),
         sa.Column("status", sa.String(20), server_default="indexed"),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["repo_id"], ["repo_indexes.id"], ondelete="CASCADE"),
     )
     op.create_index(
@@ -254,14 +256,14 @@ def upgrade() -> None:
         "agents",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("user_id", sa.Integer(), nullable=False),
-        sa.Column("name", sa.String(100), nullable=False),
+        sa.Column("name", sa.String(100), unique=True, nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("system_prompt", sa.Text(), nullable=False),
         sa.Column("model_id", sa.String(100), nullable=False),
         sa.Column("tools_json", sa.Text(), nullable=True),
         sa.Column("is_active", sa.Boolean(), server_default=sa.text("true")),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_agents_user_id", "agents", ["user_id"])
@@ -277,8 +279,8 @@ def upgrade() -> None:
         sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
         sa.Column("output", sa.Text(), nullable=True),
         sa.Column("error", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
-        sa.Column("completed_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("completed_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["agent_id"], ["agents.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
@@ -297,7 +299,7 @@ def upgrade() -> None:
         sa.Column("action_input_json", sa.Text(), nullable=True),
         sa.Column("observation", sa.Text(), nullable=True),
         sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["run_id"], ["agent_runs.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_agent_steps_run_id", "agent_steps", ["run_id"])
@@ -311,7 +313,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("rating", sa.Integer(), nullable=False),
         sa.Column("comment", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["run_id"], ["agent_runs.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
@@ -333,8 +335,8 @@ def upgrade() -> None:
         sa.Column("sync_enabled", sa.Boolean(), server_default=sa.text("true")),
         sa.Column("sync_interval_seconds", sa.Integer(), server_default="300"),
         sa.Column("priority", sa.Integer(), server_default="0"),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_indexing_configs_user_id", "indexing_configs", ["user_id"])
@@ -349,8 +351,8 @@ def upgrade() -> None:
         sa.Column("model_used", sa.String(100), nullable=True),
         sa.Column("message_count", sa.Integer(), server_default="0"),
         sa.Column("total_tokens", sa.Integer(), server_default="0"),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["repo_id"], ["repo_indexes.id"], ondelete="SET NULL"),
     )
@@ -366,7 +368,7 @@ def upgrade() -> None:
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("tokens", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("metadata_json", sa.JSON(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["conversation_id"], ["conversations.id"], ondelete="CASCADE"),
     )
     op.create_index(
@@ -374,9 +376,10 @@ def upgrade() -> None:
         "conversation_messages",
         ["conversation_id"],
     )
-    op.execute(
-        "ALTER TABLE conversation_messages "
-        "ADD CONSTRAINT conversation_messages_role_check CHECK (role IN ('system', 'user', 'assistant'))"
+    op.create_check_constraint(
+        "conversation_messages_role_check",
+        "conversation_messages",
+        "role IN ('system', 'user', 'assistant')",
     )
 
     # ── 18. documents ───────────────────────────────────────────────────
@@ -418,11 +421,11 @@ def upgrade() -> None:
         sa.Column("file_size", sa.Integer(), nullable=True),
         sa.Column("language", sa.String(64), nullable=True),
         sa.Column("metadata_json", sa.Text(), nullable=True),
-        sa.Column("last_indexed_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("last_indexed_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("embedding_model_version", sa.String(128), nullable=True),
-        sa.Column("deleted_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("deleted_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
     )
     op.create_index("ix_documents_path", "documents", ["path"])
     op.create_index("ix_documents_content_hash", "documents", ["content_hash"])
@@ -445,7 +448,7 @@ def upgrade() -> None:
         sa.Column("context_before", sa.Text(), nullable=True),
         sa.Column("context_after", sa.Text(), nullable=True),
         sa.Column("embedding_id", sa.String(128), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["document_id"], ["documents.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_document_chunks_document_id", "document_chunks", ["document_id"])
@@ -465,8 +468,8 @@ def upgrade() -> None:
         sa.Column("model_version", sa.String(128), nullable=False, server_default="default"),
         sa.Column("embedding", sa.Text(), nullable=False),
         sa.Column("token_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
-        sa.Column("last_accessed_at", sa.TIMESTAMP(), nullable=False),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("last_accessed_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("access_count", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("ttl_seconds", sa.Integer(), nullable=False, server_default="2592000"),
     )
@@ -504,17 +507,21 @@ def upgrade() -> None:
         sa.Column("total_downloads", sa.Integer(), server_default="0"),
         sa.Column("avg_rating", sa.Float(), nullable=True),
         sa.Column("rating_count", sa.Integer(), server_default="0"),
-        sa.Column("last_updated", sa.TIMESTAMP(), nullable=False),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("last_updated", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
     )
     op.create_index("ix_model_catalog_model_id", "model_catalog", ["model_id"])
     op.create_index("ix_model_catalog_family", "model_catalog", ["family"])
 
     # ── 22. model_variants ──────────────────────────────────────────────
+    # SCHEMA DEBT: This table has overlapping columns with the quantizations table:
+    #   - bits_per_param / quantization_bits overlap with quantizations.bits_per_param
+    #   - quality_multiplier / speed_multiplier overlap with quantizations.quality_score/speed_multiplier
+    # These should be consolidated in a future migration to reference quantizations directly.
     op.create_table(
         "model_variants",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("model_catalog_id", sa.Integer(), nullable=True),
+        sa.Column("model_catalog_id", sa.Integer(), nullable=False),
         sa.Column("variant_id", sa.String(255), unique=True, nullable=False),
         sa.Column("quantization", sa.String(50), nullable=False),
         sa.Column("quantization_level", sa.String(20), nullable=True),
@@ -542,10 +549,10 @@ def upgrade() -> None:
         sa.Column("file_url", sa.Text(), nullable=True),
         sa.Column("architecture", sa.String(100), nullable=True),
         sa.Column("quantization_bits", sa.Float(), nullable=True),
-        sa.Column("last_downloaded_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("last_downloaded_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("download_count", sa.Integer(), server_default="0"),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["model_catalog_id"], ["model_catalog.id"], ondelete="CASCADE"
         ),
@@ -563,13 +570,13 @@ def upgrade() -> None:
         sa.Column("status", sa.String(20), nullable=False),
         sa.Column("progress", sa.Float(), server_default="0"),
         sa.Column("download_speed_bytes_sec", sa.Float(), nullable=True),
-        sa.Column("started_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("completed_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("started_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("file_path", sa.Text(), nullable=True),
         sa.Column("file_size_bytes", sa.BigInteger(), nullable=True),
         sa.Column("checksum", sa.String(64), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["model_variant_id"], ["model_variants.id"], ondelete="SET NULL"
         ),
@@ -592,7 +599,7 @@ def upgrade() -> None:
         sa.Column("tps_generation", sa.Float(), nullable=True),
         sa.Column("tps_prompt", sa.Float(), nullable=True),
         sa.Column("context_length", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["model_variant_id"], ["model_variants.id"], ondelete="SET NULL"
         ),
@@ -614,9 +621,9 @@ def upgrade() -> None:
         sa.Column("capabilities", postgresql.JSONB(), nullable=True),
         sa.Column("enabled", sa.Boolean(), server_default=sa.text("true")),
         sa.Column("health_status", sa.String(20), server_default="unknown"),
-        sa.Column("last_health_check", sa.TIMESTAMP(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("last_health_check", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
     )
     op.create_index("ix_providers_name", "providers", ["name"])
     op.create_index("ix_providers_provider_type", "providers", ["provider_type"])
@@ -629,7 +636,7 @@ def upgrade() -> None:
         sa.Column("display_name", sa.String(100), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("icon", sa.String(50), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
     )
     op.create_index("ix_capabilities_name", "capabilities", ["name"])
 
@@ -653,10 +660,10 @@ def upgrade() -> None:
         sa.Column("size_bytes", sa.BigInteger(), nullable=True),
         sa.Column("quantization", sa.String(50), nullable=True),
         sa.Column("extra_metadata", postgresql.JSONB(), nullable=True),
-        sa.Column("discovered_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("last_seen_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("discovered_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("last_seen_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["provider_id"], ["providers.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_provider_models_provider_id", "provider_models", ["provider_id"])
@@ -678,7 +685,7 @@ def upgrade() -> None:
         sa.Column("speed_multiplier", sa.Float(), nullable=True),
         sa.Column("memory_multiplier", sa.Float(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
     )
     op.create_index("ix_quantizations_name", "quantizations", ["name"])
 
@@ -695,8 +702,8 @@ def upgrade() -> None:
         sa.Column("compute_capability", sa.String(20), nullable=True),
         sa.Column("is_default", sa.Boolean(), server_default=sa.text("false")),
         sa.Column("is_user_defined", sa.Boolean(), server_default=sa.text("false")),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
     )
     op.create_index("ix_hardware_profiles_name", "hardware_profiles", ["name"])
 
@@ -710,12 +717,12 @@ def upgrade() -> None:
         sa.Column("average_rating", sa.Float(), nullable=True),
         sa.Column("rating_count", sa.Integer(), server_default="0"),
         sa.Column("trending_score", sa.Float(), server_default="0"),
-        sa.Column("last_downloaded_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("last_downloaded_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("average_tps", sa.Float(), nullable=True),
         sa.Column("average_vram_usage_gb", sa.Float(), nullable=True),
         sa.Column("benchmark_scores", postgresql.JSONB(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["model_catalog_id"], ["model_catalog.id"], ondelete="CASCADE"
         ),
@@ -739,9 +746,9 @@ def upgrade() -> None:
         sa.Column("models_updated", sa.Integer(), server_default="0"),
         sa.Column("models_added", sa.Integer(), server_default="0"),
         sa.Column("error_message", sa.Text(), nullable=True),
-        sa.Column("started_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("completed_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("started_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("completed_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["provider_id"], ["providers.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_sync_jobs_provider_id", "sync_jobs", ["provider_id"])
@@ -757,15 +764,15 @@ def upgrade() -> None:
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("confidence", sa.Float(), nullable=False, server_default="0.5"),
         sa.Column("access_count", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("last_accessed_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("last_accessed_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("source", sa.String(100), nullable=True),
         sa.Column("source_id", sa.Integer(), nullable=True),
         sa.Column("embedding_id", sa.String(100), nullable=True),
         sa.Column("tags", sa.JSON(), nullable=False, server_default="[]"),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=False),
-        sa.Column("decayed_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("decayed_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_long_term_memories_user_id", "long_term_memories", ["user_id"])
@@ -785,7 +792,7 @@ def upgrade() -> None:
         sa.Column("is_dir", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("file_count", sa.Integer(), server_default="0"),
         sa.Column("total_size", sa.BigInteger(), server_default="0"),
-        sa.Column("last_modified", sa.TIMESTAMP(), nullable=True),
+        sa.Column("last_modified", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("repo_id", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["repo_id"], ["repo_indexes.id"], ondelete="CASCADE"),
     )
@@ -803,13 +810,13 @@ def upgrade() -> None:
         sa.Column("repo_path", sa.String(), nullable=False),
         sa.Column("repo_id", sa.Integer(), nullable=True),
         sa.Column("status", sa.String(), server_default="active"),
-        sa.Column("last_sync_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("last_sync_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("files_watched", sa.Integer(), server_default="0"),
         sa.Column("files_changed", sa.Integer(), server_default="0"),
         sa.Column("error_message", sa.String(), nullable=True),
         sa.Column("config_json", sa.JSON(), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(
             ["repo_id"], ["repo_indexes.id"], ondelete="SET NULL"
@@ -833,8 +840,8 @@ def upgrade() -> None:
         sa.Column(
             "max_concurrent_downloads", sa.Integer(), nullable=False, server_default="2"
         ),
-        sa.Column("created_at", sa.TIMESTAMP(), nullable=True),
-        sa.Column("updated_at", sa.TIMESTAMP(), nullable=True),
+        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
     op.create_index("uq_user_model_settings_user_id", "user_model_settings", ["user_id"], unique=True)
@@ -863,6 +870,8 @@ def upgrade() -> None:
     )
 
     # ── GIN full-text search indexes ────────────────────────────────────
+    # NOTE: Alembic's op.create_index() does not support GIN indexes.
+    # Raw DDL is required for PostgreSQL full-text search indexes.
     op.execute(
         "CREATE INDEX idx_code_chunks_content_fts "
         "ON code_chunks USING gin(to_tsvector('english', content))"
@@ -879,41 +888,41 @@ def downgrade() -> None:
     op.execute("DROP INDEX IF EXISTS idx_document_chunks_content_fts")
     op.execute("DROP INDEX IF EXISTS idx_code_chunks_content_fts")
 
-    op.drop_table("user_model_settings")
-    op.drop_table("sync_states")
-    op.drop_table("path_index")
-    op.drop_table("long_term_memories")
-    op.drop_table("model_usage")
-    op.drop_table("model_downloads")
-    op.drop_table("model_statistics")
-    op.drop_table("model_variants")
-    op.drop_table("model_catalog")
-    op.drop_table("sync_jobs")
-    op.drop_table("provider_models")
-    op.drop_table("hardware_profiles")
-    op.drop_table("quantizations")
-    op.drop_table("capabilities")
-    op.drop_table("providers")
-    op.drop_table("embedding_cache")
-    op.drop_table("document_chunks")
-    op.drop_table("documents")
-    op.drop_table("conversation_messages")
-    op.drop_table("conversations")
-    op.drop_table("indexing_configs")
-    op.drop_table("agent_feedback")
-    op.drop_table("agent_steps")
-    op.drop_table("agent_runs")
-    op.drop_table("agents")
-    op.drop_table("indexed_files")
-    op.drop_table("graph_edges")
-    op.drop_table("graph_nodes")
-    op.drop_table("notifications")
-    op.drop_table("code_chunks")
-    op.drop_table("repo_indexes")
-    op.drop_table("user_storage_registry")
-    op.drop_table("knowledge_entries")
-    op.drop_table("auth_events")
-    op.drop_table("users")
+    op.drop_table("user_model_settings", if_exists=True)
+    op.drop_table("sync_states", if_exists=True)
+    op.drop_table("path_index", if_exists=True)
+    op.drop_table("long_term_memories", if_exists=True)
+    op.drop_table("model_usage", if_exists=True)
+    op.drop_table("model_downloads", if_exists=True)
+    op.drop_table("model_statistics", if_exists=True)
+    op.drop_table("model_variants", if_exists=True)
+    op.drop_table("model_catalog", if_exists=True)
+    op.drop_table("sync_jobs", if_exists=True)
+    op.drop_table("provider_models", if_exists=True)
+    op.drop_table("hardware_profiles", if_exists=True)
+    op.drop_table("quantizations", if_exists=True)
+    op.drop_table("capabilities", if_exists=True)
+    op.drop_table("providers", if_exists=True)
+    op.drop_table("embedding_cache", if_exists=True)
+    op.drop_table("document_chunks", if_exists=True)
+    op.drop_table("documents", if_exists=True)
+    op.drop_table("conversation_messages", if_exists=True)
+    op.drop_table("conversations", if_exists=True)
+    op.drop_table("indexing_configs", if_exists=True)
+    op.drop_table("agent_feedback", if_exists=True)
+    op.drop_table("agent_steps", if_exists=True)
+    op.drop_table("agent_runs", if_exists=True)
+    op.drop_table("agents", if_exists=True)
+    op.drop_table("indexed_files", if_exists=True)
+    op.drop_table("graph_edges", if_exists=True)
+    op.drop_table("graph_nodes", if_exists=True)
+    op.drop_table("notifications", if_exists=True)
+    op.drop_table("code_chunks", if_exists=True)
+    op.drop_table("repo_indexes", if_exists=True)
+    op.drop_table("user_storage_registry", if_exists=True)
+    op.drop_table("knowledge_entries", if_exists=True)
+    op.drop_table("auth_events", if_exists=True)
+    op.drop_table("users", if_exists=True)
 
     # Drop ENUM type last.
     postgresql.ENUM(name="document_type").drop(op.get_bind(), checkfirst=True)

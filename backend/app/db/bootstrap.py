@@ -56,6 +56,12 @@ def _create_engine():
         pool_pre_ping=True,
         pool_timeout=30,
         pool_recycle=3600,
+        # Production recommendations (uncomment for production deployments):
+        # pool_size=10,
+        # max_overflow=20,
+        # pool_timeout=60,
+        # pool_recycle=1800,
+        # pool_pre_ping=True,
     )
     _engine = engine
     return engine
