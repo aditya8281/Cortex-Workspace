@@ -1,23 +1,12 @@
 # Cortex Database Audit Report — v2
 
 Generated: 2026-06-22
-Updated: 2026-06-22 (P0/P1 fixes applied across 2 sessions)  
+Updated: 2026-06-22 (P0/P1 fixes applied)  
 Scope: Full database layer — migrations, models, schemas, configuration
 
 ---
 
-## Fixed Issues — Session 2 (2026-06-22)
-
-| ID | Issue | Fix |
-|----|-------|-----|
-| H-D1 | `ModelVariant` FKs missing `ondelete` | Added `ondelete="SET NULL"` to `provider_id`, `provider_model_id` |
-| H-D2 | `ModelDownload`/`ModelUsage` FKs missing `ondelete` | Added `ondelete="SET NULL"` to 4 FK columns |
-| H-D3 | `Agent.user` missing `back_populates` | Added `back_populates="agents"` + `User.agents` relationship |
-| — | Migration for FK changes | Created `c00000000001_add_fk_ondelete_and_agent_back_populates.py` |
-
----
-
-## Fixed Issues — Session 1 (2026-06-22)
+## Fixed Issues (2026-06-22)
 
 | ID | Issue | Fix |
 |----|-------|-----|

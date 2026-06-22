@@ -1,27 +1,13 @@
 # Cortex Backend Code Quality Audit Report
 
 **Date:** 2026-06-22  
-**Updated:** 2026-06-22 (P0/P1 quality fixes applied across 2 sessions)  
+**Updated:** 2026-06-22 (P0/P1 quality fixes applied)  
 **Scope:** `backend/app/api/v1/`, `backend/app/services/`, `backend/app/agents/`, `backend/app/core/`, `backend/app/auth/`  
 **Method:** Static analysis — read-only scan of all files
 
 ---
 
-## Fixed Issues — Session 2 (2026-06-22)
-
-| Category | Issue | Fix | Files |
-|----------|-------|-----|-------|
-| Security | Repository path registration accepts arbitrary filesystem paths | Added path sandbox validation | `repository.py:86-97` |
-| Security | `/metrics` endpoint unauthenticated | Added `Depends(get_current_user)` | `metrics.py:32-36` |
-| Security | Password validation too weak | Now requires uppercase+lowercase+digit+special char | `security.py:30-47` |
-| DB Integrity | ModelVariant/ModelDownload/ModelUsage FKs missing `ondelete` | Added `ondelete="SET NULL"` to 6 FKs | `model_catalog.py` |
-| DB Integrity | `Agent.user` missing `back_populates` | Added `back_populates="agents"` + `User.agents` | `agent.py:31`, `user.py:50` |
-| Reliability | Health check only checks database | Added Redis + Ollama checks | `health.py`, `health_service.py` |
-| Thread Safety | `SecurePasswordCache` not thread-safe internally | Added internal `Lock` to all methods | `vault_service.py:40-85` |
-
----
-
-## Fixed Issues — Session 1 (2026-06-22)
+## Fixed Issues (2026-06-22)
 
 | Category | Issue | Fix | Files |
 |----------|-------|-----|-------|
