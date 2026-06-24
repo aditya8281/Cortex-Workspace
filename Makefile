@@ -1,4 +1,4 @@
-.PHONY: help install dev dev-no-reload migrate migration shell test test-cov test-watch lint format check clean db-reset db-shell db-backup docker-build docker-up docker-down docker-restart docker-reset docker-logs docker-shell docs lock ci prod-check logs-app logs-error
+.PHONY: help install dev dev-no-reload migrate migration shell test test-cov test-watch lint format check clean db-reset db-shell db-backup docker-build docker-up docker-down docker-restart docker-reset docker-logs docker-shell docs lock ci prod-check logs-app logs-error auto auto-pre auto-dev auto-health auto-bugs auto-complete auto-report hooks hooks-pre hooks-push hooks-merge hooks-onchange
 
 # ============================================================================
 # HELP
@@ -30,6 +30,22 @@ help:
 	@echo "  make docker-build   Build image"
 	@echo "  make docker-up      Start containers"
 	@echo "  make docker-down    Stop containers"
+	@echo ""
+	@echo "Automation:"
+	@echo "  make auto           Run all automation checks"
+	@echo "  make auto-pre       Pre-work validation only"
+	@echo "  make auto-dev       Development validation only"
+	@echo "  make auto-health    Health checks only"
+	@echo "  make auto-bugs      Bug discovery only"
+	@echo "  make auto-complete  Completion validation only"
+	@echo "  make auto-report    Generate health report"
+	@echo ""
+	@echo "Hooks:"
+	@echo "  make hooks          Run all hooks"
+	@echo "  make hooks-pre      Run pre-commit hooks (ui-review, code-quality)"
+	@echo "  make hooks-push     Run pre-push hooks (quality, architecture, contract, docs)"
+	@echo "  make hooks-merge    Run all hooks before merge"
+	@echo "  make hooks-onchange Run hooks on code change (quality, contract)"
 
 # ============================================================================
 # SETUP
@@ -200,6 +216,50 @@ logs-app:
 
 logs-error:
 	tail -f logs/error.log
+
+# ============================================================================
+# AUTOMATION FRAMEWORK
+# ============================================================================
+
+auto:
+	python scripts/automation/run_all.py
+
+auto-pre:
+	python scripts/automation/run_all.py pre-work
+
+auto-dev:
+	python scripts/automation/run_all.py development
+
+auto-health:
+	python scripts/automation/run_all.py health
+
+auto-bugs:
+	python scripts/automation/run_all.py bug-discovery
+
+auto-complete:
+	python scripts/automation/run_all.py completion
+
+auto-report:
+	python scripts/automation/run_all.py report
+
+# ============================================================================
+# HOOK SYSTEM
+# ============================================================================
+
+hooks:
+	python .claude/hooks/run_hooks.py
+
+hooks-pre:
+	python .claude/hooks/run_hooks.py --phase pre-commit
+
+hooks-push:
+	python .claude/hooks/run_hooks.py --phase pre-push
+
+hooks-merge:
+	python .claude/hooks/run_hooks.py --phase pre-merge
+
+hooks-onchange:
+	python .claude/hooks/run_hooks.py --phase on-change
 
 # ============================================================================
 # DEFAULT

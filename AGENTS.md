@@ -4,6 +4,46 @@
 
 - Keep responses concise and to the point - unless the user asks otherwise
 
+## ECOSYSTEM INTEGRATION
+
+This repository uses a multi-agent development ecosystem. All agents must follow these rules:
+
+### Workflow Rules
+
+1. **Brainstorming:** Use `superpowers:brainstorming` skill before any design work. Present design, get approval, write spec, then implement.
+2. **Planning:** Use `superpowers:writing-plans` skill after design approval. Create implementation plan with explicit steps.
+3. **Implementation:** Follow TDD when applicable. Commit after each logical unit. Run `make lint` + `make format` after each commit.
+4. **Testing:** Run `make test` (backend) and `cd frontend && npm test` (frontend) before every push. No regressions.
+5. **Validation:** Pre-commit hooks run automatically. Run `make check` before push.
+6. **Review:** Use `code-review` skill for correctness, `simplify` for quality. Address all P0/P1 findings.
+7. **Documentation:** Update relevant docs when changing APIs, schemas, security patterns, or architecture.
+8. **Completion:** All tests pass, lint clean, build succeeds, docs updated, ADR created if architectural decision.
+
+### Skill Usage Rules
+
+- **Always check for applicable skills** before any task. The skill list is in system-reminder messages.
+- **Use skills in priority order:** Process skills first (brainstorming, systematic-debugging), then implementation skills.
+- **Never skip skills** because a task "seems simple." Every task goes through the appropriate workflow.
+- **Skills are mandatory** when they apply. Do not rationalize skipping them.
+
+### Clarification Rules
+
+**Agent MUST ask human when:**
+- Decision is irreversible (schema migrations, breaking API changes, security policy)
+- Multiple valid paths exist with different trade-offs
+- Scope is ambiguous or requirements are missing
+- Change affects >2 subsystems
+- New technology or pattern not in current stack is proposed
+
+**Agent MAY proceed without asking when:**
+- Task is well-defined with explicit acceptance criteria
+- Following established codebase patterns
+- Mechanical changes (typos, formatting, imports)
+- Updating existing tests or documentation
+
+See [docs/GOVERNANCE.md](docs/GOVERNANCE.md) for full governance rules.
+See [docs/WORKFLOWS.md](docs/WORKFLOWS.md) for complete workflow definitions.
+
 ## PLANNING MODE
 
 - Always ask clarifying questions

@@ -56,7 +56,18 @@ CortexMemory/
 .cortex/
 .cortex_memory_path
 
+# Tooling cache
+.impeccable/
+
 # Alembic
 migrations/versions/__pycache__/
 migrations/versions/_archive/
 backend/migrations/
+
+# Hook system cache
+.claude/hooks/**/__pycache__/
+
+# Audit reports (generated, not source)
+docs/audits/*-health-report.md
+docs/audits/*-progress-report.md
+docs/audits/*-compliance-report.md
