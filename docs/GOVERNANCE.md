@@ -154,6 +154,38 @@ Success means future agents spend less time reinventing workflows and more time 
 
 ---
 
+## Branching Rules
+
+### Mandatory Branch-Then-Merge
+
+Every significant change must go through a feature branch. Never commit directly to `main`.
+
+**Rule:** `main` branch must always be in a working state. All changes go through: `main` → feature branch → work → verify → merge back to `main`.
+
+**Branch naming:**
+- `feat/<topic>` — new features
+- `fix/<topic>` — bug fixes
+- `docs/<topic>` — documentation changes
+- `refactor/<topic>` — code refactoring
+
+**Branch lifecycle:**
+1. Create branch from `main`
+2. Make changes, commit with descriptive messages
+3. Run relevant hooks and tests on the branch
+4. When ready, run full verification (`make hooks-merge`, `make test`, `make lint`)
+5. Merge to `main` with `--no-ff` (merge commit, not fast-forward)
+6. Delete the feature branch after merge
+
+**Parallel branch limit:** Minimize parallel branches. Finish one before starting the next. Maximum 2-3 active branches at any time to reduce merge conflicts.
+
+**Main branch protection:**
+- All hooks must pass before merge
+- All tests must pass
+- No direct commits to `main`
+- No merge if main is broken
+
+---
+
 ## Code Quality Standards
 
 ### Mandatory Before Every Commit

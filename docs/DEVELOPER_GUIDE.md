@@ -23,10 +23,34 @@ This guide explains how the agentic development ecosystem works in Cortex — th
 Every task follows this lifecycle:
 
 ```
-Context → Skill Discovery → Brainstorm → Plan → Implement → Test → Validate → Review → Simplify → Complete
+Branch → Context → Skill Discovery → Brainstorm → Plan → Implement → Test → Validate → Review → Simplify → Complete → Merge
 ```
 
-### 0. Skill Discovery (MANDATORY)
+### 0. Branch First (MANDATORY)
+
+Before any significant change, create a feature branch. Never commit directly to `main`.
+
+```bash
+git checkout main
+git pull
+git checkout -b feat/your-topic
+```
+
+**Branch naming:** `feat/<topic>`, `fix/<topic>`, `docs/<topic>`, `refactor/<topic>`
+
+**Why:** `main` must always be in a working state. Feature branches isolate work, allow safe experimentation, and prevent broken code from reaching the shared branch.
+
+**When done:** After all work is verified, merge back to `main`:
+
+```bash
+git checkout main
+git merge feat/your-topic --no-ff -m "merge: description"
+git branch -d feat/your-topic
+```
+
+**Rule:** Minimize parallel branches — finish one before starting the next. Max 2-3 active branches. Run full verification before merge (`make hooks-merge`, `make test`, `make lint`).
+
+### 1. Skill Discovery (MANDATORY)
 
 Before any significant task, search for existing skills:
 
