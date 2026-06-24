@@ -200,6 +200,10 @@ make migration m=X  # Create migration
 make hooks          # Run all hooks
 make hooks-push     # Pre-push hooks
 make hooks-merge    # Pre-merge hooks (all)
+make auto-status    # Show active version/phase
+make auto-release   # Pre-release validation
+make auto-docs      # Documentation consistency
+make auto-skills    # Skill health check
 ./start.sh          # Self-contained launcher
 ```
 

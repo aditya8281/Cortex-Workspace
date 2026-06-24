@@ -1,4 +1,4 @@
-.PHONY: help install dev dev-no-reload migrate migration shell test test-cov test-watch lint format check clean db-reset db-shell db-backup docker-build docker-up docker-down docker-restart docker-reset docker-logs docker-shell docs lock ci prod-check logs-app logs-error auto auto-pre auto-dev auto-health auto-bugs auto-complete auto-report hooks hooks-pre hooks-push hooks-merge hooks-onchange
+.PHONY: help install dev dev-no-reload migrate migration shell test test-cov test-watch lint format check clean db-reset db-shell db-backup docker-build docker-up docker-down docker-restart docker-reset docker-logs docker-shell docs lock ci prod-check logs-app logs-error auto auto-pre auto-dev auto-health auto-bugs auto-complete auto-report auto-release auto-docs auto-skills auto-status hooks hooks-pre hooks-push hooks-merge hooks-onchange
 
 # ============================================================================
 # HELP
@@ -241,6 +241,18 @@ auto-complete:
 
 auto-report:
 	python scripts/automation/run_all.py report
+
+auto-release:
+	python scripts/automation/run_all.py release
+
+auto-docs:
+	python scripts/automation/run_all.py documentation
+
+auto-skills:
+	python scripts/automation/run_all.py skills
+
+auto-status:
+	python scripts/automation/run_all.py status
 
 # ============================================================================
 # HOOK SYSTEM
