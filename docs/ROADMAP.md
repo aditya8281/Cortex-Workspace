@@ -1,5 +1,7 @@
 # CORTEX Roadmap
 
+**Last updated:** 2026-06-25
+
 ## Current Status
 
 | Area | State |
@@ -13,130 +15,115 @@
 | CLI | Scaffolded (command stubs) |
 | LLM Integration | llama.cpp + Ollama with provider abstraction |
 | Model Catalog | Full catalogue with providers, variants, benchmarks |
+| Active Version | V1 — The Brain Works |
 
 ---
 
-## Phase History
+## Development Versions
 
-### Phase 1: Identity + Secure Storage ✅ Complete
+Cortex development follows a 6-version system. Each version is a complete, releasable milestone.
 
-- Multi-user authentication with JWT and refresh tokens
-- Encrypted private vault per user (separate password)
-- Profile management and GitHub account linking
-- Admin user management
-- Cookie-based authentication with automatic refresh
-- Spring-physics animations, command palette, glass morphism UI
+| Version | Name | Duration | What It Delivers |
+|---------|------|----------|------------------|
+| **V1** | The Brain Works | 11–18 days | Agent loop, daemon lifecycle, CLI, streaming |
+| **V2** | The Architecture | 17–25 days | Provider/MCP abstraction, plugin system, memory |
+| **V3** | The Desktop | 22–31 days | Tauri shell, TUI, performance optimization |
+| **V4** | The Automaton | 21–30 days | Scheduler, MCP server, research, sessions |
+| **V5** | The Workspace | 27–38 days | Email, calendar, tasks, notes, documents, contacts |
+| **V6** | The Ecosystem | 27–38 days | Marketplace, graph intelligence, cross-encoder, polish |
 
-### Phase 2: Indexing & Knowledge Graph ✅ Complete
+**Active version:** V1 — The Brain Works
+**Phase plan location:** `.agents/plans/versions/vX/Phase-N.md`
+**Progress tracking:** `.agents/plans/versions/vX/progress.md`
 
-- Incremental indexer (hash-based change detection)
-- Knowledge graph (graph_nodes, graph_edges)
-- Cross-file search (vector + graph enrichment)
-- Unified search API
-- Repository management API (CRUD + indexing triggers)
-- Background tasks: index_repo, build_graph
+### V1: The Brain Works
 
-### Phase 3: Unified Search & Agents ✅ Complete
+| Phase | Name | Status |
+|-------|------|--------|
+| Phase 1 | Agent Intelligence | 🟢 ACTIVE |
+| Phase 2 | Indexing & Knowledge Graph | ⬜ Pending |
+| Phase 3 | Unified Search & Agents | ⬜ Pending |
 
-- Agent system (base agent, planner, executor)
-- Agent run manager with step tracking
-- Agent CRUD API + run/step/feedback API
-- Frontend: Agent chat interface, Agents management page
+### V2: The Architecture
 
-### Phase 4A: LLM Integration & Local Models 🟡 Partial
+| Phase | Name | Status |
+|-------|------|--------|
+| Phase 1 | Event Bus & Workflow | ⬜ Pending |
+| Phase 2 | MCP Client & Plugins | ⬜ Pending |
+| Phase 3 | Context Providers | ⬜ Pending |
 
-- LLM manager with provider abstraction (llama.cpp, Ollama) ✅
-- Model catalog with providers, variants, capabilities, benchmarks ✅
-- Hardware detection and quantization recommendations ✅
-- Model download manager with progress tracking ✅
-- User model settings (persisted per-user) ✅
-- Frontend: Models page with catalogue, installed models, download queue ✅
-- Conversation-to-memory pipeline ✅
-- Long-term memory with decay ✅
+### V3: The Desktop
 
-### Phase 4B: Smart Indexing & Retrieval 🟡 Partial
+| Phase | Name | Status |
+|-------|------|--------|
+| Phase 1 | Tauri Desktop Shell | ⬜ Pending |
+| Phase 2 | TUI | ⬜ Pending |
+| Phase 3 | Desktop Integration | ⬜ Pending |
 
-- Semantic chunker with language-aware splitting ✅
-- Indexing configuration (include/exclude paths, file types) ✅
-- Full-text search (PostgreSQL ts_vector) ✅
-- Hybrid retrieval (vector + keyword + graph) ✅
-- Document indexer for non-code files ✅
-- Retrieval quality metrics ✅
-- File watcher v2 with sync state persistence ✅
-- Batch indexer for bulk operations ✅
+### V4: The Automaton
 
-### Phase 5: Conversation & Context 🟡 Partial
+| Phase | Name | Status |
+|-------|------|--------|
+| Phase 1 | Scheduler & Automation | ⬜ Pending |
+| Phase 2 | MCP Server | ⬜ Pending |
+| Phase 3 | Daily Life Tools | ⬜ Pending |
 
-- Conversation model with message history and token tracking ✅
-- Conversation-to-memory pipeline ✅
-- Long-term memory model with decay, confidence, and access tracking ✅
-- SSE streaming for real-time agent responses ✅
-- Conversation service with context building ✅
+### V5: The Workspace
 
-### Phase 6: Agent Intelligence 🟡 Partial
+| Phase | Name | Status |
+|-------|------|--------|
+| Phase 1 | Design System | ⬜ Pending |
+| Phase 2 | Accessibility | ⬜ Pending |
+| Phase 3 | Mobile | ⬜ Pending |
 
-- Agent SSE streaming ✅
-- Expanded tool registry ✅
-- RAG pipeline integration ✅
-- Entity extraction service ✅
-- Search clustering and recommendations ✅
+### V6: The Ecosystem
 
----
-
-## Upcoming Phases
-
-| Phase | Name | Focus | Status |
-|-------|------|-------|--------|
-| 6.5 | Agentic Ecosystem | Development operating system, governance, workflows, validation | ✅ Complete |
-| 7 | Desktop Preparation | Service abstraction, filesystem abstraction, Tauri readiness | ⬜ Next |
-| 8 | Learning Loop | Pattern recognition, correction tracking, proactive assistant | ⬜ |
-| 9 | Observability & Monitoring | Dashboards, metrics, health monitoring | ⬜ |
-| 10 | Production Hardening | Test coverage, security, performance, Docker, CI/CD | ⬜ |
-
-### Phase 6.5: Agentic Ecosystem ✅ Complete
-
-- Governance docs (docs/GOVERNANCE.md)
-- Workflow definitions (docs/WORKFLOWS.md)
-- Decision tracking (docs/decisions/)
-- Audit tracking (docs/audits/)
-- Enhanced CLAUDE.md with ecosystem integration
-- Enhanced AGENTS.md with workflow and skill rules
-- ADR for ecosystem design (docs/decisions/001-agentic-ecosystem.md)
+| Phase | Name | Status |
+|-------|------|--------|
+| Phase 1 | Plugin Marketplace | ⬜ Pending |
+| Phase 2 | Graph Intelligence | ⬜ Pending |
+| Phase 3 | Production Hardening | ⬜ Pending |
 
 ---
 
 ## Improvement Roadmap
 
-### Phase 1: Consolidation
+### Consolidation
 
 - [ ] Remove legacy `cortexApi.ts` — migrate all imports to `client.ts` domain modules
 - [ ] Standardize API response envelope: `{ data: T, error: null } | { data: null, error: { code, message } }`
 - [ ] Add `response_model=` to all v1 endpoints for OpenAPI schema completeness
 - [ ] Replace manual session creation with `Depends(get_db)` everywhere
 
-### Phase 2: Quality
+### Quality
 
 - [ ] Achieve 80%+ backend test coverage (focus on services)
 - [ ] Achieve 60%+ frontend test coverage (focus on hooks and API modules)
 - [ ] Add E2E tests (Playwright or Cypress) for auth flow, vault, chat
 
-### Phase 3: Security Hardening
+### Security Hardening
 
 - [ ] Account lockout after 5 consecutive failed login attempts
 - [ ] Input sanitization audit (XSS, SQL injection, path traversal)
 - [ ] API key authentication for programmatic access
 - [ ] Audit logging for all state-changing operations
 
-### Phase 4: Performance
+### Performance
 
 - [ ] Redis caching for frequently queried data (model catalog, user settings)
 - [ ] Response caching headers for static assets
 - [ ] Query optimization (prefetch related objects, pagination cursors)
 - [ ] Frontend bundle analysis and code splitting
 
-### Phase 5: Observability
+### Observability
 
 - [ ] Structured logging with correlation IDs (partially done via `RequestIdFilter`)
 - [ ] Metrics export (Prometheus `/metrics` endpoint exists, needs expansion)
 - [ ] Distributed tracing (OpenTelemetry)
 - [ ] Health check deep probes (database, Redis, Qdrant, LLM)
+
+---
+
+## Previous Development History
+
+For pre-V1 development history (Phase 1–6.5), see [`PREVIOUS_DEVELOPMENT_HISTORY.md`](../PREVIOUS_DEVELOPMENT_HISTORY.md).
