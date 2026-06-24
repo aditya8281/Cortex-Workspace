@@ -202,6 +202,7 @@ Every significant change must go through a feature branch. Never commit directly
 3. No regressions (existing tests still pass)
 4. Documentation updated (if applicable)
 5. ADR created (if architectural decision made)
+6. Run `/project:review` for code quality analysis
 
 ### Mandatory Before Merge
 
