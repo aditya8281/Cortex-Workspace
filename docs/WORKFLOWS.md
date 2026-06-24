@@ -9,10 +9,25 @@ This document defines all workflows for the Cortex development process.
 ### Stages
 
 ```
-Idea → Skill Discovery → Triage → Plan → Build → Review → Release
+Idea → Branch → Skill Discovery → Triage → Plan → Build → Review → Release
 ```
 
-### Stage 0: Skill Discovery
+### Stage 0: Branch First
+
+**Purpose:** Create a feature branch before any work begins. `main` must always be in a working state.
+
+**Steps:**
+1. Agent creates a branch from `main`: `git checkout -b feat/<topic>`
+2. Agent follows branch naming convention: `feat/`, `fix/`, `docs/`, `refactor/`
+3. All work happens on the branch
+4. After verification, agent merges back to `main` with `--no-ff`
+5. Agent deletes the feature branch
+
+**Gate:** Branch exists. No direct commits to `main`.
+
+**Parallel branch limit:** Max 2-3 active branches. Finish one before starting the next.
+
+### Stage 1: Skill Discovery
 
 **Purpose:** Before any work, determine if existing skills can improve the process.
 
