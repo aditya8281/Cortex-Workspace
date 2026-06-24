@@ -18,7 +18,10 @@ vi.mock("@/shared/auth/cortexApi", () => ({
 
 vi.mock("@/shared/api", () => ({
   memoryApi: { list: vi.fn().mockResolvedValue({ total: 5, entries: [] }) },
-  agentApi: { list: vi.fn().mockResolvedValue({ agents: [] }) },
+  agentApi: {
+    list: vi.fn().mockResolvedValue({ agents: [] }),
+    listRuns: vi.fn().mockResolvedValue({ runs: [] }),
+  },
 }));
 
 vi.mock("@/shared/hooks/useSystemWebSocket", () => ({

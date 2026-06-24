@@ -10,7 +10,6 @@ import pytest
 
 from backend.app.services.ollama_catalog import (
     OllamaCatalogService,
-    CatalogSourceStatus,
     get_catalog_service,
     get_ollama_catalog,
     get_ollama_catalog_sync,
@@ -266,10 +265,12 @@ class TestCacheIntegration:
         cached = [{"name": "stale", "source": "cached"}]
         service._save_cache(cached)
 
-        with patch.object(service, "fetch_cloud_models", return_value=[]):
-            with patch.object(service, "fetch_local_models", return_value=[]):
-                with patch.object(service, "fetch_registry_models", return_value=[]):
-                    result, status = await service.fetch_catalog(force_refresh=True)
+        with (
+            patch.object(service, "fetch_cloud_models", return_value=[]),
+            patch.object(service, "fetch_local_models", return_value=[]),
+            patch.object(service, "fetch_registry_models", return_value=[]),
+        ):
+            result, status = await service.fetch_catalog(force_refresh=True)
 
         assert result == []
         assert not status.from_fallback
@@ -284,10 +285,12 @@ class TestDeduplication:
         cloud = [{"name": "llama3.1:8b", "source": "cloud", "capabilities": ["tools"]}]
         registry = [{"name": "llama3.1:8b", "source": "registry", "capabilities": []}]
 
-        with patch.object(service, "fetch_cloud_models", return_value=cloud):
-            with patch.object(service, "fetch_local_models", return_value=[]):
-                with patch.object(service, "fetch_registry_models", return_value=registry):
-                    result, _status = await service.fetch_catalog(force_refresh=True)
+        with (
+            patch.object(service, "fetch_cloud_models", return_value=cloud),
+            patch.object(service, "fetch_local_models", return_value=[]),
+            patch.object(service, "fetch_registry_models", return_value=registry),
+        ):
+            result, _status = await service.fetch_catalog(force_refresh=True)
 
         assert len(result) == 1
         assert result[0]["source"] == "cloud"

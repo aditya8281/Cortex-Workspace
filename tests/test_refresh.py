@@ -31,14 +31,14 @@ def _register(client: TestClient, username: str | None = None) -> dict:
     storage = Path.home() / f"cortex_rt_{tempfile.mktemp().split('/')[-1]}"
     storage.mkdir(parents=True, exist_ok=True)
     r = client.post(
-        "/api/auth/register",
+        "/api/v1/auth/register",
         json={
             "username": uname,
-            "password": "securepass123",
-            "confirm_password": "securepass123",
+            "password": "SecurePass123!",
+            "confirm_password": "SecurePass123!",
             "full_name": "Refresh Test User",
             "nickname": "rt",
-            "vault_password": "vaultpass123",
+            "vault_password": "VaultPass123!",
             "personal_storage_path": str(storage),
         },
     )
@@ -59,7 +59,7 @@ def test_refresh_returns_new_tokens(client):
     data = _register(client)
     old_refresh = data["refresh_token"]
 
-    r = client.post("/api/auth/refresh", json={"refresh_token": old_refresh})
+    r = client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert r.status_code == 200
     body = r.json()
     assert "access_token" in body and len(body["access_token"]) > 20
@@ -69,12 +69,12 @@ def test_refresh_returns_new_tokens(client):
 
 
 def test_refreshed_access_token_works(client):
-    """Register → refresh → use new access token on /api/auth/me."""
+    """Register → refresh → use new access token on /api/v1/auth/me."""
     data = _register(client)
-    r = client.post("/api/auth/refresh", json={"refresh_token": data["refresh_token"]})
+    r = client.post("/api/v1/auth/refresh", json={"refresh_token": data["refresh_token"]})
     new_access = r.json()["access_token"]
 
-    r2 = client.get("/api/auth/me", headers={"Authorization": f"Bearer {new_access}"})
+    r2 = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {new_access}"})
     assert r2.status_code == 200
 
 
@@ -83,11 +83,11 @@ def test_double_rotation(client):
     data = _register(client)
     rt1 = data["refresh_token"]
 
-    r1 = client.post("/api/auth/refresh", json={"refresh_token": rt1})
+    r1 = client.post("/api/v1/auth/refresh", json={"refresh_token": rt1})
     assert r1.status_code == 200
     rt2 = r1.json()["refresh_token"]
 
-    r2 = client.post("/api/auth/refresh", json={"refresh_token": rt2})
+    r2 = client.post("/api/v1/auth/refresh", json={"refresh_token": rt2})
     assert r2.status_code == 200
     rt3 = r2.json()["refresh_token"]
     assert rt3 != rt2
@@ -102,11 +102,11 @@ def test_old_token_rejected_after_rotation(client):
     old_refresh = data["refresh_token"]
 
     # First rotation succeeds
-    r1 = client.post("/api/auth/refresh", json={"refresh_token": old_refresh})
+    r1 = client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert r1.status_code == 200
 
     # Reusing the old token should be rejected
-    r2 = client.post("/api/auth/refresh", json={"refresh_token": old_refresh})
+    r2 = client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert r2.status_code == 401
 
 
@@ -121,11 +121,11 @@ def test_concurrent_reuse_detected(client):
     data = _register(client)
     rt = data["refresh_token"]
 
-    r1 = client.post("/api/auth/refresh", json={"refresh_token": rt})
+    r1 = client.post("/api/v1/auth/refresh", json={"refresh_token": rt})
     assert r1.status_code == 200
 
     # Replay attack
-    r2 = client.post("/api/auth/refresh", json={"refresh_token": rt})
+    r2 = client.post("/api/v1/auth/refresh", json={"refresh_token": rt})
     assert r2.status_code == 401
 
 
@@ -137,10 +137,10 @@ def test_refresh_after_logout_fails(client):
     data = _register(client)
     rt = data["refresh_token"]
 
-    r = client.post("/api/auth/logout", json={"refresh_token": rt})
+    r = client.post("/api/v1/auth/logout", json={"refresh_token": rt})
     assert r.status_code == 200
 
-    r2 = client.post("/api/auth/refresh", json={"refresh_token": rt})
+    r2 = client.post("/api/v1/auth/refresh", json={"refresh_token": rt})
     assert r2.status_code == 401
 
 
@@ -148,23 +148,23 @@ def test_refresh_after_logout_fails(client):
 
 
 def test_refresh_with_missing_token(client):
-    r = client.post("/api/auth/refresh", json={})
+    r = client.post("/api/v1/auth/refresh", json={})
     # Missing refresh_token → Pydantic validation error (422)
     assert r.status_code == 422
 
 
 def test_refresh_with_invalid_token(client):
-    r = client.post("/api/auth/refresh", json={"refresh_token": "not.a.valid.jwt"})
+    r = client.post("/api/v1/auth/refresh", json={"refresh_token": "not.a.valid.jwt"})
     assert r.status_code == 401
 
 
 def test_refresh_with_empty_string(client):
-    r = client.post("/api/auth/refresh", json={"refresh_token": ""})
+    r = client.post("/api/v1/auth/refresh", json={"refresh_token": ""})
     assert r.status_code == 401
 
 
 def test_refresh_with_garbage_token(client):
-    r = client.post("/api/auth/refresh", json={"refresh_token": "garbage123"})
+    r = client.post("/api/v1/auth/refresh", json={"refresh_token": "garbage123"})
     assert r.status_code == 401
 
 
@@ -185,5 +185,5 @@ def test_refresh_with_expired_token(client):
         "exp": datetime.now(timezone.utc) - timedelta(hours=1),
     }
     expired_token = jose_jwt.encode(payload, SECRET, algorithm=ALGORITHM)
-    r = client.post("/api/auth/refresh", json={"refresh_token": expired_token})
+    r = client.post("/api/v1/auth/refresh", json={"refresh_token": expired_token})
     assert r.status_code == 401

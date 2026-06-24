@@ -153,14 +153,14 @@ def test_rename_file_locked(mock_svc, client, mock_auth):
 @patch("backend.app.api.v1.vault.vault_service")
 def test_move_file(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
-    mock_svc.move_vault_item.return_value = {"source_path": "file.txt", "destination_path": "sub/file.txt"}
+    mock_svc.move_vault_item.return_value = {"name": "file.txt", "path": "sub/file.txt"}
     resp = client.post(
         "/api/v1/me/vault/files/move",
         json={"source_path": "file.txt", "destination_folder": "sub"},
         headers=HEADERS,
     )
     assert resp.status_code == 200
-    assert resp.json()["destination_path"] == "sub/file.txt"
+    assert resp.json()["path"] == "sub/file.txt"
 
 
 # ── Create Folder ───────────────────────────────────────────────────
@@ -271,11 +271,11 @@ def test_change_password_wrong_old(mock_svc, client, unlocked_user):
 @patch("backend.app.api.v1.vault.vault_service")
 def test_export_files(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
-    mock_svc.export_vault_items.return_value = {"exported": 3, "destination_dir": "/tmp/export"}
+    mock_svc.export_vault_items.return_value = {"exported": True, "count": 3}
     resp = client.post(
         "/api/v1/me/vault/files/export",
         json={"paths": ["doc.txt", "images/"], "destination_dir": "/tmp/export"},
         headers=HEADERS,
     )
     assert resp.status_code == 200
-    assert resp.json()["exported"] == 3
+    assert resp.json()["count"] == 3

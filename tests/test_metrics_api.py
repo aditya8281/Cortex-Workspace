@@ -1,6 +1,6 @@
 
 
-def test_prometheus_metrics(client):
+def test_prometheus_metrics(client, mock_auth):
     resp = client.get("/api/v1/metrics")
     assert resp.status_code == 200
     text = resp.text
@@ -12,6 +12,6 @@ def test_prometheus_metrics(client):
     assert "# TYPE" in text
 
 
-def test_prometheus_metrics_head(client):
+def test_prometheus_metrics_head(client, mock_auth):
     resp = client.head("/api/v1/metrics")
     assert resp.status_code == 200

@@ -34,7 +34,7 @@ const mockApiVaultUnlock = vi.fn().mockResolvedValue({ unlocked: true, message: 
 
 vi.mock("../../../src/shared/auth/cortexApi", () => ({
   apiVaultStatus: vi.fn().mockResolvedValue({ locked: true, has_vault_password: true }),
-  apiVaultUnlock: (...args) => mockApiVaultUnlock(...args),
+  apiVaultUnlock: (...args: any[]) => mockApiVaultUnlock(...args),
   apiVaultLock: vi.fn().mockResolvedValue({ locked: true, message: "locked" }),
   apiVaultListFiles: vi.fn().mockResolvedValue([]),
 }));

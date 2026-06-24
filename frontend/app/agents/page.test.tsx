@@ -81,11 +81,11 @@ vi.mock("../../src/shared/ui/NeuralNetwork", () => ({
 const { agentApi } = await import("../../src/shared/api/agent");
 
 const mockAgents = [
-  { id: 1, name: "Test Agent", description: "A test agent", system_prompt: "You are a test", tools: [], is_active: true, model_id: null, created_at: "2024-01-01T00:00:00Z", updated_at: null },
+  { id: 1, name: "Test Agent", description: "A test agent", system_prompt: "You are a test", tools: [], is_active: true, model_id: "", created_at: "2024-01-01T00:00:00Z", updated_at: null },
 ];
 
 const mockRuns = [
-  { id: 1, agent_id: 1, input: "Test input", status: "completed", output: "Test output", created_at: "2024-01-01T00:00:00Z", updated_at: null },
+  { id: 1, agent_id: 1, user_id: 1, input: "Test input", status: "completed" as const, output: "Test output", error: null, created_at: "2024-01-01T00:00:00Z", completed_at: null },
 ];
 
 beforeEach(() => {
@@ -93,7 +93,8 @@ beforeEach(() => {
   vi.mocked(agentApi.list).mockResolvedValue({ agents: mockAgents });
   vi.mocked(agentApi.listRuns).mockResolvedValue({ runs: mockRuns });
   vi.mocked(agentApi.create).mockResolvedValue({
-    agent: { id: 2, name: "New Agent", description: "New", system_prompt: "New prompt", tools: [], is_active: true, model_id: null, created_at: "2024-01-02T00:00:00Z", updated_at: null },
+    status: "created",
+    agent: { id: 2, name: "New Agent", description: "New", system_prompt: "New prompt", tools: [], is_active: true, model_id: "", created_at: "2024-01-02T00:00:00Z", updated_at: null },
   });
 });
 

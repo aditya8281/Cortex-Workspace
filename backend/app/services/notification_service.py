@@ -42,10 +42,10 @@ def get_notifications(
     """Return (notifications, total, unread_count)."""
     query = db.query(Notification).filter(Notification.user_id == user_id)
     if unread_only:
-        query = query.filter(not Notification.read)
+        query = query.filter(~Notification.read)
 
     total = db.query(Notification).filter(Notification.user_id == user_id).count()
-    unread_count = db.query(Notification).filter(Notification.user_id == user_id, not Notification.read).count()
+    unread_count = db.query(Notification).filter(Notification.user_id == user_id, ~Notification.read).count()
 
     notifications = query.order_by(Notification.created_at.desc()).offset(offset).limit(limit).all()
     return notifications, total, unread_count
@@ -63,7 +63,7 @@ def mark_read(db: Session, notification_id: int, user_id: int) -> bool:
 
 def mark_all_read(db: Session, user_id: int) -> int:
     """Mark all unread notifications as read. Returns count updated."""
-    count = db.query(Notification).filter(Notification.user_id == user_id, not Notification.read).update({"read": True})
+    count = db.query(Notification).filter(Notification.user_id == user_id, ~Notification.read).update({"read": True})
     db.commit()
     return count
 

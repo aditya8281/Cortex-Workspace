@@ -44,9 +44,9 @@ const mockDelete = vi.fn();
 
 vi.mock("@/shared/api/client", () => ({
   api: {
-    get: (...args) => mockGet(...args),
-    post: (...args) => mockPost(...args),
-    delete: (...args) => mockDelete(...args),
+    get: (...args: any[]) => mockGet(...args),
+    post: (...args: any[]) => mockPost(...args),
+    delete: (...args: any[]) => mockDelete(...args),
   },
   getCsrfToken: vi.fn(() => "test-csrf-token"),
 }));

@@ -146,8 +146,8 @@ async def lifespan(app: FastAPI):
     # Auto-detect Ollama models on startup
     if "pytest" not in sys.modules:
         try:
-            from backend.app.services.ollama_sync import OllamaSyncService
             from backend.app.db.session import SessionLocal as _SyncSessionLocal
+            from backend.app.services.ollama_sync import OllamaSyncService
 
             _sync_db = _SyncSessionLocal()
             try:
@@ -189,8 +189,8 @@ async def lifespan(app: FastAPI):
             while True:
                 await asyncio.sleep(60)
                 try:
-                    from backend.app.services.ollama_sync import OllamaSyncService
                     from backend.app.db.session import SessionLocal as _PeriodicSession
+                    from backend.app.services.ollama_sync import OllamaSyncService
 
                     _pdb = _PeriodicSession()
                     try:

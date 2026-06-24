@@ -37,13 +37,19 @@ const { searchApi } = await import("@/shared/api");
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(searchApi.unified).mockResolvedValue({
+    query: "test",
+    total: 2,
     results: [
-      { file_path: "src/test.ts", content: "Test content", source: "code", score: 0.9 },
-      { file_path: "memory/test.md", content: "Memory content", source: "memory", score: 0.8 },
+      { file_path: "src/test.ts", content: "Test content", source: "code", score: 0.9, document_id: 1, language: "typescript", chunk_type: "code" },
+      { file_path: "memory/test.md", content: "Memory content", source: "memory", score: 0.8, document_id: 2, language: "markdown", chunk_type: "text" },
     ],
+    next_cursor: null,
+    has_more: false,
   });
   vi.mocked(searchApi.answer).mockResolvedValue({
+    query: "test",
     answer: "This is an AI-generated answer about the search query.",
+    results: [],
   });
 });
 
@@ -77,8 +83,8 @@ describe("Search Page", () => {
   });
 
   it("handles empty results", async () => {
-    vi.mocked(searchApi.unified).mockResolvedValue({ results: [] });
-    vi.mocked(searchApi.answer).mockResolvedValue({ answer: "No results found." });
+    vi.mocked(searchApi.unified).mockResolvedValue({ query: "empty", total: 0, results: [], next_cursor: null, has_more: false });
+    vi.mocked(searchApi.answer).mockResolvedValue({ query: "empty", answer: "No results found.", results: [] });
     render(<SearchPage />);
     const input = screen.getByPlaceholderText(/Ask anything about your code/);
     fireEvent.change(input, { target: { value: "empty query" } });

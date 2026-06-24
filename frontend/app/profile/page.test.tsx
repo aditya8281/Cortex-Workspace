@@ -97,8 +97,8 @@ beforeEach(() => {
     created_at: "2024-01-01T00:00:00Z",
     updated_at: null,
   });
-  vi.mocked(apiConnectGitHub).mockResolvedValue({ connected: true, username: "testuser" });
-  vi.mocked(apiDisconnectGitHub).mockResolvedValue({ connected: false, username: "" });
+  vi.mocked(apiConnectGitHub).mockResolvedValue({ connected: true, github_username: "testuser" });
+  vi.mocked(apiDisconnectGitHub).mockResolvedValue({ connected: false, github_username: "" });
   vi.mocked(apiGetMe).mockResolvedValue({
     id: 1,
     username: "testuser",

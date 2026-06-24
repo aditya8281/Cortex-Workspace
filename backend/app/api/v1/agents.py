@@ -79,10 +79,10 @@ async def create_run(
     from backend.app.agents.background import run_agent_background
 
     manager = AgentRunManager(db)
+    agent = manager.get_agent(payload.agent_id, user_id=current_user.id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
     try:
-        agent = manager.get_agent(payload.agent_id, user_id=current_user.id)
-        if not agent:
-            raise HTTPException(status_code=404, detail="Agent not found")
         run = manager.create_run(payload.agent_id, current_user.id, payload.input)
 
         async def _run_with_logging():

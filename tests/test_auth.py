@@ -21,24 +21,24 @@ def test_create_user(client):
             "username": "dummyadmin",
             "full_name": "Dummy Admin",
             "nickname": "dummy",
-            "password": "securepassword123",
-            "confirm_password": "securepassword123",
-            "vault_password": "vaultpassword123",
+            "password": "SecurePass123!",
+            "confirm_password": "SecurePass123!",
+            "vault_password": "VaultPass123!",
             "personal_storage_path": str(storage),
         }
-        client.post("/api/auth/register", json=dummy_payload)
+        client.post("/api/v1/auth/register", json=dummy_payload)
 
         storage2 = _make_test_storage("cortex_at_")
         payload = {
             "username": "testuser",
             "full_name": "Test User",
             "nickname": "tester",
-            "password": "securepassword123",
-            "confirm_password": "securepassword123",
-            "vault_password": "vaultpassword123",
+            "password": "SecurePass123!",
+            "confirm_password": "SecurePass123!",
+            "vault_password": "VaultPass123!",
             "personal_storage_path": str(storage2),
         }
-        response = client.post("/api/auth/register", json=payload)
+        response = client.post("/api/v1/auth/register", json=payload)
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -57,17 +57,17 @@ def test_create_duplicate_user(client):
             "username": "duplicateuser",
             "full_name": "Test User 1",
             "nickname": "dupuser",
-            "password": "password123",
-            "confirm_password": "password123",
-            "vault_password": "vaultpassword123",
+            "password": "Password123!",
+            "confirm_password": "Password123!",
+            "vault_password": "VaultPass123!",
             "personal_storage_path": str(storage),
         }
         # First creation
-        response = client.post("/api/auth/register", json=payload)
+        response = client.post("/api/v1/auth/register", json=payload)
         assert response.status_code == 200
 
         # Second creation (should fail cleanly with 400 instead of crashing with 500)
-        response = client.post("/api/auth/register", json=payload)
+        response = client.post("/api/v1/auth/register", json=payload)
         assert response.status_code == 400
         assert response.json()["detail"] == "Username already registered"
     finally:
@@ -82,17 +82,17 @@ def test_login_and_me(client):
             "username": "meuser",
             "full_name": "Me User",
             "nickname": "me",
-            "password": "mypassword123",
-            "confirm_password": "mypassword123",
-            "vault_password": "vaultpassword123",
+            "password": "MyPass123!",
+            "confirm_password": "MyPass123!",
+            "vault_password": "VaultPass123!",
             "personal_storage_path": str(storage),
         }
-        reg_response = client.post("/api/auth/register", json=register_payload)
+        reg_response = client.post("/api/v1/auth/register", json=register_payload)
         assert reg_response.status_code == 200
 
         # 2. Login
-        login_payload = {"username": "meuser", "password": "mypassword123"}
-        response = client.post("/api/auth/login", json=login_payload)
+        login_payload = {"username": "meuser", "password": "MyPass123!"}
+        response = client.post("/api/v1/auth/login", json=login_payload)
         assert response.status_code == 200
         token_data = response.json()
         assert "access_token" in token_data
@@ -100,7 +100,7 @@ def test_login_and_me(client):
 
         # 3. Access protected profile /me with valid token
         headers = {"Authorization": f"Bearer {token_data['access_token']}"}
-        response = client.get("/api/auth/me", headers=headers)
+        response = client.get("/api/v1/auth/me", headers=headers)
         assert response.status_code == 200
         profile_data = response.json()
         assert profile_data["username"] == "meuser"
@@ -108,7 +108,7 @@ def test_login_and_me(client):
 
         # 4. Access protected profile /me with invalid token
         bad_headers = {"Authorization": "Bearer badtoken"}
-        response = client.get("/api/auth/me", headers=bad_headers)
+        response = client.get("/api/v1/auth/me", headers=bad_headers)
         assert response.status_code == 401
     finally:
         shutil.rmtree(storage, ignore_errors=True)
@@ -122,31 +122,31 @@ def test_vault_password_update(client):
             "username": "vaultuser",
             "full_name": "Vault User",
             "nickname": "vault",
-            "password": "mypassword123",
-            "confirm_password": "mypassword123",
-            "vault_password": "vaultpassword123",
+            "password": "MyPass123!",
+            "confirm_password": "MyPass123!",
+            "vault_password": "VaultPass123!",
             "personal_storage_path": str(storage),
         }
-        reg_response = client.post("/api/auth/register", json=register_payload)
+        reg_response = client.post("/api/v1/auth/register", json=register_payload)
         assert reg_response.status_code == 200
 
         # Login
-        login_payload = {"username": "vaultuser", "password": "mypassword123"}
-        login_resp = client.post("/api/auth/login", json=login_payload)
+        login_payload = {"username": "vaultuser", "password": "MyPass123!"}
+        login_resp = client.post("/api/v1/auth/login", json=login_payload)
         assert login_resp.status_code == 200
         token = login_resp.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
         # Update vault password with correct current_password
         r = client.put(
-            "/api/auth/me",
-            json={"vault_password": "newVaultPass123", "current_password": "mypassword123"},
+            "/api/v1/auth/me",
+            json={"vault_password": "newVaultPass123", "current_password": "MyPass123!"},
             headers=headers,
         )
         assert r.status_code == 200
 
         # Update vault password without current_password should fail
-        r = client.put("/api/auth/me", json={"vault_password": "oops"}, headers=headers)
+        r = client.put("/api/v1/auth/me", json={"vault_password": "oops"}, headers=headers)
         assert r.status_code == 400
     finally:
         shutil.rmtree(storage, ignore_errors=True)
@@ -166,12 +166,12 @@ def test_delete_user_soft_delete(client):
             "username": "softdeluser",
             "full_name": "Soft Delete User",
             "nickname": "softdel",
-            "password": "mypassword123",
-            "confirm_password": "mypassword123",
-            "vault_password": "vaultpassword123",
+            "password": "MyPass123!",
+            "confirm_password": "MyPass123!",
+            "vault_password": "VaultPass123!",
             "personal_storage_path": str(storage),
         }
-        reg_resp = client.post("/api/auth/register", json=register_payload)
+        reg_resp = client.post("/api/v1/auth/register", json=register_payload)
         assert reg_resp.status_code == 200
         user_data = reg_resp.json()["user"]
         user_id = user_data["id"]
@@ -181,8 +181,8 @@ def test_delete_user_soft_delete(client):
         assert (resolved_path / "vault").exists()
 
         # Login to get token
-        login_payload = {"username": "softdeluser", "password": "mypassword123"}
-        login_resp = client.post("/api/auth/login", json=login_payload)
+        login_payload = {"username": "softdeluser", "password": "MyPass123!"}
+        login_resp = client.post("/api/v1/auth/login", json=login_payload)
         assert login_resp.status_code == 200
         token = login_resp.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
@@ -198,7 +198,7 @@ def test_delete_user_soft_delete(client):
             db.close()
 
         # Soft delete user
-        del_resp = client.request("DELETE", "/api/auth/me", json={"password": "mypassword123"}, headers=headers)
+        del_resp = client.request("DELETE", "/api/v1/auth/me", json={"password": "MyPass123!"}, headers=headers)
         assert del_resp.status_code == 200
 
         # Verify storage directory is PRESERVED during grace period
@@ -220,7 +220,7 @@ def test_delete_user_soft_delete(client):
             db.close()
 
         # Verify restore works
-        restore_resp = client.post("/api/auth/restore", json={"password": "mypassword123"}, headers=headers)
+        restore_resp = client.post("/api/v1/auth/restore", json={"password": "MyPass123!"}, headers=headers)
         assert restore_resp.status_code == 200
 
         db = next(db_func())

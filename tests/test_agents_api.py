@@ -159,7 +159,7 @@ def test_list_runs(client, mock_auth, db_session):
     assert resp.status_code == 200
     runs = resp.json()["runs"]
     assert len(runs) >= 1
-    assert runs[0]["input"] == "test input"
+    assert runs[0]["input_text"] == "test input"
 
 
 def test_get_run(client, mock_auth, db_session):
@@ -189,7 +189,7 @@ def test_get_run(client, mock_auth, db_session):
     assert resp.status_code == 200
     data = resp.json()
     assert data["run"]["id"] == run.id
-    assert data["run"]["input"] == "get me"
+    assert data["run"]["input_text"] == "get me"
     assert isinstance(data["steps"], list)
 
 

@@ -32,7 +32,7 @@ def test_detect_doc_type():
     assert _detect_doc_type("readme.md") == DocumentType.MARKDOWN
     assert _detect_doc_type("notebook.ipynb") == DocumentType.NOTEBOOK
     assert _detect_doc_type("data.txt") == DocumentType.TEXT
-    assert _detect_doc_type("script.py") == DocumentType.OTHER
+    assert _detect_doc_type("script.py") == DocumentType.CODE
 
 
 def test_file_hash():

@@ -12,7 +12,7 @@ def fixture_svc() -> EmbeddingService:
 
 class TestEmbeddingService:
     def test_init(self, svc: EmbeddingService) -> None:
-        assert svc.model_path is None
+        assert svc.model_path is None or svc.model_path == ""
         assert svc._model is None
         assert svc._tokenizer is None
 

@@ -74,16 +74,14 @@ def test_vault_lock(mock_svc, client, mock_auth):
 @patch("backend.app.api.v1.vault.vault_service")
 def test_vault_list_files(mock_svc, client, mock_unlocked_auth):
     mock_svc._require_unlocked.return_value = None
-    mock_svc.list_vault_files.return_value = {
-        "files": [
-            {"name": "doc.txt", "path": "doc.txt", "is_dir": False, "size": 100}
-        ]
-    }
+    mock_svc.list_vault_files.return_value = [
+        {"name": "doc.txt", "path": "doc.txt", "is_dir": False, "size": 100}
+    ]
     resp = client.get("/api/v1/me/vault/files")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data["files"]) == 1
-    assert data["files"][0]["name"] == "doc.txt"
+    assert len(data) == 1
+    assert data[0]["name"] == "doc.txt"
 
 
 @patch("backend.app.api.v1.vault.vault_service")

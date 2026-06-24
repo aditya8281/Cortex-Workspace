@@ -98,20 +98,19 @@ async def unified_search(
                 filtered = []
                 for r in results:
                     # Skip results that are before or equal to the cursor position
-                    if r.score > cursor_score:
-                        filtered.append(r)
-                    elif r.score == cursor_score:
-                        # Same score: use file_path and document_id for tiebreaking
-                        if (
+                    if r.score > cursor_score or (
+                        r.score == cursor_score
+                        and (
                             r.file_path > cursor_file_path
                             or (
                                 r.file_path == cursor_file_path
                                 and r.document_id is not None
                                 and cursor_doc_id is not None
+                                and r.document_id > cursor_doc_id
                             )
-                            and r.document_id > cursor_doc_id
-                        ):
-                            filtered.append(r)
+                        )
+                    ):
+                        filtered.append(r)
                 results = filtered
 
         sources_used = list(set(r.source for r in results)) if results else []

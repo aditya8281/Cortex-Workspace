@@ -97,10 +97,10 @@ def test_send_message(mock_llm, mock_get_rag, client, mock_auth, db_session):
     assert resp.status_code == 200
 
     body = resp.text
-    lines = [l for l in body.strip().split("\n") if l.startswith("data: ")]
+    lines = [line for line in body.strip().split("\n") if line.startswith("data: ")]
     assert len(lines) >= 2
 
-    chunks = [json.loads(l.removeprefix("data: ")) for l in lines]
+    chunks = [json.loads(line.removeprefix("data: ")) for line in lines]
     chunk_types = [c["type"] for c in chunks]
     assert "chunk" in chunk_types
     assert "done" in chunk_types

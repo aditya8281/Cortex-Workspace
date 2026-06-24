@@ -6,10 +6,9 @@ and syncs their download status to the database.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-
-import re
 
 import httpx
 from sqlalchemy import select

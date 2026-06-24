@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from backend.app.models.model_catalog import ModelCatalog, SyncJob
-from backend.app.services.providers.base import ProviderModelInfo
 from backend.app.services.ollama_catalog import CatalogSourceStatus
+from backend.app.services.providers.base import ProviderModelInfo
 from backend.app.services.sync_service import SyncService
 
 

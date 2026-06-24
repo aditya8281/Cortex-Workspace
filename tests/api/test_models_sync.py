@@ -1,6 +1,4 @@
-from unittest.mock import AsyncMock, patch, MagicMock
-
-import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 
 HEADERS = {"Authorization": "Bearer fake-token"}
 
@@ -15,7 +13,11 @@ def test_sync_endpoint_returns_result(client, mock_auth):
 
     with patch("backend.app.services.ollama_sync.OllamaSyncService") as MockService:
         MockService.return_value.sync_installed_models = AsyncMock(return_value=mock_result)
-        response = client.post("/api/v1/models/installed/sync", headers=HEADERS)
+        # Patch the core.db.get_db used directly inside the endpoint (not via Depends)
+        with patch("backend.app.core.db.get_db") as mock_core_get_db:
+            mock_db_session = MagicMock()
+            mock_core_get_db.return_value = iter([mock_db_session])
+            response = client.post("/api/v1/models/installed/sync", headers=HEADERS)
 
     assert response.status_code == 200
     data = response.json()

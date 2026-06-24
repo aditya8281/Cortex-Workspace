@@ -11,9 +11,9 @@ def test_json_roundtrip(client):
         "nickname": "jsonrt",
         "password": "TestPass123!",
         "confirm_password": "TestPass123!",
-        "vault_password": "vault123!",
+        "vault_password": "VaultPass123!",
     }
-    resp = client.post("/api/auth/register", json=payload)
+    resp = client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 200
     user_id = resp.json()["user"]["id"]
 
@@ -53,9 +53,9 @@ def test_json_filter_by_key(client):
         "nickname": "jsonfilter",
         "password": "TestPass123!",
         "confirm_password": "TestPass123!",
-        "vault_password": "vault123!",
+        "vault_password": "VaultPass123!",
     }
-    resp = client.post("/api/auth/register", json=payload)
+    resp = client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 200
     user_id = resp.json()["user"]["id"]
 
@@ -89,9 +89,9 @@ def test_json_property_getter_setter_on_new_user(client):
         "nickname": "jsonbtest",
         "password": "TestPass123!",
         "confirm_password": "TestPass123!",
-        "vault_password": "vault123!",
+        "vault_password": "VaultPass123!",
     }
-    resp = client.post("/api/auth/register", json=payload)
+    resp = client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 200
 
     from backend.app.api.deps import get_db

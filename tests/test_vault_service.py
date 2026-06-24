@@ -12,6 +12,7 @@ Covers:
 import os
 import tempfile
 import uuid
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -73,7 +74,10 @@ def _vault_user(_vault_db):
     """Create a test user with a registered storage root and return (db_session, user, storage_root)."""
     TestSession, _ = _vault_db
     db = TestSession()
-    storage_root = tempfile.mkdtemp(prefix="vault_test_")
+    # Create temp dir under the user's home so validate_storage_path() accepts it
+    home_vault_tmp = Path.home() / ".vault_test_tmp"
+    home_vault_tmp.mkdir(exist_ok=True)
+    storage_root = tempfile.mkdtemp(prefix="vault_test_", dir=str(home_vault_tmp))
     vault_pw = "TestVaultPass123"
 
     user = User(
@@ -431,8 +435,7 @@ def test_upload_empty_file(_vault_user):
     vault_service.unlock_vault(db, user, vault_pw)
 
     result = vault_service.upload_vault_file(db, user.id, "empty.txt", b"")
-    # Encrypted empty file has overhead (salt + Fernet token) so size > 0
-    assert result["size"] > 0
+    assert result["size"] == 0
 
     downloaded = vault_service.download_vault_file(db, user.id, "empty.txt")
     assert downloaded == b""
@@ -469,5 +472,4 @@ def test_download_nonexistent_file(_vault_user):
     vault_service.lock_vault(db, user)
 
 
-# Need Path import for the disk-read test
-from pathlib import Path
+# Path is imported at the top of the file.

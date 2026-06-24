@@ -1,8 +1,8 @@
 {
-  "scraped_at": "2026-03-08T07:14:52.467471+00:00",
+  "scraped_at": "2026-06-24T12:18:20.194539+00:00",
   "source": "https://ollama.com/library",
-  "total_models": 214,
-  "total_tags": 773,
+  "total_models": 234,
+  "total_tags": 835,
   "models": [
     {
       "name": "alfred",
@@ -138,8 +138,7 @@
       "name": "cogito-2.1",
       "tags": [
         "latest",
-        "671b",
-        "671b-cloud"
+        "671b"
       ]
     },
     {
@@ -276,6 +275,18 @@
     },
     {
       "name": "deepseek-v3.2",
+      "tags": [
+        "cloud"
+      ]
+    },
+    {
+      "name": "deepseek-v4-flash",
+      "tags": [
+        "cloud"
+      ]
+    },
+    {
+      "name": "deepseek-v4-pro",
       "tags": [
         "cloud"
       ]
@@ -474,9 +485,20 @@
       ]
     },
     {
-      "name": "glm-4.6",
+      "name": "gemma4",
       "tags": [
-        "cloud"
+        "latest",
+        "e2b",
+        "e4b",
+        "12b",
+        "26b",
+        "31b",
+        "e2b-mlx",
+        "e4b-mlx",
+        "12b-mlx",
+        "26b-mlx",
+        "31b-mlx",
+        "31b-cloud"
       ]
     },
     {
@@ -496,6 +518,18 @@
     },
     {
       "name": "glm-5",
+      "tags": [
+        "cloud"
+      ]
+    },
+    {
+      "name": "glm-5.1",
+      "tags": [
+        "cloud"
+      ]
+    },
+    {
+      "name": "glm-5.2",
       "tags": [
         "cloud"
       ]
@@ -645,6 +679,20 @@
       ]
     },
     {
+      "name": "granite4.1",
+      "tags": [
+        "3b",
+        "8b",
+        "30b"
+      ]
+    },
+    {
+      "name": "granite4.1-guardian",
+      "tags": [
+        "8b"
+      ]
+    },
+    {
       "name": "hermes3",
       "tags": [
         "latest",
@@ -665,21 +713,33 @@
       ]
     },
     {
-      "name": "kimi-k2",
-      "tags": [
-        "1t-cloud"
-      ]
-    },
-    {
-      "name": "kimi-k2-thinking",
-      "tags": [
-        "cloud"
-      ]
-    },
-    {
       "name": "kimi-k2.5",
       "tags": [
         "cloud"
+      ]
+    },
+    {
+      "name": "kimi-k2.6",
+      "tags": [
+        "cloud"
+      ]
+    },
+    {
+      "name": "kimi-k2.7-code",
+      "tags": [
+        "cloud"
+      ]
+    },
+    {
+      "name": "laguna-xs.2",
+      "tags": [
+        "latest",
+        "mxfp8",
+        "nvfp4",
+        "q4_K_M",
+        "q8_0",
+        "bf16",
+        "mlx-bf16"
       ]
     },
     {
@@ -687,6 +747,13 @@
       "tags": [
         "latest",
         "24b"
+      ]
+    },
+    {
+      "name": "lfm2.5",
+      "tags": [
+        "latest",
+        "8b"
       ]
     },
     {
@@ -891,6 +958,21 @@
       ]
     },
     {
+      "name": "medgemma",
+      "tags": [
+        "latest",
+        "4b",
+        "27b"
+      ]
+    },
+    {
+      "name": "medgemma1.5",
+      "tags": [
+        "latest",
+        "4b"
+      ]
+    },
+    {
       "name": "meditron",
       "tags": [
         "latest",
@@ -920,9 +1002,17 @@
       ]
     },
     {
-      "name": "minimax-m2",
+      "name": "minicpm-v4.5",
       "tags": [
-        "cloud"
+        "latest",
+        "8b"
+      ]
+    },
+    {
+      "name": "minicpm-v4.6",
+      "tags": [
+        "latest",
+        "1b"
       ]
     },
     {
@@ -933,6 +1023,18 @@
     },
     {
       "name": "minimax-m2.5",
+      "tags": [
+        "cloud"
+      ]
+    },
+    {
+      "name": "minimax-m2.7",
+      "tags": [
+        "cloud"
+      ]
+    },
+    {
+      "name": "minimax-m3",
       "tags": [
         "cloud"
       ]
@@ -967,6 +1069,13 @@
       "name": "mistral-large-3",
       "tags": [
         "675b-cloud"
+      ]
+    },
+    {
+      "name": "mistral-medium-3.5",
+      "tags": [
+        "latest",
+        "128b"
       ]
     },
     {
@@ -1045,8 +1154,30 @@
       "name": "nemotron-3-nano",
       "tags": [
         "latest",
+        "4b",
         "30b",
         "30b-cloud"
+      ]
+    },
+    {
+      "name": "nemotron-3-super",
+      "tags": [
+        "latest",
+        "120b",
+        "cloud"
+      ]
+    },
+    {
+      "name": "nemotron-3-ultra",
+      "tags": [
+        "cloud"
+      ]
+    },
+    {
+      "name": "nemotron-cascade-2",
+      "tags": [
+        "latest",
+        "30b"
       ]
     },
     {
@@ -1054,6 +1185,12 @@
       "tags": [
         "latest",
         "4b"
+      ]
+    },
+    {
+      "name": "nemotron3",
+      "tags": [
+        "33b"
       ]
     },
     {
@@ -1082,6 +1219,18 @@
       "name": "nomic-embed-text-v2-moe",
       "tags": [
         "latest"
+      ]
+    },
+    {
+      "name": "north-mini-code-1.0",
+      "tags": [
+        "latest",
+        "q4_K_M",
+        "q8_0",
+        "bf16",
+        "mlx-mxfp8",
+        "mlx-nvfp4",
+        "mlx-bf16"
       ]
     },
     {
@@ -1416,8 +1565,7 @@
       "name": "qwen3-next",
       "tags": [
         "latest",
-        "80b",
-        "80b-cloud"
+        "80b"
       ]
     },
     {
@@ -1429,9 +1577,7 @@
         "8b",
         "30b",
         "32b",
-        "235b",
-        "235b-cloud",
-        "235b-instruct-cloud"
+        "235b"
       ]
     },
     {
@@ -1445,8 +1591,24 @@
         "27b",
         "35b",
         "122b",
+        "0.8b-mlx",
+        "2b-mlx",
+        "4b-mlx",
+        "9b-mlx",
+        "27b-mlx",
+        "35b-mlx",
         "cloud",
         "397b-cloud"
+      ]
+    },
+    {
+      "name": "qwen3.6",
+      "tags": [
+        "latest",
+        "27b",
+        "35b",
+        "27b-mlx",
+        "35b-mlx"
       ]
     },
     {

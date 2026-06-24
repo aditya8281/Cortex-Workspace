@@ -191,7 +191,7 @@ def test_load_providers_from_db_uses_singleton_by_default():
 
     with patch("backend.app.services.providers.registry.provider_registry") as mock_singleton:
         load_providers_from_db(db)
-        mock_singleton is not None
+        assert mock_singleton is not None
 
 
 def test_load_providers_from_db_passes_base_url_to_ollama():

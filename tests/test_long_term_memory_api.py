@@ -170,9 +170,7 @@ def test_reinforce_memory_not_found(client, mock_unlocked_auth):
         "/api/v1/long-term-memory/999999/reinforce",
         headers=HEADERS,
     )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["error"] == "not found"
+    assert resp.status_code == 404
 
 
 def test_delete_memory(client, mock_unlocked_auth, db_session):
@@ -211,6 +209,4 @@ def test_delete_memory_nonexistent(client, mock_unlocked_auth):
         "/api/v1/long-term-memory/999999",
         headers=HEADERS,
     )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "deleted"
+    assert resp.status_code == 404
