@@ -1,4 +1,4 @@
-# Cortex Roadmap
+# CORTEX Roadmap
 
 ## Current Status
 

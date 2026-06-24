@@ -1,4 +1,4 @@
-# Cortex Workflow Definitions
+# CORTEX Workflow Definitions
 
 This document defines all workflows for the Cortex development process.
 

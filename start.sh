@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# Cortex Workspace - Quick Startup Pipeline
+# CORTEX - Quick Startup Pipeline
 # ==============================================================================
 # This script automates backend and frontend setup, migrations, and starts the
 # local development environment.
