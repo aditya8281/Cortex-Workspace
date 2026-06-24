@@ -1,263 +1,274 @@
-# CLAUDE.md
+# CLAUDE.md — CORTEX Control Plane
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file is the **execution contract** for Claude Code. It defines what CORTEX is, what to do on entry, and what rules govern all work.
 
-## Project Overview
+## What CORTEX Is
 
-CORTEX is a local-first machine intelligence layer — a persistent AI brain that lives on your machine. It gives a computer its own understanding, memory, reasoning, and agency. It combines a FastAPI backend, Next.js frontend, Rust-based code intelligence, and a Python CLI into a single workspace. The architecture is designed around encrypted vaults, knowledge graphs, vector search, LLM integration, and autonomous agents. CORTEX is not a chatbot, repo assistant, or model wrapper — it is an entire local AI brain ecosystem.
+CORTEX is a local-first machine intelligence layer — a persistent AI brain on your machine. FastAPI backend + Next.js frontend + Rust code intelligence + Python CLI. Encrypted vaults, knowledge graphs, vector search, LLM integration, autonomous agents. Not a chatbot. Not a repo assistant. An entire local AI brain ecosystem.
 
-**For detailed architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).**
-**For ecosystem governance, see [docs/GOVERNANCE.md](docs/GOVERNANCE.md).**
-**For workflow definitions, see [docs/WORKFLOWS.md](docs/WORKFLOWS.md).**
-**For developer guide, see [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md).**
+## Entry Protocol — MANDATORY
 
-## Commands
+When entering this repository, Claude MUST do these in order:
 
-### Full Stack
+### 1. Determine Active Development State
 
 ```bash
-make install        # Install all deps (uv sync + npm install)
-make dev            # Backend hot reload (uvicorn on :8000)
-make dev-frontend   # Frontend dev server (Next.js on :3000)
-make dev-full       # Both backend + frontend
-./start.sh          # Self-contained: starts PG in user-space, runs migrations, launches both
+# Read the constitution to understand the full system
+cat guide.md
+
+# Find which version is currently being developed
+grep -r "in_progress\|active\|current" .agents/plans/versions/*/progress.md
+
+# Read the active version's phase plan
+cat .agents/plans/versions/vX/Phase-1.md  # (replace X with active version)
 ```
 
-### Testing
+If no version is active (all components show "Not started"), start with **V1: The Brain Works** per `.agents/plans/implementation_steps.md`.
+
+### 2. Load the Execution Plan
 
 ```bash
-make test           # Backend pytest (all tests in tests/ at project root)
-make test-cov       # Backend coverage report
-cd frontend && npm test   # Frontend Vitest
-make check          # lint + test
+# Contributor guide with execution order and constraints
+cat .agents/plans/implementation_steps.md
+
+# Architecture constitution (10 principles, what to keep/reject)
+cat guide.md
+
+# Cross-reference matrix (which items go in which version)
+cat .agents/plans/FinalCompatibilities.md
 ```
 
-### Linting & Formatting
+### 3. Verify Governance Infrastructure
 
 ```bash
-make lint           # ruff check + mypy (backend/tests)
-make format         # ruff format + ruff check --fix
+# Hook system
+python .claude/hooks/run_hooks.py --help
+
+# Available slash commands
+ls .claude/commands/project/
+
+# Available skills
+ls .agents/skills/
 ```
 
-### Database
+### 4. Check for Existing Work
 
 ```bash
-make migrate                       # Apply all Alembic migrations
-make migration m="description"     # Create new migration
-make db-reset                      # Drop+recreate schema, reapply migrations
-make db-shell                      # PostgreSQL CLI
+# What's the current branch?
+git branch --show-current
+
+# What changed recently?
+git log --oneline -10
+
+# Any uncommitted work?
+git status
 ```
 
-### Docker
+## Authority Hierarchy
 
-```bash
-make docker-build   # Build production image
-make docker-up      # Start postgres, redis, qdrant
-make docker-down    # Stop containers
-```
+When documents conflict, this order governs:
 
-### Task Queue
+| Priority | Document | Purpose |
+|----------|----------|---------|
+| 1 | **CLAUDE.md** (this file) | Execution contract — what Claude does |
+| 2 | **guide.md** | Constitution — architecture principles, what to build |
+| 3 | **AGENTS.md** | Agent behavior rules — security, API patterns |
+| 4 | **.agents/plans/implementation_steps.md** | Implementation guide — execution order |
+| 5 | **.agents/plans/versions/vX/Phase-N.md** | Active phase plan — current work |
+| 6 | **docs/** | Reference — detailed docs for specific domains |
 
-```bash
-make worker         # Start arq worker for background tasks (embed, index, graph)
-```
+**Rule:** If a topic appears in multiple files, the higher-priority document wins. Lower documents reference, not duplicate.
 
-### Frontend Build
+## What CORTEX Is Building
 
-```bash
-cd frontend && npm run build    # Next.js standalone output (Docker-ready)
-```
+Six versions, each a complete milestone:
 
-## Architecture
+| Version | Name | Duration | What It Delivers |
+|---------|------|----------|------------------|
+| **V1** | The Brain Works | 11-18 days | Agent loop, daemon lifecycle, CLI, streaming |
+| **V2** | The Architecture | 17-25 days | Provider/MCP abstraction, plugin system, memory |
+| **V3** | The Desktop | 22-31 days | Tauri shell, TUI, performance optimization |
+| **V4** | The Automaton | 21-30 days | Scheduler, MCP server, research, sessions |
+| **V5** | The Workspace | 27-38 days | Email, calendar, tasks, notes, documents, contacts |
+| **V6** | The Ecosystem | 27-38 days | Marketplace, graph intelligence, cross-encoder, polish |
+
+**Active version:** V1 (if nothing has started yet)
+**Phase plan location:** `.agents/plans/versions/vX/Phase-N.md`
+**Progress tracking:** `.agents/plans/versions/vX/progress.md`
+
+## Execution Contract
+
+### Before ANY Work
+
+1. **Read the active phase plan** — know what components are in scope
+2. **Read the constraints** — guide.md architecture principles apply always
+3. **Verify entry state** — run the entry protocol above
+4. **Skill discovery** — check `.agents/skills/` for applicable skills
+5. **Branch** — create `feat/<topic>` from `main`
+
+### During Work
+
+1. **TDD when applicable** — write test, verify fail, implement, verify pass
+2. **Commit frequently** — after each logical unit
+3. **Run hooks on change** — `make hooks-onchange`
+4. **Follow architecture** — file placement rules, ownership checks, API conventions
+5. **Update progress** — mark components as you complete them in `progress.md`
+
+### After Work
+
+1. **Run completion gate** — `make hooks-merge`
+2. **Run tests** — `make test` + `cd frontend && npm test`
+3. **Run lint** — `make lint` + `make format`
+4. **Reflection** — use `/project:reflect` before marking complete
+5. **Update progress** — mark completed components in `progress.md`
+6. **Merge** — after all checks pass
+
+### Completion Criteria (for any component)
+
+- [ ] Tests passing
+- [ ] Lint clean
+- [ ] Build succeeds
+- [ ] Documentation updated (if applicable)
+- [ ] ADR created (if architectural decision)
+- [ ] Progress updated in `progress.md`
+- [ ] Hook suite passes (`make hooks-merge`)
+
+## Architecture Constraints
+
+These rules are immutable. See `guide.md` for full rationale.
 
 ### Backend (`backend/app/`)
 
-**Framework**: FastAPI with sync SQLAlchemy 2.0 + Alembic migrations
+**Framework:** FastAPI + sync SQLAlchemy 2.0 + Alembic
 
-```
-backend/app/
-├── main.py              # App factory, middleware stack, startup (DB bootstrap, Redis, Ollama)
-├── core/                # Config, security, CSRF, rate limiting, Redis, vector_db
-├── api/
-│   ├── router.py        # Root router — mounts all v1 sub-routers
-│   └── v1/              # Domain routers (auth, users, vault, memory, search, models, agents, etc.)
-├── models/              # SQLAlchemy models (~20 model files)
-├── schemas/             # Pydantic request/response schemas (from_attributes=True)
-├── services/            # Business logic (vault, embedding, vector_db, rag_pipeline, etc.)
-├── managers/            # Manager classes (llm_manager, download_manager, etc.)
-├── tasks/               # arq background tasks (embed, index, build_graph)
-└── middleware/           # CORS, rate limiting, CSRF, request logging
-```
-
-**Key patterns**:
-- **Auth**: JWT access tokens (30min) + refresh tokens (7-day rotation) stored in httpOnly cookies. CSRF double-submit pattern. All `/api/v1/*` endpoints require auth unless explicit.
-- **DB**: `get_db()` generator for session injection. `DynamicSessionLocal` factory. Migrations run at startup via `bootstrap_database()`.
-- **Services**: Constructor injection with optional overrides. Global singletons for `llm_manager`, `redis_cache`, `download_manager`.
-- **Embeddings**: Three-tier fallback: ONNX → Ollama → mock. 768-dim vectors stored in Qdrant.
-- **RAG**: HybridRetrievalV2 merges vector + fulltext + graph results via RRF + MMR diversity reranking.
-- **Vault**: Fernet-encrypted per-user file storage with separate vault password. SecurePasswordCache.
-- **Middleware stack order**: CORS → RequestLogging → GZip → RequestSizeLimit → RateLimit → CSRF → HTTPS redirect.
-
-**Ownership rules** (AGENTS.md): Every user-scoped endpoint must verify `resource.user_id == current_user.id`. Use `Depends(get_current_user)`, never trust client-provided user IDs.
-
-**API conventions** (AGENTS.md): Specific routes before parameterized routes. Always use `response_model=` on decorators. Router files per domain in `api/v1/`, registered in `api/router.py`.
+- **Auth:** JWT access (30min) + refresh (7-day) in httpOnly cookies. CSRF double-submit.
+- **DB:** `get_db()` generator. `DynamicSessionLocal` factory. Migrations at startup.
+- **Services:** Constructor injection. Global singletons: `llm_manager`, `redis_cache`, `download_manager`.
+- **Embeddings:** ONNX → Ollama → mock. 768-dim in Qdrant.
+- **RAG:** HybridRetrievalV2 — vector + fulltext + graph via RRF + MMR.
+- **Vault:** Fernet-encrypted per-user. SecurePasswordCache.
+- **Middleware:** CORS → RequestLogging → GZip → RequestSizeLimit → RateLimit → CSRF → HTTPS redirect.
+- **Ownership:** `resource.user_id == current_user.id` on ALL user-scoped endpoints.
+- **Routes:** Specific before parameterized. `response_model=` on all decorators.
 
 ### Frontend (`frontend/`)
 
-**Framework**: Next.js 15 (App Router) + React 19 + TypeScript 5.8 + Tailwind CSS 3.4
+**Framework:** Next.js 15 App Router + React 19 + TypeScript 5.8 + Tailwind 3.4
+
+- **Auth:** `AuthProvider` bootstraps via `GET /me`. Auto token refresh on 401.
+- **Proxy:** Client → Next.js API route → FastAPI. Same-origin, no CORS.
+- **State:** React Context for auth. Component-local everywhere else.
+- **Design:** Dark-only glassmorphism. Tokens in `tokens.ts`. NeuralNetwork canvas background.
+- **SSE:** `ReadableStream` line-by-line for chat/agent streaming.
+- **Responsive:** Desktop 240px sidebar, tablet overlay, mobile bottom tabs.
+
+### File Placement
+
+| Type | Location |
+|------|----------|
+| Models | `backend/app/models/` |
+| Schemas | `backend/app/schemas/` |
+| Routers | `backend/app/api/v1/` |
+| Services | `backend/app/services/` |
+| Managers | `backend/app/managers/` |
+| Middleware | `backend/app/middleware/` |
+| Tasks | `backend/app/tasks/` |
+| Tests | `tests/` (project root, NOT inside backend/) |
+| Migrations | `migrations/versions/` |
+| Docs | `docs/` |
+| ADRs | `docs/decisions/` |
+| Skills | `.agents/skills/` |
+| Hooks | `.claude/hooks/` |
+
+### Forbidden Paths
+
+`.trae/`, `.codex/`, `.cortex_bootstrap/`, `skills-lock.json` — must never exist.
+
+## Commands
+
+```bash
+make install        # Install all deps
+make dev            # Backend hot reload (:8000)
+make dev-frontend   # Frontend dev server (:3000)
+make dev-full       # Both
+make test           # Backend pytest
+make lint           # ruff + mypy
+make format         # ruff format
+make check          # lint + test
+make migrate        # Apply Alembic migrations
+make migration m=X  # Create migration
+make hooks          # Run all hooks
+make hooks-push     # Pre-push hooks
+make hooks-merge    # Pre-merge hooks (all)
+./start.sh          # Self-contained launcher
+```
+
+## Mandatory Workflow
 
 ```
-frontend/
-├── app/                  # Pages (all "use client")
-│   ├── layout.tsx        # Root layout (AuthProvider, fonts)
-│   ├── api/[...path]/    # Catch-all proxy → FastAPI backend
-│   └── [route]/page.tsx  # Page components
-├── src/
-│   ├── shared/
-│   │   ├── api/          # Modular API clients (barrel-exported)
-│   │   ├── auth/         # AuthProvider, cortexApi (monolithic client), session helpers
-│   │   ├── hooks/        # useLiveMetrics, useSystemWebSocket, useFolderPicker
-│   │   ├── layout/       # DashboardShell (sidebar, header, mobile tabs)
-│   │   ├── design/       # tokens.ts (palette, shadows, fonts)
-│   │   ├── ui/           # 17 custom components (Button, Card, Modal, CommandPalette, NeuralNetwork, etc.)
-│   │   └── types.ts      # ~800 lines of TypeScript interfaces
-│   └── lib/utils.ts      # cn() helper (clsx + tailwind-merge)
-└── vitest.config.ts
+Branch → Skill Discovery → Brainstorm → Plan → Implement → Test → Validate → Review → Reflect → Merge
 ```
 
-**Key patterns**:
-- **Auth flow**: `AuthProvider` bootstraps via `GET /me`. Login sets httpOnly cookies. Logout locks vault, clears session. Auto token refresh on 401.
-- **API proxy**: Client-side fetch → Next.js API route → FastAPI. Same-origin, no CORS.
-- **State**: No external store. React Context for auth. Component-local state everywhere else.
-- **Design system**: Dark-only glassmorphism. Custom tokens in `tokens.ts`. NeuralNetwork Canvas 2D animated background.
-- **SSE streaming**: Chat and agent responses stream via `ReadableStream` line-by-line parsing.
-- **Responsive**: Desktop (fixed 240px sidebar), tablet (overlay sidebar), mobile (bottom tab bar).
+Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for details.
 
-### Rust Crates (`crates/`)
+### Mandatory Reviews
 
-- **`cortex-code-intel`**: PyO3 Python extension using tree-sitter to parse Python source into AST nodes.
-- **`cortex-file-watcher`**: Standalone binary using the `notify` crate to watch filesystem events.
-
-### CLI (`cli/`)
-
-TypeScript/Commander.js CLI (`cortex-cli`). 15 command stubs scaffolded but not yet implemented.
-
-## Database Schema
-
-Migrations live in `migrations/versions/`. Alphabetical-prefix naming (`b00000000000` baseline, `c0000000000X` current chain). Archived migrations in `_archive/`.
-
-**Important**: After any model change, run `make migration m="description"` then `make migrate`. Both `upgrade()` and `downgrade()` must be defined. Test with `make db-reset`.
-
-Core models: User/Profile/Vault, Memory/LongTermMemory, Agent/AgentRun/AgentStep, Conversation/ConversationMessage, Document/DocumentChunk, ModelCatalog/ModelVariant/Provider/Quantization, RepoIndex/CodeChunk/IndexedFile, GraphNode/GraphEdge, EmbeddingCache, PathIndex, StorageRegistry, SyncState.
-
-See [docs/DATABASE.md](docs/DATABASE.md) for full schema reference.
-
-## Testing
-
-Tests live at the project root in `tests/` (not inside `backend/`). Two-level conftest:
-
-1. **Root `conftest.py`**: SQLite in-memory engine, per-test session rollback isolation, `mock_auth` fixture, `TestClient` with mocked external services.
-2. **`tests/conftest.py`**: Blanket mocks for all external infrastructure (Qdrant, Ollama, embedding service, file watcher, RAG pipeline, fulltext search — 13 patched paths).
-
-Tests run without real PostgreSQL, Redis, or Qdrant. The `tests/` conftest autouse fixtures handle this.
-
-Frontend tests use Vitest + jsdom + React Testing Library. `test-setup.ts` polyfills `IntersectionObserver`, `ResizeObserver`, `matchMedia`, and `HTMLCanvasElement.getContext`.
-
-## Environment
-
-Required env vars (see `.env.example`): `SECRET_KEY`, `DATABASE_URL` (port 5435 for user-space PG), `REDIS_URL` (optional), `APP_NAME`, `API_V1_PREFIX`. Optional: `CORTEX_ROOT`, `MEMORY_PATH`, `VAULT_PATH`.
-
-Docker services: PostgreSQL 16, Redis 7, Qdrant v1.18 — all on localhost-only ports.
-
-## Common Gotchas
-
-- `start.sh` runs PostgreSQL in user-space on port 5435 (not Docker). `docker-compose.yml` uses port 5432. These are different.
-- The root `conftest.py` compiles `JSONB → JSON` for SQLite compatibility. Real DB uses JSONB.
-- `backend/app/main.py` imports all models at module level for Alembic autogenerate to work.
-- Route registration order matters: specific routes (e.g., `/models/installed`) must come before parameterized routes (`/models/{model_id}`).
-- The `cortexCode` Rust crate must be built separately (`cargo build --release` in `crates/code-intel/`) before Python can use it.
-
-## Ecosystem Integration
-
-This repository uses a multi-agent development ecosystem. All agents must follow these rules:
-
-### Mandatory Workflow Rules
-
-1. **Branching:** Always create a feature branch before any significant change. Never commit directly to `main`. Name branches `feat/<topic>`, `fix/<topic>`, or `docs/<topic>`. After all work is done and verified, merge to `main`. Minimize parallel branches to avoid merge conflicts — finish one branch before starting the next.
-2. **Skill Discovery:** Before any task, search for existing skills. Use `superpowers:brainstorming`, `superpowers:writing-plans`, `superpowers:test-driven-development`, `superpowers:systematic-debugging`, `code-review`, `simplify`, and other available skills. Never skip skill discovery.
-3. **Brainstorming:** Use `superpowers:brainstorming` skill before any design work. Present design, get approval, write spec, then implement.
-4. **Planning:** Use `superpowers:writing-plans` skill after design approval. Create implementation plan with explicit steps.
-5. **Implementation:** Follow TDD when applicable. Commit after each logical unit. Run `make lint` + `make format` after each commit.
-6. **Testing:** Run `make test` (backend) and `cd frontend && npm test` (frontend) before every push. No regressions.
-7. **Validation:** Pre-commit hooks run automatically. Run `make check` before push.
-8. **Review:** Use `code-review` skill for correctness, `simplify` for quality. Address all P0/P1 findings.
-9. **Documentation:** Update relevant docs when changing APIs, schemas, security patterns, or architecture.
-10. **Completion:** All tests pass, lint clean, build succeeds, docs updated, ADR created if architectural decision. Run full hook suite before merge.
-11. **Hooks:** Run `make hooks-push` before push, `make hooks-merge` before merge. Hook system validates quality at every stage.
-12. **Skill Creation:** When a reusable workflow is identified during development, create a skill. Skills are a normal part of Cortex development, not a separate activity.
-
-### Reflection Rule
-
-Before completing any major task, agents MUST run through the reflection framework. Ask:
-
-- What could be improved?
-- What could be simplified?
-- What could be automated?
-- What could become a skill?
-- What could become a hook?
-- What could become a reusable workflow?
-- What future problem does this reveal?
-- What future opportunity does this create?
-
-Use `/project:reflect` for structured execution. Document findings. Never skip reflection.
-
-### Skill Usage Rules
-
-- **Always check for applicable skills** before any task. The skill list is in system-reminder messages.
-- **Use skills in priority order:** Process skills first (brainstorming, systematic-debugging), then implementation skills.
-- **Never skip skills** because a task "seems simple." Every task goes through the appropriate workflow.
-- **Skills are mandatory** when they apply. Do not rationalize skipping them.
+| Review | When | Command/Skill |
+|--------|------|---------------|
+| Code quality | Before push | `/project:review` |
+| Adversarial | Before major decisions | `/project:challenge` |
+| Reflection | Before completion | `/project:reflect` |
+| Architecture | Before big changes | `/project:architecture` |
+| Health | Weekly | `/project:health` |
 
 ### Clarification Rules
 
-**Agent MUST ask human when:**
-- Decision is irreversible (schema migrations, breaking API changes, security policy)
-- Multiple valid paths exist with different trade-offs
-- Scope is ambiguous or requirements are missing
-- Change affects >2 subsystems
-- New technology or pattern not in current stack is proposed
+**MUST ask human:** Irreversible decisions, multiple valid paths, scope ambiguity, >2 subsystems affected, new technology proposed.
 
-**Agent MAY proceed without asking when:**
-- Task is well-defined with explicit acceptance criteria
-- Following established codebase patterns
-- Mechanical changes (typos, formatting, imports)
-- Updating existing tests or documentation
-
-See [docs/GOVERNANCE.md](docs/GOVERNANCE.md) for full governance rules.
-See [docs/WORKFLOWS.md](docs/WORKFLOWS.md) for complete workflow definitions.
+**MAY proceed:** Well-defined tasks, established patterns, mechanical changes, test/doc updates.
 
 ## Strategic Commands
 
 | Command | When | Purpose |
 |---------|------|---------|
-| `/project:reflect` | Before completion (mandatory) | Reflection framework — quality, improvement, ecosystem growth |
-| `/project:review` | Before PR/push | Code quality, correctness, patterns |
-| `/project:challenge` | Before major decisions | Adversarial review — poke holes in approach |
-| `/project:health` | Weekly | Repo health, dead code, drift, debt |
-| `/project:architecture` | Before big changes | Architecture alignment, convention check |
-| `/project:ideas` | Weekly/monthly | Innovation, future opportunities, gap discovery |
-| `/project:improve` | Weekly | Ecosystem improvement — skills, hooks, workflows |
+| `/project:reflect` | Before completion | Reflection framework |
+| `/project:review` | Before push | Code quality analysis |
+| `/project:challenge` | Before decisions | Adversarial review |
+| `/project:health` | Weekly | Repo health check |
+| `/project:architecture` | Before changes | Architecture alignment |
+| `/project:ideas` | Weekly | Innovation discovery |
+| `/project:improve` | Weekly | Ecosystem improvement |
 
-## Agent Skills
+## Common Gotchas
 
-### Issue tracker
+- `start.sh` uses port 5435 (user-space PG). `docker-compose.yml` uses 5432. Different.
+- `conftest.py` compiles `JSONB → JSON` for SQLite. Real DB uses JSONB.
+- `main.py` imports all models at module level for Alembic autogenerate.
+- Route order: specific routes before parameterized (e.g., `/models/installed` before `/models/{id}`).
+- `cortexCode` Rust crate: `cargo build --release` in `crates/code-intel/` before Python use.
 
-GitHub Issues via `gh` CLI. External PRs are not treated as triage requests. See `docs/agents/issue-tracker.md`.
+## Testing
 
-### Triage labels
+Tests at project root in `tests/`. SQLite in-memory, mocked external services. No real Postgres/Redis/Qdrant needed.
 
-Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+Frontend: Vitest + jsdom + React Testing Library. `test-setup.ts` polyfills observers.
 
-### Domain docs
+## Environment
 
-Single-context — one `CONTEXT.md` at the repo root, `docs/adr/` for architectural decisions. See `docs/agents/domain.md`.
+Required: `SECRET_KEY`, `DATABASE_URL` (port 5435), `APP_NAME`, `API_V1_PREFIX`. Optional: `REDIS_URL`, `CORTEX_ROOT`, `MEMORY_PATH`, `VAULT_PATH`.
+
+## Reference Documents
+
+| Topic | Location |
+|-------|----------|
+| Architecture | `docs/ARCHITECTURE.md` |
+| Constitution | `guide.md` |
+| Governance | `docs/GOVERNANCE.md` |
+| Workflows | `docs/WORKFLOWS.md` |
+| Developer Guide | `docs/DEVELOPER_GUIDE.md` |
+| API Reference | `docs/API.md` |
+| Database Schema | `docs/DATABASE.md` |
+| Design System | `DESIGN.md` |
+| Implementation Guide | `.agents/plans/implementation_steps.md` |
+| Phase Plans | `.agents/plans/versions/vX/Phase-N.md` |
+| Progress Tracking | `.agents/plans/versions/vX/progress.md` |
