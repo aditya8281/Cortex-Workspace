@@ -9,7 +9,7 @@ This document defines all workflows for the Cortex development process.
 ### Stages
 
 ```
-Idea → Branch → Skill Discovery → Triage → Plan → Build → Review → Release
+Idea → Branch → Skill Discovery → Triage → Plan → Build → Review → Reflect → Release
 ```
 
 ### Stage 0: Branch First
@@ -87,11 +87,13 @@ Idea → Branch → Skill Discovery → Triage → Plan → Build → Review →
 **Purpose:** Verify quality and correctness.
 
 **Steps:**
-1. Agent runs code-review skill for correctness
-2. Agent runs simplify skill for quality
-3. Agent verifies each finding independently
-4. Agent addresses P0/P1 findings
-5. Agent presents review results to human
+1. Agent runs `/project:review` for code quality analysis
+2. Agent runs `/project:challenge` for adversarial review (if architectural decision)
+3. Agent runs code-review skill for correctness
+4. Agent runs simplify skill for quality
+5. Agent verifies each finding independently
+6. Agent addresses P0/P1 findings
+7. Agent presents review results to human
 
 **Gate:** No P0/P1 findings, no regressions, build passes.
 
@@ -100,11 +102,12 @@ Idea → Branch → Skill Discovery → Triage → Plan → Build → Review →
 **Purpose:** Final validation and merge.
 
 **Steps:**
-1. Agent runs full `make check` + `npm run build`
-2. Agent updates changelog if user-facing change
-3. Agent creates PR with clear description
-4. Human reviews and approves
-5. Agent merges
+1. Agent runs `/project:reflect` for reflection framework
+2. Agent runs full `make check` + `npm run build`
+3. Agent updates changelog if user-facing change
+4. Agent creates PR with clear description
+5. Human reviews and approves
+6. Agent merges
 
 **Gate:** All validation passes, human merges.
 
