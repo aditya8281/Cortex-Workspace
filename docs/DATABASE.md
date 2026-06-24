@@ -1,4 +1,4 @@
-# Cortex Database Reference
+# CORTEX Database Reference
 
 PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations.
 

@@ -1,6 +1,6 @@
 # CORTEX Agentic Development Guide
 
-This guide explains how the agentic development ecosystem works in Cortex — the tools, workflows, hooks, and automation that every agent (human or AI) follows.
+This guide explains how the agentic development ecosystem works in CORTEX — the tools, workflows, hooks, and automation that every agent (human or AI) follows.
 
 ---
 
@@ -12,7 +12,7 @@ This guide explains how the agentic development ecosystem works in Cortex — th
 | During work | `make hooks-onchange` | Validates code quality, contracts |
 | Check health | `make auto-health` | Dead code, duplicates, drift |
 | Before push | `make hooks-push` | Quality, architecture, contract, docs |
-| Before merge | `make hooks-merge` | All 10 hooks |
+| Before merge | `make hooks-merge` | All hooks |
 | Full check | `make auto` | All automation + health + bugs |
 | Report | `make auto-report` | Generate health report |
 
@@ -63,13 +63,13 @@ ls .agents/skills/
 **Ask yourself:**
 - Is there a skill for this task domain?
 - Can an existing skill improve this process?
-- Is this Cortex-specific and reusable?
+- Is this CORTEX-specific and reusable?
 
 If yes → use the skill. If no → document why (may become a skill creation candidate).
 
 **Rule:** Context → Find Skill → Use Skill → Brainstorm → Plan → Implement → Test → Validate → Review → Complete. NOT: Context → Implement Immediately.
 
-### 1. Context (Pre-Work)
+### 2. Context (Pre-Work)
 
 Before starting any work, validate that the project context is ready:
 
@@ -84,7 +84,7 @@ This checks:
 
 **What to do if it fails:** Read the missing docs. If governance files are missing, the ecosystem is broken — stop and fix.
 
-### 2. Brainstorm
+### 3. Brainstorm
 
 For any design work, use the `superpowers:brainstorming` skill:
 - Ask clarifying questions one at a time
@@ -92,7 +92,7 @@ For any design work, use the `superpowers:brainstorming` skill:
 - Present design sections, get approval after each
 - Write spec to `docs/superpowers/specs/`
 
-### 3. Plan
+### 4. Plan
 
 After design approval, use `superpowers:writing-plans` skill:
 - Create implementation plan with explicit steps
@@ -100,7 +100,7 @@ After design approval, use `superpowers:writing-plans` skill:
 - Assess blast radius
 - Present to human for approval
 
-### 4. Implement
+### 5. Implement
 
 During implementation, run hooks on code changes:
 
@@ -119,14 +119,14 @@ make format    # Format code
 make lint      # Check lint + types
 ```
 
-### 5. Test
+### 6. Test
 
 ```bash
 make test           # Backend pytest
 cd frontend && npm test   # Frontend vitest
 ```
 
-### 6. Validate
+### 7. Validate
 
 Before pushing, run the full validation suite:
 
@@ -140,24 +140,24 @@ This runs:
 - Frontend/backend contract
 - Documentation consistency
 
-### 7. Review
+### 8. Review
 
 Use `code-review` skill for correctness, `simplify` for quality.
 Address all P0/P1 findings.
 
-### 8. Simplify
+### 9. Simplify
 
 Use `simplify` skill to clean up code:
 - Remove unnecessary complexity
 - Consolidate duplicate logic
 - Improve naming and structure
 
-### 9. Complete
+### 10. Complete
 
 Before marking work complete, run the completion gate:
 
 ```bash
-make hooks-merge    # All 10 hooks
+make hooks-merge    # All hooks
 make auto-complete  # Tests, docs, build
 ```
 
@@ -175,7 +175,7 @@ The completion gate blocks completion if:
 
 Hooks are automated checks that run at different stages of development. They catch issues early — before code is committed, pushed, or merged.
 
-### The 10 Hooks
+### The 11 Hooks
 
 | # | Hook | Trigger | Purpose |
 |---|------|---------|---------|
@@ -189,6 +189,7 @@ Hooks are automated checks that run at different stages of development. They cat
 | 8 | **Completion Gate** | Before marking complete | Tests, lint, types, migrations |
 | 9 | **Repo Health** | Periodically | Dead code, placeholders, hotspots |
 | 10 | **Decision Tracking** | Architecture changes | ADR existence, format validation |
+| 11 | **Skill Discovery** | Pre-task | Skill availability, relevance check |
 
 ### Running Hooks
 
@@ -397,13 +398,13 @@ All checks must pass before merge.
 5. Update AGENTS.md or GOVERNANCE.md if it's a core workflow
 6. Commit with `feat:` prefix
 
-**Cortex-specific skill candidates:**
-- Cortex Architecture Audit
-- Cortex Repository Health Review
-- Cortex Planning Consistency Audit
-- Cortex Documentation Consistency Audit
-- Cortex Frontend/Backend Contract Audit
-- Cortex Release Readiness Audit
+**CORTEX-specific skill candidates:**
+- CORTEX Architecture Audit
+- CORTEX Repository Health Review
+- CORTEX Planning Consistency Audit
+- CORTEX Documentation Consistency Audit
+- CORTEX Frontend/Backend Contract Audit
+- CORTEX Release Readiness Audit
 
 ### Skill Evolution
 
@@ -495,7 +496,7 @@ The Cortex development ecosystem ensures quality through:
 
 1. **Governance docs** — CLAUDE.md, AGENTS.md, docs/GOVERNANCE.md define the rules
 2. **Workflows** — docs/WORKFLOWS.md defines the process
-3. **Hooks** — 10 automated checks at different stages
+3. **Hooks** — 11 automated checks at different stages
 4. **Automation** — 6-phase validation framework
 5. **CI** — GitHub Actions gates on every push
 6. **ADRs** — Architecture decisions are documented and tracked

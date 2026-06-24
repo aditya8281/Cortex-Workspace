@@ -1,6 +1,6 @@
 # CORTEX Workflow Definitions
 
-This document defines all workflows for the Cortex development process.
+This document defines all workflows for the CORTEX development process.
 
 ---
 
@@ -9,10 +9,10 @@ This document defines all workflows for the Cortex development process.
 ### Stages
 
 ```
-Idea → Branch → Skill Discovery → Triage → Plan → Build → Review → Reflect → Release
+Branch → Skill Discovery → Triage → Plan → Build → Review → Reflect → Release
 ```
 
-### Stage 0: Branch First
+### Stage 1: Branch First
 
 **Purpose:** Create a feature branch before any work begins. `main` must always be in a working state.
 
@@ -27,7 +27,7 @@ Idea → Branch → Skill Discovery → Triage → Plan → Build → Review →
 
 **Parallel branch limit:** Max 2-3 active branches. Finish one before starting the next.
 
-### Stage 1: Skill Discovery
+### Stage 2: Skill Discovery
 
 **Purpose:** Before any work, determine if existing skills can improve the process.
 
@@ -42,7 +42,7 @@ Idea → Branch → Skill Discovery → Triage → Plan → Build → Review →
 
 **Rule:** Context → Find Skill → Use Skill → Brainstorm → Plan → Implement → Test → Validate → Review → Complete. NOT: Context → Implement Immediately.
 
-### Stage 1: Idea → Triage
+### Stage 3: Triage
 
 **Purpose:** Classify and prioritize incoming work.
 
@@ -55,7 +55,7 @@ Idea → Branch → Skill Discovery → Triage → Plan → Build → Review →
 
 **Gate:** Classification agreed before proceeding.
 
-### Stage 2: Triage → Plan
+### Stage 4: Plan
 
 **Purpose:** Create specification and get human approval.
 
@@ -69,7 +69,7 @@ Idea → Branch → Skill Discovery → Triage → Plan → Build → Review →
 
 **Gate:** Human approves spec. Agent MUST NOT implement until approved.
 
-### Stage 3: Plan → Build
+### Stage 5: Build
 
 **Purpose:** Implement the approved spec.
 
@@ -82,7 +82,7 @@ Idea → Branch → Skill Discovery → Triage → Plan → Build → Review →
 
 **Gate:** All tests pass, lint clean, build succeeds.
 
-### Stage 4: Build → Review
+### Stage 6: Review
 
 **Purpose:** Verify quality and correctness.
 
@@ -97,7 +97,7 @@ Idea → Branch → Skill Discovery → Triage → Plan → Build → Review →
 
 **Gate:** No P0/P1 findings, no regressions, build passes.
 
-### Stage 5: Review → Release
+### Stage 7: Reflect & Release
 
 **Purpose:** Final validation and merge.
 
@@ -388,7 +388,7 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 | Trigger | Action |
 |---------|--------|
 | Repetitive process identified | Extract into skill |
-| Cortex-specific workflow matured | Convert to skill |
+| CORTEX-specific workflow matured | Convert to skill |
 | Agent discovers a better workflow | Improve existing skill or create new one |
 | Skill gap detected during execution | Create skill improvement candidate |
 
@@ -411,14 +411,14 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 - Error handling guidance
 - References to related skills
 
-### Cortex-Specific Skill Candidates
+### CORTEX-Specific Skill Candidates
 
-- **Cortex Architecture Audit:** Validate architecture against docs/ARCHITECTURE.md
-- **Cortex Repository Health Review:** Run full health check suite
-- **Cortex Planning Consistency Audit:** Verify roadmap matches implementation
-- **Cortex Documentation Consistency Audit:** Check all doc links and references
-- **Cortex Frontend/Backend Contract Audit:** Verify API contract integrity
-- **Cortex Release Readiness Audit:** Pre-release validation checklist
+- **CORTEX Architecture Audit:** Validate architecture against docs/ARCHITECTURE.md
+- **CORTEX Repository Health Review:** Run full health check suite
+- **CORTEX Planning Consistency Audit:** Verify roadmap matches implementation
+- **CORTEX Documentation Consistency Audit:** Check all doc links and references
+- **CORTEX Frontend/Backend Contract Audit:** Verify API contract integrity
+- **CORTEX Release Readiness Audit:** Pre-release validation checklist
 
 ---
 
@@ -430,7 +430,7 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 - When output quality degrades
 - When missing steps are discovered
 - When friction points are identified
-- When Cortex architecture changes
+- When CORTEX architecture changes
 
 ### Evolution Process
 
