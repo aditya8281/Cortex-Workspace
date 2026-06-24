@@ -46,6 +46,18 @@ PHASES = {
         ("Docs", "completion/check_docs.py"),
         ("Full validation", "completion/validate_all.py"),
     ],
+    "release": [
+        ("Release validation", "release/check_release.py"),
+    ],
+    "documentation": [
+        ("Doc consistency", "docs/check_doc_consistency.py"),
+    ],
+    "skills": [
+        ("Skill health", "skills/check_skill_health.py"),
+    ],
+    "status": [
+        ("Status report", "status/show_status.py"),
+    ],
 }
 
 
