@@ -10,14 +10,16 @@ This repository uses a multi-agent development ecosystem. All agents must follow
 
 ### Workflow Rules
 
-1. **Brainstorming:** Use `superpowers:brainstorming` skill before any design work. Present design, get approval, write spec, then implement.
-2. **Planning:** Use `superpowers:writing-plans` skill after design approval. Create implementation plan with explicit steps.
-3. **Implementation:** Follow TDD when applicable. Commit after each logical unit. Run `make lint` + `make format` after each commit.
-4. **Testing:** Run `make test` (backend) and `cd frontend && npm test` (frontend) before every push. No regressions.
-5. **Validation:** Pre-commit hooks run automatically. Run `make check` before push.
-6. **Review:** Use `code-review` skill for correctness, `simplify` for quality. Address all P0/P1 findings.
-7. **Documentation:** Update relevant docs when changing APIs, schemas, security patterns, or architecture.
-8. **Completion:** All tests pass, lint clean, build succeeds, docs updated, ADR created if architectural decision.
+1. **Skill Discovery:** Before any task, search for existing skills. Use `superpowers:brainstorming`, `superpowers:writing-plans`, `superpowers:test-driven-development`, `superpowers:systematic-debugging`, `code-review`, `simplify`, and other available skills. Never skip skill discovery.
+2. **Brainstorming:** Use `superpowers:brainstorming` skill before any design work. Present design, get approval, write spec, then implement.
+3. **Planning:** Use `superpowers:writing-plans` skill after design approval. Create implementation plan with explicit steps.
+4. **Implementation:** Follow TDD when applicable. Commit after each logical unit. Run `make lint` + `make format` after each commit.
+5. **Testing:** Run `make test` (backend) and `cd frontend && npm test` (frontend) before every push. No regressions.
+6. **Validation:** Pre-commit hooks run automatically. Run `make check` before push.
+7. **Review:** Use `code-review` skill for correctness, `simplify` for quality. Address all P0/P1 findings.
+8. **Documentation:** Update relevant docs when changing APIs, schemas, security patterns, or architecture.
+9. **Completion:** All tests pass, lint clean, build succeeds, docs updated, ADR created if architectural decision.
+10. **Skill Creation:** When a reusable workflow is identified, create a skill. Skills are a normal part of Cortex development.
 
 ### Skill Usage Rules
 
@@ -25,6 +27,9 @@ This repository uses a multi-agent development ecosystem. All agents must follow
 - **Use skills in priority order:** Process skills first (brainstorming, systematic-debugging), then implementation skills.
 - **Never skip skills** because a task "seems simple." Every task goes through the appropriate workflow.
 - **Skills are mandatory** when they apply. Do not rationalize skipping them.
+- **Skill-first rule:** Before performing any significant task, determine whether an existing skill can improve the process.
+- **Skill gap detection:** During execution, continuously evaluate: Is this repetitive? Likely to happen again? Cortex-specific? Difficult enough to benefit from standardization? If yes, create a skill improvement candidate.
+- **Skill evolution:** When a skill is used, review its effectiveness, output quality, missing steps, and friction points. Improve the skill.
 
 ### Clarification Rules
 

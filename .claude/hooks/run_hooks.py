@@ -31,11 +31,12 @@ HOOKS = {
     "completion-gate": "completion-gate/hook.py",
     "repo-health": "repo-health/hook.py",
     "decision-tracking": "decision-tracking/hook.py",
+    "skill-discovery": "skill-discovery/hook.py",
 }
 
 PHASES = {
     "pre-commit": ["ui-review", "code-quality"],
-    "pre-push": ["code-quality", "architecture", "contract", "docs-consistency"],
+    "pre-push": ["code-quality", "architecture", "contract", "docs-consistency", "skill-discovery"],
     "pre-merge": list(HOOKS.keys()),
     "on-change": ["code-quality", "contract"],
 }

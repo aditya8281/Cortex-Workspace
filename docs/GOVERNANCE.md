@@ -71,6 +71,89 @@ This document defines the rules of engagement for all participants (human and ag
 
 ---
 
+## Skill Governance
+
+### Skill-First Rule
+
+Before performing any significant task, agents must determine whether an existing skill can improve the process.
+
+**Workflow:** Context → Find Skill → Use Skill → Brainstorm → Plan → Implement → Test → Validate → Review → Complete
+
+**NOT:** Context → Implement Immediately
+
+### Mandatory Skill Discovery
+
+At the beginning of every major task:
+
+1. Identify the task domain
+2. Search for relevant skills
+3. Evaluate available skills
+4. Select the best skill or skill combination
+5. Apply those skills before continuing
+
+### Skill Gap Detection
+
+During execution, agents must continuously evaluate:
+
+- Is this process repetitive?
+- Is this process likely to happen again?
+- Is this process Cortex-specific?
+- Is this process difficult enough to benefit from standardization?
+- Is this process valuable enough to reuse?
+
+If yes: Create a Skill Improvement Candidate.
+
+### Skill Creation Workflow
+
+Whenever a reusable workflow is identified:
+
+1. Extract the process
+2. Document the process
+3. Create a dedicated skill
+4. Add examples
+5. Add validation steps
+6. Integrate it into existing workflows
+
+Creating skills should become a normal part of Cortex development.
+
+### Cortex-Specific Skills
+
+Actively build a library of Cortex-specific skills:
+
+- Cortex Architecture Audit
+- Cortex Repository Health Review
+- Cortex Planning Consistency Audit
+- Cortex Documentation Consistency Audit
+- Cortex Memory Review
+- Cortex Retrieval Review
+- Cortex Model Marketplace Review
+- Cortex Agent Review
+- Cortex Desktop Readiness Audit
+- Cortex Release Readiness Audit
+- Cortex Frontend/Backend Contract Audit
+
+Whenever a Cortex-specific workflow becomes mature and reusable, convert it into a dedicated skill.
+
+### Skill Evolution
+
+Skills must not remain static. When a skill is used:
+
+- Review effectiveness
+- Review output quality
+- Review missing steps
+- Review friction points
+- Improve the skill
+
+Skills should evolve alongside Cortex.
+
+### Long-Term Objective
+
+The Cortex repository should gradually evolve into a skill-driven engineering system. Over time, more work should move from ad-hoc manual execution to reusable, documented, validated skills.
+
+Success means future agents spend less time reinventing workflows and more time executing proven processes. Whenever a better workflow is discovered, the agent should improve the ecosystem itself rather than only completing the immediate task.
+
+---
+
 ## Code Quality Standards
 
 ### Mandatory Before Every Commit

@@ -183,15 +183,17 @@ This repository uses a multi-agent development ecosystem. All agents must follow
 
 ### Mandatory Workflow Rules
 
-1. **Brainstorming:** Use `superpowers:brainstorming` skill before any design work. Present design, get approval, write spec, then implement.
-2. **Planning:** Use `superpowers:writing-plans` skill after design approval. Create implementation plan with explicit steps.
-3. **Implementation:** Follow TDD when applicable. Commit after each logical unit. Run `make lint` + `make format` after each commit.
-4. **Testing:** Run `make test` (backend) and `cd frontend && npm test` (frontend) before every push. No regressions.
-5. **Validation:** Pre-commit hooks run automatically. Run `make check` before push.
-6. **Review:** Use `code-review` skill for correctness, `simplify` for quality. Address all P0/P1 findings.
-7. **Documentation:** Update relevant docs when changing APIs, schemas, security patterns, or architecture.
-8. **Completion:** All tests pass, lint clean, build succeeds, docs updated, ADR created if architectural decision.
-9. **Hooks:** Run `make hooks-push` before push, `make hooks-merge` before merge. Hook system validates quality at every stage.
+1. **Skill Discovery:** Before any task, search for existing skills. Use `superpowers:brainstorming`, `superpowers:writing-plans`, `superpowers:test-driven-development`, `superpowers:systematic-debugging`, `code-review`, `simplify`, and other available skills. Never skip skill discovery.
+2. **Brainstorming:** Use `superpowers:brainstorming` skill before any design work. Present design, get approval, write spec, then implement.
+3. **Planning:** Use `superpowers:writing-plans` skill after design approval. Create implementation plan with explicit steps.
+4. **Implementation:** Follow TDD when applicable. Commit after each logical unit. Run `make lint` + `make format` after each commit.
+5. **Testing:** Run `make test` (backend) and `cd frontend && npm test` (frontend) before every push. No regressions.
+6. **Validation:** Pre-commit hooks run automatically. Run `make check` before push.
+7. **Review:** Use `code-review` skill for correctness, `simplify` for quality. Address all P0/P1 findings.
+8. **Documentation:** Update relevant docs when changing APIs, schemas, security patterns, or architecture.
+9. **Completion:** All tests pass, lint clean, build succeeds, docs updated, ADR created if architectural decision.
+10. **Hooks:** Run `make hooks-push` before push, `make hooks-merge` before merge. Hook system validates quality at every stage.
+11. **Skill Creation:** When a reusable workflow is identified during development, create a skill. Skills are a normal part of Cortex development, not a separate activity.
 
 ### Skill Usage Rules
 

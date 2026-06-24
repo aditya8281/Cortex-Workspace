@@ -23,8 +23,27 @@ This guide explains how the agentic development ecosystem works in Cortex — th
 Every task follows this lifecycle:
 
 ```
-Context → Brainstorm → Plan → Implement → Test → Validate → Review → Simplify → Complete
+Context → Skill Discovery → Brainstorm → Plan → Implement → Test → Validate → Review → Simplify → Complete
 ```
+
+### 0. Skill Discovery (MANDATORY)
+
+Before any significant task, search for existing skills:
+
+```bash
+# Check available skills
+ls .agents/skills/
+# Or use the skill list from system-reminder messages
+```
+
+**Ask yourself:**
+- Is there a skill for this task domain?
+- Can an existing skill improve this process?
+- Is this Cortex-specific and reusable?
+
+If yes → use the skill. If no → document why (may become a skill creation candidate).
+
+**Rule:** Context → Find Skill → Use Skill → Brainstorm → Plan → Implement → Test → Validate → Review → Complete. NOT: Context → Implement Immediately.
 
 ### 1. Context (Pre-Work)
 
@@ -347,10 +366,30 @@ All checks must pass before merge.
 
 ### Adding a New Skill
 
-1. Create directory in `.agents/skills/your-skill/`
-2. Add skill definition file
-3. Update AGENTS.md if needed
-4. Test the skill
+1. Identify the reusable workflow (repetitive? Cortex-specific? Difficult enough?)
+2. Create directory in `.agents/skills/your-skill/`
+3. Write skill definition with: purpose, steps, examples, validation
+4. Test the skill on a real task
+5. Update AGENTS.md or GOVERNANCE.md if it's a core workflow
+6. Commit with `feat:` prefix
+
+**Cortex-specific skill candidates:**
+- Cortex Architecture Audit
+- Cortex Repository Health Review
+- Cortex Planning Consistency Audit
+- Cortex Documentation Consistency Audit
+- Cortex Frontend/Backend Contract Audit
+- Cortex Release Readiness Audit
+
+### Skill Evolution
+
+When a skill is used:
+- Review effectiveness and output quality
+- Identify missing steps or friction points
+- Improve the skill definition
+- Commit with `improve:` prefix
+
+Skills should evolve alongside Cortex. Never leave a skill static.
 
 ### Adding a New Hook
 
