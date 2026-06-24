@@ -46,7 +46,7 @@ git log --oneline --since="2 weeks ago" | head -50
 ```
 ## Health Report: [date]
 
-### Hooks: X/11 passed
+### Hooks: X/N passed (dynamic from hook runner)
 [Per-hook results]
 
 ### Automation Health
