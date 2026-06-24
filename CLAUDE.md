@@ -196,6 +196,21 @@ This repository uses a multi-agent development ecosystem. All agents must follow
 11. **Hooks:** Run `make hooks-push` before push, `make hooks-merge` before merge. Hook system validates quality at every stage.
 12. **Skill Creation:** When a reusable workflow is identified during development, create a skill. Skills are a normal part of Cortex development, not a separate activity.
 
+### Reflection Rule
+
+Before completing any major task, agents MUST run through the reflection framework. Ask:
+
+- What could be improved?
+- What could be simplified?
+- What could be automated?
+- What could become a skill?
+- What could become a hook?
+- What could become a reusable workflow?
+- What future problem does this reveal?
+- What future opportunity does this create?
+
+Use `/project:reflect` for structured execution. Document findings. Never skip reflection.
+
 ### Skill Usage Rules
 
 - **Always check for applicable skills** before any task. The skill list is in system-reminder messages.
@@ -220,6 +235,18 @@ This repository uses a multi-agent development ecosystem. All agents must follow
 
 See [docs/GOVERNANCE.md](docs/GOVERNANCE.md) for full governance rules.
 See [docs/WORKFLOWS.md](docs/WORKFLOWS.md) for complete workflow definitions.
+
+## Strategic Commands
+
+| Command | When | Purpose |
+|---------|------|---------|
+| `/project:reflect` | Before completion (mandatory) | Reflection framework — quality, improvement, ecosystem growth |
+| `/project:review` | Before PR/push | Code quality, correctness, patterns |
+| `/project:challenge` | Before major decisions | Adversarial review — poke holes in approach |
+| `/project:health` | Weekly | Repo health, dead code, drift, debt |
+| `/project:architecture` | Before big changes | Architecture alignment, convention check |
+| `/project:ideas` | Weekly/monthly | Innovation, future opportunities, gap discovery |
+| `/project:improve` | Weekly | Ecosystem improvement — skills, hooks, workflows |
 
 ## Agent Skills
 
