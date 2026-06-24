@@ -1,8 +1,10 @@
-# Cortex Architecture
+# CORTEX Architecture
 
 ## Overview
 
-Cortex is a local-first machine intelligence layer. It runs entirely on the user's machine and transforms a personal computer into a context-aware development environment. All embeddings, vector search, LLM inference, and file indexing happen locally — no user data leaves the machine.
+CORTEX is a local-first machine intelligence layer — a persistent AI brain that lives on your machine. It runs entirely on the user's machine and transforms a personal computer into a context-aware, memory-equipped, reasoning-capable companion. All embeddings, vector search, LLM inference, and file indexing happen locally — no user data leaves the machine.
+
+CORTEX is not a chatbot, repo assistant, or RAG platform. It is an entire local AI brain ecosystem that understands your files, code, conversations, projects, and habits as a connected system. It remembers, reasons, learns, and acts.
 
 ### Core Principles
 
@@ -12,10 +14,12 @@ Cortex is a local-first machine intelligence layer. It runs entirely on the user
 | **Compound learning** | Memories, graph edges, and long-term facts accumulate over time. The system grows more useful with use. |
 | **Two-tier trust** | Account access and vault access use separate passwords. Compromising one does not compromise the other. |
 | **Graceful degradation** | Redis, Ollama, ONNX, and Qdrant are all optional. Core features work without them. |
+| **Model freedom** | Runs any model (Ollama, llama.cpp, OpenAI, Anthropic) or degrades gracefully. The user chooses the brain; CORTEX provides the mind. |
+| **Living knowledge** | Files, conversations, memories, and relationships are connected into a coherent, evolving model of the user's digital life. |
 
 ### User Mental Model
 
-Users think of Cortex as a companion that knows their machine — what files exist, what conversations happened, what documents are stored, what skills and interests the user has declared. It responds to natural language by grounding answers in actual code and files.
+Users think of CORTEX as a companion that knows their machine — what files exist, what conversations happened, what documents are stored, what skills and interests the user has declared. It responds to natural language by grounding answers in actual code and files. Over time, it develops a persistent understanding that survives sessions and grows more useful with use.
 
 ---
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cortex is a cognitive operating layer for personal computing — a long-term effort to build persistent machine intelligence. It combines a FastAPI backend, Next.js frontend, Rust-based code intelligence, and a Python CLI into a single workspace. The architecture is designed around encrypted vaults, knowledge graphs, vector search, LLM integration, and autonomous agents.
+CORTEX is a local-first machine intelligence layer — a persistent AI brain that lives on your machine. It gives a computer its own understanding, memory, reasoning, and agency. It combines a FastAPI backend, Next.js frontend, Rust-based code intelligence, and a Python CLI into a single workspace. The architecture is designed around encrypted vaults, knowledge graphs, vector search, LLM integration, and autonomous agents. CORTEX is not a chatbot, repo assistant, or model wrapper — it is an entire local AI brain ecosystem.
 
 **For detailed architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).**
 **For ecosystem governance, see [docs/GOVERNANCE.md](docs/GOVERNANCE.md).**

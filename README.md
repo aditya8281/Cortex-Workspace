@@ -1,22 +1,29 @@
-# Cortex
+# CORTEX
 
 ## Vision
 
-**The cognitive operating layer for personal computing.**
+**A local-first machine intelligence layer that gives your computer its own persistent understanding, memory, reasoning, and agency.**
 
-Cortex is an attempt to give computers a persistent mind.
+CORTEX is a long-term effort to build a real AI companion — like Jarvis, or the AI in Rick's garage. Not a chatbot. Not a repository assistant. Not a RAG platform. Not a model wrapper.
 
-Modern operating systems manage files, processes, memory, and hardware. They execute commands efficiently, but they do not understand the machine they run on.
+CORTEX is an entire local AI brain ecosystem that lives on your machine and grows with you. It knows your files, your code, your conversations, your projects, your habits. It understands context — not just the current message, but everything that came before. It remembers, reasons, learns, and acts.
 
-Cortex exists to change that.
+The goal is to transform a computer from a tool you operate into a companion that understands you.
 
-Its purpose is to build a continuously evolving understanding of the entire system — its files, repositories, applications, workflows, history, knowledge, and user intent. Instead of treating information as isolated fragments, Cortex connects them into a coherent model of the machine and its world.
+### What CORTEX Is Not
 
-This is not a chatbot, a search engine, or a repository assistant.
+- **Not a chatbot** — it doesn't just respond to prompts. It maintains persistent understanding across sessions.
+- **Not a repo assistant** — it doesn't just index code. It understands your entire digital world as a connected system.
+- **Not a RAG platform** — retrieval is a feature, not the product. CORTEX uses RAG to serve a deeper goal: genuine machine intelligence.
+- **Not a model wrapper** — it isn't a thin UI over an API. It's an entire cognition layer with memory, reasoning, and agency.
 
-Cortex is a long-term effort to create a machine intelligence layer that can remember, reason, learn, and act with context.
+### What CORTEX Is
 
-**Transform a computer from a tool that executes instructions into a companion that understands.**
+- **A living knowledge graph** — files, conversations, memories, and relationships connected into a coherent model of your digital life.
+- **A persistent memory** — memories that accumulate, decay, and strengthen based on use. CORTEX remembers what matters.
+- **An agentic intelligence** — autonomous agents that can plan, reason, search, write, and execute with your approval.
+- **A system-aware brain** — understands your filesystem, repositories, services, models, and workflows as interconnected systems.
+- **A model-free companion** — runs any model (Ollama, llama.cpp, OpenAI, Anthropic) or degrades gracefully. You choose the brain, CORTEX provides the mind.
 
 ---
 
@@ -33,6 +40,7 @@ Cortex is a long-term effort to create a machine intelligence layer that can rem
 | CLI | Scaffolded (command stubs) |
 | LLM Integration | llama.cpp + Ollama with provider abstraction |
 | Model Catalog | Full catalogue with providers, variants, benchmarks |
+| Agentic Ecosystem | Governance, workflows, hooks, automation — complete |
 
 **Phases 1–3 complete. Phases 4–6 partially complete. See [Roadmap](docs/ROADMAP.md) for details.**
 
@@ -78,7 +86,7 @@ make migrate
 
 ## Architecture
 
-Cortex combines a FastAPI backend, Next.js frontend, Rust-based code intelligence, and a Python CLI into a single workspace. The architecture is designed around encrypted vaults, knowledge graphs, vector search, LLM integration, and autonomous agents.
+CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligence, and a Python CLI into a single workspace. The architecture is designed around encrypted vaults, knowledge graphs, vector search, LLM integration, and autonomous agents.
 
 ```
 ┌────────────────────────────────────────────────┐
@@ -158,6 +166,8 @@ make check         # lint + test
 | [docs/API.md](docs/API.md) | Engineers | API reference, endpoints, auth |
 | [docs/DATABASE.md](docs/DATABASE.md) | Engineers | DB schema, migrations, conventions |
 | [docs/SECURITY.md](docs/SECURITY.md) | Engineers | Security patterns, auth flow |
+| [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | Everyone | Ecosystem, workflows, hooks |
+| [docs/GOVERNANCE.md](docs/GOVERNANCE.md) | Everyone | Rules of engagement |
 | [docs/agents/](docs/agents/) | AI Agents | Domain context, triage, issue tracking |
 
 ---

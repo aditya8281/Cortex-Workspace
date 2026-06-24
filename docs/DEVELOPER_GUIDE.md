@@ -1,4 +1,4 @@
-# Cortex Agentic Development Guide
+# CORTEX Agentic Development Guide
 
 This guide explains how the agentic development ecosystem works in Cortex — the tools, workflows, hooks, and automation that every agent (human or AI) follows.
 

@@ -5,7 +5,7 @@
 # ============================================================================
 
 help:
-	@echo "Cortex Workspace - Development Commands"
+	@echo "CORTEX - Development Commands"
 	@echo ""
 	@echo "Setup:"
 	@echo "  make install        Install dependencies"

@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "Cortex Workspace"
+    APP_NAME: str = "CORTEX"
     DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
