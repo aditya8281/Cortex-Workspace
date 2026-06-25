@@ -63,11 +63,12 @@ def _is_text_file(name: str) -> bool:
 
 
 def _format_size(size: int) -> str:
+    size_f = float(size)
     for unit in ("B", "KB", "MB", "GB", "TB"):
-        if size < 1024:
-            return f"{size:.1f} {unit}" if unit != "B" else f"{size} B"
-        size /= 1024
-    return f"{size:.1f} PB"
+        if size_f < 1024:
+            return f"{size_f:.1f} {unit}" if unit != "B" else f"{size} B"
+        size_f /= 1024
+    return f"{size_f:.1f} PB"
 
 
 def _format_time(ts: float | None) -> str:

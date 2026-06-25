@@ -18,6 +18,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
 from utils import ROOT, HookResult, get_changed_files, read_file, print_result
 
+# ── Constants ─────────────────────────────────────────────────────
+
+MIN_DOC_BYTES = 50
+MAX_LINK_FINDINGS = 10
+
+# ── Compiled regex (once) ─────────────────────────────────────────
+
+_RE_MARKDOWN_LINK = re.compile(r'\[.*?\]\(([^)]+)\)')
+
+# ── Data ──────────────────────────────────────────────────────────
+
 CORE_DOCS = [
     "README.md", "CLAUDE.md", "AGENTS.md", "DESIGN.md",
     "docs/GOVERNANCE.md", "docs/WORKFLOWS.md", "docs/ARCHITECTURE.md",
@@ -25,21 +36,21 @@ CORE_DOCS = [
 ]
 
 
-def check_core_docs() -> list:
+def check_core_docs() -> list[str]:
     """Check that core documentation files exist and have content."""
-    findings = []
+    findings: list[str] = []
     for doc in CORE_DOCS:
         p = ROOT / doc
         if not p.exists():
             findings.append(f"MISSING: {doc}")
-        elif p.stat().st_size < 50:
+        elif p.stat().st_size < MIN_DOC_BYTES:
             findings.append(f"THIN: {doc} ({p.stat().st_size} bytes)")
     return findings
 
 
-def check_links() -> list:
+def check_links() -> list[str]:
     """Check for broken links in markdown files."""
-    findings = []
+    findings: list[str] = []
     docs = list(ROOT.glob("*.md")) + list(ROOT.glob("docs/**/*.md"))
 
     for doc in docs:
@@ -51,12 +62,10 @@ def check_links() -> list:
 
         rel = str(doc.relative_to(ROOT))
 
-        # Markdown links: [text](path)
-        links = re.findall(r'\[.*?\]\(([^)]+)\)', content)
+        links = _RE_MARKDOWN_LINK.findall(content)
         for link in links:
             if link.startswith("http") or link.startswith("#") or link.startswith("mailto:"):
                 continue
-            # Remove anchor
             link_path = link.split("#")[0]
             if not link_path:
                 continue
@@ -67,16 +76,14 @@ def check_links() -> list:
     return findings
 
 
-def check_roadmap_consistency() -> list:
+def check_roadmap_consistency() -> list[str]:
     """Check roadmap checkbox consistency."""
-    findings = []
+    findings: list[str] = []
     roadmap = ROOT / "docs" / "ROADMAP.md"
     if not roadmap.exists():
         return findings
 
     content = read_file(roadmap)
-    # Check for mixed checkbox states on same item
-    # This is a basic check — more sophisticated checks can be added
     unchecked = content.count("[ ]")
     checked = content.count("[x]")
 
@@ -87,9 +94,9 @@ def check_roadmap_consistency() -> list:
     return findings
 
 
-def run_hook():
+def run_hook() -> HookResult:
     """Run the docs consistency hook."""
-    findings = []
+    findings: list[str] = []
     findings.extend(check_core_docs())
     findings.extend(check_links())
     findings.extend(check_roadmap_consistency())
@@ -101,7 +108,7 @@ def run_hook():
         name="Documentation Consistency",
         passed=len(errors) == 0,
         message=f"{len(errors)} errors, {len(warnings)} warnings" if findings else "Docs OK",
-        findings=errors + warnings[:10],
+        findings=errors + warnings[:MAX_LINK_FINDINGS],
         warnings=warnings,
     )
 

@@ -54,10 +54,11 @@ def _parse_vcard(text: str) -> dict[str, str | list[str]]:
             tel_type = "work" if "work" in params_lower else ("home" if "home" in params_lower else "other")
             key = f"phone_{tel_type}"
             if key in result:
-                if isinstance(result[key], list):
-                    result[key].append(value)
+                existing = result[key]
+                if isinstance(existing, list):
+                    existing.append(value)
                 else:
-                    result[key] = [result[key], value]
+                    result[key] = [existing, value]
             else:
                 result[key] = value
         elif prop_name == "EMAIL":
@@ -65,10 +66,11 @@ def _parse_vcard(text: str) -> dict[str, str | list[str]]:
             email_type = "work" if "work" in params_lower else ("home" if "home" in params_lower else "other")
             key = f"email_{email_type}"
             if key in result:
-                if isinstance(result[key], list):
-                    result[key].append(value)
+                existing = result[key]
+                if isinstance(existing, list):
+                    existing.append(value)
                 else:
-                    result[key] = [result[key], value]
+                    result[key] = [existing, value]
             else:
                 result[key] = value
         elif prop_name == "ADR":
@@ -95,10 +97,11 @@ def _parse_vcard(text: str) -> dict[str, str | list[str]]:
         elif prop_name in ("PREFIX", "SUFFIX", "ROLE", "GEO", "IMPP", "X-SOCIALPROFILE"):
             key = prop_name.lower().replace("-", "_")
             if key in result:
-                if isinstance(result[key], list):
-                    result[key].append(value)
+                existing = result[key]
+                if isinstance(existing, list):
+                    existing.append(value)
                 else:
-                    result[key] = [result[key], value]
+                    result[key] = [existing, value]
             else:
                 result[key] = value
 
@@ -171,7 +174,8 @@ class VCardParser(BaseParser):
 
             if contact:
                 formatted = _format_contact(contact)
-                name = contact.get("full_name") or contact.get("name", "Contact")
+                raw_name = contact.get("full_name") or contact.get("name", "Contact")
+                name = raw_name if isinstance(raw_name, str) else " ".join(raw_name)
                 total_chars += len(formatted)
                 sections.append(
                     ParsedSection(

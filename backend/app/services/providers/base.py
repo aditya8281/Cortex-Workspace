@@ -7,6 +7,7 @@ this interface to integrate with the Model Intelligence System.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -97,7 +98,7 @@ class ProviderAdapter(ABC):
         self,
         model_id: str,
         variant_id: str | None = None,
-        on_progress: callable | None = None,
+        on_progress: Callable[[float], None] | None = None,
     ) -> ProviderDownloadResult:
         """Download a model. Calls on_progress(progress_float) during download."""
 

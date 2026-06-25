@@ -67,7 +67,7 @@ def run_build_check() -> HookResult:
     )
 
 
-def run_hook():
+def run_hook() -> HookResult:
     """Run the playwright/build validation hook."""
     has_playwright = check_playwright_config()
 

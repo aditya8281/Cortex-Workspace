@@ -22,6 +22,19 @@ from utils import (
     get_changed_files, is_backend_file, read_file, print_result,
 )
 
+# ── Constants ─────────────────────────────────────────────────────
+
+MAX_RUFF_FINDINGS = 20
+MAX_DANGEROUS_FINDINGS = 15
+MAX_IMPORT_FINDINGS = 10
+
+SKIP_DIRS: frozenset[str] = frozenset({
+    "__pycache__", ".venv", "node_modules", "build",
+    "dist", ".git", ".pytest_cache", ".mypy_cache",
+})
+
+# ── Compiled regex (once) ─────────────────────────────────────────
+
 DANGEROUS_PATTERNS = [
     (re.compile(r'^\s*except:\s*$'), "bare except clause"),
     (re.compile(r'except\s+Exception\s*:'), "broad exception catch"),
@@ -32,58 +45,73 @@ DANGEROUS_PATTERNS = [
     (re.compile(r'subprocess\.call\(.*shell\s*=\s*True'), "shell=True in subprocess"),
 ]
 
+_RE_STAR_IMPORT = re.compile(r'from\s+\S+\s+import\s+\*')
+_RE_LINT_ERROR = re.compile(r'error:', re.IGNORECASE)
+
+
+# ── File Discovery ────────────────────────────────────────────────
+
+
+def _discover_py_files() -> list[Path]:
+    """Find all Python source files in backend and tests, skipping irrelevant dirs."""
+    files: list[Path] = []
+    for pattern in ("backend/**/*.py", "tests/**/*.py"):
+        for fpath in ROOT.glob(pattern):
+            parts = fpath.relative_to(ROOT).parts
+            if any(d in SKIP_DIRS for d in parts):
+                continue
+            files.append(fpath)
+    return files
+
+
+# ── Checks ────────────────────────────────────────────────────────
+
 
 def check_ruff() -> HookResult:
     """Run ruff lint."""
     code, out, err = run_make("lint")
-    errors = []
-    for line in out.splitlines():
-        if "error:" in line.lower():
-            errors.append(line.strip())
+    errors = [line.strip() for line in out.splitlines() if _RE_LINT_ERROR.search(line)]
 
     return HookResult(
         name="Ruff/MyPy",
         passed=code == 0,
         message=f"{len(errors)} lint/type errors" if errors else "All clean",
-        findings=errors[:20],
+        findings=errors[:MAX_RUFF_FINDINGS],
     )
 
 
 def check_dangerous_patterns() -> HookResult:
-    """Scan backend code for dangerous patterns."""
-    findings = []
-    py_files = list(ROOT.glob("backend/app/**/*.py"))
+    """Scan backend and test code for dangerous patterns."""
+    findings: list[str] = []
 
-    for fpath in py_files:
-        if "__pycache__" in str(fpath) or ".venv" in str(fpath):
-            continue
+    for fpath in _discover_py_files():
         content = read_file(fpath)
         if not content:
             continue
         rel = str(fpath.relative_to(ROOT))
 
-        lines = content.split("\n")
-        for i, line in enumerate(lines):
+        # Skip test files — dangerous patterns in tests are expected
+        if "test_" in rel or "conftest" in rel:
+            continue
+
+        for i, line in enumerate(content.split("\n"), 1):
             for pattern, desc in DANGEROUS_PATTERNS:
                 if pattern.search(line):
-                    # Skip in test files
-                    if "test_" in rel or "conftest" in rel:
-                        continue
-                    findings.append(f"{rel}:{i+1}: {desc}")
+                    findings.append(f"{rel}:{i}: {desc}")
 
     # Deduplicate
-    findings = list(set(findings))
+    findings = list(dict.fromkeys(findings))
 
     return HookResult(
         name="Dangerous Patterns",
         passed=len(findings) == 0,
         message=f"{len(findings)} dangerous patterns found" if findings else "No dangerous patterns",
-        findings=findings[:15],
+        findings=findings[:MAX_DANGEROUS_FINDINGS],
     )
 
 
 def check_imports() -> HookResult:
-    """Check for unused or missing imports in changed Python files."""
+    """Check for star imports in changed Python files."""
     files = get_changed_files()
     py_files = [f for f in files if is_backend_file(f)]
 
@@ -94,41 +122,38 @@ def check_imports() -> HookResult:
             message="No backend files changed",
         )
 
-    findings = []
+    findings: list[str] = []
     for fpath in py_files:
         content = read_file(fpath)
         if not content:
             continue
         rel = str(fpath.relative_to(ROOT))
 
-        # Check for star imports
         for i, line in enumerate(content.splitlines(), 1):
-            if "from " in line and " import *" in line:
+            if _RE_STAR_IMPORT.search(line):
                 findings.append(f"{rel}:{i}: star import (from X import *)")
 
     return HookResult(
         name="Import Check",
         passed=len(findings) == 0,
         message=f"{len(findings)} import issues" if findings else "Imports OK",
-        findings=findings[:10],
+        findings=findings[:MAX_IMPORT_FINDINGS],
     )
 
 
-def run_hook():
+# ── Main Hook ─────────────────────────────────────────────────────
+
+
+def run_hook() -> HookResult:
     """Run the code quality hook."""
-    results = []
+    results: list[HookResult] = []
 
-    # Ruff + MyPy
     results.append(check_ruff())
-
-    # Dangerous patterns
     results.append(check_dangerous_patterns())
-
-    # Import checks
     results.append(check_imports())
 
-    all_findings = []
-    all_warnings = []
+    all_findings: list[str] = []
+    all_warnings: list[str] = []
     passed = all(r.passed for r in results)
 
     for r in results:

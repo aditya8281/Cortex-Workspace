@@ -142,7 +142,7 @@ def check_patterns(content: str, filepath: str) -> list:
     return findings
 
 
-def run_hook(files=None):
+def run_hook(files=None) -> HookResult:
     """Run the UI review hook."""
     if files is None:
         files = get_changed_files()
