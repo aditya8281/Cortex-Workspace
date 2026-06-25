@@ -56,4 +56,4 @@ P0 (critical, do soon) / P1 (important, next phase) / P2 (valuable, backlog) / P
 Total: N, P0: N, P1: N, P2: N, P3: N, Top recommendation: ...
 ```
 
-Save to `docs/ideas/YYYY-MM-DD.md` if 3+ ideas found.
+Save to `docs/ideas/YYYY-MM-DD-{N}.md` if 3+ ideas found.
