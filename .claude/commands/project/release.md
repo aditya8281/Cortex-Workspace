@@ -8,27 +8,14 @@ Determine if the current state is ready for release of the active version/phase.
 
 ### 1. Read Version Context
 
-```bash
-cat .agents/plans/ACTIVE_VERSION.md
-cat .agents/plans/versions/vX/progress.md  # (replace X with active version)
-```
+Run `.agents/plans/shared-phases.md#repository-intelligence`.
+Run `.agents/plans/shared-phases.md#planning-ecosystem-load`.
 
-Read the active phase plan: `.agents/plans/versions/vX/Phase-N.md`
-
-Identify the phase exit criteria.
+Identify the phase exit criteria from the active phase plan.
 
 ### 2. Run Verification
 
-Run all `/project:verify` checks:
-- Backend tests
-- Frontend tests
-- Lint
-- Format
-- Build
-- Hooks
-- Migrations
-
-Report results.
+Run `.agents/plans/shared-phases.md#system-validation`.
 
 ### 3. Check Phase Completeness
 
@@ -40,13 +27,7 @@ Flag any incomplete items.
 
 ### 4. Check Documentation
 
-| Check | Status |
-|-------|--------|
-| New/changed APIs in `docs/API.md` | ✅/❌ |
-| New models in `docs/DATABASE.md` | ✅/❌ |
-| Architecture changes in `docs/ARCHITECTURE.md` | ✅/❌ |
-| ADRs created for architectural decisions | ✅/❌ |
-| README.md reflects current state | ✅/❌ |
+Run `.agents/plans/shared-phases.md#documentation-consistency-check`.
 
 ### 5. Check Governance
 
@@ -54,8 +35,8 @@ Flag any incomplete items.
 |-------|--------|
 | All hooks passing | ✅/❌ |
 | `progress.md` up to date | ✅/❌ |
-| No unresolved P0/P1 from /review | ✅/❌ |
-| No unresolved P0/P1 from /challenge | ✅/❌ |
+| No unresolved P0/P1 from code review | ✅/❌ |
+| No unresolved P0/P1 from adversarial review | ✅/❌ |
 
 ### 6. Check Git State
 

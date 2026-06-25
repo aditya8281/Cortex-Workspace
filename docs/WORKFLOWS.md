@@ -4,13 +4,110 @@ This document defines all workflows for the CORTEX development process.
 
 ---
 
-## 1. Development Lifecycle
+## 1. Command Ecosystem Hierarchy
+
+The Cortex command ecosystem uses a 3-tier orchestrator hierarchy. Orchestrators delegate to specialist commands, never duplicate their logic.
+
+```
+                          ┌─────────────────────┐
+                          │    /project:update   │
+                          │  (Project Evolution) │
+                          └──────────┬──────────┘
+                                     │ triggers
+                                     v
+                          ┌─────────────────────┐
+                          │ /project:enhance_plan│
+                          │ (Planning Ecosystem) │
+                          └──────────┬──────────┘
+                                     │ triggers
+                                     v
+                          ┌─────────────────────┐
+                          │   /project:develop   │
+                          │  (Development Loop)  │
+                          └──────────┬──────────┘
+                                     │ triggers
+                                     v
+                    ┌─────────────────────────────────┐
+                    │       /project:cortex            │
+                    │  (Autonomous Development Agent)  │
+                    └──────────┬──────────────────────┘
+                               │
+              ┌────────────────┼────────────────┐
+              v                v                v
+   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+   │  Specialist  │  │  Specialist  │  │  Specialist  │
+   │  Commands    │  │  Commands    │  │  Commands    │
+   └──────────────┘  └──────────────┘  └──────────────┘
+```
+
+### Orchestrator Commands
+
+| Command | Role | When |
+|---------|------|------|
+| `/project:update` | **Top-level orchestrator.** Transforms high-level ideas into approved plans. 8 phases: intelligence → exploration/synthesis → specification → impact analysis → planning integration → adversarial review → approval → handoff. Never implements. | New feature request, architecture change, unclear requirement |
+| `/project:enhance_plan` | **Planning ecosystem improver.** Reviews all plans and detects implementation drift, planning drift, architecture drift, and vision drift. Actively improves plans. Never changes product vision. | Before milestones, after major changes, weekly planning review |
+| `/project:develop` | **Development orchestrator.** Determines next work, generates brief if ambiguous, delegates to c cortex workflow, runs reflection, produces completion report. Outlines, delegates, verifies. | Standard development task, bug fix, feature implementation |
+
+### Specialist Commands
+
+| Command | Role |
+|---------|------|
+| `/project:cortex` | Full autonomous development iteration (phases: strategic planning, branch, implementation loop, system validation, engineering review, reflection, cleanup, version integrity) |
+| `/project:audit` | Deep code-level scan (runtime errors, dead code, integration issues, placeholders, consistency) |
+| `/project:review` | Code quality analysis before push |
+| `/project:verify` | Automated verification suite before merge |
+| `/project:release` | Release readiness check |
+| `/project:architecture` | Architecture alignment review |
+| `/project:challenge` | Adversarial review before major decisions |
+| `/project:health` | Repository health check (weekly) |
+| `/project:improve` | Ecosystem self-improvement |
+| `/project:reflect` | Reflection framework before completion |
+| `/project:feature-gap` | Roadmap vs codebase gap analysis |
+| `/project:prompt` | Ecosystem-aware prompt generation |
+| `/project:ideas` | Innovation discovery |
+
+### Shared Execution Phases
+
+All commands reference reusable phases from `.agents/plans/shared-phases.md` instead of duplicating instructions:
+
+- **Repository Intelligence** — Build accurate understanding of current repo state (branch, git log, structure, constitution, plans, docs)
+- **Planning Ecosystem Load** — Read guide.md, version plans, progress, roadmap, ADRs
+- **System Validation** — Run tests, lint, format check, hooks
+- **Documentation Consistency Check** — Cross-reference every doc against current implementation
+- **Engineering Quality Review** — Architecture, performance, security, maintainability, test gap
+- **Architecture Drift Detection** — Verify files match intended architecture
+- **Adversarial Challenge** — Refute findings before reporting
+- **Post-Completion Reflection** — Full reflection framework
+- **Repository Cleanup** — Remove temp files, dead code, stale references
+- **Version Integration Check** — Commit quality, merge readiness, verification
+- **Repository Health Scan** — Dead code, duplicates, dependencies, drift, placeholders, security, errors
+
+---
+
+## 2. Development Lifecycle
 
 ### Stages
 
 ```
-Branch → Skill Discovery → Triage → Plan → Build → Review → Reflect → Release
+Ideation → Update → Enhance Plan → Develop → Review → Reflect → Release
+           │           │            │
+           v           v            v
+       /project:   /project:   /project:cortex
+       update      enhance_   (or /project:
+                   plan         develop)
 ```
+
+### Detailed Flow
+
+| Stage | Orchestrator | What Happens |
+|-------|------------|--------------|
+| **Ideation** | User | High-level idea or request |
+| **Evolution** | `/project:update` | Transforms idea into approved plan with spec, impact analysis, adversarial review |
+| **Planning** | `/project:enhance_plan` | Reviews plans for drift, improves completeness, ensures consistency |
+| **Development** | `/project:develop` or `/project:cortex` | Determines next work, delegates implementation, verifies completion |
+| **Review** | `/project:review` + `/project:challenge` | Quality analysis + adversarial verification |
+| **Reflection** | `/project:reflect` | Systematic reflection across quality, redundancy, automation, tech debt, docs |
+| **Release** | `/project:release` | Version gate: verification, docs, governance, git state, phase completeness |
 
 ### Stage 1: Branch First
 
@@ -112,15 +209,20 @@ Branch → Skill Discovery → Triage → Plan → Build → Review → Reflect 
 **Gate:** All validation passes, human merges.
 
 **Command equivalents:**
+- Project evolution: `/project:update`
+- Planning improvement: `/project:enhance_plan`
+- Development: `/project:develop` or `/project:cortex`
 - Code quality: `/project:review`
 - Adversarial: `/project:challenge`
 - Reflection: `/project:reflect`
 - Verification: `/project:verify`
 - Release readiness: `/project:release`
+- Codebase audit: `/project:audit`
+- Feature gap: `/project:feature-gap`
 
 ---
 
-## 2. Bug-Finding Workflow
+## 3. Bug-Finding Workflow
 
 ### Automatic Bug Discovery
 
@@ -154,7 +256,7 @@ Branch → Skill Discovery → Triage → Plan → Build → Review → Reflect 
 
 ---
 
-## 3. Validation Workflow
+## 4. Validation Workflow
 
 ### Pre-commit Validation
 
@@ -208,7 +310,7 @@ Branch → Skill Discovery → Triage → Plan → Build → Review → Reflect 
 
 ---
 
-## 4. Review Workflow
+## 5. Review Workflow
 
 ### Code Review
 
@@ -240,7 +342,7 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 
 ---
 
-## 5. Refactoring Workflow
+## 6. Refactoring Workflow
 
 ### When to Refactor
 
@@ -271,7 +373,7 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 
 ---
 
-## 6. Release Workflow
+## 7. Release Workflow
 
 ### Pre-release Checklist
 
@@ -305,7 +407,7 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 
 ---
 
-## 7. Audit Workflow
+## 8. Audit Workflow
 
 ### Scheduled Audit
 
@@ -354,7 +456,7 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 
 ---
 
-## 8. Documentation Workflow
+## 9. Documentation Workflow
 
 ### When to Update Docs
 
@@ -388,7 +490,7 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 
 ---
 
-## 9. Skill Creation Workflow
+## 10. Skill Creation Workflow
 
 ### When to Create a Skill
 
@@ -429,7 +531,7 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 
 ---
 
-## 10. Skill Evolution Workflow
+## 11. Skill Evolution Workflow
 
 ### When to Evolve a Skill
 

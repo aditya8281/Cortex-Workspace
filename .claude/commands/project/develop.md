@@ -25,28 +25,12 @@ This command invokes those workflows conceptually. It does **not** duplicate the
 
 ### Step 1: Discover Repository State
 
-Run:
+Run `.agents/plans/shared-phases.md#repository-intelligence`.
 
-```bash
-# Current state
-git status
-git branch --show-current
-git log --oneline -5
+Also read:
 
-# What's the active version and phase?
-cat .agents/plans/ACTIVE_VERSION.md 2>/dev/null || echo "No ACTIVE_VERSION.md"
-grep -r "in_progress\|active" .agents/plans/versions/*/progress.md 2>/dev/null || true
-
-# Any uncommitted work or branches?
-git stash list
-```
-
-Read:
-
-- `.agents/plans/implementation_steps.md` — execution order
 - Active plan file: `.agents/plans/versions/v{ACTIVE}/Phase-{N}.md` — current phase
 - Active progress: `.agents/plans/versions/v{ACTIVE}/progress.md` — what's done/not done
-- `docs/ROADMAP.md` (if present) — broader roadmap
 
 **Outcome:** A clear picture of where the project is and what's incomplete.
 
@@ -157,27 +141,7 @@ During execution, one of these happens:
 
 ### Step 6: Run Reflection
 
-Conceptually invoke the `/project:reflect` framework.
-
-The reflection covers:
-
-1. **Identify work completed** — files changed, features implemented, bugs fixed
-2. **Quality** — code cleanliness, error handling, edge cases
-3. **Redundancy** — duplication, consolidation opportunities
-4. **Automation** — manual steps, hook/skill opportunities
-5. **Documentation gaps** — outdated or missing docs
-6. **Test gaps** — missing coverage, edge case tests
-7. **Technical debt** — shortcuts, TODOs, postponed refactors
-8. **Ecosystem impact** — commands, hooks, workflows, skills to update
-9. **Architecture review** — coupling, cohesion, layer separation
-
-**Do not** copy the full reflection framework here. It lives in `/project:reflect` — reference it.
-
-If the reflection identifies action-items:
-
-1. Apply them if they belong in this iteration (quick wins)
-2. Defer them to a follow-up iteration if they require separate work
-3. Document deferred items in progress.md or an audit report
+Run `.agents/plans/shared-phases.md#post-completion-reflection`.
 
 Save reflection to `docs/audits/YYYY-MM-DD-reflect-{N}.md` if any action-item exists.
 

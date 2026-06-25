@@ -4,6 +4,12 @@ Run weekly or after completing significant work. Reviews and enhances skills, ho
 
 ## Instructions
 
+### 0. Load Ecosystem State
+
+Run `.agents/plans/shared-phases.md#repository-intelligence`.
+
+### 1. Review Skill Usage
+
 1. **Review skill usage.**
 - Check git log for recent skill invocations
 - Which skills from `.agents/skills/` were used?

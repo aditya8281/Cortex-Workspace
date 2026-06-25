@@ -6,17 +6,9 @@ Generate development prompts that integrate with the Cortex ecosystem. Not a tex
 
 ### Step 0: DISCOVER
 
-Before assuming repository structure, inspect it.
+Run `.agents/plans/shared-phases.md#repository-intelligence`.
 
-Review:
-
-```bash
-pwd
-find . -maxdepth 3 -type d | sort
-find . -maxdepth 2 -type f | sort
-```
-
-Identify:
+Specifically identify:
 
 - project layout
 - major modules
@@ -35,41 +27,7 @@ Do not assume files exist. Adapt to the repository structure.
 
 ### Step 1: UNDERSTAND
 
-Before generating anything, read the repository state:
-
-```bash
-# Current state
-git status
-git log --oneline -5
-git branch --show-current
-
-# Version context
-cat .agents/plans/ACTIVE_VERSION.md
-grep -r "in_progress\|active" .agents/plans/versions/*/progress.md
-```
-
-Read the following (where present) to understand the ecosystem:
-
-- README.md
-- CLAUDE.md
-- AGENT.md
-- PRODUCT.md
-- DESIGN.md
-- docs/ARCHITECTURE.md
-- docs/WORKFLOWS.md
-- docs/GOVERNANCE.md
-- docs/
-- docs/plans/
-- docs/decisions/
-- docs/audits/
-- .agents/plans/guide.md
-- .agents/skills/ (list directory)
-- .claude/commands/project/ (list directory)
-- .claude/hooks/ (list directory)
-
-Prefer canonical documentation over assumptions.
-
-This context ensures generated prompts reference real systems, not hypothetical ones.
+Run `.agents/plans/shared-phases.md#planning-ecosystem-load`.
 
 ### Step 1.5: DISCOVER EXISTING IMPLEMENTATION
 

@@ -8,13 +8,8 @@ Cross-reference roadmap/phase plans against the actual codebase. Find what's pla
 
 ### 1. Read the Roadmap
 
-```bash
-cat docs/ROADMAP.md
-cat .agents/plans/ACTIVE_VERSION.md
-cat .agents/plans/versions/vX/progress.md  # (replace X with active version)
-```
-
-Read the active phase plan: `.agents/plans/versions/vX/Phase-N.md`
+Run `.agents/plans/shared-phases.md#repository-intelligence`.
+Run `.agents/plans/shared-phases.md#planning-ecosystem-load`.
 
 ### 2. Scan the Codebase
 

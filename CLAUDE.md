@@ -237,13 +237,26 @@ Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for d
 
 ## Strategic Commands
 
+### Orchestrators (design → improve → develop)
+
 | Command | When | Purpose |
 |---------|------|---------|
-| `/project:update` | Before significant changes | Project evolution orchestration — design before implementation |
-| `/project:develop` | Start of session | Orchestrate next development iteration |
-| `/project:cortex` | Start development session | Autonomous development iteration |
+| `/project:update` | Before significant changes | **Top-level orchestrator.** Transforms ideas into approved plans. 8 phases: intelligence → exploration → specification → impact analysis → planning integration → adversarial review → approval → handoff. Never implements. |
+| `/project:enhance_plan` | After phases or when plans drift | **Planning ecosystem improver.** Reviews all plans for implementation/planning/architecture/vision drift. Actively improves plans. Never changes product vision. |
+| `/project:develop` | Start of session | **Development orchestrator.** Determines next work, generates brief if ambiguous, delegates to cortex workflow, runs reflection, produces completion report. |
+
+### Autonomous Agent
+
+| Command | When | Purpose |
+|---------|------|---------|
+| `/project:cortex` | Start development session | Full autonomous development iteration: strategic planning → branch → implementation → validation → review → reflection → cleanup → version integrity. |
+
+### Specialist Commands
+
+| Command | When | Purpose |
+|---------|------|---------|
 | `/project:prompt` | Before complex work | Generate ecosystem-aware prompts |
-| `/project:audit` | During audits | Deep code-level scan |
+| `/project:audit` | During audits | Deep code-level scan (runtime errors, dead code, integration issues) |
 | `/project:review` | Before push | Code quality analysis |
 | `/project:verify` | Before merge | Automated verification suite |
 | `/project:release` | Before release | Release readiness check |
@@ -254,7 +267,6 @@ Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for d
 | `/project:improve` | Weekly | Ecosystem self-improvement |
 | `/project:reflect` | Before completion | Reflection framework |
 | `/project:feature-gap` | During planning | Roadmap vs codebase gaps |
-| `/project:enhance_plan` | After phases or when plans drift | Planning ecosystem improvement |
 
 ## Common Gotchas
 

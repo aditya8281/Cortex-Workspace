@@ -1,328 +1,158 @@
-## Instructions
+# /project:cortex — Implementation Workflow
 
-### Phase 0: REPOSITORY INTELLIGENCE
+Executes a complete implementation iteration. This is the **how** — detailed implementation guidance that the orchestrator `/project:develop` conceptually invokes.
 
-Before making any decisions, build an accurate understanding of the current repository.
+**When to run directly:** You have a concrete, well-defined task with clear scope. For ambiguous or high-level requests, use `/project:update` or `/project:develop` instead.
 
-Inspect:
+**Relationship to other commands:** This command does not duplicate specialist tools. It references them.
 
-```bash
-# Repository
-pwd
-git status
-git branch --show-current
-git log --oneline -10
+## Phases
 
-# Repository health
-make check
+### Phase 0: Repository Intelligence
 
-# Repository structure
-find . -maxdepth 3 -type d | sort
-find . -maxdepth 2 -type f | sort
+Run discovery steps from `.agents/plans/shared-phases.md#repository-intelligence`.
 
-# Constitution
-cat .agents/plans/guide.md
+Then read:
 
-# Execution plan
-cat .agents/plans/implementation_steps.md
+- `.agents/plans/guide.md` — architecture principles
+- `.agents/plans/implementation_steps.md` — execution order
+- Active phase plan: `.agents/plans/versions/v{ACTIVE}/Phase-{N}.md`
+- Active progress: `.agents/plans/versions/v{ACTIVE}/progress.md`
+- `docs/ROADMAP.md` — broader roadmap
 
-# Active version
-cat .agents/plans/ACTIVE_VERSION.md
-grep -r "in_progress\|active" .agents/plans/versions/*/progress.md
-```
+Also identify existing implementations related to the task. Prefer extending existing code.
 
-Read, where present:
-
-* README.md
-* CLAUDE.md
-* AGENT.md
-* DESIGN.md
-* .agents/
-* docs/
-* docs/ARCHITECTURE.md
-* docs/WORKFLOWS.md
-* docs/GOVERNANCE.md
-* Active phase document
-* Relevant ADRs
-* Relevant architecture decisions
-
-Discover:
-
-* repository layout
-* active version
-* active phase
-* current roadmap position
-* completed work
-* in-progress work
-* current blockers
-* repository health
-* existing commands
-* existing hooks
-* existing workflows
-* existing skills
-* existing prompts
-* existing templates
-
-Also identify existing implementations related to the task.
-
-Prefer extending existing code over introducing parallel implementations.
-
-Produce a concise repository intelligence summary before continuing.
+**Outcome:** Repository state, active version, phase, and related implementations understood.
 
 ---
 
-### Phase 1: STRATEGIC PLANNING
+### Phase 1: Strategic Planning
 
-Determine the highest-value work for this iteration.
+Determine the approach.
 
 When an implementation plan exists:
 
-* Read it completely.
-* Challenge every assumption.
-* Verify file locations.
-* Verify dependencies.
-* Verify integration points.
-* Determine whether the plan is still optimal.
-* Adapt when a better solution exists.
-* Document significant deviations.
+- Read it completely.
+- Challenge assumptions — verify file locations, dependencies, integration points.
+- Determine whether the plan is still optimal.
+- Adapt when a better solution exists.
+- Document significant deviations.
 
-When no implementation plan exists:
-
-Create one before implementation.
-
-Do not blindly follow documentation.
-
-Repository state always overrides stale plans.
+When no implementation plan exists: create one.
 
 Determine:
 
-* objectives
-* deliverables
-* affected modules
-* affected APIs
-* affected commands
-* affected hooks
-* affected workflows
-* affected skills
-* affected documentation
-* affected configuration
-* affected tests
-* dependencies
-* risks
-* validation strategy
-* rollback strategy
-* completion criteria
+- Objectives, deliverables
+- Affected modules, APIs, commands, hooks, workflows, skills, docs, config, tests
+- Dependencies, risks, validation strategy, rollback strategy, completion criteria
 
-Select applicable skills.
+Select applicable skills from `.agents/skills/`.
 
-If brainstorming or architecture exploration would materially improve the solution, invoke the appropriate skill before implementation.
+If brainstorming or architecture exploration would materially improve the solution, use appropriate skills before implementation.
 
-Only ask the user when multiple valid architectural directions exist with no objectively better choice.
+Only ask the user when multiple valid directions exist with no objectively better choice.
+
+**Outcome:** Clear plan for what to implement and how.
 
 ---
 
-### Phase 2: BRANCH
+### Phase 2: Branch
 
-Create an isolated working branch when appropriate.
+Create an isolated working branch:
 
 ```bash
-git checkout -b <update type eg. fix,feat etc>/<topic>
+git checkout -b <type>/<topic>  # e.g., feat/streaming-memory, fix/auth-bug
 ```
 
 Verify:
 
-* working tree is clean
-* branch naming follows conventions
-* repository is ready for implementation
+- Working tree is clean
+- Branch naming follows conventions
+- Repository is ready for implementation
 
 ---
 
-### Phase 3: IMPLEMENTATION LOOP
+### Phase 3: Implementation Loop
 
 Implement using small, verifiable iterations.
 
-For every logical unit of work:
+For each logical unit of work:
 
 1. Plan the smallest complete increment.
 2. Implement.
 3. Follow TDD where practical.
 4. Perform a quick self-review.
-5. Run relevant linting and tests.
+5. Run relevant linting and tests (`make lint` + `make format`).
 6. Fix issues immediately.
-7. Continue.
+7. Commit after each logical unit.
 
 During implementation:
 
-* Prefer extending existing implementations.
-* Avoid duplicated logic.
-* Maintain architecture consistency.
-* Keep commits logical and atomic.
-* Update documentation whenever implementation changes behavior.
-* Update configuration when required.
-* Use subagents when beneficial.
-* Leverage MCP servers where appropriate.
-
-If a substantially better implementation is discovered:
-
-* Prefer the better implementation.
-* Explain the deviation.
-* Update planning artifacts when necessary.
+- Prefer extending existing implementations.
+- Avoid duplicated logic.
+- Maintain architecture consistency.
+- Keep commits logical and atomic.
+- Update documentation when behavior changes.
+- Update configuration when required.
+- Use subagents for parallel independent work.
+- If a substantially better implementation is discovered, prefer it and explain the deviation.
 
 Repeat until implementation objectives are complete.
 
----
-
-### Phase 4: SYSTEM VALIDATION
-
-Validate the complete implementation.
-
-Run all applicable validation:
-
-```bash
-make test
-cd frontend && npm test
-make lint
-make format --check
-make hooks-onchange
-```
-
-Also verify:
-
-* integration points
-* documentation consistency
-* configuration consistency
-* public APIs
-* generated artifacts
-* developer workflows
-* backward compatibility where applicable
-
-If any validation fails:
-
-* fix immediately
-* repeat validation
-
-Do not proceed until validation succeeds.
+**Outcome:** Working implementation, tests passing, clean commits.
 
 ---
 
-### Phase 5: ENGINEERING REVIEW
+### Phase 4: System Validation
 
-Review implementation from multiple engineering perspectives.
+Run `.agents/plans/shared-phases.md#system-validation`.
 
-Review:
+Fix any failures before proceeding.
 
-* correctness
-* architecture
-* maintainability
-* readability
-* performance
-* security
-* scalability
-* repository consistency
+---
 
-Check:
+### Phase 5: Engineering Review
 
-* error handling
-* abstractions
-* duplication
-* coupling
-* naming
-* API design
-* ownership boundaries
-* test quality
+Run `.agents/plans/shared-phases.md#engineering-quality-review`.
 
-Challenge assumptions.
+Run `.agents/plans/shared-phases.md#architecture-drift-detection`.
 
-Identify:
-
-* over-engineering
-* under-engineering
-* unnecessary complexity
-* future maintenance risks
+Run `.agents/plans/shared-phases.md#adversarial-challenge`.
 
 Resolve every P0 and P1 issue before continuing.
 
-Document important P2 improvements for future work.
+If significant issues are found, return to Phase 3.
 
-If significant issues are found:
-
-Return to the Implementation Loop.
+**Outcome:** Quality confirmed, architecture aligned, risks identified.
 
 ---
 
-### Phase 6: REFLECTION
+### Phase 6: Post-Completion Reflection
 
-Run the complete Reflection Framework defined in:
+Run `.agents/plans/shared-phases.md#post-completion-reflection`.
 
-`.claude/commands/project/reflect.md`
-
-Apply any action items that belong in the current iteration.
-
-Only defer work when there is a justified reason.
+Apply any action-items that belong in this iteration. Only defer when justified.
 
 Update:
 
-* progress tracking
-* architecture documentation
-* ADRs
-* implementation plans
+- Progress tracking
+- Architecture documentation
+- ADRs
+- Implementation plans
 
 when required.
 
 ---
 
-### Phase 7: REPOSITORY CLEANUP
+### Phase 7: Repository Cleanup
 
-Restore repository cleanliness.
-
-Review:
-
-```bash
-git status
-git diff --name-only main
-```
-
-Remove:
-
-* temporary files
-* abandoned implementations
-* dead code
-* obsolete comments
-* scratch files
-* stale references
-
-Verify:
-
-* imports
-* documentation
-* configuration
-* examples
-* references
-* TODO/FIXME entries
-
-Ensure only intentional changes remain.
+Run `.agents/plans/shared-phases.md#repository-cleanup`.
 
 ---
 
-### Phase 8: VERSION INTEGRITY
+### Phase 8: Version Integration
 
-Prepare the repository for integration.
-
-Verify:
-
-* commit quality
-* atomic commit history
-* meaningful commit messages
-* merge readiness
-
-Run:
-
-```bash
-make hooks-merge
-make check
-```
-
-Only finalize the iteration when repository integrity is confirmed.
+Run `.agents/plans/shared-phases.md#version-integration-check`.
 
 ---
 
@@ -330,19 +160,17 @@ Only finalize the iteration when repository integrity is confirmed.
 
 The iteration is complete only when all of the following are true:
 
-* [ ] Objectives completed
-* [ ] Validation passed
-* [ ] Engineering review completed
-* [ ] Reflection completed
-* [ ] Documentation updated where required
-* [ ] Configuration updated where required
-* [ ] Progress tracking updated
-* [ ] Repository cleanup completed
-* [ ] Repository ready for merge
+- [ ] Objectives completed
+- [ ] Validation passed
+- [ ] Engineering review completed
+- [ ] Reflection completed
+- [ ] Documentation updated where required
+- [ ] Configuration updated where required
+- [ ] Progress tracking updated
+- [ ] Repository cleanup completed
+- [ ] Repository ready for merge
 
-If any requirement is not satisfied:
-
-Return to the Implementation Loop.
+If any requirement is not satisfied, return to the Implementation Loop.
 
 Maximum three full iteration loops before escalating.
 
@@ -352,15 +180,15 @@ Maximum three full iteration loops before escalating.
 
 Pause and ask the user only when:
 
-* architecture would change
-* product direction would change
-* roadmap direction would change
-* repository contains conflicting sources of truth
-* requirements remain ambiguous after repository analysis
-* multiple equally valid architectural solutions exist
-* implementation would require unsafe migration
-* maximum autonomous iterations have been exceeded
-* a blocker cannot be resolved using repository context
+- Architecture would change
+- Product direction would change
+- Roadmap direction would change
+- Repository contains conflicting sources of truth
+- Requirements remain ambiguous after repository analysis
+- Multiple equally valid architectural solutions exist
+- Implementation would require unsafe migration
+- Maximum autonomous iterations have been exceeded
+- A blocker cannot be resolved using repository context
 
 Otherwise continue autonomously.
 

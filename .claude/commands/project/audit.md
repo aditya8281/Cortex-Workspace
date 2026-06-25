@@ -8,20 +8,13 @@ Deep code-level scan for runtime errors, dead code, integration issues, broken i
 
 ### 1. Read Scope
 
-```bash
-cat .agents/plans/ACTIVE_VERSION.md
-grep -r "in_progress\|active" .agents/plans/versions/*/progress.md
-```
+Run `.agents/plans/shared-phases.md#repository-intelligence`.
 
 Read the active phase plan to know what components are in scope.
 
 ### 2. Baseline
 
-```bash
-make check
-```
-
-Report: tests pass/fail, lint clean/dirty.
+Run `.agents/plans/shared-phases.md#system-validation`.
 
 ### 3. Runtime Errors
 
