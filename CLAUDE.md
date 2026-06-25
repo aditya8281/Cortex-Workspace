@@ -253,6 +253,7 @@ Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for d
 | `/project:improve` | Weekly | Ecosystem self-improvement |
 | `/project:reflect` | Before completion | Reflection framework |
 | `/project:feature-gap` | During planning | Roadmap vs codebase gaps |
+| `/project:enhance_plan` | After phases or when plans drift | Planning ecosystem improvement |
 
 ## Common Gotchas
 
