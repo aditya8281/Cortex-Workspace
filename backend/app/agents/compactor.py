@@ -115,16 +115,19 @@ def estimate_token_count(
     messages: list[dict[str, str]],
     approx_chars_per_token: float = 4.0,
 ) -> int:
-    """Rough token count estimate (character-based, for compaction decisions).
+    """Estimate token count for a list of messages.
+
+    Uses tiktoken when available, falling back to character-based
+    estimation for environments without the optional dependency.
 
     Args:
         messages: List of message dicts with 'role' and 'content' keys.
-        approx_chars_per_token: Rough ratio (4.0 for English text).
+        approx_chars_per_token: Fallback ratio (only used when tiktoken
+            is unavailable).
 
     Returns:
         Estimated total token count.
     """
-    total_chars = sum(len(m.get("content", "")) for m in messages)
-    # Add overhead for role markers, formatting, etc.
-    total_chars += len(messages) * 10
-    return int(total_chars / approx_chars_per_token)
+    from backend.app.agents.token_counter import count_message_tokens
+
+    return count_message_tokens(messages, approx_chars_per_token=approx_chars_per_token)

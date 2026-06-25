@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from backend.app.agents.token_counter import count_message_tokens, count_tokens
 from backend.app.services.llm.llama_cpp import LlamaCppProvider
 from backend.app.services.llm.ollama import OllamaProvider
 from backend.app.services.llm.provider import LLMMessage, LLMModelInfo, LLMProvider, LLMResponse
@@ -176,8 +177,8 @@ class LLMManager:
                     yield token
 
                 self._total_requests += 1
-                prompt_tokens = sum(len(m.content) for m in messages) // 4
-                completion_tokens = len(full_response) // 4
+                prompt_tokens = count_message_tokens([{"content": m.content} for m in messages])
+                completion_tokens = count_tokens(full_response)
                 self._total_prompt_tokens += prompt_tokens
                 self._total_completion_tokens += completion_tokens
 

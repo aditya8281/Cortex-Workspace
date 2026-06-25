@@ -18,8 +18,10 @@ MAX_CONTEXT_TOKENS = 32000
 
 
 def estimate_tokens(text: str) -> int:
-    """Approximate token count from text length."""
-    return max(1, len(text) // CHARS_PER_TOKEN)
+    """Approximate token count from text length (uses tiktoken when available)."""
+    from backend.app.agents.token_counter import count_tokens
+
+    return count_tokens(text)
 
 
 class ConversationService:

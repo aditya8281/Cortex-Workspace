@@ -25,13 +25,13 @@
 | Phase 2 | Intent classification | ✅ Complete | casual/admin/agent/continuation classifier |
 | Phase 2 | Stall detection | ✅ Complete | Repeated identical calls → force answer |
 | Phase 2 | Completion verifier | ✅ Complete | Fresh-context LLM subagent |
-| Phase 2 | tiktoken | ⬜ Not started | Not yet integrated |
+| Phase 2 | tiktoken | ✅ Complete | Integrated in conversation_service, compactor, llm manager with fallback |
 | Phase 2 | Run persistence | ⬜ Not started | Database-backed run store not yet implemented |
 | Phase 2 | Feature flag | ✅ Complete | CORTEX_NEW_AGENT_LOOP in settings |
 | Phase 3 | CLI commands (15) | ⬜ Not started | |
 | Phase 3 | Bug fixes (5) | ⬜ Not started | |
 | Phase 3 | Documentation cleanup | ⬜ Not started | |
-| **V1 Total** | **20 components** | **🟡 15/20** | |
+| **V1 Total** | **20 components** | **🟡 16/20** | |
 
 ---
 
