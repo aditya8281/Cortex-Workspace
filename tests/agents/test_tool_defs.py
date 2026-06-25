@@ -67,7 +67,9 @@ class TestReadFile:
     def test_read_file_empty(self):
         (Path(self._tmpdir) / "empty.txt").write_text("", encoding="utf-8")
         result = asyncio.run(read_file(path="empty.txt"))
-        assert result == ""
+        # Empty file now wrapped with UNTRUSTED_SOURCE_DATA markers
+        assert "<UNTRUSTED_SOURCE_DATA" in result
+        assert 'source="file:empty.txt"' in result
 
 
 class TestWriteFile:

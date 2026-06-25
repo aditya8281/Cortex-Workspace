@@ -13,6 +13,7 @@ import shlex
 from pathlib import Path
 from typing import Any
 
+from backend.app.agents.security import wrap_external_content
 from backend.app.agents.tools.registry import tool
 from backend.app.agents.tools.security import (
     BLOCKED_URL_SCHEMES,
@@ -182,7 +183,8 @@ async def web_fetch(url: str) -> str:
         req = urllib.request.Request(url, headers={"User-Agent": "Cortex-Agent/1.0"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = resp.read(100 * 1024)
-            return data.decode("utf-8", errors="replace")
+            content = data.decode("utf-8", errors="replace")
+            return wrap_external_content(content, source=f"web:{url}")
     except Exception as e:
         return f"Error fetching URL: {e}"
 
@@ -226,7 +228,7 @@ async def read_file(path: str, max_lines: int = 500) -> str:
             shown = lines[:max_lines]
             text = "\n".join(shown)
             text += f"\n\n... ({total - max_lines} more lines, truncated at {max_lines})"
-        return text
+        return wrap_external_content(text, source=f"file:{path}")
     except PermissionError:
         return f"Error: permission denied — {path}"
     except Exception as exc:
@@ -347,7 +349,7 @@ async def grep_files(pattern: str, path: str = ".", max_results: int = 50) -> st
     result_parts: list[str] = [f"Found {len(matches)} match(es) for: {pattern}"]
     for fpath, lineno, line in matches[:max_results]:
         result_parts.append(f"  {fpath}:{lineno}: {line}")
-    return "\n".join(result_parts)
+    return wrap_external_content("\n".join(result_parts), source=f"grep:{path}:{pattern}")
 
 
 @tool(description="Show git working tree status", category="code")
@@ -429,7 +431,7 @@ async def search_knowledge(query: str, limit: int = 10) -> str:
                 content = str(r.get("content", ""))[:200]
                 category = r.get("category", "general")
                 parts.append(f"  [{category}] {title}: {content}")
-            return "\n".join(parts)
+            return wrap_external_content("\n".join(parts), source="search:knowledge")
         finally:
             db.close()
     except ImportError:

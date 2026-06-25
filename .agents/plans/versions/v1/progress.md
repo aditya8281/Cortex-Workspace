@@ -21,7 +21,7 @@
 | Phase 2 | Tool policy | ✅ Complete | Per-turn allow/deny/ask composition |
 | Phase 2 | Tool security | ✅ Complete | Enhanced SSRF, path traversal, command blocking |
 | Phase 2 | Context compaction | ✅ Complete | Auto at 85%, Goal/Done/State/Pending summary |
-| Phase 2 | Prompt security | ⬜ Not started | UNTRUSTED_SOURCE_DATA markers not yet implemented |
+| Phase 2 | Prompt security | ✅ Complete | UNTRUSTED_SOURCE_DATA markers on web_fetch, read_file, grep_files, search_knowledge |
 | Phase 2 | Intent classification | ✅ Complete | casual/admin/agent/continuation classifier |
 | Phase 2 | Stall detection | ✅ Complete | Repeated identical calls → force answer |
 | Phase 2 | Completion verifier | ✅ Complete | Fresh-context LLM subagent |
@@ -31,7 +31,7 @@
 | Phase 3 | CLI commands (15) | ⬜ Not started | |
 | Phase 3 | Bug fixes (5) | ⬜ Not started | |
 | Phase 3 | Documentation cleanup | ⬜ Not started | |
-| **V1 Total** | **20 components** | **🟡 14/20** | |
+| **V1 Total** | **20 components** | **🟡 15/20** | |
 
 ---
 
