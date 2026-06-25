@@ -54,10 +54,11 @@ def _parse_vcard(text: str) -> dict[str, str | list[str]]:
             tel_type = "work" if "work" in params_lower else ("home" if "home" in params_lower else "other")
             key = f"phone_{tel_type}"
             if key in result:
-                if isinstance(result[key], list):
-                    result[key].append(value)
+                existing = result[key]
+                if isinstance(existing, list):
+                    existing.append(value)
                 else:
-                    result[key] = [result[key], value]
+                    result[key] = [existing, value]
             else:
                 result[key] = value
         elif prop_name == "EMAIL":
@@ -65,10 +66,11 @@ def _parse_vcard(text: str) -> dict[str, str | list[str]]:
             email_type = "work" if "work" in params_lower else ("home" if "home" in params_lower else "other")
             key = f"email_{email_type}"
             if key in result:
-                if isinstance(result[key], list):
-                    result[key].append(value)
+                existing = result[key]
+                if isinstance(existing, list):
+                    existing.append(value)
                 else:
-                    result[key] = [result[key], value]
+                    result[key] = [existing, value]
             else:
                 result[key] = value
         elif prop_name == "ADR":
