@@ -112,17 +112,17 @@ class FileWatcherV2:
         return True
 
     def start(self) -> None:
-        if self._observer and self._observer.is_alive():  # type: ignore[union-attr]
+        if self._observer and self._observer.is_alive():  # type: ignore[attr-defined]
             return
         self._observer = Observer()
-        self._observer.start()  # type: ignore[union-attr]
+        self._observer.start()  # type: ignore[attr-defined]
         logger.info("File watcher started")
 
     def stop(self) -> None:
-        if self._observer and self._observer.is_alive():  # type: ignore[union-attr]
-            self._observer.stop()  # type: ignore[union-attr]
-            self._observer.join(timeout=5.0)  # type: ignore[union-attr]
-            if self._observer.is_alive():  # type: ignore[union-attr]
+        if self._observer and self._observer.is_alive():  # type: ignore[attr-defined]
+            self._observer.stop()  # type: ignore[attr-defined]
+            self._observer.join(timeout=5.0)  # type: ignore[attr-defined]
+            if self._observer.is_alive():  # type: ignore[attr-defined]
                 logger.warning("File watcher did not stop within timeout")
             else:
                 logger.info("File watcher stopped")

@@ -126,4 +126,4 @@ Cortex development follows a 6-version system. Each version is a complete, relea
 
 ## Previous Development History
 
-For pre-V1 development history (Phase 1–6.5), see [`PREVIOUS_DEVELOPMENT_HISTORY.md`](../PREVIOUS_DEVELOPMENT_HISTORY.md).
+For pre-V1 development history (Phase 1–6.5), see [`PREVIOUS_DEVELOPMENT_HISTORY.md`](PREVIOUS_DEVELOPMENT_HISTORY.md).

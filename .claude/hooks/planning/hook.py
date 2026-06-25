@@ -51,7 +51,9 @@ def check_adr_consistency() -> list[str]:
     if not adr_dir.exists():
         return []
 
-    for adr_file in adr_dir.glob("*.md"):
+    for adr_file in sorted(adr_dir.glob("*.md")):
+        if adr_file.name == "README.md":
+            continue
         content = read_file(adr_file)
         if not content:
             continue
