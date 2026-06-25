@@ -1,7 +1,7 @@
 # CORTEX V1: "The Brain Works" — Progress
 
 **Version:** 1
-**Started:** —
+**Started:** 2026-06-25
 **Target:** —
 
 ---
@@ -10,11 +10,11 @@
 
 | Phase | Component | Status | Notes |
 |-------|-----------|--------|-------|
-| Phase 1 | Daemon lifecycle | ⬜ Not started | cortexd start/stop/status/logs |
-| Phase 1 | PID management | ⬜ Not started | PID file, stale detection, orphan cleanup |
-| Phase 1 | Health checks | ⬜ Not started | DB, Redis, Qdrant probing |
-| Phase 1 | Graceful shutdown | ⬜ Not started | Drain in-flight, flush state |
-| Phase 1 | Sleep/wake | ⬜ Not started | Idle detection, wake triggers |
+| Phase 1 | Daemon lifecycle | ✅ Complete | cortexd start/stop/status/logs |
+| Phase 1 | PID management | ✅ Complete | PID file, stale detection, orphan cleanup |
+| Phase 1 | Health checks | ✅ Complete | DB, Redis, Qdrant probing |
+| Phase 1 | Graceful shutdown | ✅ Complete | Signal handlers, drain in-flight |
+| Phase 1 | Sleep/wake | ✅ Complete | Idle detection, wake triggers |
 | Phase 2 | Agent loop rebuild | ⬜ Not started | Single streaming loop (replaces Planner→Executor) |
 | Phase 2 | @tool decorator | ⬜ Not started | Auto-generated JSON Schema |
 | Phase 2 | 15+ tools | ⬜ Not started | With schemas, policy, security |
@@ -29,10 +29,10 @@
 | Phase 3 | CLI commands (15) | ⬜ Not started | daemon, agent, search, config, vault, memory |
 | Phase 3 | Bug fixes (5) | ⬜ Not started | Dead code, SSRF, blocking, sync/async, tokens |
 | Phase 3 | Documentation cleanup | ⬜ Not started | CLAUDE.md, test count, architecture |
-| **V1 Total** | **19 components** | **⬜ 0/19** | |
+| **V1 Total** | **19 components** | **🟡 5/19** | |
 
 ---
 
 ## Commit Log
 
-(No commits yet — version not started)
+- `c32b1f6` feat(daemon): V1 Phase-1 daemon foundation — PID mgmt, health checks, lifecycle, CLI
