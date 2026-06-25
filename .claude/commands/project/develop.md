@@ -235,6 +235,7 @@ The full development lifecycle is documented across these commands:
 
 | Phase | Command | When |
 |-------|---------|------|
+| Project Evolution | `/project:update` | High-level idea → approved plan |
 | Triage & Classification | `/project:develop` Step 2 | Session start, ambiguous tasks |
 | Prompt Generation | `/project:prompt` | Complex tasks needing structured spec |
 | Full Implementation | `/project:cortex` | Every significant implementation |
@@ -247,6 +248,7 @@ The full development lifecycle is documented across these commands:
 | Health Check | `/project:health` | Weekly |
 | Ecosystem Improvement | `/project:improve` | Weekly or after significant work |
 | Feature Gap Analysis | `/project:feature-gap` | During planning |
+| Planning Ecosystem | `/project:enhance_plan` | When plans drift from reality |
 | Ideas | `/project:ideas` | Weekly |
 
 ## Commit Guideline

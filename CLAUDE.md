@@ -239,6 +239,7 @@ Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for d
 
 | Command | When | Purpose |
 |---------|------|---------|
+| `/project:update` | Before significant changes | Project evolution orchestration — design before implementation |
 | `/project:develop` | Start of session | Orchestrate next development iteration |
 | `/project:cortex` | Start development session | Autonomous development iteration |
 | `/project:prompt` | Before complex work | Generate ecosystem-aware prompts |
