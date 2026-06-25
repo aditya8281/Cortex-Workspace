@@ -6,7 +6,7 @@
 
 | Area | State |
 |------|-------|
-| Tests | 486+ passing (backend pytest + frontend vitest) |
+| Tests | 434 passing (341 backend pytest + 93 frontend vitest) |
 | Frontend build | Passes |
 | Linting | ruff + ESLint + mypy — all clean |
 | Auth + vault backend | Production-quality foundation |

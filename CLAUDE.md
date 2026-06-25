@@ -14,7 +14,7 @@ When entering this repository, Claude MUST do these in order:
 
 ```bash
 # Read the constitution to understand the full system
-cat guide.md
+cat .agents/plans/guide.md
 
 # Find which version is currently being developed
 grep -r "in_progress\|active\|current" .agents/plans/versions/*/progress.md
@@ -32,7 +32,7 @@ If no version is active (all components show "Not started"), start with **V1: Th
 cat .agents/plans/implementation_steps.md
 
 # Architecture constitution (10 principles, what to keep/reject)
-cat guide.md
+cat .agents/plans/guide.md
 
 # Cross-reference matrix (which items go in which version)
 cat .agents/plans/FinalCompatibilities.md
@@ -71,7 +71,7 @@ When documents conflict, this order governs:
 | Priority | Document | Purpose |
 |----------|----------|---------|
 | 1 | **CLAUDE.md** (this file) | Execution contract — what Claude does |
-| 2 | **guide.md** | Constitution — architecture principles, what to build |
+| 2 | **.agents/plans/guide.md** | Constitution — architecture principles, what to build |
 | 3 | **AGENTS.md** | Agent behavior rules — security, API patterns |
 | 4 | **.agents/plans/implementation_steps.md** | Implementation guide — execution order |
 | 5 | **.agents/plans/versions/vX/Phase-N.md** | Active phase plan — current work |
@@ -101,7 +101,7 @@ Six versions, each a complete milestone:
 ### Before ANY Work
 
 1. **Read the active phase plan** — know what components are in scope
-2. **Read the constraints** — guide.md architecture principles apply always
+2. **Read the constraints** — .agents/plans/guide.md architecture principles apply always
 3. **Verify entry state** — run the entry protocol above
 4. **Skill discovery** — check `.agents/skills/` for applicable skills
 5. **Branch** — create `feat/<topic>` from `main`
@@ -135,7 +135,7 @@ Six versions, each a complete milestone:
 
 ## Architecture Constraints
 
-These rules are immutable. See `guide.md` for full rationale.
+These rules are immutable. See `.agents/plans/guide.md` for full rationale.
 
 ### Backend (`backend/app/`)
 
@@ -170,8 +170,8 @@ These rules are immutable. See `guide.md` for full rationale.
 | Schemas | `backend/app/schemas/` |
 | Routers | `backend/app/api/v1/` |
 | Services | `backend/app/services/` |
-| Managers | `backend/app/managers/` |
-| Middleware | `backend/app/middleware/` |
+| Core | `backend/app/core/` (config, security, middleware, DB, Redis) |
+| Agents | `backend/app/agents/` (agent system, run manager) |
 | Tasks | `backend/app/tasks/` |
 | Tests | `tests/` (project root, NOT inside backend/) |
 | Migrations | `migrations/versions/` |
@@ -247,7 +247,7 @@ Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for d
 
 - `start.sh` uses port 5435 (user-space PG). `docker-compose.yml` uses 5432. Different.
 - `conftest.py` compiles `JSONB → JSON` for SQLite. Real DB uses JSONB.
-- `main.py` imports all models at module level for Alembic autogenerate.
+- `migrations/env.py` imports all models for Alembic autogenerate.
 - Route order: specific routes before parameterized (e.g., `/models/installed` before `/models/{id}`).
 - `cortexCode` Rust crate: `cargo build --release` in `crates/code-intel/` before Python use.
 
@@ -266,7 +266,7 @@ Required: `SECRET_KEY`, `DATABASE_URL` (port 5435), `APP_NAME`, `API_V1_PREFIX`.
 | Topic | Location |
 |-------|----------|
 | Architecture | `docs/ARCHITECTURE.md` |
-| Constitution | `guide.md` |
+| Constitution | `.agents/plans/guide.md` |
 | Governance | `docs/GOVERNANCE.md` |
 | Workflows | `docs/WORKFLOWS.md` |
 | Developer Guide | `docs/DEVELOPER_GUIDE.md` |

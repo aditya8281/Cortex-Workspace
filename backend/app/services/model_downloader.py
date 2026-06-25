@@ -425,6 +425,8 @@ class DownloadManager:
                 "status": r.status.value,
                 "progress": r.progress,
                 "speed_bytes_sec": r.speed_bytes_sec,
+                "bytes_downloaded": r.bytes_downloaded,
+                "total_bytes": r.total_bytes,
                 "eta_seconds": r.eta_seconds,
                 "retry_count": r.retry_count,
                 "error_message": r.error_message,

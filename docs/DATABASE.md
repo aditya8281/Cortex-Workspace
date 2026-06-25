@@ -83,5 +83,5 @@ After any model change, run `make migration m="description"` then `make migrate`
 ## Gotchas
 
 - Root `conftest.py` compiles `JSONB → JSON` for SQLite compatibility. Real DB uses JSONB.
-- `backend/app/main.py` imports all models at module level for Alembic autogenerate to work.
+- `migrations/env.py` imports all models for Alembic autogenerate to work.
 - `start.sh` runs PostgreSQL on port 5435 (user-space). `docker-compose.yml` uses port 5432. These are different.

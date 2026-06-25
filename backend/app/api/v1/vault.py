@@ -189,7 +189,19 @@ async def upload_file(
 ):
     """Upload a file to a specific folder in the vault."""
     vault_service._require_unlocked(current_user)
-    content = await file.read()
+    # Read in chunks to enforce size limit before loading entire file into memory
+    MAX_UPLOAD = 10 * 1024 * 1024  # 10 MB
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(64 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_UPLOAD:
+            raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD // (1024*1024)} MB)")
+        chunks.append(chunk)
+    content = b"".join(chunks)
     filename = file.filename or "unnamed"
 
     clean_folder = folder.strip("/")

@@ -121,7 +121,7 @@ async def login(payload: UserLogin, request: Request, response: Response, db: Se
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str | None = None
 
 
 @router.post("/api/v1/auth/refresh", response_model=TokenResponse)

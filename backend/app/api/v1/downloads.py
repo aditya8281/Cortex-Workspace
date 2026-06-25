@@ -129,25 +129,25 @@ async def get_download_queue(
 
     for rec in records:
         rec_dict = {
-            "job_id": rec.download_id,
-            "model_id": rec.model_name,
-            "status": rec.status.value,
-            "progress": rec.progress,
-            "speed_bytes_sec": rec.speed_bytes_sec,
-            "downloaded_bytes": rec.bytes_downloaded,
-            "total_bytes": rec.total_bytes,
-            "eta_seconds": rec.eta_seconds,
+            "job_id": rec["download_id"],
+            "model_id": rec["model_name"],
+            "status": rec["status"],
+            "progress": rec["progress"],
+            "speed_bytes_sec": rec["speed_bytes_sec"],
+            "downloaded_bytes": rec.get("bytes_downloaded", 0),
+            "total_bytes": rec.get("total_bytes", 0),
+            "eta_seconds": rec["eta_seconds"],
             "queue_position": None,
-            "error": rec.error_message,
+            "error": rec["error_message"],
         }
 
-        if rec.status.value == "downloading":
+        if rec["status"] == "downloading":
             active.append(rec_dict)
-        elif rec.status.value == "queued":
+        elif rec["status"] == "queued":
             queued.append(rec_dict)
-        elif rec.status.value == "completed":
+        elif rec["status"] == "completed":
             completed.append(rec_dict)
-        elif rec.status.value in ("failed", "cancelled"):
+        elif rec["status"] in ("failed", "cancelled"):
             failed.append(rec_dict)
 
     for i, job in enumerate(queued):

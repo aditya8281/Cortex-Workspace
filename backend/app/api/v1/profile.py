@@ -148,11 +148,21 @@ async def upload_profile_photo(
     db: Session = Depends(get_db),
 ):
     """Upload and process a profile photo (JPEG, PNG, or WebP, max 2 MB)."""
-    content = await file.read()
+    # Read in chunks to enforce size limit before loading entire file into memory
+    MAX_PHOTO = 2 * 1024 * 1024  # 2 MB
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(64 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > MAX_PHOTO:
+            raise HTTPException(status_code=413, detail="File too large (max 2 MB)")
+        chunks.append(chunk)
+    content = b"".join(chunks)
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
-    if len(content) > 2 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large (max 2 MB)")
 
     # Validate image type — check content_type header first, then PIL
     content_type = (file.content_type or "").lower()

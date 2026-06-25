@@ -149,8 +149,8 @@ def test_refresh_after_logout_fails(client):
 
 def test_refresh_with_missing_token(client):
     r = client.post("/api/v1/auth/refresh", json={})
-    # Missing refresh_token → Pydantic validation error (422)
-    assert r.status_code == 422
+    # Missing refresh_token → falls through to cookie check, no cookie → 401
+    assert r.status_code == 401
 
 
 def test_refresh_with_invalid_token(client):
