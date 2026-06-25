@@ -182,7 +182,7 @@ SKIP_DIRS: set[str] = {
 
 # chardet availability
 try:
-    import chardet  # type: ignore[import-untyped]
+    import chardet  # type: ignore[import-not-found]
 
     _CHARDET_AVAILABLE = True
 except ImportError:
@@ -274,7 +274,7 @@ class DocumentIndexer:
         if parser is None:
             return self._read_text_file(file_path)
         try:
-            parsed = parser.parse(file_path)
+            parsed = parser.parse(file_path)  # type: ignore[attr-defined]
             return parsed.full_text
         except Exception as e:
             logger.warning(

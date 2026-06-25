@@ -198,7 +198,7 @@ class OllamaCatalogService:
             elif source_name == "registry":
                 status.registry = "ok"
 
-            for model in result:
+            for model in result:  # type: ignore[union-attr]
                 key = model.get("name", "")
                 existing = merged.get(key)
                 if existing is None:
@@ -296,18 +296,14 @@ class OllamaCatalogService:
             CONCURRENCY_LIMIT,
         )
 
-        async def _probe_one(
-            model_name: str, tag: str, all_tags: list[str]
-        ) -> None:
+        async def _probe_one(model_name: str, tag: str, all_tags: list[str]) -> None:
             async with self._semaphore:
                 result = await self._probe_registry_model(model_name, tag)
             if result is not None:
                 result["available_tags"] = all_tags
                 models.append(result)
 
-        await asyncio.gather(
-            *[_probe_one(name, tag, tags) for name, tag, tags in probe_list]
-        )
+        await asyncio.gather(*[_probe_one(name, tag, tags) for name, tag, tags in probe_list])
 
         logger.info("Registry probe complete: %d models found", len(models))
         return models
@@ -618,9 +614,7 @@ class OllamaCatalogService:
             logger.warning("Failed to load fallback catalog: %s", e)
         return None
 
-    def fetch_catalog_sync(
-        self, force_refresh: bool = False
-    ) -> tuple[list[dict[str, Any]], CatalogSourceStatus]:
+    def fetch_catalog_sync(self, force_refresh: bool = False) -> tuple[list[dict[str, Any]], CatalogSourceStatus]:
         """Sync wrapper for backward compatibility.
 
         Runs fetch_catalog in a new event loop if no loop is running,

@@ -78,7 +78,7 @@ class ModelComparisonService:
 
         # Overall winner: model with most dimension wins
         if result.dimension_wins:
-            result.winner_model = max(result.dimension_wins, key=result.dimension_wins.get)
+            result.winner_model = max(result.dimension_wins, key=result.dimension_wins.get)  # type: ignore[arg-type]
 
         result.summary = self._generate_summary(result, models, hardware)
         return result
@@ -119,9 +119,9 @@ class ModelComparisonService:
         numeric_vals = {k: v for k, v in dr.values.items() if isinstance(v, (int, float))}
         if numeric_vals:
             if dr.higher_is_better:
-                dr.winner = max(numeric_vals, key=numeric_vals.get)
+                dr.winner = max(numeric_vals, key=numeric_vals.get)  # type: ignore[arg-type]
             else:
-                dr.winner = min(numeric_vals, key=numeric_vals.get)
+                dr.winner = min(numeric_vals, key=numeric_vals.get)  # type: ignore[arg-type]
         else:
             # Fallback: pick first non-None
             for name, val in dr.values.items():

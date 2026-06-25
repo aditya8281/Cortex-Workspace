@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
+import builtins
+
 from backend.app.models.conversation import Conversation, ConversationMessage
 
 # Approximate tokens per character (English text ~4 chars per token)
@@ -75,7 +77,7 @@ class ConversationService:
         self._db.refresh(msg)
         return msg
 
-    def get_messages(self, conversation_id: int, limit: int = 50) -> list[ConversationMessage]:
+    def get_messages(self, conversation_id: int, limit: int = 50) -> builtins.list[ConversationMessage]:
         return (
             self._db.query(ConversationMessage)
             .filter(ConversationMessage.conversation_id == conversation_id)
@@ -86,9 +88,9 @@ class ConversationService:
 
     def get_context_messages(
         self, conversation_id: int, max_tokens: int = MAX_CONTEXT_TOKENS
-    ) -> list[ConversationMessage]:
+    ) -> builtins.list[ConversationMessage]:
         """Get messages that fit within the token budget, keeping most recent."""
-        all_msgs = self.get_messages(conversation_id, limit=500)
+        all_msgs: list[ConversationMessage] = self.get_messages(conversation_id, limit=500)
         if not all_msgs:
             return []
 
@@ -117,7 +119,9 @@ class ConversationService:
             conv.title = title
             self._db.commit()
 
-    async def extract_insights(self, conversation_id: int, user_id: int, model: str | None = None) -> list[dict]:
+    async def extract_insights(
+        self, conversation_id: int, user_id: int, model: str | None = None
+    ) -> builtins.list[dict]:
         try:
             from backend.app.services.llm.manager import llm_manager
             from backend.app.services.llm.provider import LLMMessage
@@ -127,7 +131,7 @@ class ConversationService:
             if len(messages) < 2:
                 return []
 
-            conversation_text = "\n".join(f"{m.role}: {m.content}" for m in messages)
+            conversation_text = "\n".join(f"{m.role}: {m.content}" for m in messages)  # type: ignore[attr-defined]
             extraction_prompt = (
                 "Analyze this conversation and extract key insights about the user. "
                 "For each insight, provide:\n"

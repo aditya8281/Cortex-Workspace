@@ -12,19 +12,31 @@ from backend.app.services.document_indexer import DocumentIndexer, _detect_doc_t
 
 @pytest.fixture()
 def indexer(db_session: Session):
-    mock_embedder = type("MockEmbedder", (), {
-        "embed_batch": lambda self, texts: [[0.1] * 768 for _ in texts],
-        "embed_single": lambda self, text: [0.1] * 768,
-        "compute_embedding_id": lambda self, text: "test_id_" + text[:8],
-    })()
-    mock_vdb = type("MockVDB", (), {
-        "upsert": lambda self, coll, pts: None,
-        "delete": lambda self, coll, ids: None,
-    })()
-    mock_cache = type("MockCache", (), {
-        "get": lambda self, h, model_name: None,
-        "put": lambda self, **kw: None,
-    })()
+    mock_embedder = type(
+        "MockEmbedder",
+        (),
+        {
+            "embed_batch": lambda self, texts: [[0.1] * 768 for _ in texts],
+            "embed_single": lambda self, text: [0.1] * 768,
+            "compute_embedding_id": lambda self, text: "test_id_" + text[:8],
+        },
+    )()
+    mock_vdb = type(
+        "MockVDB",
+        (),
+        {
+            "upsert": lambda self, coll, pts: None,
+            "delete": lambda self, coll, ids: None,
+        },
+    )()
+    mock_cache = type(
+        "MockCache",
+        (),
+        {
+            "get": lambda self, h, model_name: None,
+            "put": lambda self, **kw: None,
+        },
+    )()
     return DocumentIndexer(db_session, embedding_service=mock_embedder, embedding_cache=mock_cache, vector_db=mock_vdb)
 
 

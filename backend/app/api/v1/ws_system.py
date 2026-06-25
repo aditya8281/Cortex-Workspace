@@ -48,12 +48,14 @@ def collect_processes(n: int = 5) -> list[dict]:
         try:
             info = proc.info
             if info["cpu_percent"] and info["cpu_percent"] > 0:
-                processes.append({
-                    "pid": info["pid"],
-                    "name": info["name"],
-                    "cpu_percent": round(info["cpu_percent"], 1),
-                    "memory_percent": round(info["memory_percent"], 1)
-                })
+                processes.append(
+                    {
+                        "pid": info["pid"],
+                        "name": info["name"],
+                        "cpu_percent": round(info["cpu_percent"], 1),
+                        "memory_percent": round(info["memory_percent"], 1),
+                    }
+                )
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
 

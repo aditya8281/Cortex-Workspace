@@ -45,6 +45,7 @@ def test_chunk_text_paragraphs(chunker):
 
 def test_chunk_notebook(chunker):
     import json
+
     nb = {
         "cells": [
             {"cell_type": "markdown", "source": ["# Title"]},

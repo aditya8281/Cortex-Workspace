@@ -73,7 +73,7 @@ class LongTermMemoryService:
         )
         result = self.db.execute(stmt)  # type: ignore[assignment]
         self.db.commit()
-        return result.rowcount
+        return result.rowcount  # type: ignore[attr-defined]
 
     def search(
         self,

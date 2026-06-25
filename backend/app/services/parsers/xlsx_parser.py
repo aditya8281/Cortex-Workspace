@@ -14,7 +14,7 @@ class XlsxParser(BaseParser):
 
     def parse(self, file_path: str) -> ParsedDocument:
         try:
-            import openpyxl
+            import openpyxl  # type: ignore[import-untyped]
         except ImportError:
             logger.warning("openpyxl not installed — run: pip install openpyxl")
             return ParsedDocument(metadata={"error": "openpyxl not installed"})

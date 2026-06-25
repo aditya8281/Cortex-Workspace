@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from backend.app.services.parsers.base import BaseParser, ParsedDocument, ParsedSection
 
@@ -20,7 +21,7 @@ class PDFParser(BaseParser):
             return ParsedDocument(metadata={"error": "pdfplumber not installed"})
 
         sections = []
-        metadata = {}
+        metadata: dict[str, Any] = {}
 
         try:
             with pdfplumber.open(file_path) as pdf:

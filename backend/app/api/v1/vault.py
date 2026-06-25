@@ -116,15 +116,16 @@ async def unlock_vault(
         logger.warning("Vault rate limiter Redis failure, falling back to in-memory: %s", e)
         # In-memory fallback when Redis is down
         import time as _time
+
         now = _time.time()
-        if not hasattr(unlock_vault, '_attempts'):
-            unlock_vault._attempts = {}
+        if not hasattr(unlock_vault, "_attempts"):  # type: ignore[attr-defined]
+            unlock_vault._attempts = {}  # type: ignore[attr-defined]
         user_key = str(current_user.id)
-        attempts = unlock_vault._attempts.get(user_key, {"count": 0, "window_start": now})
+        attempts = unlock_vault._attempts.get(user_key, {"count": 0, "window_start": now})  # type: ignore[attr-defined]
         if now - attempts["window_start"] > 60:
             attempts = {"count": 0, "window_start": now}
         attempts["count"] += 1
-        unlock_vault._attempts[user_key] = attempts
+        unlock_vault._attempts[user_key] = attempts  # type: ignore[attr-defined]
         if attempts["count"] > 5:
             raise HTTPException(status_code=429, detail="Too many vault unlock attempts. Try again later.")
 
@@ -199,7 +200,7 @@ async def upload_file(
             break
         total += len(chunk)
         if total > MAX_UPLOAD:
-            raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD // (1024*1024)} MB)")
+            raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD // (1024 * 1024)} MB)")
         chunks.append(chunk)
     content = b"".join(chunks)
     filename = file.filename or "unnamed"
@@ -240,7 +241,7 @@ def preview_file(
     vault_service._require_unlocked(current_user)
     content = vault_service.download_vault_file(db, current_user.id, file_path)
     filename = file_path.split("/")[-1]
-    safe_name = filename.replace('"', '_')
+    safe_name = filename.replace('"', "_")
     mime_type = get_mime_type(filename)
     return StreamingResponse(
         io.BytesIO(content),
@@ -259,7 +260,7 @@ def download_file(
     vault_service._require_unlocked(current_user)
     content = vault_service.download_vault_file(db, current_user.id, file_path)
     filename = file_path.split("/")[-1]
-    safe_name = filename.replace('"', '_')
+    safe_name = filename.replace('"', "_")
     return StreamingResponse(
         io.BytesIO(content),
         media_type="application/octet-stream",

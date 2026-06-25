@@ -315,7 +315,7 @@ class ArchiveParser(BaseParser):
         all_text: list[str] = []
 
         try:
-            import py7zr
+            import py7zr  # type: ignore[import-not-found]
 
             with py7zr.SevenZipFile(file_path, mode="r") as sz:
                 names = sz.getnames()
@@ -374,7 +374,7 @@ class ArchiveParser(BaseParser):
         all_text: list[str] = []
 
         try:
-            import rarfile
+            import rarfile  # type: ignore[import-not-found]
 
             with rarfile.RarFile(file_path) as rf:
                 infos = rf.infolist()

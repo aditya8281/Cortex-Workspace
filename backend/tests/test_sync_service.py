@@ -39,7 +39,7 @@ def _make_model_info(**overrides) -> ProviderModelInfo:
         "size_bytes": 4_000_000_000,
     }
     defaults.update(overrides)
-    return ProviderModelInfo(**defaults)
+    return ProviderModelInfo(**defaults)  # type: ignore[arg-type]
 
 
 def _make_mock_adapter(name="ollama", models=None):

@@ -18,6 +18,7 @@ def get_registry_for_user(db: Session, user_id: int) -> StorageRegistry | None:
 def register_user_storage(db: Session, user_id: int, storage_root: str) -> StorageRegistry:
     if not validate_storage_path(storage_root):
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="Invalid storage path")
     entry = get_registry_for_user(db, user_id)
     if entry is None:

@@ -107,7 +107,7 @@ class RAGPipeline:
 
         messages.append({"role": "system", "content": "\n\n".join(system_parts)})
 
-        for msg in history:
+        for msg in history:  # type: ignore[attr-defined]
             messages.append({"role": msg.role, "content": msg.content})
 
         messages.append({"role": "user", "content": user_message})
@@ -125,9 +125,9 @@ class RAGPipeline:
 
         facts = []
         for i in range(0, len(messages) - 1, 2):
-            if messages[i].role == "user" and messages[i + 1].role == "assistant":
-                user_content = messages[i].content
-                assistant_content = messages[i + 1].content
+            if messages[i].role == "user" and messages[i + 1].role == "assistant":  # type: ignore[index]
+                user_content = messages[i].content  # type: ignore[index]
+                assistant_content = messages[i + 1].content  # type: ignore[index]
 
                 if len(user_content) > 20 and len(assistant_content) > 50:
                     fact = f"Q: {user_content[:200]}\nA: {assistant_content[:300]}"

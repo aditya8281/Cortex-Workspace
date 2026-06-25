@@ -3,6 +3,7 @@
 Queries Ollama's /api/tags to detect locally installed models
 and syncs their download status to the database.
 """
+
 from __future__ import annotations
 
 import logging
@@ -72,12 +73,16 @@ class OllamaSyncService:
 
         try:
             # 2. Match existing variants by ollama_tag
-            existing_variants = db.execute(
-                select(ModelVariant).where(
-                    ModelVariant.ollama_tag.isnot(None),
-                    ModelVariant.ollama_tag.in_(list(installed_tags)),
+            existing_variants = (
+                db.execute(
+                    select(ModelVariant).where(
+                        ModelVariant.ollama_tag.isnot(None),
+                        ModelVariant.ollama_tag.in_(list(installed_tags)),
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
             matched_tags = set()
             for variant in existing_variants:
@@ -124,12 +129,16 @@ class OllamaSyncService:
                 result.created += 1
 
             # 4. Detect deletions
-            downloaded_variants = db.execute(
-                select(ModelVariant).where(
-                    ModelVariant.downloaded,
-                    ModelVariant.ollama_tag.isnot(None),
+            downloaded_variants = (
+                db.execute(
+                    select(ModelVariant).where(
+                        ModelVariant.downloaded,
+                        ModelVariant.ollama_tag.isnot(None),
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
             for variant in downloaded_variants:
                 if variant.ollama_tag not in installed_tags:
@@ -145,9 +154,7 @@ class OllamaSyncService:
     async def _fetch_installed(self, result: SyncResult) -> list[dict] | None:
         """Fetch installed models from Ollama. Returns None on failure."""
         try:
-            async with httpx.AsyncClient(
-                base_url=settings.OLLAMA_BASE_URL, timeout=5.0
-            ) as client:
+            async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=5.0) as client:
                 resp = await client.get("/api/tags")
                 resp.raise_for_status()
                 return resp.json().get("models", [])

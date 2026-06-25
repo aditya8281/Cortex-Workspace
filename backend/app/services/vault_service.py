@@ -434,7 +434,9 @@ def download_vault_file(db: Session, user_id: int, file_path: str) -> bytes:
         except Exception as e:
             logger.warning(
                 "Vault decryption failed for user %d file %s (may be unencrypted): %s",
-                user_id, file_path, e,
+                user_id,
+                file_path,
+                e,
             )
     return content
 
@@ -634,7 +636,9 @@ def change_vault_password(db: Session, user: User, old_pw: str, new_pw: str) -> 
             decrypted_metadata = decrypt_bytes(metadata_content, old_pw)
         except Exception:
             _restore_from_backup(vault_dir, backup_dir)
-            raise HTTPException(status_code=500, detail="Failed to decrypt vault metadata. Password change aborted — backup restored.")
+            raise HTTPException(
+                status_code=500, detail="Failed to decrypt vault metadata. Password change aborted — backup restored."
+            )
 
     # Re-encrypt and write everything with the new password
     try:

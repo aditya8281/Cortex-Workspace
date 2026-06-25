@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import cast
 
 from sqlalchemy import String as sa_String
 from sqlalchemy import cast as sa_cast
@@ -110,7 +111,7 @@ class ModelSearchService:
         query_lower = query.lower().strip()
         for phrase, filters in self.NL_MAPPINGS.items():
             if phrase in query_lower:
-                return filters
+                return cast(dict, filters)
         return None
 
     def _filtered_search(self, filters: dict, limit: int) -> list[ModelCatalog]:

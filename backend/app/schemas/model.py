@@ -216,6 +216,7 @@ class InstalledModelsResponse(BaseModel):
 
 class SyncInstalledResponse(BaseModel):
     """Response for Ollama model sync."""
+
     matched: int = 0
     created: int = 0
     deleted: int = 0

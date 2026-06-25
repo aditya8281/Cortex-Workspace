@@ -4,6 +4,7 @@ Scrapes ollama.com/library to update backend/app/data/library.json
 with the latest model families and tags. Runs once at startup and
 on manual trigger (not periodic).
 """
+
 from __future__ import annotations
 
 import asyncio

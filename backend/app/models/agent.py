@@ -53,9 +53,7 @@ class AgentRun(Base):
     steps = relationship("AgentStep", back_populates="run", cascade="all, delete-orphan")
     feedback = relationship("AgentFeedback", back_populates="run", cascade="all, delete-orphan")
 
-    __table_args__ = (
-        Index("idx_agent_runs_status", "status"),
-    )
+    __table_args__ = (Index("idx_agent_runs_status", "status"),)
 
 
 class AgentStep(Base):

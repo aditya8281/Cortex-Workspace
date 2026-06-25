@@ -221,9 +221,9 @@ class IncrementalIndexer:
 
         If rules is provided, applies additional IndexingRules filtering.
         """
-        followlinks = bool(rules and rules._config and rules._config.follow_symlinks)
+        follow_symlinks = bool(rules and rules._config and rules._config.follow_symlinks)
         files: list[Path] = []
-        for root, dirs, filenames in path.walk(followlinks=followlinks):
+        for root, dirs, filenames in path.walk(follow_symlinks=follow_symlinks):
             dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
             for filename in filenames:
                 file_path = Path(root) / filename
@@ -264,17 +264,17 @@ class IncrementalIndexer:
         repo_id = self._get_repo_id_for_file(rel_path)
 
         db_chunks: list[CodeChunk] = []
-        for c in chunks:
+        for ch in chunks:
             chunk = CodeChunk(
                 repo_id=repo_id,
-                file_path=c.file_path,
-                chunk_index=c.chunk_index,
-                content=c.content,
-                language=c.language,
-                symbol_type=c.symbol_type,
-                symbol_name=c.symbol_name,
-                start_line=c.start_line,
-                end_line=c.end_line,
+                file_path=ch.file_path,
+                chunk_index=ch.chunk_index,
+                content=ch.content,
+                language=ch.language,
+                symbol_type=ch.symbol_type,
+                symbol_name=ch.symbol_name,
+                start_line=ch.start_line,
+                end_line=ch.end_line,
             )
             self.db.add(chunk)
             db_chunks.append(chunk)

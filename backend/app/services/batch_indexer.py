@@ -127,7 +127,7 @@ class BatchIndexer:
 
                 if points:
                     collection = items[0].collection if items else "cortex_code"
-                    vector_db.upsert_batch(collection, points)
+                    vector_db.upsert_batch(collection, points)  # type: ignore[attr-defined]
 
         except Exception as e:
             logger.error("Batch flush failed: %s", e)

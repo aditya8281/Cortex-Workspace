@@ -31,7 +31,7 @@ class EmbeddingService:
         model_path = self.model_path
         if model_path:
             try:
-                import onnxruntime as ort  # type: ignore[import-untyped]
+                import onnxruntime as ort  # type: ignore[import-not-found]
 
                 self._model = ort.InferenceSession(model_path)
                 self._backend = "onnx"
@@ -160,6 +160,8 @@ class EmbeddingService:
             except Exception as e:
                 raise RuntimeError(f"Failed to load tokenizer: {e}")
 
+        if self._tokenizer is None:
+            raise RuntimeError("Tokenizer not loaded")
         encoded = self._tokenizer(text, return_tensors="np", padding=True, truncation=True, max_length=512)
         return {k: v.tolist() for k, v in encoded.items()}
 

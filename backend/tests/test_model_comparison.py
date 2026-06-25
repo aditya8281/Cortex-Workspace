@@ -28,7 +28,7 @@ def _make_hardware(**kwargs) -> HardwareProfile:
         "supports_cuda": True,
     }
     defaults.update(kwargs)
-    return HardwareProfile(**defaults)
+    return HardwareProfile(**defaults)  # type: ignore[arg-type]
 
 
 def _make_model(**kwargs) -> ModelCatalog:

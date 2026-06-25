@@ -1,5 +1,3 @@
-
-
 def test_prometheus_metrics(client, mock_auth):
     resp = client.get("/api/v1/metrics")
     assert resp.status_code == 200

@@ -11,6 +11,7 @@ def mock_retrieval():
     class Mock:
         def retrieve(self, query, repo_id=None, limit=10, sources=None):
             from backend.app.services.hybrid_retrieval import RetrievalResult
+
             return [
                 RetrievalResult(
                     content="def calculate_sum(a, b): return a + b",
@@ -26,6 +27,7 @@ def mock_retrieval():
                     file_path="docs/math.md",
                 ),
             ]
+
     return Mock()
 
 
@@ -34,18 +36,30 @@ def mock_conv_service():
     class Mock:
         def get_context_messages(self, conversation_id, max_tokens=32000):
             from backend.app.models.conversation import ConversationMessage
+
             return [
                 ConversationMessage(id=1, conversation_id=1, role="user", content="Hello", tokens=1),
                 ConversationMessage(id=2, conversation_id=1, role="assistant", content="Hi there!", tokens=2),
             ]
+
         def get_messages(self, conversation_id, limit=50):
             from backend.app.models.conversation import ConversationMessage
+
             return [
-                ConversationMessage(id=1, conversation_id=1, role="user", content="How do I add numbers in Python?", tokens=3),
-                ConversationMessage(id=2, conversation_id=1, role="assistant", content="Use the calculate_sum function from math.py which takes two arguments and returns their sum using the + operator.", tokens=5),
+                ConversationMessage(
+                    id=1, conversation_id=1, role="user", content="How do I add numbers in Python?", tokens=3
+                ),
+                ConversationMessage(
+                    id=2,
+                    conversation_id=1,
+                    role="assistant",
+                    content="Use the calculate_sum function from math.py which takes two arguments and returns their sum using the + operator.",
+                    tokens=5,
+                ),
                 ConversationMessage(id=3, conversation_id=1, role="user", content="Thanks!", tokens=1),
                 ConversationMessage(id=4, conversation_id=1, role="assistant", content="You're welcome!", tokens=2),
             ]
+
     return Mock()
 
 
@@ -65,6 +79,7 @@ def test_retrieve_context_empty():
     class EmptyRetrieval:
         def retrieve(self, **kw):
             return []
+
     pipeline = RAGPipeline.__new__(RAGPipeline)
     pipeline._retrieval = EmptyRetrieval()
     ctx = pipeline.retrieve_context("nonexistent")
@@ -98,8 +113,10 @@ def test_consolidate_too_few_messages(rag: RAGPipeline):
     class ShortConv:
         def get_messages(self, cid, limit=50):
             from backend.app.models.conversation import ConversationMessage
+
             return [ConversationMessage(id=1, conversation_id=1, role="user", content="hi", tokens=1)]
-    rag._conv_service = ShortConv()
+
+    rag._conv_service = ShortConv()  # type: ignore[assignment]
     facts = rag.consolidate(1)
     assert len(facts) == 0
 
@@ -110,9 +127,9 @@ def test_context_token_limit():
     class ManyResults:
         def retrieve(self, **kw):
             return [
-                RetrievalResult(content="x " * 500, source="vector", score=0.9, file_path=f"f{i}.py")
-                for i in range(20)
+                RetrievalResult(content="x " * 500, source="vector", score=0.9, file_path=f"f{i}.py") for i in range(20)
             ]
+
     pipeline = RAGPipeline.__new__(RAGPipeline)
     pipeline._retrieval = ManyResults()
     ctx = pipeline.retrieve_context("test", max_tokens=500)

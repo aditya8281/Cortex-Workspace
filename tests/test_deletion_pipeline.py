@@ -9,13 +9,21 @@ from backend.app.services.deletion_pipeline import DeletionPipeline
 
 @pytest.fixture()
 def pipeline(db_session: Session) -> DeletionPipeline:
-    mock_vector_db = type("MockVectorDB", (), {
-        "delete": lambda self, coll, ids: None,
-        "collection_exists": lambda self, coll: True,
-    })()
-    mock_cache = type("MockEmbeddingCache", (), {
-        "invalidate": lambda self, h: 1,
-    })()
+    mock_vector_db = type(
+        "MockVectorDB",
+        (),
+        {
+            "delete": lambda self, coll, ids: None,
+            "collection_exists": lambda self, coll: True,
+        },
+    )()
+    mock_cache = type(
+        "MockEmbeddingCache",
+        (),
+        {
+            "invalidate": lambda self, h: 1,
+        },
+    )()
     return DeletionPipeline(db_session, vector_db=mock_vector_db, embedding_cache=mock_cache)
 
 

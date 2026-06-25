@@ -19,9 +19,27 @@ def _setup_code_chunks(db_session: Session):
     db_session.refresh(repo)
 
     chunks = [
-        CodeChunk(repo_id=repo.id, file_path="main.py", chunk_index=0, content="def calculate_sum(a, b): return a + b", language="python"),
-        CodeChunk(repo_id=repo.id, file_path="utils.py", chunk_index=1, content="def parse_json(text): import json; return json.loads(text)", language="python"),
-        CodeChunk(repo_id=repo.id, file_path="models.py", chunk_index=2, content="class User: def __init__(self, name): self.name = name", language="python"),
+        CodeChunk(
+            repo_id=repo.id,
+            file_path="main.py",
+            chunk_index=0,
+            content="def calculate_sum(a, b): return a + b",
+            language="python",
+        ),
+        CodeChunk(
+            repo_id=repo.id,
+            file_path="utils.py",
+            chunk_index=1,
+            content="def parse_json(text): import json; return json.loads(text)",
+            language="python",
+        ),
+        CodeChunk(
+            repo_id=repo.id,
+            file_path="models.py",
+            chunk_index=2,
+            content="class User: def __init__(self, name): self.name = name",
+            language="python",
+        ),
     ]
     db_session.add_all(chunks)
     db_session.commit()
@@ -30,6 +48,7 @@ def _setup_code_chunks(db_session: Session):
 def test_search_code_basic(db_session: Session, fts: FullTextSearch):
     _setup_code_chunks(db_session)
     results = fts.search_code("calculate sum")
+    assert db_session.bind is not None
     is_postgres = db_session.bind.dialect.name == "postgresql"
     if is_postgres:
         assert len(results) >= 1
@@ -54,6 +73,7 @@ def test_search_code_with_language_filter(db_session: Session, fts: FullTextSear
 def test_search_code_with_repo_filter(db_session: Session, fts: FullTextSearch):
     _setup_code_chunks(db_session)
     repo = db_session.query(RepoIndex).first()
+    assert repo is not None
     results = fts.search_code("sum", repo_id=repo.id)
     assert len(results) >= 0
 

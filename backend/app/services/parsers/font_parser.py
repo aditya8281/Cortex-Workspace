@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def _parse_font_metadata(file_path: str) -> dict:
     """Extract font metadata using fonttools."""
     try:
-        from fontTools.ttLib import TTFont
+        from fontTools.ttLib import TTFont  # type: ignore[import-not-found]
 
         font = TTFont(file_path, fontNumber=0)
         meta: dict = {}

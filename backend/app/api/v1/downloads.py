@@ -173,18 +173,18 @@ async def get_download_history(
 
     history = []
     for rec in records:
-        if rec.status.value in ("completed", "failed", "cancelled"):
+        if rec["status"] in ("completed", "failed", "cancelled"):
             history.append(
                 {
-                    "job_id": rec.download_id,
-                    "model_id": rec.model_name,
-                    "status": rec.status.value,
-                    "progress": rec.progress if rec.status.value != "completed" else 1.0,
-                    "downloaded_bytes": rec.bytes_downloaded,
-                    "total_bytes": rec.total_bytes,
-                    "error": rec.error_message,
-                    "completed_at": rec.completed_at,
-                    "created_at": rec.created_at,
+                    "job_id": rec["download_id"],
+                    "model_id": rec["model_name"],
+                    "status": rec["status"],
+                    "progress": rec["progress"] if rec["status"] != "completed" else 1.0,
+                    "downloaded_bytes": rec.get("bytes_downloaded", 0),
+                    "total_bytes": rec.get("total_bytes", 0),
+                    "error": rec.get("error_message"),
+                    "completed_at": rec.get("completed_at"),
+                    "created_at": rec.get("created_at"),
                 }
             )
 
@@ -236,6 +236,6 @@ async def delete_model(
     import httpx
 
     async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=30.0) as client:
-        resp = await client.delete("/api/delete", json={"name": model_name})
+        resp = await client.request("DELETE", "/api/delete", json={"name": model_name})
         resp.raise_for_status()
     return {"status": "deleted", "model": model_name}

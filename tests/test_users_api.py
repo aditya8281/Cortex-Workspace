@@ -1,4 +1,3 @@
-
 import pytest
 
 HEADERS = {"Authorization": "Bearer fake-token"}

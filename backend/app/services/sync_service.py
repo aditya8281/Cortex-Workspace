@@ -7,6 +7,7 @@ then upserts them into ModelCatalog.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import cast
 
 import structlog
 from sqlalchemy import select
@@ -60,7 +61,7 @@ class SyncService:
                     model_info = ProviderModelInfo(
                         provider_model_id=model.get("name", ""),
                         display_name=model.get("name", "").split(":")[0].replace("-", " ").title(),
-                        family=model.get("family"),
+                        family=cast(str, model.get("family") or ""),
                         parameter_count=self._parse_param_count(model.get("parameter_size")),
                         context_length=4096,
                         capabilities=model.get("capabilities", []),

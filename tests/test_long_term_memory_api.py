@@ -198,9 +198,7 @@ def test_delete_memory(client, mock_unlocked_auth, db_session):
 
     from sqlalchemy import select
 
-    refreshed = db_session.execute(
-        select(LongTermMemory).where(LongTermMemory.id == mem_id)
-    ).scalar_one()
+    refreshed = db_session.execute(select(LongTermMemory).where(LongTermMemory.id == mem_id)).scalar_one()
     assert refreshed.is_active is False
 
 

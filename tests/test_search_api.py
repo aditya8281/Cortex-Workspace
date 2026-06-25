@@ -3,7 +3,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 HEADERS = {"Authorization": "Bearer fake-token"}
 
 
-def _make_retrieval_result(content="test content", source="vector", score=0.9, file_path="test.py", document_id=1, language="python", chunk_type="code"):
+def _make_retrieval_result(
+    content="test content",
+    source="vector",
+    score=0.9,
+    file_path="test.py",
+    document_id=1,
+    language="python",
+    chunk_type="code",
+):
     r = MagicMock()
     r.content = content
     r.source = source

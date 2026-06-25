@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import structlog
 from sqlalchemy.orm import Session
 
@@ -127,5 +129,5 @@ class QuantizationService:
                         "score": round(score, 1),
                     }
                 )
-        recommendations.sort(key=lambda x: x["score"], reverse=True)  # type: ignore[arg-type]
-        return recommendations
+        recommendations.sort(key=lambda x: x["score"], reverse=True)  # type: ignore[return-value, arg-type]
+        return cast(list[dict], recommendations)

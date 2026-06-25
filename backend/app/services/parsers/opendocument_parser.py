@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 def _extract_odt_content(file_path: str) -> ParsedDocument:
     """Extract text from ODF text documents (.odt)."""
     try:
-        import odf.text
+        import odf.text  # type: ignore[import-not-found]
         from odf import teletype
-        from odf.opendocument import load
+        from odf.opendocument import load  # type: ignore[import-not-found]
 
         doc = load(file_path)
         paragraphs = doc.getElementsByType(odf.text.P)
@@ -58,9 +58,9 @@ def _extract_odt_content(file_path: str) -> ParsedDocument:
 def _extract_ods_content(file_path: str) -> ParsedDocument:
     """Extract tables from ODF spreadsheet documents (.ods)."""
     try:
-        from odf.opendocument import load
-        from odf.table import Table, TableCell, TableRow
-        from odf.text import P
+        from odf.opendocument import load  # type: ignore[import-not-found]
+        from odf.table import Table, TableCell, TableRow  # type: ignore[import-not-found]
+        from odf.text import P  # type: ignore[import-not-found]
 
         doc = load(file_path)
         tables = doc.getElementsByType(Table)
@@ -133,8 +133,8 @@ def _extract_odp_content(file_path: str) -> ParsedDocument:
     """Extract text from ODF presentation documents (.odp)."""
     try:
         from odf import teletype
-        from odf.opendocument import load
-        from odf.text import P
+        from odf.opendocument import load  # type: ignore[import-not-found]
+        from odf.text import P  # type: ignore[import-not-found]
 
         doc = load(file_path)
         paragraphs = doc.getElementsByType(P)

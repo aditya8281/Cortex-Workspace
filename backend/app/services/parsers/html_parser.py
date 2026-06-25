@@ -21,7 +21,7 @@ class HTMLParser(BaseParser):
 
     def parse(self, file_path: str) -> ParsedDocument:
         try:
-            from lxml import etree
+            from lxml import etree  # type: ignore[import-untyped]
         except ImportError:
             logger.warning("lxml not installed — run: pip install lxml")
             return ParsedDocument(metadata={"error": "lxml not installed"})
@@ -82,7 +82,7 @@ class HTMLParser(BaseParser):
 
 def _walk_lxml_tree(element, sections: list[ParsedSection]) -> None:
     """Walk an lxml element tree and extract sections."""
-    from lxml import etree
+    from lxml import etree  # type: ignore[import-untyped]
 
     for child in element:
         tag = etree.QName(child.tag).localname if isinstance(child.tag, str) else None
@@ -157,7 +157,7 @@ def _walk_lxml_tree(element, sections: list[ParsedSection]) -> None:
 
 def _walk_xml_element(element, sections: list[ParsedSection]) -> None:
     """Walk a raw XML element tree (non-HTML) and extract text sections."""
-    from lxml import etree
+    from lxml import etree  # type: ignore[import-untyped]
 
     if element.text and element.text.strip():
         sections.append(
@@ -196,7 +196,7 @@ def _walk_xml_element(element, sections: list[ParsedSection]) -> None:
 
 def _get_text_content(element) -> str:
     """Recursively get all text content from an element, skipping unwanted tags."""
-    from lxml import etree
+    from lxml import etree  # type: ignore[import-untyped]
 
     parts = []
     if element.text:

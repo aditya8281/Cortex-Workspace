@@ -23,7 +23,7 @@ class DocxParser(BaseParser):
 
     def parse(self, file_path: str) -> ParsedDocument:
         try:
-            import docx
+            import docx  # type: ignore[import-not-found]
         except ImportError:
             logger.warning("python-docx not installed — run: pip install python-docx")
             return ParsedDocument(metadata={"error": "python-docx not installed"})

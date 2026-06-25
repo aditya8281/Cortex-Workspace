@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import httpx
 import structlog
@@ -92,7 +93,7 @@ class OllamaProvider(ProviderAdapter):
         self,
         model_id: str,
         variant_id: str | None = None,
-        on_progress: callable | None = None,
+        on_progress: Callable[[float], None] | None = None,
     ) -> ProviderDownloadResult:
         try:
             async with self._client.stream("POST", "/api/pull", json={"name": model_id}) as resp:

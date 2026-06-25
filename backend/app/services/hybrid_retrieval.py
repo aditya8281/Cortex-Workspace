@@ -236,7 +236,7 @@ class HybridRetrievalV2:
 
         while len(selected) < limit and remaining:
             best_idx = 0
-            best_mmr = -1
+            best_mmr = -1.0
 
             for i, candidate in enumerate(remaining):
                 relevance = candidate.score

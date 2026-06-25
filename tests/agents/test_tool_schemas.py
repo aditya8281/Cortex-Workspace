@@ -11,6 +11,7 @@ from backend.app.agents.tools.schemas import generate_schema
 def test_generate_basic_types():
     def func(name: str, count: int, factor: float, enabled: bool) -> str:
         """Do something."""
+        return ""
 
     schema = generate_schema(func)
     func_schema = schema["function"]
@@ -27,6 +28,7 @@ def test_generate_basic_types():
 def test_default_values_not_required():
     def func(name: str, limit: int = 10) -> str:
         """Do something."""
+        return ""
 
     schema = generate_schema(func)
     params = schema["function"]["parameters"]
@@ -38,6 +40,7 @@ def test_default_values_not_required():
 def test_optional_param():
     def func(name: str | None = None) -> str:
         """Do something."""
+        return ""
 
     schema = generate_schema(func)
     params = schema["function"]["parameters"]
@@ -47,6 +50,7 @@ def test_optional_param():
 def test_literal_enum():
     def func(mode: Literal["fast", "slow", "auto"]) -> str:
         """Do something."""
+        return ""
 
     schema = generate_schema(func)
     prop = schema["function"]["parameters"]["properties"]["mode"]
@@ -57,6 +61,7 @@ def test_literal_enum():
 def test_list_param():
     def func(items: list[str]) -> str:
         """Do something."""
+        return ""
 
     schema = generate_schema(func)
     prop = schema["function"]["parameters"]["properties"]["items"]
@@ -72,6 +77,7 @@ def test_docstring_description():
             query: The search term
             limit: Max results to return
         """
+        return ""
 
     schema = generate_schema(func=search)
     prop_query = schema["function"]["parameters"]["properties"]["query"]
@@ -86,6 +92,7 @@ def test_sphinx_docstring():
 
         :param query: The query string
         """
+        return ""
 
     schema = generate_schema(func=func)
     prop = schema["function"]["parameters"]["properties"]["query"]
@@ -107,6 +114,7 @@ def test_self_skip():
 def test_kwargs_skip():
     def func(name: str, **kwargs: str) -> str:
         """Do something."""
+        return ""
 
     schema = generate_schema(func)
     params = schema["function"]["parameters"]["properties"]
@@ -117,6 +125,7 @@ def test_kwargs_skip():
 def test_func_name_used():
     def my_custom_tool(query: str) -> str:
         """Do something."""
+        return ""
 
     schema = generate_schema(my_custom_tool)
     assert schema["function"]["name"] == "my_custom_tool"

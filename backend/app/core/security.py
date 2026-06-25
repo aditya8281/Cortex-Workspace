@@ -28,10 +28,33 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 _COMMON_PASSWORDS = {
-    "password", "123456", "12345678", "qwerty", "abc123", "monkey", "1234567",
-    "letmein", "trustno1", "dragon", "baseball", "iloveyou", "master", "sunshine",
-    "ashley", "bailey", "passw0rd", "shadow", "123123", "654321", "superman",
-    "qazwsx", "michael", "football", "password1", "password123", "admin",
+    "password",
+    "123456",
+    "12345678",
+    "qwerty",
+    "abc123",
+    "monkey",
+    "1234567",
+    "letmein",
+    "trustno1",
+    "dragon",
+    "baseball",
+    "iloveyou",
+    "master",
+    "sunshine",
+    "ashley",
+    "bailey",
+    "passw0rd",
+    "shadow",
+    "123123",
+    "654321",
+    "superman",
+    "qazwsx",
+    "michael",
+    "football",
+    "password1",
+    "password123",
+    "admin",
 }
 
 

@@ -64,12 +64,7 @@ def list_repos(
     current_user: User = Depends(get_current_user),
 ):
     """List all repositories for the current user."""
-    repos = (
-        db.query(RepoIndex)
-        .filter(RepoIndex.user_id == current_user.id)
-        .order_by(RepoIndex.updated_at.desc())
-        .all()
-    )
+    repos = db.query(RepoIndex).filter(RepoIndex.user_id == current_user.id).order_by(RepoIndex.updated_at.desc()).all()
     return {"repos": [_serialize_repo(r) for r in repos]}
 
 

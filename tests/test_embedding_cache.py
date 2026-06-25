@@ -1,6 +1,5 @@
 """Tests for EmbeddingCache model and EmbeddingCacheService."""
 
-
 import pytest
 from sqlalchemy.orm import Session
 
@@ -80,6 +79,5 @@ def test_access_count_increments(db_session: Session, cache_service: EmbeddingCa
     cache_service.get("hash1", model_name="m1")
 
     entry = db_session.query(EmbeddingCache).filter(EmbeddingCache.content_hash == "hash1").first()
+    assert entry is not None
     assert entry.access_count == 3  # 1 put + 2 gets
-
-

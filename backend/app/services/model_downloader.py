@@ -320,7 +320,7 @@ class DownloadManager:
         try:
             from datetime import datetime, timezone
 
-            from backend.app.db import SessionLocal
+            from backend.app.db.session import SessionLocal
             from backend.app.models.model_catalog import ModelDownload
 
             db = SessionLocal()

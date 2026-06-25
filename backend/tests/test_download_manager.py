@@ -310,7 +310,7 @@ async def test_execute_download_unsupported_provider(manager: DownloadManager):
     with patch.object(manager, "_update_db"):
         await manager._execute_download(record)
         assert record.status == DownloadStatus.FAILED
-        assert "Unsupported provider" in record.error_message
+        assert record.error_message is not None and "Unsupported provider" in record.error_message
 
 
 @pytest.mark.asyncio
@@ -368,7 +368,7 @@ def test_update_speed_eta_basic(manager: DownloadManager):
     manager._speed_samples["speed1"] = []
 
     record.bytes_downloaded = 0
-    record._update_speed_eta = lambda: None  # bypass for manual test
+    record._update_speed_eta = lambda: None  # type: ignore[attr-defined]  # bypass for manual test
     manager._update_speed_eta(record)
 
     # With only 0 or 1 sample, no speed calculated

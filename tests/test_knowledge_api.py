@@ -1,5 +1,3 @@
-
-
 def test_knowledge_health(client, mock_auth):
     resp = client.get("/api/v1/knowledge/health")
     assert resp.status_code == 200

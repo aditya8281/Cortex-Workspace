@@ -1,6 +1,5 @@
 """Tests for the memory API endpoints."""
 
-
 from fastapi.testclient import TestClient
 
 HEADERS = {"Authorization": "Bearer fake-token"}
@@ -273,4 +272,6 @@ def test_unauthorized_access(client: TestClient):
     for method, url in endpoints:
         response = client.request(method, url, json={"title": "test"} if method == "POST" else None)
         # GET returns 401 (unauthorized), POST/PUT/DELETE return 403 (CSRF) when no Bearer token
-        assert response.status_code in (401, 403, 429), f"{method} {url} should require auth, got {response.status_code}"
+        assert response.status_code in (401, 403, 429), (
+            f"{method} {url} should require auth, got {response.status_code}"
+        )

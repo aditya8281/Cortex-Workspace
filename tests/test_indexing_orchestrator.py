@@ -14,12 +14,15 @@ def mock_doc_indexer():
         def __init__(self):
             self.indexed = []
             self.removed = []
+
         def index_file(self, path, force=False):
             self.indexed.append(path)
             return True
+
         def remove_file(self, path):
             self.removed.append(path)
             return True
+
     return MockDocIndexer()
 
 
@@ -29,21 +32,28 @@ def mock_watcher():
         def __init__(self):
             self._callback = None
             self.watched = set()
+
         def set_callback(self, cb):
             self._callback = cb
+
         def watch(self, path):
             self.watched.add(path)
             return True
+
         def unwatch(self, path):
             self.watched.discard(path)
             return True
+
         def start(self):
             pass
+
         def stop(self):
             pass
+
         def simulate(self, change):
             if self._callback:
                 self._callback(change)
+
     return MockWatcher()
 
 

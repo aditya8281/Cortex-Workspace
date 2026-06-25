@@ -186,6 +186,7 @@ async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None)
         log_event("refresh_reuse_detected", info["user_id"], ip, {"jti": info["jti"]}, db=db)
         # Revoke all active refresh tokens for this user
         from backend.app.core.redis import redis_cache
+
         try:
             await redis_cache.clear_pattern(f"refresh:user:{info['user_id']}:*")
         except Exception:

@@ -11,10 +11,12 @@ from backend.app.services.parsers.pdf_parser import PDFParser
 
 
 def test_parsed_document_full_text():
-    doc = ParsedDocument(sections=[
-        ParsedSection(content="Hello"),
-        ParsedSection(content="World"),
-    ])
+    doc = ParsedDocument(
+        sections=[
+            ParsedSection(content="Hello"),
+            ParsedSection(content="World"),
+        ]
+    )
     assert doc.full_text == "Hello\n\nWorld"
 
 

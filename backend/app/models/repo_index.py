@@ -26,7 +26,9 @@ class RepoIndex(Base):
     last_indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     graph_nodes: Mapped[list] = relationship("GraphNode", back_populates="repo")
     indexed_files: Mapped[list] = relationship("IndexedFile", back_populates="repo")
@@ -50,8 +52,6 @@ class CodeChunk(Base):
     embedding_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    __table_args__ = (
-        UniqueConstraint("repo_id", "file_path", "chunk_index", name="uq_code_chunks_repo_file_index"),
-    )
+    __table_args__ = (UniqueConstraint("repo_id", "file_path", "chunk_index", name="uq_code_chunks_repo_file_index"),)
 
     graph_nodes: Mapped[list] = relationship("GraphNode", back_populates="chunk")

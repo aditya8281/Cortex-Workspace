@@ -83,7 +83,7 @@ async def get_conversation(
         total_tokens=conv.total_tokens,
         created_at=conv.created_at,
         updated_at=conv.updated_at,
-        messages=[ConversationMessageResponse.model_validate(m) for m in messages],
+        messages=[ConversationMessageResponse.model_validate(m) for m in messages],  # type: ignore[attr-defined]
     )
 
 
@@ -166,7 +166,7 @@ async def _stream_chat_response(
             "\nUse this context to answer the user's question. Cite sources using [1], [2], etc. when referencing specific files."
         )
     raw_messages = [{"role": "system", "content": "\n\n".join(system_parts)}]
-    for msg in history:
+    for msg in history:  # type: ignore[attr-defined]
         raw_messages.append({"role": msg.role, "content": msg.content})
     raw_messages.append({"role": "user", "content": user_content})
     messages = [LLMMessage(role=m["role"], content=m["content"]) for m in raw_messages]
@@ -229,7 +229,11 @@ async def send_message(
                 logger.error("Background insight extraction failed for conversation %d", conversation_id, exc_info=True)
 
         task = asyncio.create_task(_extract_with_logging())
-        task.add_done_callback(lambda t: None if not t.exception() else logger.error("Unhandled error in background task: %s", t.exception()))
+        task.add_done_callback(
+            lambda t: (
+                None if not t.exception() else logger.error("Unhandled error in background task: %s", t.exception())
+            )
+        )
 
     return StreamingResponse(
         _wrapped_stream(),

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class LLMManager:
     """Singleton that routes to the best available LLM provider."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._providers: list[LLMProvider] = []
         self._active: LLMProvider | None = None
         self._semaphore = asyncio.Semaphore(4)
@@ -29,7 +29,7 @@ class LLMManager:
         ollama_url: str | None = None,
         n_ctx: int = 4096,
         n_gpu_layers: int = 0,
-    ):
+    ) -> None:
         self._providers = []
 
         if ollama_url:
@@ -50,7 +50,7 @@ class LLMManager:
         for p in self._providers:
             if await self._check_available(p):
                 self._active = p
-                logger.info("Active LLM provider: %s", p.provider_name())
+                logger.info("Active LLM provider: %s", p.provider_name())  # type: ignore[attr-defined]
                 return p
         raise RuntimeError("No LLM provider available. Install llama-cpp-python or start Ollama.")
 
@@ -92,7 +92,7 @@ class LLMManager:
 
         for attempt in range(max_retries + 1):
             try:
-                result = await provider.chat_direct(
+                result = await provider.chat_direct(  # type: ignore[attr-defined]
                     messages=messages,
                     model=model,
                     max_tokens=max_tokens,
@@ -104,13 +104,15 @@ class LLMManager:
 
                 try:
                     if db is None:
-                        from backend.app.db import SessionLocal
+                        from backend.app.db.session import SessionLocal
+
                         db = SessionLocal()
                         close_db = True
                     else:
                         close_db = False
                     try:
                         from backend.app.services.usage_tracker import UsageTracker
+
                         tracker = UsageTracker(db)
                         tracker.record_usage(
                             model_name=result.get("model", "unknown"),
@@ -165,7 +167,7 @@ class LLMManager:
         for attempt in range(max_retries + 1):
             full_response = ""
             try:
-                async for token in provider.chat_stream(
+                async for token in provider.chat_stream(  # type: ignore[attr-defined]
                     [{"role": m.role, "content": m.content} for m in messages],
                     tools=[],
                     config={"model": model, "max_tokens": max_tokens, "temperature": temperature},
@@ -181,13 +183,15 @@ class LLMManager:
 
                 try:
                     if db is None:
-                        from backend.app.db import SessionLocal
+                        from backend.app.db.session import SessionLocal
+
                         db = SessionLocal()
                         close_db = True
                     else:
                         close_db = False
                     try:
                         from backend.app.services.usage_tracker import UsageTracker
+
                         tracker = UsageTracker(db)
                         tracker.record_usage(
                             model_name=model or "unknown",
@@ -340,16 +344,16 @@ class LLMManager:
         return all_models
 
     async def health_check(self) -> dict:
-        status = {}
+        status: dict[str, object] = {}
         for p in self._providers:
             try:
                 available = await self._check_available(p)
-                status[p.provider_name()] = {
+                status[p.provider_name()] = {  # type: ignore[attr-defined]
                     "available": available,
                     "is_active": p is self._active,
                 }
             except Exception as e:
-                status[p.provider_name()] = {
+                status[p.provider_name()] = {  # type: ignore[attr-defined]
                     "available": False,
                     "is_active": False,
                     "error": str(e),
@@ -362,7 +366,7 @@ class LLMManager:
             "total_errors": self._total_errors,
             "total_prompt_tokens": self._total_prompt_tokens,
             "total_completion_tokens": self._total_completion_tokens,
-            "active_provider": self._active.provider_name() if self._active else None,
+            "active_provider": self._active.provider_name() if self._active else None,  # type: ignore[attr-defined]
         }
 
 

@@ -14,7 +14,7 @@ class EPUBParser(BaseParser):
 
     def parse(self, file_path: str) -> ParsedDocument:
         try:
-            import epub
+            import epub  # type: ignore[import-not-found]
         except ImportError:
             logger.warning("ebooklib not installed — run: pip install ebooklib")
             return ParsedDocument(metadata={"error": "ebooklib not installed"})

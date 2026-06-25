@@ -39,9 +39,7 @@ class EmbeddingCache(Base):
             EmbeddingCache.clean_expired(session)
             session.commit()
         """
-        stmt = select(cls).where(
-            func.age(func.now(), cls.created_at) > cls.ttl_seconds
-        )
+        stmt = select(cls).where(func.age(func.now(), cls.created_at) > cls.ttl_seconds)
         expired = session.execute(stmt).scalars().all()
         for entry in expired:
             session.delete(entry)

@@ -8,16 +8,28 @@ from backend.app.services.hybrid_retrieval import HybridRetrievalV2, RetrievalRe
 
 @pytest.fixture()
 def mock_retrieval(db_session: Session):
-    mock_embedder = type("Mock", (), {
-        "embed_single": lambda s, t: [0.1] * 768,
-    })()
-    mock_vdb = type("Mock", (), {
-        "search": lambda s, coll, q, limit=10, filter_payload=None: [],
-    })()
-    mock_fts = type("Mock", (), {
-        "search_code": lambda s, q, repo_id=None, limit=20: [],
-        "search_documents": lambda s, q, doc_type=None, limit=20: [],
-    })()
+    mock_embedder = type(
+        "Mock",
+        (),
+        {
+            "embed_single": lambda s, t: [0.1] * 768,
+        },
+    )()
+    mock_vdb = type(
+        "Mock",
+        (),
+        {
+            "search": lambda s, coll, q, limit=10, filter_payload=None: [],
+        },
+    )()
+    mock_fts = type(
+        "Mock",
+        (),
+        {
+            "search_code": lambda s, q, repo_id=None, limit=20: [],
+            "search_documents": lambda s, q, doc_type=None, limit=20: [],
+        },
+    )()
     return HybridRetrievalV2(db_session, embedding_service=mock_embedder, vector_db=mock_vdb, fulltext_search=mock_fts)
 
 

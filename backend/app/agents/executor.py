@@ -120,7 +120,7 @@ class ExecutorAgent(BaseAgent):
 
     async def _execute_with_llm(self, task: str, context: dict | None = None) -> str:
         """Use LLM with tool calling to execute a task."""
-        messages = [
+        messages: list[dict[str, Any]] = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": task},
         ]
@@ -143,6 +143,9 @@ class ExecutorAgent(BaseAgent):
                 pass
         if allowed_tools:
             all_schemas = [s for s in all_schemas if s["function"]["name"] in allowed_tools]
+
+        if self._llm_chat is None:
+            return "LLM chat not available"
 
         max_iterations = 10
         for _ in range(max_iterations):

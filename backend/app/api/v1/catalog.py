@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -49,7 +50,7 @@ async def list_models(
     available_models = await llm_manager.list_all_models()
     available_names = {m.name for m in available_models}
 
-    catalog = []
+    catalog: list[dict[str, Any]] = []
     seen_bases: set[str] = set()
     for model in catalog_models:
         name = model.get("name", "")
@@ -124,16 +125,16 @@ async def recommended_models(
         return RecommendedModelsSingleResponse(
             hardware=hardware.to_dict(),
             workload=workload,
-            recommendations=_format_recommendations(recs),
+            recommendations=_format_recommendations(recs),  # type: ignore[arg-type]
         )
     else:
         all_recs = engine.recommend_all(all_models)
         formatted = {}
         for wl_id, recs in all_recs.items():
             formatted[wl_id] = WorkloadRecommendations(
-                label=WORKLOADS[wl_id]["label"],
-                description=WORKLOADS[wl_id]["description"],
-                recommendations=_format_recommendations(recs),
+                label=WORKLOADS[wl_id]["label"],  # type: ignore[arg-type]
+                description=WORKLOADS[wl_id]["description"],  # type: ignore[arg-type]
+                recommendations=_format_recommendations(recs),  # type: ignore[arg-type]
             )
         return RecommendedModelsAllResponse(
             hardware=hardware.to_dict(),
@@ -201,7 +202,7 @@ async def search_models(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid input")
     except Exception as e:
-        logger.error("search_failed", error=str(e))
+        logger.error("search_failed: %s", str(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -247,7 +248,7 @@ async def compare_models(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("compare_failed", error=str(e))
+        logger.error("compare_failed: %s", str(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -264,7 +265,7 @@ async def autocomplete_models(
         suggestions = service.autocomplete(q, limit=limit)
         return {"suggestions": suggestions}
     except Exception as e:
-        logger.error("autocomplete_failed", error=str(e))
+        logger.error("autocomplete_failed: %s", str(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

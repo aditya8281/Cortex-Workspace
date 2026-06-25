@@ -84,6 +84,7 @@ class TestGetRunStatus:
         run = _create_run(db_session, agent.id)
 
         import backend.app.agents.background as bg
+
         mock_task = type("MockTask", (), {"done": lambda self: False})()
         bg._active_runs[run.id] = mock_task
         try:

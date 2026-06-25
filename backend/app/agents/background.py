@@ -8,7 +8,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_active_runs: dict[int, asyncio.Task] = {}
+_active_runs: dict[int, asyncio.Task[Any] | None] = {}
 _event_queues: dict[int, list[asyncio.Queue]] = {}
 
 
@@ -50,5 +50,7 @@ async def run_agent_background(run_id: int, agent_id: int, user_id: int, input_t
 def get_run_status(run_id: int) -> str:
     if run_id in _active_runs:
         task = _active_runs[run_id]
+        if task is None:
+            return "unknown"
         return "completed" if task.done() else "running"
     return "unknown"

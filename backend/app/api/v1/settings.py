@@ -65,7 +65,7 @@ async def trigger_sync(
     except ValueError:
         raise HTTPException(status_code=400, detail="Provider error")
     except Exception as e:
-        logger.error("sync_failed", error=str(e))
+        logger.error("sync_failed: %s", str(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -184,8 +184,8 @@ async def get_model_settings(
                 salt=None,
                 info=b"huggingface-token-encryption",
             )
-            key = hkdf.derive(_cfg.SECRET_KEY.encode())
-            fernet_key = Fernet(_b64.urlsafe_b64encode(key))
+            encryption_key = hkdf.derive(_cfg.SECRET_KEY.encode())
+            fernet_key = Fernet(_b64.urlsafe_b64encode(encryption_key))
             decrypted_hf_token = fernet_key.decrypt(settings_row.huggingface_token.encode()).decode()
         except Exception:
             pass
@@ -230,8 +230,8 @@ async def update_model_settings(
             salt=None,
             info=b"huggingface-token-encryption",
         )
-        key = hkdf.derive(_cfg.SECRET_KEY.encode())
-        fernet_key = Fernet(_b64.urlsafe_b64encode(key))
+        encryption_key = hkdf.derive(_cfg.SECRET_KEY.encode())
+        fernet_key = Fernet(_b64.urlsafe_b64encode(encryption_key))
         updates["huggingface_token"] = fernet_key.encrypt(updates["huggingface_token"].encode()).decode()
 
     for key, value in updates.items():
@@ -257,8 +257,8 @@ async def update_model_settings(
                 salt=None,
                 info=b"huggingface-token-encryption",
             )
-            key = hkdf.derive(_cfg.SECRET_KEY.encode())
-            fernet_key = Fernet(_b64.urlsafe_b64encode(key))
+            encryption_key = hkdf.derive(_cfg.SECRET_KEY.encode())
+            fernet_key = Fernet(_b64.urlsafe_b64encode(encryption_key))
             decrypted_hf_token = fernet_key.decrypt(settings_row.huggingface_token.encode()).decode()
         except Exception:
             pass

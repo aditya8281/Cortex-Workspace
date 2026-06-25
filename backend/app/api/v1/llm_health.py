@@ -27,9 +27,7 @@ async def llm_health(
         health = await llm_manager.health_check()
         latency_ms = (time.monotonic() - start) * 1000
 
-        any_available = any(
-            provider_info.get("available", False) for provider_info in health.values()
-        )
+        any_available = any(provider_info.get("available", False) for provider_info in health.values())
         status = "healthy" if any_available else "unavailable"
         error = None
         if not any_available:

@@ -5,7 +5,11 @@ HEADERS = {"Authorization": "Bearer fake-token"}
 
 def test_list_models(client, mock_auth):
     with (
-        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=([], MagicMock())),
+        patch(
+            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            new_callable=AsyncMock,
+            return_value=([], MagicMock()),
+        ),
         patch("backend.app.api.v1.catalog.llm_manager") as mock_llm,
     ):
         mock_llm.list_all_models = AsyncMock(return_value=[])

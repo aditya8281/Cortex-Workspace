@@ -14,7 +14,7 @@ class PptxParser(BaseParser):
 
     def parse(self, file_path: str) -> ParsedDocument:
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # type: ignore[import-not-found]
         except ImportError:
             logger.warning("python-pptx not installed — run: pip install python-pptx")
             return ParsedDocument(metadata={"error": "python-pptx not installed"})

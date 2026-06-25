@@ -26,7 +26,7 @@ class LlamaCppProvider(LLMProvider):
             if self._llama is not None:
                 return
             try:
-                from llama_cpp import Llama
+                from llama_cpp import Llama  # type: ignore[import-not-found]
             except ImportError:
                 raise RuntimeError("llama-cpp-python not installed. Run: pip install llama-cpp-python")
             loop = asyncio.get_running_loop()

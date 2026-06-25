@@ -57,17 +57,17 @@ class LongTermMemoryDeleteResponse(BaseModel):
     status: str
 
 
-def _serialize_memory(m: LongTermMemory) -> dict:
-    return {
-        "id": m.id,
-        "category": m.category,
-        "title": m.title,
-        "content": m.content,
-        "confidence": m.confidence,
-        "access_count": m.access_count,
-        "source": m.source,
-        "created_at": m.created_at.isoformat() if m.created_at else None,
-    }
+def _serialize_memory(m: LongTermMemory) -> LongTermMemoryItem:
+    return LongTermMemoryItem(
+        id=m.id,
+        category=m.category,
+        title=m.title,
+        content=m.content,
+        confidence=m.confidence,
+        access_count=m.access_count,
+        source=m.source,
+        created_at=m.created_at.isoformat() if m.created_at else None,
+    )
 
 
 @router.get("/long-term-memory", response_model=LongTermMemoryListResponse)
@@ -83,10 +83,7 @@ def list_memories(
         )
     grouped = service.list_by_category(user.id)
     return LongTermMemoryListResponse(
-        grouped={
-            cat: [_serialize_memory(m) for m in memories]
-            for cat, memories in grouped.items()
-        }
+        grouped={cat: [_serialize_memory(m) for m in memories] for cat, memories in grouped.items()}
     )
 
 

@@ -126,6 +126,8 @@ def update_memory(
         source_path=payload.source_path,
         tags=payload.tags,
     )
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Memory entry not found")
     return {"status": "updated", "entry": manager._serialize(entry)}
 
 
