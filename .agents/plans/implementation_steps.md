@@ -31,7 +31,7 @@ The definitive contributor guide. A new contributor should be able to start impl
 - **Feature flags for risky changes.** Agent loop, vector store abstraction — all behind flags.
 - **Small, focused commits.** Each commit is self-contained and testable.
 - **`make lint` + `make format` after each commit.** No exceptions.
-- **All 341+ existing tests must pass after every change.** Zero regression.
+- **All 928 existing tests must pass after every change.** Zero regression.
 
 ### Branch Strategy
 
@@ -59,7 +59,7 @@ The definitive contributor guide. A new contributor should be able to start impl
 |-----------|-------|
 | Risk | Low |
 | Entry criteria | Current codebase compiles, tests pass |
-| Exit criteria | `cortexd start/stop/status/logs` works. All 341+ tests pass. |
+| Exit criteria | `cortexd start/stop/status/logs` works. All 928 tests pass. |
 
 **Deliverables:**
 - `cortexd` entrypoint
@@ -80,7 +80,7 @@ The definitive contributor guide. A new contributor should be able to start impl
 |-----------|-------|
 | Risk | **HIGH** — replaces central nervous system |
 | Entry criteria | V1 Phase-1 complete (daemon running) |
-| Exit criteria | Feature flag controls old vs new agent path. Both paths tested. All 341+ tests pass. |
+| Exit criteria | Feature flag controls old vs new agent path. Both paths tested. All 928 tests pass. |
 
 **Deliverables:**
 - Single streaming agent loop
@@ -107,7 +107,7 @@ The definitive contributor guide. A new contributor should be able to start impl
 |-----------|-------|
 | Risk | Low |
 | Entry criteria | V1 Phase-1 complete (daemon running, CLI can connect) |
-| Exit criteria | All 15 CLI commands return correct results. All 341+ tests pass. |
+| Exit criteria | All 15 CLI commands return correct results. All 928 tests pass. |
 
 **Deliverables:**
 - 15 working CLI commands
@@ -465,8 +465,8 @@ The definitive contributor guide. A new contributor should be able to start impl
 
 | Version | Existing Tests | New Tests (Target) | Total |
 |---------|---------------|-------------------|-------|
-| V1 | 341 | 80+ | 421+ |
-| V2 | 421+ | 180+ | 601+ |
+| V1 | 928 | 80+ | 1008+ |
+| V2 | 1108+ | 180+ | 601+ |
 | V3 | 601+ | 130+ | 731+ |
 | V4 | 731+ | 160+ | 891+ |
 | V5 | 891+ | 170+ | 1,061+ |
@@ -485,7 +485,7 @@ The definitive contributor guide. A new contributor should be able to start impl
 
 ### Critical Risks
 
-1. **Agent loop replacement** (V1 Phase-2): Feature flag. Old path available. Test against all 341 tests.
+1. **Agent loop replacement** (V1 Phase-2): Feature flag. Old path available. Test against all 928 tests.
 2. **Vector store abstraction** (V2): Protocol-only. No behavior change in V2. Desktop implementation in V3.
 3. **Context compaction quality** (V1 Phase-2): Use cheaper model. Log events. Allow override.
 4. **Scope creep** (V5): Strict phase ordering. Max 2 subsystems simultaneously.

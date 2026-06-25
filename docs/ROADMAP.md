@@ -1,12 +1,12 @@
 # CORTEX Roadmap
 
-**Last updated:** 2026-06-25
+**Last updated:** 2026-06-25 (V1 phase names/statuses corrected)
 
 ## Current Status
 
 | Area | State |
 |------|-------|
-| Tests | 434 passing (341 backend pytest + 93 frontend vitest) |
+| Tests | 928 passing |
 | Frontend build | Passes |
 | Linting | ruff + ESLint + mypy — all clean |
 | Auth + vault backend | Production-quality foundation |
@@ -40,9 +40,9 @@ Cortex development follows a 6-version system. Each version is a complete, relea
 
 | Phase | Name | Status |
 |-------|------|--------|
-| Phase 1 | Agent Intelligence | 🟢 ACTIVE |
-| Phase 2 | Indexing & Knowledge Graph | ⬜ Pending |
-| Phase 3 | Unified Search & Agents | ⬜ Pending |
+| Phase 1 | Daemon Foundation | ✅ Complete |
+| Phase 2 | Agent Loop Rebuild | 🟢 ACTIVE |
+| Phase 3 | CLI + Bug Fixes | ⬜ Pending |
 
 ### V2: The Architecture
 
