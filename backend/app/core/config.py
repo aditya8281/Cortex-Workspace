@@ -44,6 +44,7 @@ class Settings(BaseSettings):
 
         if not self.SECRET_KEY:
             import secrets
+
             self.SECRET_KEY = secrets.token_hex(32)
 
     EMBEDDING_DIM: int = 768
@@ -62,6 +63,12 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW_SECONDS: int = 60
+
+    # Feature flags
+    CORTEX_NEW_AGENT_LOOP: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("CORTEX_NEW_AGENT_LOOP", "CORTEX_NEW_AGENT"),
+    )
 
     # HTTPS redirect
     HTTPS_REDIRECT_ENABLED: bool = False

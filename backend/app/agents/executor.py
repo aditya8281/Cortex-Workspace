@@ -11,7 +11,7 @@ import time
 from typing import Any
 
 from backend.app.agents.base import BaseAgent
-from backend.app.agents.tools import (
+from backend.app.agents.tool_defs import (
     TOOL_REGISTRY,
     requires_approval,
 )
@@ -56,9 +56,7 @@ class ExecutorAgent(BaseAgent):
     def _generate_approval_token(self, tool_name: str, user_id: int) -> str:
         """Generate an HMAC-signed approval token for a tool."""
         payload = f"{tool_name}:{user_id}:{int(time.time())}"
-        signature = hmac.new(
-            self._approval_secret.encode(), payload.encode(), hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(self._approval_secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
         return f"{payload}:{signature}"
 
     def _verify_approval_token(self, token: str, tool_name: str, user_id: int) -> bool:
@@ -266,7 +264,7 @@ class ExecutorAgent(BaseAgent):
     async def _read_file_tool(self, path: str) -> str:
         """Read a file's contents."""
         try:
-            from backend.app.agents.tools import _ensure_within_workspace
+            from backend.app.agents.tool_defs import _ensure_within_workspace
 
             target = _ensure_within_workspace(path)
             if not target.exists():
@@ -284,7 +282,7 @@ class ExecutorAgent(BaseAgent):
     async def _write_file_tool(self, path: str, content: str = "") -> str:
         """Write content to a file."""
         try:
-            from backend.app.agents.tools import _ensure_within_workspace
+            from backend.app.agents.tool_defs import _ensure_within_workspace
 
             target = _ensure_within_workspace(path)
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -298,7 +296,7 @@ class ExecutorAgent(BaseAgent):
     async def _list_files_tool(self, path: str = ".") -> str:
         """List files in a directory."""
         try:
-            from backend.app.agents.tools import _ensure_within_workspace
+            from backend.app.agents.tool_defs import _ensure_within_workspace
 
             dir_path = _ensure_within_workspace(path)
             if not dir_path.is_dir():
