@@ -1,8 +1,8 @@
 # Active Version
 
 **Current Version:** V1 — The Brain Works
-**Current Phase:** Phase 1 — Daemon Foundation
-**Status:** Active (5/19 components complete)
+**Current Phase:** Phase 2 — Agent Loop Rebuild
+**Status:** Active (9/19 components complete)
 
 ## How This File Works
 
@@ -13,7 +13,7 @@ This file is the **single source of truth** for what version/phase is currently 
 ## Active Phase Plan
 
 ```
-.agents/plans/versions/v1/Phase-1.md   ← Current work
+.agents/plans/versions/v1/Phase-2.md   ← Current work
 .agents/plans/versions/v1/progress.md  ← What's done / what's pending
 ```
 
@@ -21,7 +21,7 @@ This file is the **single source of truth** for what version/phase is currently 
 
 | Version | Name | Status | Phase Plan |
 |---------|------|--------|------------|
-| **V1** | The Brain Works | 🟢 ACTIVE | `versions/v1/Phase-1.md` |
+| **V1** | The Brain Works | 🟢 ACTIVE | `versions/v1/Phase-2.md` |
 | V2 | The Architecture | ⬜ Not started | `versions/v2/Phase-1.md` |
 | V3 | The Desktop | ⬜ Not started | `versions/v3/Phase-1.md` |
 | V4 | The Automaton | ⬜ Not started | `versions/v4/Phase-1.md` |
@@ -32,9 +32,9 @@ This file is the **single source of truth** for what version/phase is currently 
 
 | Phase | Name | Status | Plan |
 |-------|------|--------|------|
-| **Phase 1** | Daemon Foundation | 🟢 ACTIVE | `versions/v1/Phase-1.md` |
-| Phase 2 | Indexing & Knowledge Graph | ⬜ Pending | `versions/v1/Phase-2.md` |
-| Phase 3 | Unified Search & Agents | ⬜ Pending | `versions/v1/Phase-3.md` |
+| Phase 1 | Daemon Foundation | ✅ Complete | `versions/v1/Phase-1.md` |
+| **Phase 2** | **Agent Loop Rebuild** | 🟢 **ACTIVE** | `versions/v1/Phase-2.md` |
+| Phase 3 | CLI + Bug Fixes | ⬜ Pending | `versions/v1/Phase-3.md` |
 
 ## Entry Protocol (for Claude)
 
