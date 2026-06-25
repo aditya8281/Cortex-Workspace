@@ -217,13 +217,15 @@ Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for d
 
 ### Mandatory Reviews
 
-| Review | When | Command/Skill |
-|--------|------|---------------|
+| Review | When | Command |
+|--------|------|---------|
 | Code quality | Before push | `/project:review` |
+| Verification | Before merge | `/project:verify` |
 | Adversarial | Before major decisions | `/project:challenge` |
 | Reflection | Before completion | `/project:reflect` |
 | Architecture | Before big changes | `/project:architecture` |
 | Health | Weekly | `/project:health` |
+| Release | Before release | `/project:release` |
 
 ### Clarification Rules
 
@@ -235,13 +237,19 @@ Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for d
 
 | Command | When | Purpose |
 |---------|------|---------|
-| `/project:reflect` | Before completion | Reflection framework |
+| `/project:cortex` | Start development session | Autonomous development iteration |
+| `/project:prompt` | Before complex work | Generate ecosystem-aware prompts |
+| `/project:audit` | During audits | Deep code-level scan |
 | `/project:review` | Before push | Code quality analysis |
+| `/project:verify` | Before merge | Automated verification suite |
+| `/project:release` | Before release | Release readiness check |
+| `/project:architecture` | Before big changes | Architecture alignment |
 | `/project:challenge` | Before decisions | Adversarial review |
-| `/project:health` | Weekly | Repo health check |
-| `/project:architecture` | Before changes | Architecture alignment |
+| `/project:health` | Weekly | Repository health check |
 | `/project:ideas` | Weekly | Innovation discovery |
-| `/project:improve` | Weekly | Ecosystem improvement |
+| `/project:improve` | Weekly | Ecosystem self-improvement |
+| `/project:reflect` | Before completion | Reflection framework |
+| `/project:feature-gap` | During planning | Roadmap vs codebase gaps |
 
 ## Common Gotchas
 
