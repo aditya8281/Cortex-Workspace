@@ -1,216 +1,420 @@
-# /project:cortex — Autonomous Development Iteration
-
-Run this command to execute one complete development cycle. It reads the repository state, plans the work, implements it, validates, reviews, cleans up, and commits — all autonomously.
-
-Only ask the human when a decision would change architecture, vision, or product direction.
-
 ## Instructions
 
-### Phase 0: CONTEXT
+### Phase 0: REPOSITORY INTELLIGENCE
 
-Read all repository state before doing anything:
+Before making any decisions, build an accurate understanding of the current repository.
+
+Inspect:
 
 ```bash
-# Constitution and architecture
+# Repository
+pwd
+git status
+git branch --show-current
+git log --oneline -10
+
+# Repository health
+make check
+
+# Repository structure
+find . -maxdepth 3 -type d | sort
+find . -maxdepth 2 -type f | sort
+
+# Constitution
 cat .agents/plans/guide.md
 
 # Execution plan
 cat .agents/plans/implementation_steps.md
 
-# Active version and phase
+# Active version
 cat .agents/plans/ACTIVE_VERSION.md
 grep -r "in_progress\|active" .agents/plans/versions/*/progress.md
-
-# Recent work
-git log --oneline -10
-git status
-git branch --show-current
-
-# Current health
-make check
 ```
 
-Read the active phase plan: `.agents/plans/versions/vX/Phase-N.md` (replace X with active version).
+Read, where present:
 
-Summarize: Where is the repo? What version/phase? What's the next piece of work? What's the current test/lint status?
+* README.md
+* CLAUDE.md
+* AGENT.md
+* DESIGN.md
+* .agents/
+* docs/
+* docs/ARCHITECTURE.md
+* docs/WORKFLOWS.md
+* docs/GOVERNANCE.md
+* Active phase document
+* Relevant ADRs
+* Relevant architecture decisions
 
-### Phase 1: PLAN (Critical Thinking)
+Discover:
 
-Determine what work should be done in this iteration.
+* repository layout
+* active version
+* active phase
+* current roadmap position
+* completed work
+* in-progress work
+* current blockers
+* repository health
+* existing commands
+* existing hooks
+* existing workflows
+* existing skills
+* existing prompts
+* existing templates
 
-**When a plan exists (phase plan covers next work):**
-- Read the plan thoroughly
-- **Challenge every step:** Is this still the best approach? Are assumptions valid given current repo state? Has anything changed since the plan was written?
-- **Adapt:** If a better approach emerges during planning, use it. Note the deviation and why.
-- **Question scope:** Is the plan too broad for one iteration? Too narrow? Should it be split?
-- **Verify file targets:** Do the files the plan references still exist? Have they been modified?
-- **Assess dependencies:** Does the plan account for all integration points?
+Also identify existing implementations related to the task.
 
-**When no plan exists:**
-- Determine what work is needed from context (recent commits, open issues, roadmap position)
-- Create a brief plan before proceeding
-- Apply the same critical thinking
+Prefer extending existing code over introducing parallel implementations.
 
-**The plan is guidance, not gospel. Your judgment supersedes the plan when you can articulate why.**
+Produce a concise repository intelligence summary before continuing.
 
-Select applicable skills from `.agents/skills/`. If the work involves complex design, consider whether the brainstorming skill should be invoked.
+---
 
-Define exit criteria for this iteration:
-- What specific deliverables will be produced?
-- What tests must pass?
-- What validation must succeed?
+### Phase 1: STRATEGIC PLANNING
+
+Determine the highest-value work for this iteration.
+
+When an implementation plan exists:
+
+* Read it completely.
+* Challenge every assumption.
+* Verify file locations.
+* Verify dependencies.
+* Verify integration points.
+* Determine whether the plan is still optimal.
+* Adapt when a better solution exists.
+* Document significant deviations.
+
+When no implementation plan exists:
+
+Create one before implementation.
+
+Do not blindly follow documentation.
+
+Repository state always overrides stale plans.
+
+Determine:
+
+* objectives
+* deliverables
+* affected modules
+* affected APIs
+* affected commands
+* affected hooks
+* affected workflows
+* affected skills
+* affected documentation
+* affected configuration
+* affected tests
+* dependencies
+* risks
+* validation strategy
+* rollback strategy
+* completion criteria
+
+Select applicable skills.
+
+If brainstorming or architecture exploration would materially improve the solution, invoke the appropriate skill before implementation.
+
+Only ask the user when multiple valid architectural directions exist with no objectively better choice.
+
+---
 
 ### Phase 2: BRANCH
 
-```bash
-git checkout -b feat/<topic>
-```
-
-Verify clean starting state: `git status` shows only expected changes.
-
-### Phase 3: BUILD
-
-Implement the planned work:
-
-1. Follow TDD when applicable — write test, verify fail, implement, verify pass
-2. Commit after each logical unit with descriptive messages
-3. After each commit, run:
-   ```bash
-   make lint && make format
-   ```
-4. Run relevant tests after each commit:
-   ```bash
-   make test
-   ```
-5. For multi-file work, use subagents when beneficial
-6. Leverage MCP servers (context7 for library docs) where appropriate
-
-**If you discover a better approach during implementation than what the plan specified:**
-- Use the better approach
-- Document the deviation in the commit message
-- Update the plan if the deviation is significant
-
-### Phase 4: VALIDATE
-
-Run the full validation suite:
+Create an isolated working branch when appropriate.
 
 ```bash
-make test                    # Backend tests
-cd frontend && npm test      # Frontend tests
-make lint                    # Linting
-make format --check          # Format check
-make hooks-onchange          # Hook suite
+git checkout -b <update type eg. fix,feat etc>/<topic>
 ```
 
-If anything fails: fix the issue and loop back to Phase 3. Do not proceed with failures.
+Verify:
 
-### Phase 5: REVIEW
+* working tree is clean
+* branch naming follows conventions
+* repository is ready for implementation
 
-**Code quality review:**
-- Review each changed file for correctness, patterns, completeness
-- Check: error handling, API patterns (response_model=, ownership checks), code quality, test coverage
-- Address all P0 (critical) and P1 (important) findings
+---
 
-**Adversarial review (if architectural decision involved):**
-- Challenge the approach: risks, edge cases, over/under-engineering, wrong assumptions
-- Verify alignment with CORTEX principles: privacy-first, compound learning, two-tier trust, graceful degradation, model freedom, living knowledge
+### Phase 3: IMPLEMENTATION LOOP
 
-If critical issues found: loop back to Phase 3 to fix.
+Implement using small, verifiable iterations.
 
-### Phase 6: REFLECT
+For every logical unit of work:
 
-Run through the reflection framework:
+1. Plan the smallest complete increment.
+2. Implement.
+3. Follow TDD where practical.
+4. Perform a quick self-review.
+5. Run relevant linting and tests.
+6. Fix issues immediately.
+7. Continue.
 
-1. **Quality:** Could any code be cleaner? Functions doing too much? Names clear?
-2. **Redundancy:** Anything duplicated? Patterns that could share utilities?
-3. **Automation:** Any manual steps that could be automated?
-4. **Skill/Hook/Workflow Opportunity:** Should any finding become a new skill, hook, or workflow?
-5. **Future Problems:** Does this introduce technical debt? Will it scale poorly?
-6. **Documentation Gap:** Anything undocumented that should be?
+During implementation:
 
-Update tracking:
-- Update `progress.md` with completed components
-- Update relevant docs if architecture changed
-- Check if new ADR is needed (new technology, architecture pattern, security policy, API design)
+* Prefer extending existing implementations.
+* Avoid duplicated logic.
+* Maintain architecture consistency.
+* Keep commits logical and atomic.
+* Update documentation whenever implementation changes behavior.
+* Update configuration when required.
+* Use subagents when beneficial.
+* Leverage MCP servers where appropriate.
 
-### Phase 7: CLEANUP
+If a substantially better implementation is discovered:
 
-After reflection, before final commit:
+* Prefer the better implementation.
+* Explain the deviation.
+* Update planning artifacts when necessary.
 
-1. Identify files created during this iteration that are unnecessary:
-   ```bash
-   git status
-   git diff --name-only main
-   ```
-2. Remove any scratch files, temp outputs, abandoned approaches
-3. Check for new TODO/FIXME introduced — resolve or document them
-4. Verify no stale references to removed files exist in docs or imports
-5. Confirm only intended files are staged
+Repeat until implementation objectives are complete.
 
-### Phase 8: COMMIT
+---
 
-1. Verify commit messages are meaningful and follow conventions
-2. Run the merge gate:
-   ```bash
-   make hooks-merge
-   ```
-3. Verify repository is ready for merge:
-   ```bash
-   make check
-   ```
+### Phase 4: SYSTEM VALIDATION
 
-### Exit Gate
+Validate the complete implementation.
 
-After Phase 8, verify all exit criteria:
+Run all applicable validation:
 
-- [ ] All tests pass (`make test` + `cd frontend && npm test`)
-- [ ] Lint clean (`make lint`)
-- [ ] No P0/P1 review findings unresolved
-- [ ] Progress tracking updated
-- [ ] Cleanup complete — no unnecessary files
+```bash
+make test
+cd frontend && npm test
+make lint
+make format --check
+make hooks-onchange
+```
 
-**If exit criteria not met:** Loop back to Phase 3. Maximum 3 iterations before escalating to human.
+Also verify:
 
-### Escalation to Human
+* integration points
+* documentation consistency
+* configuration consistency
+* public APIs
+* generated artifacts
+* developer workflows
+* backward compatibility where applicable
 
-Pause and ask the user when:
-- A decision would change architecture, vision, or product direction
-- Multiple valid paths exist with no clear winner
-- Maximum loop iterations exceeded
-- Unexpected blocker that cannot be resolved autonomously
-- Scope ambiguity that the repository cannot resolve
+If any validation fails:
+
+* fix immediately
+* repeat validation
+
+Do not proceed until validation succeeds.
+
+---
+
+### Phase 5: ENGINEERING REVIEW
+
+Review implementation from multiple engineering perspectives.
+
+Review:
+
+* correctness
+* architecture
+* maintainability
+* readability
+* performance
+* security
+* scalability
+* repository consistency
+
+Check:
+
+* error handling
+* abstractions
+* duplication
+* coupling
+* naming
+* API design
+* ownership boundaries
+* test quality
+
+Challenge assumptions.
+
+Identify:
+
+* over-engineering
+* under-engineering
+* unnecessary complexity
+* future maintenance risks
+
+Resolve every P0 and P1 issue before continuing.
+
+Document important P2 improvements for future work.
+
+If significant issues are found:
+
+Return to the Implementation Loop.
+
+---
+
+### Phase 6: REFLECTION
+
+Run the complete Reflection Framework defined in:
+
+`.claude/commands/project/reflect.md`
+
+Apply any action items that belong in the current iteration.
+
+Only defer work when there is a justified reason.
+
+Update:
+
+* progress tracking
+* architecture documentation
+* ADRs
+* implementation plans
+
+when required.
+
+---
+
+### Phase 7: REPOSITORY CLEANUP
+
+Restore repository cleanliness.
+
+Review:
+
+```bash
+git status
+git diff --name-only main
+```
+
+Remove:
+
+* temporary files
+* abandoned implementations
+* dead code
+* obsolete comments
+* scratch files
+* stale references
+
+Verify:
+
+* imports
+* documentation
+* configuration
+* examples
+* references
+* TODO/FIXME entries
+
+Ensure only intentional changes remain.
+
+---
+
+### Phase 8: VERSION INTEGRITY
+
+Prepare the repository for integration.
+
+Verify:
+
+* commit quality
+* atomic commit history
+* meaningful commit messages
+* merge readiness
+
+Run:
+
+```bash
+make hooks-merge
+make check
+```
+
+Only finalize the iteration when repository integrity is confirmed.
+
+---
+
+## Exit Gate
+
+The iteration is complete only when all of the following are true:
+
+* [ ] Objectives completed
+* [ ] Validation passed
+* [ ] Engineering review completed
+* [ ] Reflection completed
+* [ ] Documentation updated where required
+* [ ] Configuration updated where required
+* [ ] Progress tracking updated
+* [ ] Repository cleanup completed
+* [ ] Repository ready for merge
+
+If any requirement is not satisfied:
+
+Return to the Implementation Loop.
+
+Maximum three full iteration loops before escalating.
+
+---
+
+## Escalation Policy
+
+Pause and ask the user only when:
+
+* architecture would change
+* product direction would change
+* roadmap direction would change
+* repository contains conflicting sources of truth
+* requirements remain ambiguous after repository analysis
+* multiple equally valid architectural solutions exist
+* implementation would require unsafe migration
+* maximum autonomous iterations have been exceeded
+* a blocker cannot be resolved using repository context
+
+Otherwise continue autonomously.
+
+---
 
 ## Output
 
-Report when complete:
-
-```
+```text
 ## Cortex Iteration: [date]
 
-### Context
-[What was the starting state]
+### Repository Intelligence
+[Current repository state]
 
-### Work Done
-[What was implemented, fixed, or changed]
+### Objectives
+[Iteration objectives]
+
+### Work Completed
+[Summary]
 
 ### Files Changed
-[List of files modified/created/deleted]
+[Modified / Created / Deleted]
+
+### Repository Impact
+- Modules
+- APIs
+- Commands
+- Hooks
+- Workflows
+- Skills
+- Documentation
+- Configuration
+- Tests
 
 ### Validation
-[PASS/FAIL for each check]
+[PASS / FAIL]
 
-### Review
-[Findings and resolution]
+### Engineering Review
+[Summary]
 
 ### Reflection
-[Key observations, action items]
+[Summary]
+
+### Ecosystem Updates
+[List any documentation, commands, hooks, workflows, skills, prompts or templates updated]
+
+### Technical Debt
+[Remaining items]
 
 ### Commits
-[Git log of commits made in this iteration]
+[Git log]
 
-### Status
-- Tests: PASS/FAIL
-- Lint: PASS/FAIL
-- Hooks: PASS/FAIL
-- Ready for merge: YES/NO
+### Final Status
+- Tests: PASS / FAIL
+- Lint: PASS / FAIL
+- Hooks: PASS / FAIL
+- Repository Ready: YES / NO
 ```

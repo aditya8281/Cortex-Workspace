@@ -5,8 +5,9 @@ Run this before implementing a significant feature or making an architectural ch
 ## Instructions
 
 1. **Read the current plan/spec/design.** Check for:
-- `docs/superpowers/specs/` — latest design spec
-- `docs/superpowers/plans/` — latest implementation plan
+- `.agents/plans/` — latest implementation plan (WHOLE REPO PLAN CONATINING EVERYTHING - SOURCE OF TRUTH)
+- `docs/superpowers/specs/` — latest design spec (temporary)
+- `docs/superpowers/plans/` — latest implementation plan (temporary artifact)
 - Recent git commits — what's being worked on
 
 2. **Challenge the approach.** For each challenge, be specific — reference actual code, actual dependencies, actual constraints.

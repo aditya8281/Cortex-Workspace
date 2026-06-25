@@ -10,6 +10,7 @@ Run weekly or after completing significant work. Reviews and enhances skills, ho
 - Which were skipped? Why?
 - Were there skill creation opportunities that weren't acted on?
 - Are any skills stale (not updated in 30+ days)?
+- Is there any skill which is not listed in our docs but we have it and can use it.
 
 2. **Review hook effectiveness.**
 - Run `python3 .claude/hooks/run_hooks.py` — any false positives?
@@ -86,4 +87,4 @@ Run weekly or after completing significant work. Reviews and enhances skills, ho
 - Now: N, Soon: N, Later: N
 ```
 
-9. If action-items found, save to `docs/audits/YYYY-MM-DD-improve.md`.
+9. If action-items found, save to `docs/audits/YYYY-MM-DD-improve-{N}.md`. (N= number of improve taht day)
