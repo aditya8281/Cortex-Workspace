@@ -12,6 +12,8 @@ import os
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from backend.app.agents.tools.security import (
     ensure_within_workspace,
     has_blocked_command,
@@ -284,7 +286,3 @@ class TestEnsureWithinWorkspace:
     def test_absolute_path_outside_denied(self):
         with pytest.raises(ValueError, match="Path traversal denied"):
             ensure_within_workspace("/etc/passwd")
-
-
-# Need pytest import for exception tests
-import pytest  # noqa: E402 — placed at bottom to keep test order clean

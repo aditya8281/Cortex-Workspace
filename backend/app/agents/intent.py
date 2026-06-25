@@ -12,15 +12,17 @@ from typing import Literal
 
 Intent = Literal["casual", "admin", "agent", "continuation"]
 
-# Patterns that indicate a casual (non-task) message
+# Patterns that indicate a casual (non-task) message.
+# Each pattern must match the ENTIRE message (plus trailing punctuation)
+# to avoid classifying "hi, find the bug" as casual.
 _CASUAL_PATTERNS: list[re.Pattern[str]] = [
-    re.compile(r"^(hi|hello|hey|hey there|good morning|good evening|good afternoon)\b", re.IGNORECASE),
-    re.compile(r"^(thanks|thank you|thx|ty|appreciate it)\b", re.IGNORECASE),
-    re.compile(r"^(ok|okay|k|sure|alright|got it|i see)\b", re.IGNORECASE),
-    re.compile(r"^(bye|goodbye|see you|cya|later)\b", re.IGNORECASE),
-    re.compile(r"^(how are you|what's up|sup|how's it going)\b", re.IGNORECASE),
-    re.compile(r"^(nice|great|awesome|cool|perfect)\s*$", re.IGNORECASE),
-    re.compile(r"^(lol|haha|lmfao|rofl)\b", re.IGNORECASE),
+    re.compile(r"^(hi|hello|hey|hey there|good morning|good evening|good afternoon)[\s\.,!?]*$", re.IGNORECASE),
+    re.compile(r"^(thanks|thank you|thx|ty|appreciate it)[\s\.,!?]*$", re.IGNORECASE),
+    re.compile(r"^(ok|okay|k|sure|alright|got it|i see)[\s\.,!?]*$", re.IGNORECASE),
+    re.compile(r"^(bye|goodbye|see you|cya|later)[\s\.,!?]*$", re.IGNORECASE),
+    re.compile(r"^(how are you|what's up|sup|how's it going)[\s\.,!?]*$", re.IGNORECASE),
+    re.compile(r"^(nice|great|awesome|cool|perfect)[\s\.,!?]*$", re.IGNORECASE),
+    re.compile(r"^(lol|haha|lmfao|rofl)[\s\.,!?]*$", re.IGNORECASE),
 ]
 
 # Patterns that indicate an admin / system command

@@ -165,8 +165,14 @@ async def agent_loop(
             summary = await compact_context(history, llm_chat=llm_chat, model=model)
             yield Compaction(summary=summary)
             # Replace history with compacted version
-            # Keep the latest user message for context
-            history = [{"role": "system", "content": f"Previous context summary:\n{summary}"}]
+            # Preserve the original user message so the LLM knows its task
+            user_msg = (
+                history[0] if history and history[0].get("role") == "user" else {"role": "user", "content": message}
+            )
+            history = [
+                {"role": "system", "content": f"Previous context summary:\n{summary}"},
+                user_msg,
+            ]
             token_est = 0
 
         try:
@@ -196,6 +202,11 @@ async def agent_loop(
                 for tc in tool_calls:
                     tool_name = tc["name"]
                     tool_args = tc.get("args", {})
+
+                    # Coerce arg types based on tool schema
+                    tool_obj = registry.get(tool_name)
+                    if tool_obj:
+                        tool_args = _coerce_args(tool_args, tool_obj.schema)
 
                     yield Thinking(text=f"Calling tool: {tool_name}")
                     yield ToolCall(name=tool_name, args=tool_args)
@@ -275,7 +286,7 @@ async def agent_loop(
     # 6. Emit Done
     yield Done(
         summary=verdict.summary or f"Completed after {iteration} iterations",
-        status="completed" if verdict.complete else ("incomplete" if iteration >= max_iterations else "completed"),
+        status="completed" if verdict.complete else ("failed" if iteration < max_iterations else "incomplete"),
     )
 
     logger.info(
@@ -299,6 +310,37 @@ def _format_tool_info(registry: ToolRegistry) -> str:
     return "\n".join(lines)
 
 
+def _coerce_args(args: dict[str, str], schema: dict) -> dict[str, Any]:
+    """Coerce string argument values to types declared in the tool schema.
+
+    Tool call args arrive as strings from TOOL_CALL parsing. This uses the
+    tool's JSON schema parameter types to coerce int/float/bool/None values.
+    """
+    if not args or not schema:
+        return args
+    try:
+        params = schema.get("function", {}).get("parameters", {}).get("properties", {})
+        if not params:
+            return args
+        coerced: dict[str, Any] = {}
+        for key, val in args.items():
+            prop = params.get(key, {})
+            ptype = prop.get("type", "string")
+            if val.lower() in ("none", "null", ""):
+                coerced[key] = None
+            elif ptype == "integer":
+                coerced[key] = int(val)
+            elif ptype == "number":
+                coerced[key] = float(val)
+            elif ptype == "boolean":
+                coerced[key] = val.lower() in ("true", "1", "yes")
+            else:
+                coerced[key] = val
+        return coerced
+    except (ValueError, TypeError):
+        return args
+
+
 def _describe_schema_params(schema: dict) -> str:
     """Extract parameter descriptions from a tool's JSON schema."""
     try:
@@ -311,22 +353,54 @@ def _describe_schema_params(schema: dict) -> str:
         return ""
 
 
-_TOOL_CALL_RE = re.compile(
-    r"TOOL_CALL:\s*(\w+)\s*\(([^)]*)\)",
+# Matches TOOL_CALL: name( — captures tool name and opening paren position.
+# Argument extraction uses paren-depth counting to handle nested parens.
+_TOOL_CALL_START_RE = re.compile(
+    r"TOOL_CALL:\s*(\w+)\s*\(",
     re.IGNORECASE,
 )
+
+
+def _extract_paren_block(text: str, start: int) -> tuple[str, int] | None:
+    """Extract a balanced parenthesized block starting at text[start]=='('.
+
+    Returns (content_inside_parens, end_position_after_closing_paren)
+    or None if unbalanced.
+    """
+    depth = 0
+    for i in range(start, len(text)):
+        ch = text[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return text[start + 1 : i], i + 1
+    return None
 
 
 def _parse_tool_calls(text: str) -> list[dict]:
     """Parse TOOL_CALL directives from LLM response text.
 
     Parses format: TOOL_CALL: tool_name(param=value, param2=value2)
+    Uses paren-depth counting so quoted values with parens work
+    (e.g. path="some/file(1).txt").
     """
-    matches = _TOOL_CALL_RE.findall(text)
     result: list[dict] = []
-    for name, args_str in matches:
+    pos = 0
+    while True:
+        match = _TOOL_CALL_START_RE.search(text, pos)
+        if not match:
+            break
+        name = match.group(1)
+        block = _extract_paren_block(text, match.end() - 1)
+        if block is None:
+            pos = match.end()
+            continue
+        args_str, end_pos = block
         args = _parse_args(args_str)
         result.append({"name": name, "args": args})
+        pos = end_pos
     return result
 
 
@@ -375,17 +449,33 @@ def _split_args(args_str: str) -> list[str]:
 
 
 def _strip_tool_calls(text: str) -> str:
-    """Remove TOOL_CALL directives from text, leaving only user-visible content."""
-    return re.sub(
-        r"TOOL_CALL:\s*\w+\s*\([^)]*\)\s*",
-        "",
-        text,
-        flags=re.IGNORECASE,
-    ).strip()
+    """Remove TOOL_CALL directives from text, leaving only user-visible content.
+
+    Uses paren-depth counting to handle nested parens in arguments.
+    """
+    result_parts: list[str] = []
+    pos = 0
+    while True:
+        match = _TOOL_CALL_START_RE.search(text, pos)
+        if not match:
+            result_parts.append(text[pos:])
+            break
+        # Append text before this TOOL_CALL
+        result_parts.append(text[pos : match.start()])
+        block = _extract_paren_block(text, match.end() - 1)
+        if block is None:
+            pos = match.end()
+            continue
+        _, end_pos = block
+        pos = end_pos
+        # Skip trailing whitespace after the call
+        while pos < len(text) and text[pos] in " \t\n":
+            pos += 1
+    return "".join(result_parts).strip()
 
 
 def _is_completion_signal(content: str) -> bool:
     """Check if the LLM indicated task completion."""
-    lower = content.strip().lower()
+    lower = content.strip().lower().rstrip(".,!?;: \t\n")
     # If the last paragraph indicates completion
     return lower.endswith(("task complete", "all done", "finished"))

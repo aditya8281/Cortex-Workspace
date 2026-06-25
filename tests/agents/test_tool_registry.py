@@ -232,3 +232,76 @@ class TestSingletonRegistry:
         r1 = get_tool_registry()
         r2 = get_tool_registry()
         assert r1 is r2
+
+
+class TestToolRegistryExecute:
+    """ToolRegistry.execute() — tool execution dispatch."""
+
+    def setup_method(self):
+        self.reg = ToolRegistry()
+
+    def test_execute_sync_tool(self):
+        def my_tool(query: str) -> str:
+            return f"result:{query}"
+
+        self.reg.register(Tool(name="my_tool", description="A tool", handler=my_tool))
+
+        import asyncio
+
+        result = asyncio.run(self.reg.execute("my_tool", query="hello"))
+        assert result == "result:hello"
+
+    def test_execute_async_tool(self):
+        async def my_async_tool(x: int) -> str:
+            return f"got:{x}"
+
+        self.reg.register(Tool(name="my_async_tool", description="Async tool", handler=my_async_tool))
+
+        import asyncio
+
+        result = asyncio.run(self.reg.execute("my_async_tool", x=42))
+        assert result == "got:42"
+
+    def test_execute_unknown_tool(self):
+        import asyncio
+
+        try:
+            asyncio.run(self.reg.execute("nonexistent"))
+            raise AssertionError("Should have raised")
+        except ValueError as e:
+            assert "nonexistent" in str(e)
+
+    def test_execute_none_result_coerced_to_string(self):
+        def returns_none() -> None:
+            return None
+
+        self.reg.register(Tool(name="returns_none", description="Returns none", handler=returns_none))
+
+        import asyncio
+
+        result = asyncio.run(self.reg.execute("returns_none"))
+        assert result == ""
+
+    def test_execute_int_result_coerced_to_string(self):
+        def returns_int() -> int:
+            return 42
+
+        self.reg.register(Tool(name="returns_int", description="Returns int", handler=returns_int))
+
+        import asyncio
+
+        result = asyncio.run(self.reg.execute("returns_int"))
+        assert result == "42"
+
+    def test_execute_tool_preserves_handler_registration(self):
+        """Calling execute doesn't remove the tool from registry."""
+
+        def my_tool() -> str:
+            return "ok"
+
+        self.reg.register(Tool(name="persistent", description="Persistent tool", handler=my_tool))
+
+        import asyncio
+
+        asyncio.run(self.reg.execute("persistent"))
+        assert self.reg.get("persistent") is not None

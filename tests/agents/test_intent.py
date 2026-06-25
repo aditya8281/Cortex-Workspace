@@ -67,6 +67,12 @@ class TestClassifyIntent:
         assert classify_intent("search xyz") == "agent"
         assert classify_intent("run") == "agent"
 
+    def test_casual_word_with_task_not_casual(self):
+        """Message starting with casual word BUT containing real task."""
+        assert classify_intent("hi can you find the bug") == "agent"
+        assert classify_intent("hello search for my file") == "agent"
+        assert classify_intent("thanks now find the error") == "agent"
+
 
 class TestCasualResponse:
     """Fast-path responses for casual messages."""

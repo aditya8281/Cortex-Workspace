@@ -198,21 +198,40 @@ class AgentRunManager:
                 registry=registry,
                 policy=policy,
             ):
-                # Persist AgentStep for tool calls
-                if event.__class__.__name__ in ("ToolCall", "ToolResult", "ToolDenied", "AgentMessage"):
+                # Persist AgentStep for tool call-related events
+                from backend.app.agents.events import AgentMessage as EvAgentMessage
+                from backend.app.agents.events import Thinking
+                from backend.app.agents.events import ToolCall as EvToolCall
+                from backend.app.agents.events import ToolDenied as EvToolDenied
+                from backend.app.agents.events import ToolResult as EvToolResult
+
+                if isinstance(event, (EvAgentMessage, EvToolCall, EvToolResult, EvToolDenied)):
                     step_number += 1
+
+                    # Build step data based on event type
+                    if isinstance(event, EvAgentMessage):
+                        action_input: dict[str, Any] = {"text": event.text}
+                        observation = event.text
+                    elif isinstance(event, EvToolCall):
+                        action_input = {"name": event.name, "args": event.args}
+                        observation = str(event)
+                    elif isinstance(event, EvToolResult):
+                        action_input = {"name": event.name, "result": event.result}
+                        observation = event.result
+                    elif isinstance(event, EvToolDenied):
+                        action_input = {"name": event.name, "reason": event.reason}
+                        observation = event.reason
+                    else:
+                        action_input = {"name": getattr(event, "name", "")}
+                        observation = str(event)
+
                     step = AgentStep(
                         run_id=run.id,
                         step_number=step_number,
                         thought="",
                         action=event.__class__.__name__,
-                        action_input_json=json.dumps(
-                            {
-                                "name": getattr(event, "name", ""),
-                                "args": getattr(event, "args", getattr(event, "result", "")),
-                            }
-                        ),
-                        observation=str(event),
+                        action_input_json=json.dumps(action_input),
+                        observation=observation,
                         status="completed",
                     )
                     self.db.add(step)
@@ -225,8 +244,8 @@ class AgentRunManager:
                 if isinstance(event, Done):
                     final_output = event.summary
 
-                # Stream to callback
-                if hasattr(event, "text") and event.text:
+                # Stream to callback (AgentMessage and Thinking have text)
+                if isinstance(event, (EvAgentMessage, Thinking)) and event.text:
                     await self._emit(
                         {
                             "type": "stream",

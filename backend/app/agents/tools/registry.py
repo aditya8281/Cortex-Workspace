@@ -45,6 +45,8 @@ class ToolRegistry:
 
     def register(self, tool: Tool) -> None:
         """Register a tool. Overwrites if name already exists."""
+        if tool.name in self._tools:
+            logger.warning("Overwriting existing tool: %s", tool.name)
         self._tools[tool.name] = tool
         logger.debug("Registered tool: %s (category: %s)", tool.name, tool.category)
 
@@ -176,12 +178,9 @@ def tool(
 
             return async_wrapper
         else:
-
-            @wraps(func)
-            def sync_wrapper(**kwargs: Any) -> Any:  # type: ignore[misc]
-                return func(**kwargs)
-
-            return sync_wrapper
+            # Return the original function directly for sync tools so that
+            # inspect.signature(func) preserves the real parameter names.
+            return func
 
     return decorator
 
