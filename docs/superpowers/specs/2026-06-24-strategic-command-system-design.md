@@ -157,7 +157,7 @@ Claude Code reads `.md` files from `.claude/commands/` and exposes them as slash
 2. Run `python3 scripts/automation/run_all.py health` — dead code, duplicates, drift.
 3. Run `python3 scripts/automation/run_all.py bug-discovery` — placeholders, security, errors.
 4. Check skill health:
-   - Are all skills in `.agents/skills/` complete (have definitions)?
+   - Are all skills in `.claude/skills/` complete (have definitions)?
    - Are any skills stale (not updated in 30+ days)?
    - Are any skills unused?
 5. Check documentation freshness:

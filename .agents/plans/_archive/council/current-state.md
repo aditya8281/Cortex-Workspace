@@ -270,4 +270,4 @@ No `middleware/` directory exists despite CLAUDE.md mentioning it. All middlewar
 
 ## 10. Skills — What Exists
 
-65 skills installed in `.agents/skills/`. No lock file. Mix of development, design, and utility skills.
+65 skills installed in `.claude/skills/`. No lock file. Mix of development, design, and utility skills.

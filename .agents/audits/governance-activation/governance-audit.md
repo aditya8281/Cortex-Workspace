@@ -195,7 +195,7 @@ Key additions:
 | 2 | P1 | Test all 11 hooks for execution | ✅ DONE | Verified 6/11 pass, 5 fail on pre-existing issues |
 | 3 | P1 | Create `/project:status` command | 30 min | Quick active state discovery |
 | 4 | P1 | Wire completion-gate into Claude Code hooks | 30 min | Platform-enforced quality gate |
-| 5 | P2 | Create `.agents/skills/INDEX.md` manifest | 30 min | Skill discoverability |
+| 5 | P2 | Create `.claude/skills/INDEX.md` manifest | 30 min | Skill discoverability |
 | 6 | P2 | Create `cortex-architecture-audit` skill | 1 hr | Domain-specific quality |
 | 7 | P2 | Add git hook to prevent direct commits to main | 30 min | Branch enforcement |
 | 8 | P3 | Add frontend pre-commit hooks | 30 min | Frontend quality on commit |

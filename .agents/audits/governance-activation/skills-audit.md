@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-25
 **Auditor:** Claude Code
-**Scope:** All 66 skill directories in `.agents/skills/`
+**Scope:** All 66 skill directories in `.claude/skills/`
 
 ---
 
@@ -71,7 +71,7 @@ GOVERNANCE.md lists these as candidates but NONE exist yet:
 ### How Skills Are Found
 
 1. **system-reminder messages** — Claude Code lists available skills automatically
-2. **`ls .agents/skills/`** — Manual discovery
+2. **`ls .claude/skills/`** — Manual discovery
 3. **`find-skills/` skill** — Meta-skill for finding other skills (just a SKILL.md)
 
 ### What's Missing
@@ -95,7 +95,7 @@ None.
    - **Fix:** Create at least `cortex-architecture-audit` and `cortex-health-review` skills.
 
 2. **No skill manifest** — 66 skills with no index. Claude must `ls` or rely on system-reminder. No way to query "which skill for database work?"
-   - **Fix:** Create `.agents/skills/INDEX.md` with categories and descriptions.
+   - **Fix:** Create `.claude/skills/INDEX.md` with categories and descriptions.
 
 3. **Duplicate/overlapping skills** — `design-taste-frontend` and `design-taste-frontend-v1` exist. `grill-me`, `grill-with-docs`, and `grilling` overlap. `ask-matt` and `setup-matt-pocock-skills` overlap.
    - **Fix:** Audit and consolidate overlapping skills.
@@ -114,7 +114,7 @@ None.
 
 | Priority | Action | Effort |
 |----------|--------|--------|
-| P1 | Create `.agents/skills/INDEX.md` manifest | 30 min |
+| P1 | Create `.claude/skills/INDEX.md` manifest | 30 min |
 | P1 | Create `cortex-architecture-audit` skill | 1 hr |
 | P2 | Create `cortex-health-review` skill | 1 hr |
 | P2 | Audit and consolidate duplicate skills | 2 hr |

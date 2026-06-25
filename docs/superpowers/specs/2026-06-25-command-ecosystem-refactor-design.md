@@ -132,7 +132,7 @@ Read all state to understand where the repo is:
 
 **The plan is guidance, not gospel. The agent's judgment supersedes the plan when the agent can articulate why.**
 
-Select applicable skills from `.agents/skills/`. Determine if brainstorming skill is needed for complex design decisions.
+Select applicable skills from `.claude/skills/`. Determine if brainstorming skill is needed for complex design decisions.
 
 #### Phase 2: BRANCH
 
@@ -227,7 +227,7 @@ Before generating anything, read:
 - Constitution (.agents/plans/guide.md)
 - Workflows (docs/WORKFLOWS.md)
 - Governance (docs/GOVERNANCE.md)
-- Available skills (.agents/skills/)
+- Available skills (.claude/skills/)
 - Available commands (.claude/commands/project/)
 - Available hooks (.claude/hooks/)
 - Available MCP servers (from settings)
@@ -278,7 +278,7 @@ Generated prompts follow this structure:
 
 **Key rules:**
 - Reference real file paths that exist in the repo
-- Reference real skills that exist in `.agents/skills/`
+- Reference real skills that exist in `.claude/skills/`
 - Reference real workflows from `docs/WORKFLOWS.md`
 - Reference real governance from `docs/GOVERNANCE.md`
 - Don't repeat rules already enforced by hooks

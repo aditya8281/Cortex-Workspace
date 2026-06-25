@@ -36,7 +36,7 @@ echo "CWD set to repo root: $ROOT"
 
 ```bash
 echo "Commands: $(ls .claude/commands/project/ 2>/dev/null | wc -l)"
-echo "Skills: $(ls -d .agents/skills/cortex-*/ 2>/dev/null | wc -l)"
+echo "Skills: $(ls -d .claude/skills/cortex-*/ 2>/dev/null | wc -l)"
 echo "CLAUDE.md: $([ -f CLAUDE.md ] && echo 'found' || echo 'MISSING')"
 ```
 

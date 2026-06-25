@@ -81,7 +81,7 @@ The original Cortex development followed a phase-based approach (Phase 1–10). 
 - Enhanced CLAUDE.md with ecosystem integration
 - Enhanced AGENTS.md with workflow and skill rules
 - ADR for ecosystem design (docs/decisions/001-agentic-ecosystem.md)
-- 66+ agent skills (.agents/skills/)
+- 66+ agent skills (.claude/skills/)
 - 7 strategic commands (.claude/commands/project/)
 - 11 governance hooks (.claude/hooks/)
 - Automation framework (scripts/automation/)

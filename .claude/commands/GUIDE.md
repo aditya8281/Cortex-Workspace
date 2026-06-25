@@ -16,7 +16,7 @@ Skills (contain reusable intelligence)
 Hooks (enforce quality automatically)
 ```
 
-Commands are thin orchestrators. They invoke skills from `.agents/skills/` rather than containing logic inline.
+Commands are thin orchestrators. They invoke skills from `.claude/skills/` rather than containing logic inline.
 
 ## Commands
 

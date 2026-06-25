@@ -130,7 +130,7 @@ Ideation → Update → Enhance Plan → Develop → Review → Reflect → Rele
 
 **Steps:**
 1. Agent identifies the task domain
-2. Agent searches for relevant skills (system-reminder skill list, `.agents/skills/`)
+2. Agent searches for relevant skills (system-reminder skill list, `.claude/skills/`)
 3. Agent evaluates available skills against the task
 4. Agent selects the best skill or skill combination
 5. Agent applies those skills before continuing
@@ -505,7 +505,7 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 
 1. **Extract:** Document the process step-by-step
 2. **Document:** Write skill definition with purpose, steps, examples, validation
-3. **Create:** Add to `.agents/skills/your-skill/`
+3. **Create:** Add to `.claude/skills/your-skill/`
 4. **Test:** Run the skill on a real task
 5. **Validate:** Verify output quality, identify friction points
 6. **Integrate:** Update workflows to reference the new skill
@@ -564,6 +564,6 @@ path:line: <emoji> <severity>: <problem>. <fix>.
 When a skill is no longer useful:
 
 1. Document why it's being retired
-2. Remove from `.agents/skills/`
+2. Remove from `.claude/skills/`
 3. Update any workflows that reference it
 4. Commit with `remove:` prefix

@@ -25,7 +25,7 @@ Four dimensions:
 
 Invoke `cortex-repo-discovery`. Invoke `cortex-planning-ecosystem`.
 
-Also review: `.claude/commands/project/`, `.agents/skills/INDEX.md`, `docs/WORKFLOWS.md`, `docs/GOVERNANCE.md`, relevant ADRs.
+Also review: `.claude/commands/project/`, `.claude/skills/INDEX.md`, `docs/WORKFLOWS.md`, `docs/GOVERNANCE.md`, relevant ADRs.
 
 **Outcome:** Complete understanding of planned state vs actual state.
 

@@ -25,7 +25,7 @@ def main():
     skill_count = 0
 
     if not SKILLS_DIR.exists():
-        print("  ✗ .agents/skills/ directory not found")
+        print("  ✗ .claude/skills/ directory not found")
         return 1
 
     for skill_dir in sorted(SKILLS_DIR.iterdir()):
@@ -54,7 +54,7 @@ def main():
     if index_md.exists():
         print(f"  ✓ INDEX.md exists ({index_md.stat().st_size} bytes)")
     else:
-        issues.append("INDEX.md missing in .agents/skills/")
+        issues.append("INDEX.md missing in .claude/skills/")
 
     # Report
     print(f"  Skills found: {skill_count}")

@@ -1,6 +1,6 @@
 # Skills Index
 
-81 skills in `.agents/skills/`. Each has a `SKILL.md` entry point. Cortex-specific skills provide reusable intelligence for the command ecosystem.
+81 skills in `.claude/skills/`. Each has a `SKILL.md` entry point. Cortex-specific skills provide reusable intelligence for the command ecosystem.
 
 ---
 

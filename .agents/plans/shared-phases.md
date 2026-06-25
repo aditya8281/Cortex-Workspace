@@ -1,6 +1,6 @@
 # Shared Execution Phases
 
-This document defines reusable phases that multiple commands reference. Each phase delegates to a dedicated skill in `.agents/skills/`.
+This document defines reusable phases that multiple commands reference. Each phase delegates to a dedicated skill in `.claude/skills/`.
 
 **Purpose:** Commands orchestrate; skills contain intelligence. Update a skill, and every referencing command stays consistent.
 

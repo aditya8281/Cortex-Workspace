@@ -34,7 +34,7 @@ ALLOWED_LOCATIONS: dict[str, str] = {
     "middleware": "backend/app/middleware/",
     "task": "backend/app/tasks/",
     "hook": ".claude/hooks/",
-    "skill": ".agents/skills/",
+    "skill": ".claude/skills/",
     "migration": "migrations/versions/",
     "test": "tests/",
     "doc": "docs/",

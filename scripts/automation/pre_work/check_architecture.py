@@ -20,7 +20,7 @@ def check_architecture():
 
     # Check for competing doc systems (should not exist)
     known_bad = [
-        (".trae/skills", "Duplicate skill directory (should use .agents/skills/)"),
+        (".trae/skills", "Duplicate skill directory (should use .claude/skills/)"),
         (".codex/hooks.json", "Stale Codex config"),
         (".cortex_bootstrap", "One-time bootstrap artifact"),
         ("skills-lock.json", "Unused skill lock file"),

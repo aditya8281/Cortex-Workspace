@@ -22,7 +22,7 @@ def check_skill_inventory() -> list:
     findings = []
     skills_dir = ROOT / ".agents" / "skills"
     if not skills_dir.exists():
-        return ["No .agents/skills/ directory found"]
+        return ["No .claude/skills/ directory found"]
 
     skill_dirs = [d for d in skills_dir.iterdir() if d.is_dir() and not d.name.startswith(".")]
 

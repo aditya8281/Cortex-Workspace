@@ -48,7 +48,7 @@ python .claude/hooks/run_hooks.py --help
 ls .claude/commands/project/
 
 # Available skills
-ls .agents/skills/
+ls .claude/skills/
 ```
 
 ### 4. Check for Existing Work
@@ -103,7 +103,7 @@ Six versions, each a complete milestone:
 1. **Read the active phase plan** — know what components are in scope
 2. **Read the constraints** — .agents/plans/guide.md architecture principles apply always
 3. **Verify entry state** — run the entry protocol above
-4. **Skill discovery** — check `.agents/skills/` for applicable skills
+4. **Skill discovery** — check `.claude/skills/` for applicable skills
 5. **Branch** — create `feat/<topic>` from `main`
 
 ### During Work
@@ -177,7 +177,7 @@ These rules are immutable. See `.agents/plans/guide.md` for full rationale.
 | Migrations | `migrations/versions/` |
 | Docs | `docs/` |
 | ADRs | `docs/decisions/` |
-| Skills | `.agents/skills/` |
+| Skills | `.claude/skills/` |
 | Hooks | `.claude/hooks/` |
 
 ### Forbidden Paths
@@ -230,7 +230,7 @@ Hooks (enforce quality automatically)
 ```
 
 - **Commands** are thin orchestrators. They invoke skills and compose workflows. They do not contain reusable logic.
-- **Skills** (in `.agents/skills/`) contain reusable intelligence. Each has a documented purpose, step-by-step process, and output definition.
+- **Skills** (in `.claude/skills/`) contain reusable intelligence. Each has a documented purpose, step-by-step process, and output definition.
 - **Shared phases** (`.agents/plans/shared-phases.md`) delegate to skills. Updating a skill updates all commands that reference it.
 - **Discovery is automatic.** Every command starts with `cortex-repo-discovery` to find the repository root from any directory.
 

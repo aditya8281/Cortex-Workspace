@@ -34,7 +34,7 @@
 | **Email** | None | IMAP/SMTP with triage, tags, summaries, reply drafts | **Odysseus** | DEFER |
 | **Calendar/Tasks** | None | CalDAV sync, reminders, scheduled agent tasks | **Odysseus** | DEFER |
 | **Documents** | None | Writing-first editor with AI edits, suggestions, Markdown | **Odysseus** | DEFER |
-| **Skills** | .agents/skills/ (dev-time only) | Disk-based skill system (YAML frontmatter + markdown, usage tracking) | **Odysseus** | **ADAPT** |
+| **Skills** | .claude/skills/ (dev-time only) | Disk-based skill system (YAML frontmatter + markdown, usage tracking) | **Odysseus** | **ADAPT** |
 | **Session management** | Conversation model with message history | SessionManager singleton + session search + auto-sort | **Odysseus** | **ADAPT** |
 | **Webhooks** | None | Outgoing webhook manager | **Odysseus** | DEFER |
 | **Model serving** | Ollama integration | Cookbook (tmux-based vLLM/SGLang/llama.cpp) + model download + presets | **Odysseus** | DEFER |
@@ -62,7 +62,7 @@
 | **Notes** | None | Google Keep-style notes/checklists, pin/archive/reorder, reminder dispatch (browser/email/ntfy/webhook), LLM synthesis | **Odysseus** | **ADOPT** |
 | **Documents** | None | Living documents with version history, PDF import/export (forms + signatures), AI tidy, signed-reply | **Odysseus** | **ADOPT** |
 | **Deep research** | None | IterResearch-style multi-step web research, visual HTML reports, spinoff to chat | **Odysseus** | **ADOPT** |
-| **Skills** | .agents/skills/ (dev-time only) | Disk-based skill system (YAML frontmatter + markdown, usage tracking, slash-command invocation, autonomous audit) | **Odysseus** | **ADOPT** |
+| **Skills** | .claude/skills/ (dev-time only) | Disk-based skill system (YAML frontmatter + markdown, usage tracking, slash-command invocation, autonomous audit) | **Odysseus** | **ADOPT** |
 | **Webhooks** | None | Outgoing webhook CRUD + test, API token sync-chat endpoint, provider auto-detection | **Odysseus** | **ADAPT** |
 | **Task scheduler** | None | Cron/event/webhook triggers, 10 built-in housekeeping tasks, personal assistant crew member | **Odysseus** | **ADOPT** |
 | **Governance** | Comprehensive (GOVERNANCE.md, WORKFLOWS.md, ADRs) | None | Cortex | KEEP |
@@ -471,7 +471,7 @@ Odysseus implements a complete "AI personal assistant" layer. These are NOT just
 
 **7. Runtime Skill Injection**
 - Adopt Odysseus's Jaccard-matched skill injection into system prompt
-- Integrate with existing `.agents/skills/` directory
+- Integrate with existing `.claude/skills/` directory
 - Create `backend/app/services/skills/injector.py`
 
 **8. Session Search**

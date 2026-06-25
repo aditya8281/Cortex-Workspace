@@ -18,7 +18,7 @@ Report: pass/fail per hook, any false positives.
 
 ### 2. Skill Health
 
-- List all skills in `.agents/skills/`
+- List all skills in `.claude/skills/`
 - Check for definition files in each
 - Flag skills not updated in 30+ days as stale
 - Flag skills with no references in docs/workflows as unused

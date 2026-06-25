@@ -559,7 +559,7 @@ Run:
 ```bash
 # Available layers to check
 ls .claude/commands/project/
-ls .agents/skills/ 2>/dev/null | head -20
+ls .claude/skills/ 2>/dev/null | head -20
 ls .claude/hooks/ 2>/dev/null
 ls docs/ 2>/dev/null
 ```
@@ -577,7 +577,7 @@ Check each layer for required updates:
 | **Commands** | `.claude/commands/project/*.md` | Do any commands need updating? New command needed? |
 | **Hooks** | `.claude/hooks/` | Does validation need new hooks? |
 | **Workflows** | `docs/WORKFLOWS.md` | Do development workflows change? |
-| **Skills** | `.agents/skills/` | Is a new skill needed? Does an existing skill need updating? |
+| **Skills** | `.claude/skills/` | Is a new skill needed? Does an existing skill need updating? |
 | **CLAUDE.md** | `CLAUDE.md` | Do architecture constraints change? New patterns? |
 | **ADRs** | `docs/decisions/` | Is a new ADR needed? Do existing ADRs get superseded? |
 | **Tests** | `tests/` | What test files are affected? New test directories needed? |

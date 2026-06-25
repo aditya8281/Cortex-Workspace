@@ -359,7 +359,7 @@ git commit -m "feat: add /project:challenge command"
 - Create: `.claude/commands/project/health.md`
 
 **Interfaces:**
-- Consumes: All hooks (`.claude/hooks/run_hooks.py`), automation scripts (`scripts/automation/`), skill inventory (`.agents/skills/`)
+- Consumes: All hooks (`.claude/hooks/run_hooks.py`), automation scripts (`scripts/automation/`), skill inventory (`.claude/skills/`)
 - Produces: Health report in terminal; saves to `docs/audits/YYYY-MM-DD-health-report.md`
 
 - [ ] **Step 1: Write the health command**
@@ -392,7 +392,7 @@ python3 scripts/automation/run_all.py bug-discovery
 Report: placeholders, security issues, error patterns.
 
 4. **Check skill health.**
-- List all skills in `.agents/skills/`
+- List all skills in `.claude/skills/`
 - For each, check if it has a definition file (`.md`, `.txt`, `.yaml`, `.py`)
 - Check last modification date — flag skills not updated in 30+ days as stale
 - List any skills that appear unused (no references in docs or workflows)
@@ -708,7 +708,7 @@ Run weekly or after completing significant work. Reviews and enhances skills, ho
 
 1. **Review skill usage.**
 - Check git log for recent skill invocations
-- Which skills from `.agents/skills/` were used?
+- Which skills from `.claude/skills/` were used?
 - Which were skipped? Why?
 - Were there skill creation opportunities that weren't acted on?
 - Are any skills stale (not updated in 30+ days)?

@@ -56,7 +56,7 @@ Before any significant task, search for existing skills:
 
 ```bash
 # Check available skills
-ls .agents/skills/
+ls .claude/skills/
 # Or use the skill list from system-reminder messages
 ```
 
@@ -289,7 +289,7 @@ Every topic has exactly one authoritative file:
 | Docs | `docs/` |
 | ADRs | `docs/decisions/` |
 | Audits | `docs/audits/` |
-| Skills | `.agents/skills/` |
+| Skills | `.claude/skills/` |
 | Hooks | `.claude/hooks/` |
 
 ### Forbidden Paths
@@ -392,7 +392,7 @@ All checks must pass before merge.
 ### Adding a New Skill
 
 1. Identify the reusable workflow (repetitive? Cortex-specific? Difficult enough?)
-2. Create directory in `.agents/skills/your-skill/`
+2. Create directory in `.claude/skills/your-skill/`
 3. Write skill definition with: purpose, steps, examples, validation
 4. Test the skill on a real task
 5. Update AGENTS.md or GOVERNANCE.md if it's a core workflow

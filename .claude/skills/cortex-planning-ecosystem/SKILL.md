@@ -28,7 +28,7 @@ Read:
 ```bash
 echo "Commands:" && ls .claude/commands/project/ 2>/dev/null
 echo "Hooks:" && ls .claude/hooks/ 2>/dev/null
-echo "Skills (cortex):" && ls -d .agents/skills/cortex-*/ 2>/dev/null
+echo "Skills (cortex):" && ls -d .claude/skills/cortex-*/ 2>/dev/null
 ```
 
 ## Output

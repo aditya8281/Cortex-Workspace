@@ -296,7 +296,7 @@ A discovery and cataloging tool that aggregates metadata for **773+ Ollama model
 **Current state:** None. No extensibility mechanism.
 
 **What exists:**
-- Skills in `.agents/skills/` (file-based, not runtime-loadable)
+- Skills in `.claude/skills/` (file-based, not runtime-loadable)
 - Agent system (basic)
 
 **What's missing:**

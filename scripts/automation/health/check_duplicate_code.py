@@ -2,7 +2,7 @@
 """Repository health: Detect duplicate/similar code.
 
 Checks:
-- Duplicate skill directories (should only be .agents/skills/)
+- Duplicate skill directories (should only be .claude/skills/)
 - Duplicate configuration files
 - Similar Python function names across modules
 """
@@ -16,8 +16,8 @@ ROOT = Path(__file__).resolve().parents[3]
 def find_duplicate_skills():
     """Check for duplicate skill directories."""
     known_locations = [
-        (".agents/skills", "Primary skill directory"),
-        (".trae/skills", "Trae skills (should not exist — duplicates .agents/skills/)"),
+        (".claude/skills", "Primary skill directory"),
+        (".trae/skills", "Trae skills (should not exist — duplicates .claude/skills/)"),
     ]
 
     found = {}

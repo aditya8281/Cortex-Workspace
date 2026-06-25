@@ -16,7 +16,7 @@ Invoke `cortex-repo-health-scan`.
 
 ### 3. Check Skill Health
 
-- List all skills in `.agents/skills/`
+- List all skills in `.claude/skills/`
 - For each, check if it has a definition file
 - Flag skills not updated in 30+ days as stale
 - List any unused skills (no references in docs or workflows)

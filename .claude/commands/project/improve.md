@@ -11,7 +11,7 @@ Invoke `cortex-repo-discovery`. Invoke `cortex-repository-intelligence`. Invoke 
 ### 1. Review Skill Usage
 
 - Check git log for recent skill invocations
-- Which skills from `.agents/skills/` were used? Which skipped? Why?
+- Which skills from `.claude/skills/` were used? Which skipped? Why?
 - Skill creation opportunities not acted on?
 - Stale skills (not updated in 30+ days)?
 

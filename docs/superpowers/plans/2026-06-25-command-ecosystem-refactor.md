@@ -52,7 +52,7 @@ Modify:
 - Create: `.claude/commands/project/cortex.md`
 
 **Interfaces:**
-- Consumes: CLAUDE.md (execution contract), `.agents/plans/guide.md` (constitution), `.agents/plans/implementation_steps.md`, `.agents/plans/versions/vX/Phase-N.md` (active phase), `.agents/plans/versions/vX/progress.md`, `ACTIVE_VERSION.md`, `docs/WORKFLOWS.md`, `docs/GOVERNANCE.md`, `.agents/skills/`, `.claude/hooks/`, `docs/ARCHITECTURE.md`
+- Consumes: CLAUDE.md (execution contract), `.agents/plans/guide.md` (constitution), `.agents/plans/implementation_steps.md`, `.agents/plans/versions/vX/Phase-N.md` (active phase), `.agents/plans/versions/vX/progress.md`, `ACTIVE_VERSION.md`, `docs/WORKFLOWS.md`, `docs/GOVERNANCE.md`, `.claude/skills/`, `.claude/hooks/`, `docs/ARCHITECTURE.md`
 - Produces: A complete development iteration (branch, implementation, commits, updated tracking)
 
 **Validation:** File exists. Reads correctly. References real file paths. Follows Purpose → Instructions → Output structure. Implements 8 phases from spec. Includes cleanup phase. Includes critical thinking in PLAN phase. Includes exit gate with max 3 iterations. Includes escalation to human.
@@ -117,7 +117,7 @@ Determine what work should be done in this iteration.
 
 **The plan is guidance, not gospel. Your judgment supersedes the plan when you can articulate why.**
 
-Select applicable skills from `.agents/skills/`. If the work involves complex design, consider whether the brainstorming skill should be invoked.
+Select applicable skills from `.claude/skills/`. If the work involves complex design, consider whether the brainstorming skill should be invoked.
 
 Define exit criteria for this iteration:
 - What specific deliverables will be produced?
@@ -342,7 +342,7 @@ Read these files to understand the ecosystem:
 - `.agents/plans/guide.md` — constitution and principles
 - `docs/WORKFLOWS.md` — development workflows
 - `docs/GOVERNANCE.md` — governance rules
-- `.agents/skills/` — available skills (list the directory)
+- `.claude/skills/` — available skills (list the directory)
 - `.claude/commands/project/` — available commands (list the directory)
 - `.claude/hooks/` — available hooks
 
@@ -398,7 +398,7 @@ Write the prompt using this structure:
 
 **Key rules for generated prompts:**
 - Reference real file paths that exist in the repository
-- Reference real skills from `.agents/skills/` that apply to this work
+- Reference real skills from `.claude/skills/` that apply to this work
 - Reference real workflows from `docs/WORKFLOWS.md`
 - Reference real governance from `docs/GOVERNANCE.md`
 - Do not repeat rules already enforced by hooks (the on-change hook handles lint)
