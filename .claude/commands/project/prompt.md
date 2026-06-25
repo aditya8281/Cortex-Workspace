@@ -15,7 +15,7 @@ git log --oneline -5
 git branch --show-current
 
 # Version context
-cat ACTIVE_VERSION.md
+cat .agents/plans/ACTIVE_VERSION.md
 grep -r "in_progress\|active" .agents/plans/versions/*/progress.md
 ```
 

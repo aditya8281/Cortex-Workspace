@@ -10,7 +10,7 @@ Cross-reference roadmap/phase plans against the actual codebase. Find what's pla
 
 ```bash
 cat docs/ROADMAP.md
-cat ACTIVE_VERSION.md
+cat .agents/plans/ACTIVE_VERSION.md
 cat .agents/plans/versions/vX/progress.md  # (replace X with active version)
 ```
 

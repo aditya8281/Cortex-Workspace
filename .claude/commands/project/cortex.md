@@ -18,7 +18,7 @@ cat .agents/plans/guide.md
 cat .agents/plans/implementation_steps.md
 
 # Active version and phase
-cat ACTIVE_VERSION.md
+cat .agents/plans/ACTIVE_VERSION.md
 grep -r "in_progress\|active" .agents/plans/versions/*/progress.md
 
 # Recent work

@@ -9,7 +9,7 @@ Deep code-level scan for runtime errors, dead code, integration issues, broken i
 ### 1. Read Scope
 
 ```bash
-cat ACTIVE_VERSION.md
+cat .agents/plans/ACTIVE_VERSION.md
 grep -r "in_progress\|active" .agents/plans/versions/*/progress.md
 ```
 

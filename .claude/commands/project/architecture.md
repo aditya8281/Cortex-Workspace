@@ -6,7 +6,7 @@ Run before implementing significant new systems or modifying core architecture.
 
 1. **Read the source of truth.** Read `docs/ARCHITECTURE.md` completely.
 
-2. **Check version context.** Read `ACTIVE_VERSION.md`. Verify the proposed change is appropriate for the current version. Changes that belong in a later version should be deferred.
+2. **Check version context.** Read `.agents/plans/ACTIVE_VERSION.md`. Verify the proposed change is appropriate for the current version. Changes that belong in a later version should be deferred.
 
 3. **Understand the proposed change.** Check:
 - Recent git commits (`git log --oneline -10`)

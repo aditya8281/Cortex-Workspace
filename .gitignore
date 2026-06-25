@@ -58,6 +58,7 @@ CortexMemory/
 
 # Tooling cache
 .impeccable/
+.superpowers/
 
 # Alembic
 migrations/versions/__pycache__/

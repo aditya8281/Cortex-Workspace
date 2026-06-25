@@ -9,7 +9,7 @@ Determine if the current state is ready for release of the active version/phase.
 ### 1. Read Version Context
 
 ```bash
-cat ACTIVE_VERSION.md
+cat .agents/plans/ACTIVE_VERSION.md
 cat .agents/plans/versions/vX/progress.md  # (replace X with active version)
 ```
 
