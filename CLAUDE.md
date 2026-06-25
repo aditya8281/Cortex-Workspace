@@ -233,10 +233,13 @@ Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for d
 
 **MAY proceed:** Well-defined tasks, established patterns, mechanical changes, test/doc updates.
 
+**WHENECER COMMIT** RULE (SHOULD ALWAYS FOLLOW) : always make git msg of one line in standard manner, and never add any co authored by text never.
+
 ## Strategic Commands
 
 | Command | When | Purpose |
 |---------|------|---------|
+| `/project:develop` | Start of session | Orchestrate next development iteration |
 | `/project:cortex` | Start development session | Autonomous development iteration |
 | `/project:prompt` | Before complex work | Generate ecosystem-aware prompts |
 | `/project:audit` | During audits | Deep code-level scan |
