@@ -36,13 +36,19 @@ Run weekly or after completing significant work. Reviews and enhances skills, ho
 - Are there new patterns that should be codified?
 - Are clarification rules still appropriate?
 
-6. **Generate improvement recommendations.** For each:
+6. **Check for generation opportunities.** Based on patterns observed during this review:
+   - Should any new command be created? (recurring manual process)
+   - Should any new hook be created? (recurring quality issue)
+   - Should any new skill be created? (recurring workflow pattern)
+   - If yes, recommend with justification.
+
+7. **Generate improvement recommendations.** For each:
 - What: specific improvement
 - Why: what problem it solves
 - Effort: S/M/L
 - Priority: now / soon / later
 
-7. **Output** format:
+8. **Output** format:
 
 ```
 ## Ecosystem Improvement: [date]
@@ -80,4 +86,4 @@ Run weekly or after completing significant work. Reviews and enhances skills, ho
 - Now: N, Soon: N, Later: N
 ```
 
-8. If action-items found, save to `docs/audits/YYYY-MM-DD-improve.md`.
+9. If action-items found, save to `docs/audits/YYYY-MM-DD-improve.md`.
