@@ -185,6 +185,7 @@ async def lifespan(app: FastAPI):
 
     # Periodic Ollama model sync (every 60 seconds)
     if "pytest" not in sys.modules:
+
         async def _periodic_ollama_sync():
             while True:
                 await asyncio.sleep(60)
@@ -229,39 +230,50 @@ async def lifespan(app: FastAPI):
     logger.info("Redis cache connection closed")
 
 
-app = FastAPI(
-    title=settings.APP_NAME,
-    debug=settings.DEBUG,
-    version="0.1.0",
-    lifespan=lifespan,
-)
+def create_daemon_app() -> FastAPI:
+    """Create a FastAPI app configured for daemon operation.
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
-)
+    Used by cortexd CLI. Returns the same app instance as the module-level
+    ``app`` for backward compatibility.
+    """
+    app = FastAPI(
+        title=settings.APP_NAME,
+        debug=settings.DEBUG,
+        version=getattr(settings, "VERSION", "0.1.0"),
+        lifespan=lifespan,
+    )
 
-app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-CSRF-Token"],
+    )
 
-app.add_middleware(GZipMiddleware, minimum_size=500)
-app.add_middleware(RequestSizeLimitMiddleware)
+    app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(GZipMiddleware, minimum_size=500)
+    app.add_middleware(RequestSizeLimitMiddleware)
 
-setup_rate_limiting(app)
-setup_csrf_protection(app)
-setup_https_redirect(app)
+    setup_rate_limiting(app)
+    setup_csrf_protection(app)
+    setup_https_redirect(app)
 
-app.include_router(
-    api_router,
-    prefix=settings.API_V1_PREFIX,
-)
-app.include_router(auth_router)
-app.include_router(memory_router)
-app.include_router(ws_router)
-app.include_router(ws_models_router)
-app.include_router(ws_system_router)
+    app.include_router(
+        api_router,
+        prefix=settings.API_V1_PREFIX,
+    )
+    app.include_router(auth_router)
+    app.include_router(memory_router)
+    app.include_router(ws_router)
+    app.include_router(ws_models_router)
+    app.include_router(ws_system_router)
+
+    return app
+
+
+# Module-level app for backward compatibility (existing imports / uvicorn)
+app = create_daemon_app()
 
 
 @app.get("/")

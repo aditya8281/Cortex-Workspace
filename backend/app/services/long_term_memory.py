@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import CursorResult, func
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.app.models.long_term_memory import LongTermMemory
