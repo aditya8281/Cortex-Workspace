@@ -196,22 +196,26 @@ def check_api_conventions() -> list[str]:
 
 
 def check_model_registration() -> list[str]:
-    """Check that new models are imported in main.py for Alembic."""
+    """Check that new models are imported in migrations/env.py for Alembic.
+
+    Models must be imported in migrations/env.py (not main.py) so Alembic's
+    autogenerate can detect them for migration creation.
+    """
     findings: list[str] = []
-    main_py = ROOT / "backend" / "app" / "main.py"
+    migrations_env = ROOT / "migrations" / "env.py"
     models_dir = ROOT / "backend" / "app" / "models"
 
-    if not main_py.exists() or not models_dir.exists():
+    if not migrations_env.exists() or not models_dir.exists():
         return findings
 
-    main_content = read_file(main_py)
+    env_content = read_file(migrations_env)
 
     for model_file in models_dir.glob("*.py"):
         if model_file.name.startswith("__"):
             continue
         module_name = f"backend.app.models.{model_file.stem}"
-        if module_name not in main_content:
-            findings.append(f"Model {model_file.stem} not imported in main.py (needed for Alembic)")
+        if module_name not in env_content:
+            findings.append(f"Model {model_file.stem} not imported in migrations/env.py (needed for Alembic)")
 
     return findings
 
