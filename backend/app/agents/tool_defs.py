@@ -197,9 +197,344 @@ async def ask_user(question: str) -> str:
     raise UserInputRequired(question)
 
 
+# ---------------------------------------------------------------------------
+# New tools (V1 Phase 2 — 15+ tools target)
+# ---------------------------------------------------------------------------
+
+
+@tool(description="Read file contents with line limit", category="files")
+async def read_file(path: str, max_lines: int = 500) -> str:
+    """Read the contents of a file, limited to max_lines.
+
+    Args:
+        path: Absolute path or path relative to workspace root
+        max_lines: Maximum number of lines to read (default 500)
+    """
+    try:
+        target = ensure_within_workspace(path)
+    except (ValueError, PermissionError) as exc:
+        return f"Error: {exc}"
+    if not target.exists():
+        return f"Error: file not found — {path}"
+    if not target.is_file():
+        return f"Error: not a file — {path}"
+    try:
+        text = target.read_text("utf-8", errors="replace")
+        lines = text.split("\n")
+        total = len(lines)
+        if total > max_lines:
+            shown = lines[:max_lines]
+            text = "\n".join(shown)
+            text += f"\n\n... ({total - max_lines} more lines, truncated at {max_lines})"
+        return text
+    except PermissionError:
+        return f"Error: permission denied — {path}"
+    except Exception as exc:
+        return f"Error reading file: {exc}"
+
+
+@tool(description="Write content to a file (requires approval)", requires_approval=True, category="files")
+async def write_file(path: str, content: str) -> str:
+    """Write content to a file within the workspace. Overwrites if exists.
+
+    Args:
+        path: Path relative to workspace root (no absolute paths for safety)
+        content: The content to write
+    """
+    try:
+        target = ensure_within_workspace(path)
+    except (ValueError, PermissionError) as exc:
+        return f"Error: {exc}"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        target.write_text(content, encoding="utf-8")
+        return f"Written {len(content)} bytes to {target}"
+    except PermissionError:
+        return f"Error: permission denied — {path}"
+    except Exception as exc:
+        return f"Error writing file: {exc}"
+
+
+@tool(description="List directory contents", category="files")
+async def list_directory(path: str = ".") -> str:
+    """List files and directories at the given path.
+
+    Args:
+        path: Directory path relative to workspace root (default: .)
+    """
+    try:
+        target = ensure_within_workspace(path)
+    except (ValueError, PermissionError) as exc:
+        return f"Error: {exc}"
+    if not target.exists():
+        return f"Error: path not found — {path}"
+    if not target.is_dir():
+        return f"Error: not a directory — {path}"
+    try:
+        entries = sorted(target.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower()))
+        lines: list[str] = []
+        for entry in entries:
+            suffix = "/" if entry.is_dir() else ""
+            size = entry.stat().st_size if entry.is_file() else 0
+            if entry.is_file():
+                lines.append(f"  {entry.name}{suffix}  ({size} bytes)")
+            else:
+                lines.append(f"  {entry.name}{suffix}")
+        if not lines:
+            return "(empty directory)"
+        return "\n".join(lines)
+    except PermissionError:
+        return f"Error: permission denied — {path}"
+    except Exception as exc:
+        return f"Error listing directory: {exc}"
+
+
+@tool(description="Search for text patterns in files (like grep)", category="code")
+async def grep_files(pattern: str, path: str = ".", max_results: int = 50) -> str:
+    """Search for a regex pattern in files within the given directory.
+
+    Args:
+        pattern: Regex pattern to search for
+        path: Directory to search in (relative to workspace root)
+        max_results: Maximum match lines to return (default 50)
+    """
+    try:
+        target = ensure_within_workspace(path)
+    except (ValueError, PermissionError) as exc:
+        return f"Error: {exc}"
+    if not target.exists():
+        return f"Error: path not found — {path}"
+    if not target.is_dir():
+        return f"Error: not a directory — {path}"
+
+    try:
+        import re
+
+        compiled = re.compile(pattern)
+    except re.error as exc:
+        return f"Error: invalid regex pattern — {exc}"
+
+    matches: list[tuple[str, int, str]] = []
+    try:
+        for file_path in target.rglob("*"):
+            if not file_path.is_file():
+                continue
+            # Skip binary and hidden
+            if file_path.name.startswith("."):
+                continue
+            ext = file_path.suffix.lower()
+            if ext in (".pyc", ".pyo", ".so", ".dll", ".dylib", ".exe", ".bin", ".o", ".a"):
+                continue
+
+            try:
+                text = file_path.read_text("utf-8", errors="replace")
+                for i, line in enumerate(text.split("\n"), 1):
+                    if compiled.search(line):
+                        rel_path = str(file_path.relative_to(target))
+                        matches.append((rel_path, i, line.strip()[:200]))
+                        if len(matches) >= max_results:
+                            break
+            except (PermissionError, UnicodeDecodeError):
+                continue
+            if len(matches) >= max_results:
+                break
+    except Exception as exc:
+        return f"Error searching files: {exc}"
+
+    if not matches:
+        return f"No matches found for: {pattern}"
+
+    result_parts: list[str] = [f"Found {len(matches)} match(es) for: {pattern}"]
+    for fpath, lineno, line in matches[:max_results]:
+        result_parts.append(f"  {fpath}:{lineno}: {line}")
+    return "\n".join(result_parts)
+
+
+@tool(description="Show git working tree status", category="code")
+async def git_status() -> str:
+    """Show the git working tree status (modified, staged, untracked files)."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "git",
+            "status",
+            "--short",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
+        output = stdout.decode("utf-8", errors="replace")
+        if proc.returncode != 0:
+            return f"git error: {stderr.decode('utf-8', errors='replace')}"
+        if not output.strip():
+            return "(clean working tree)"
+        return output.strip()
+    except asyncio.TimeoutError:
+        return "Error: git status timed out"
+    except FileNotFoundError:
+        return "Error: git not available"
+
+
+@tool(description="Show git commit details or file content from a commit", category="code")
+async def git_show(ref: str = "HEAD") -> str:
+    """Show details of a git commit or object.
+
+    Args:
+        ref: Git reference (commit hash, branch, tag). Default: HEAD
+    """
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "git",
+            "show",
+            "--stat",
+            "--pretty=format:%H%nAuthor: %an <%ae>%nDate: %ad%nSubject: %s%n%b",
+            ref,
+            "--",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
+        output = stdout.decode("utf-8", errors="replace")
+        if proc.returncode != 0:
+            return f"git error: {stderr.decode('utf-8', errors='replace')}"
+        return output.strip() or f"No output for ref: {ref}"
+    except asyncio.TimeoutError:
+        return "Error: git show timed out"
+    except FileNotFoundError:
+        return "Error: git not available"
+
+
+@tool(description="Search knowledge base entries", category="knowledge")
+async def search_knowledge(query: str, limit: int = 10) -> str:
+    """Search the knowledge base for entries matching the query.
+
+    Args:
+        query: Search query text
+        limit: Maximum results to return (default 10, max 50)
+    """
+    limit = min(limit, 50)
+    try:
+        # MemoryManager requires a db session. We create one lazily.
+        from backend.app.core.database import SessionLocal
+        from backend.app.services.memory_manager import MemoryManager
+
+        db = SessionLocal()
+        try:
+            mgr = MemoryManager(db)
+            results = mgr.search(query=query, user_id=None, category=None, limit=limit)
+            if not results:
+                return "No knowledge base entries found matching the query."
+            parts: list[str] = [f"Knowledge base results ({len(results)}):"]
+            for r in results:
+                title = r.get("title", "Untitled")
+                content = str(r.get("content", ""))[:200]
+                category = r.get("category", "general")
+                parts.append(f"  [{category}] {title}: {content}")
+            return "\n".join(parts)
+        finally:
+            db.close()
+    except ImportError:
+        return "Knowledge base search is not available (MemoryManager not yet initialized)"
+    except Exception as exc:
+        return f"Error searching knowledge base: {exc}"
+
+
+@tool(description="Get the current date and time", category="system")
+async def current_datetime() -> str:
+    """Get the current date and time. Useful when the agent needs to know what
+    time it is or what day/date it is."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    return now.strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+@tool(description="List all available tools with descriptions", category="system")
+async def list_available_tools() -> str:
+    """List all registered tools with their descriptions and parameter info."""
+    from backend.app.agents.tools.registry import get_tool_registry
+
+    registry = get_tool_registry()
+    all_tools = registry.get_all()
+    if not all_tools:
+        return "No tools registered."
+    lines: list[str] = [f"Available tools ({len(all_tools)}):"]
+    for t in all_tools:
+        req = " [requires approval]" if t.requires_approval else ""
+        params = ""
+        try:
+            props = t.schema.get("function", {}).get("parameters", {}).get("properties", {})
+            if props:
+                param_names = ", ".join(props.keys())
+                params = f" ({param_names})"
+        except Exception:
+            pass
+        lines.append(f"  - {t.name}: {t.description}{params}{req}")
+    return "\n".join(lines)
+
+
+@tool(description="Get repository information", category="code")
+async def get_repo_info() -> str:
+    """Get information about the current git repository: name, branch, remote URL."""
+    try:
+        # Get repo root
+        proc_root = await asyncio.create_subprocess_exec(
+            "git",
+            "rev-parse",
+            "--show-toplevel",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout_root, _ = await asyncio.wait_for(proc_root.communicate(), timeout=5)
+        root = stdout_root.decode("utf-8", errors="replace").strip()
+        if proc_root.returncode != 0:
+            root = "(not a git repo or git not available)"
+
+        # Get branch
+        proc_branch = await asyncio.create_subprocess_exec(
+            "git",
+            "branch",
+            "--show-current",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout_branch, _ = await asyncio.wait_for(proc_branch.communicate(), timeout=5)
+        branch = stdout_branch.decode("utf-8", errors="replace").strip() or "(detached HEAD)"
+
+        # Get remote URL
+        proc_remote = await asyncio.create_subprocess_exec(
+            "git",
+            "remote",
+            "get-url",
+            "origin",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout_remote, _ = await asyncio.wait_for(proc_remote.communicate(), timeout=5)
+        remote = (
+            stdout_remote.decode("utf-8", errors="replace").strip() if proc_remote.returncode == 0 else "(no remote)"
+        )
+
+        repo_name = root.split("/")[-1] if "/" in root else root
+        return f"Repository: {repo_name}\nBranch: {branch}\nRemote: {remote}\nRoot: {root}"
+    except asyncio.TimeoutError:
+        return "Error: git commands timed out"
+    except FileNotFoundError:
+        return "Error: git not available"
+
+
 # Legacy registrations (backward compat)
 register_tool("exec_command", exec_command, "Run a shell command with safety limits")
 register_tool("git_log", git_log, "Show recent git commits")
 register_tool("git_diff", git_diff, "Show file changes")
 register_tool("web_fetch", web_fetch, "Fetch URL content")
 register_tool("ask_user", ask_user, "Ask user for input")
+register_tool("read_file", read_file, "Read file contents with line limit")
+register_tool("write_file", write_file, "Write content to a file (requires approval)")
+register_tool("list_directory", list_directory, "List directory contents")
+register_tool("grep_files", grep_files, "Search for text patterns in files (like grep)")
+register_tool("git_status", git_status, "Show git working tree status")
+register_tool("git_show", git_show, "Show git commit details or file content from a commit")
+register_tool("search_knowledge", search_knowledge, "Search knowledge base entries")
+register_tool("current_datetime", current_datetime, "Get the current date and time")
+register_tool("list_available_tools", list_available_tools, "List all available tools with descriptions")
+register_tool("get_repo_info", get_repo_info, "Get repository information")
