@@ -13,6 +13,7 @@ Checks:
 - Service instantiation patterns (constructor injection, not global)
 """
 
+import ast
 import re
 import sys
 from pathlib import Path
@@ -20,8 +21,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
 from utils import ROOT, HookResult, get_changed_files, read_file, print_result
 
-# Allowed file locations per type
-ALLOWED_LOCATIONS = {
+# ── Constants ─────────────────────────────────────────────────────
+
+MAX_FINDINGS = 15
+
+ALLOWED_LOCATIONS: dict[str, str] = {
     "model": "backend/app/models/",
     "schema": "backend/app/schemas/",
     "router": "backend/app/api/v1/",
@@ -36,64 +40,100 @@ ALLOWED_LOCATIONS = {
     "doc": "docs/",
 }
 
-# Forbidden paths (should never be recreated)
-FORBIDDEN_PATHS = [
+FORBIDDEN_PATHS: list[str] = [
     ".trae/",
     ".codex/",
     ".cortex_bootstrap/",
     "skills-lock.json",
 ]
 
+ALLOWED_TOPLEVEL_MD: frozenset[str] = frozenset({
+    "README.md", "CLAUDE.md", "AGENTS.md", "DESIGN.md",
+    "LICENSE", "CHANGELOG.md",
+})
 
-def check_file_placement(files: list) -> list:
+SKIP_DIRS: frozenset[str] = frozenset({
+    "__pycache__", ".venv", "node_modules", "build",
+    "dist", ".git", ".pytest_cache", ".mypy_cache",
+})
+
+
+# ── Helpers ───────────────────────────────────────────────────────
+
+
+def _has_sqlalchemy_base(fpath: Path) -> bool:
+    """AST-based check: does this file define a class inheriting from Base?
+
+    Reads the file once, parses with ast, and looks for ClassDef nodes
+    whose bases include 'Base'. Much more reliable than string matching.
+    """
+    content = read_file(fpath)
+    if not content:
+        return False
+
+    try:
+        tree = ast.parse(content, filename=str(fpath))
+    except SyntaxError:
+        return False
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for base in node.bases:
+            if isinstance(base, ast.Name) and base.id == "Base":
+                return True
+            if isinstance(base, ast.Attribute) and base.attr == "Base":
+                return True
+    return False
+
+
+# ── Checks ────────────────────────────────────────────────────────
+
+
+def check_file_placement(files: list[Path]) -> list[str]:
     """Verify new files are placed in correct directories."""
-    findings = []
+    findings: list[str] = []
     for f in files:
         if not f.exists():
             continue
         rel = str(f.relative_to(ROOT))
-        name = f.name
 
-        # Check forbidden paths
         for forbidden in FORBIDDEN_PATHS:
             if rel.startswith(forbidden):
                 findings.append(f"File in forbidden location: {rel}")
                 break
 
-        # Check model files
-        if name.endswith(".py") and not name.startswith("__"):
-            if "class " in read_file(f) and "Base" in read_file(f):
-                if "models/" not in rel and "test_" not in rel:
-                    findings.append(f"SQLAlchemy model outside models/: {rel}")
+        if f.suffix == ".py" and not f.name.startswith("__"):
+            if _has_sqlalchemy_base(f) and "models/" not in rel and "test_" not in rel:
+                findings.append(f"SQLAlchemy model outside models/: {rel}")
 
     return findings
 
 
-def check_doc_systems() -> list:
+def check_doc_systems() -> list[str]:
     """Check for competing documentation systems."""
-    findings = []
+    findings: list[str] = []
 
-    # Check no new top-level .md files that duplicate docs/
     for md_file in ROOT.glob("*.md"):
-        name = md_file.name
-        if name in ("README.md", "CLAUDE.md", "AGENTS.md", "DESIGN.md", "LICENSE", "CHANGELOG.md"):
+        if md_file.name in ALLOWED_TOPLEVEL_MD:
             continue
-        # New top-level md might be a competing doc system
-        findings.append(f"New top-level doc (consider docs/): {name}")
+        findings.append(f"New top-level doc (consider docs/): {md_file.name}")
 
-    # Check .claude/context/ doesn't get recreated
     ctx_dir = ROOT / ".claude" / "context"
     if ctx_dir.exists():
-        empty = [f for f in ctx_dir.iterdir() if f.is_file() and f.stat().st_size == 0]
+        try:
+            empty = [f for f in ctx_dir.iterdir() if f.is_file() and f.stat().st_size == 0]
+        except OSError:
+            empty = []
         if empty:
             findings.append(f".claude/context/ has {len(empty)} empty files — should be deleted")
 
     return findings
 
 
-def check_api_conventions() -> list:
+def check_api_conventions() -> list[str]:
     """Check API convention compliance."""
-    findings = []
+    findings: list[str] = []
     api_dir = ROOT / "backend" / "app" / "api"
     router_py = api_dir / "router.py"
 
@@ -101,7 +141,6 @@ def check_api_conventions() -> list:
         return findings
 
     content = read_file(router_py)
-    # Check that all v1 routers are registered
     v1_dir = api_dir / "v1"
     if v1_dir.exists():
         for router_file in v1_dir.glob("*.py"):
@@ -115,9 +154,9 @@ def check_api_conventions() -> list:
     return findings
 
 
-def check_model_registration() -> list:
+def check_model_registration() -> list[str]:
     """Check that new models are imported in main.py for Alembic."""
-    findings = []
+    findings: list[str] = []
     main_py = ROOT / "backend" / "app" / "main.py"
     models_dir = ROOT / "backend" / "app" / "models"
 
@@ -136,18 +175,19 @@ def check_model_registration() -> list:
     return findings
 
 
-def run_hook():
+# ── Main Hook ─────────────────────────────────────────────────────
+
+
+def run_hook() -> HookResult:
     """Run the architecture compliance hook."""
     files = get_changed_files()
 
-    findings = []
+    findings: list[str] = []
     findings.extend(check_file_placement(files))
     findings.extend(check_doc_systems())
     findings.extend(check_api_conventions())
     findings.extend(check_model_registration())
 
-    warnings = []
-    # Filter: new top-level docs are warnings, not errors
     real_errors = [f for f in findings if "forbidden" in f.lower() or "not imported" in f.lower() or "not registered" in f.lower()]
     warnings = [f for f in findings if f not in real_errors]
 
@@ -155,7 +195,7 @@ def run_hook():
         name="Architecture Compliance",
         passed=len(real_errors) == 0,
         message=f"{len(real_errors)} violations, {len(warnings)} warnings" if findings else "Architecture OK",
-        findings=real_errors + warnings[:10],
+        findings=real_errors + warnings[:MAX_FINDINGS],
         warnings=warnings,
     )
 

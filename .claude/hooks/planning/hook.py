@@ -17,34 +17,36 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
 from utils import ROOT, HookResult, read_file, print_result
 
+# ── Compiled regex (once) ─────────────────────────────────────────
 
-def check_roadmap_phases() -> list:
+_RE_PHASE = re.compile(r'### Phase (\d+[A-B]?):\s+(.+?)\s*([✅🟡⬜])')
+_RE_PLACEHOLDER = re.compile(r'(TBD|PLACEHOLDER|XXX)', re.IGNORECASE)
+
+
+def check_roadmap_phases() -> list[str]:
     """Check roadmap phase status consistency."""
-    findings = []
+    findings: list[str] = []
     roadmap = ROOT / "docs" / "ROADMAP.md"
     if not roadmap.exists():
         return ["docs/ROADMAP.md not found"]
 
     content = read_file(roadmap)
 
-    # Find phase headers with status indicators
-    phases = re.findall(r'### Phase (\d+[A-B]?):\s+(.+?)\s*([✅🟡⬜])', content)
+    phases = _RE_PHASE.findall(content)
     for num, name, status in phases:
         if status == "✅":
-            # Check if all items under this phase are checked
             findings.append(f"Phase {num}: {name.strip()} — marked complete")
 
-    # Check for TODO/PLACEHOLDER in roadmap
     for i, line in enumerate(content.splitlines(), 1):
-        if re.search(r'(TBD|PLACEHOLDER|XXX)', line, re.IGNORECASE):
+        if _RE_PLACEHOLDER.search(line):
             findings.append(f"ROADMAP.md:{i}: placeholder found: {line.strip()[:80]}")
 
     return findings
 
 
-def check_adr_consistency() -> list:
+def check_adr_consistency() -> list[str]:
     """Check ADR directory consistency."""
-    findings = []
+    findings: list[str] = []
     adr_dir = ROOT / "docs" / "decisions"
     if not adr_dir.exists():
         return []
@@ -54,7 +56,6 @@ def check_adr_consistency() -> list:
         if not content:
             continue
 
-        # Check ADR has required fields
         has_status = "**Status:**" in content
         has_date = "**Date:**" in content
         has_context = "## Context" in content
@@ -71,13 +72,12 @@ def check_adr_consistency() -> list:
     return findings
 
 
-def run_hook():
+def run_hook() -> HookResult:
     """Run the planning consistency hook."""
-    findings = []
+    findings: list[str] = []
     findings.extend(check_roadmap_phases())
     findings.extend(check_adr_consistency())
 
-    # Separate informational from errors
     errors = [f for f in findings if "missing" in f.lower() or "not found" in f.lower()]
     warnings = [f for f in findings if f not in errors]
 

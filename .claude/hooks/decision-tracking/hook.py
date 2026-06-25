@@ -109,7 +109,7 @@ def check_architecture_changes() -> list:
     return findings
 
 
-def run_hook():
+def run_hook() -> HookResult:
     """Run the decision tracking hook."""
     findings = []
     findings.extend(check_adr_exists())

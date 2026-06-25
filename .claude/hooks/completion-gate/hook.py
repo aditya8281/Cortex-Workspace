@@ -62,8 +62,11 @@ def check_types() -> HookResult:
 
 
 def check_schema_migrations() -> HookResult:
-    """Check if model changes have corresponding migrations."""
-    # Check if any model files were modified
+    """Check if model changes have corresponding migrations.
+
+    Compares git modification timestamps: if any model file was changed
+    more recently than the latest migration, flag it.
+    """
     code, out, _ = run_command(["git", "diff", "--name-only", "HEAD"])
     changed = out.strip().splitlines()
 
@@ -71,7 +74,6 @@ def check_schema_migrations() -> HookResult:
     if not model_changed:
         return HookResult(name="Migrations", passed=True, message="No model changes")
 
-    # Check if a migration exists
     versions_dir = ROOT / "migrations" / "versions"
     if not versions_dir.exists():
         return HookResult(
@@ -79,7 +81,6 @@ def check_schema_migrations() -> HookResult:
             message="Models changed but migrations/versions/ missing",
         )
 
-    # Check most recent migration timestamp
     migrations = sorted(versions_dir.glob("*.py"))
     if not migrations:
         return HookResult(
@@ -87,13 +88,38 @@ def check_schema_migrations() -> HookResult:
             message="Models changed but no migrations found",
         )
 
+    # Compare timestamps: get latest migration's git commit time
+    latest_migration = migrations[-1]
+    mig_code, mig_out, _ = run_command(
+        ["git", "log", "-1", "--format=%at", "--", str(latest_migration.relative_to(ROOT))],
+    )
+    mig_ts = int(mig_out.strip()) if mig_code == 0 and mig_out.strip().isdigit() else 0
+
+    # Get the most recent model file change time
+    max_model_ts = 0
+    for f in changed:
+        if "models/" in f and f.endswith(".py"):
+            fcode, fout, _ = run_command(
+                ["git", "log", "-1", "--format=%at", "--", f],
+            )
+            if fcode == 0 and fout.strip().isdigit():
+                ts = int(fout.strip())
+                if ts > max_model_ts:
+                    max_model_ts = ts
+
+    if max_model_ts > mig_ts and mig_ts > 0:
+        return HookResult(
+            name="Migrations", passed=False,
+            message=f"Model files changed after latest migration ({latest_migration.name})",
+        )
+
     return HookResult(
         name="Migrations", passed=True,
-        message=f"Latest migration: {migrations[-1].name}",
+        message=f"Latest migration: {latest_migration.name}",
     )
 
 
-def run_hook():
+def run_hook() -> HookResult:
     """Run the completion gate."""
     results = [
         check_tests(),
