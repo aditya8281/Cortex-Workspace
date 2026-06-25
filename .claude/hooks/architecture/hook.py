@@ -131,25 +131,66 @@ def check_doc_systems() -> list[str]:
     return findings
 
 
+def _find_registered_modules(content: str) -> set[str]:
+    """Extract module names imported from v1/ in a file's content."""
+    found: set[str] = set()
+    # Match: from backend.app.api.v1.X import / from .v1.X import
+    for m in re.finditer(r'from\s+(?:backend\.app\.api\.v1\.|\.v1\.)(\w+)', content):
+        found.add(m.group(1))
+    return found
+
+
 def check_api_conventions() -> list[str]:
-    """Check API convention compliance."""
+    """Check API convention compliance.
+
+    Checks three registration paths:
+    1. Direct registration in api/router.py
+    2. Nested sub-routers (imported into a file that IS registered in router.py)
+    3. Direct app-level registration in main.py (e.g. WebSocket routers)
+    """
     findings: list[str] = []
     api_dir = ROOT / "backend" / "app" / "api"
-    router_py = api_dir / "router.py"
+    v1_dir = api_dir / "v1"
+    main_py = ROOT / "backend" / "app" / "main.py"
 
-    if not router_py.exists():
+    if not v1_dir.exists():
         return findings
 
-    content = read_file(router_py)
-    v1_dir = api_dir / "v1"
-    if v1_dir.exists():
-        for router_file in v1_dir.glob("*.py"):
-            if router_file.name.startswith("__"):
-                continue
-            module_name = router_file.stem
-            if f"from backend.app.api.v1.{module_name}" not in content:
-                if f"from .v1.{module_name}" not in content:
-                    findings.append(f"Router {module_name} not registered in api/router.py")
+    # Step 1: Collect all v1 module names
+    v1_modules: set[str] = set()
+    for router_file in v1_dir.glob("*.py"):
+        if not router_file.name.startswith("__"):
+            v1_modules.add(router_file.stem)
+
+    if not v1_modules:
+        return findings
+
+    # Step 2: Find modules registered in router.py
+    router_py = api_dir / "router.py"
+    router_content = read_file(router_py) if router_py.exists() else ""
+    registered_in_router = _find_registered_modules(router_content)
+
+    # Step 3: For modules NOT in router.py, check if they're nested sub-routers
+    # (imported into a file that IS registered in router.py)
+    nested_modules: set[str] = set()
+    for reg_mod in registered_in_router:
+        reg_file = v1_dir / f"{reg_mod}.py"
+        if reg_file.exists():
+            reg_content = read_file(reg_file)
+            nested_modules |= _find_registered_modules(reg_content)
+
+    # Step 4: For remaining modules, check main.py for direct app-level registration
+    main_content = read_file(main_py) if main_py.exists() else ""
+    registered_in_main: set[str] = set()
+    for m in re.finditer(r'from\s+backend\.app\.api\.v1\.(\w+)', main_content):
+        registered_in_main.add(m.group(1))
+
+    # Step 5: Flag truly unregistered modules
+    all_registered = registered_in_router | nested_modules | registered_in_main
+    unregistered = v1_modules - all_registered
+
+    for module_name in sorted(unregistered):
+        findings.append(f"Router {module_name} not registered (router.py, sub-routers, or main.py)")
 
     return findings
 

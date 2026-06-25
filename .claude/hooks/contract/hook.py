@@ -32,11 +32,14 @@ _RE_CLIENT_METHOD = re.compile(
 _RE_PARAM_TOKEN = re.compile(r'\$\{(\w+)\}')
 _RE_PARAM_BRACE = re.compile(r'\{(\w+)\}')
 _RE_PARAM_COLON = re.compile(r':\w+')
+_RE_CAMEL_CASE = re.compile(r'(?<=[a-z0-9])(?=[A-Z])')
+_RE_TEMPLATE_GARBAGE = re.compile(r'\$\{|encodeURIComponent|encodeURI\b|decodeURI|Math\.|window\.|qs[\s?\.]')
 
 # ── Constants ─────────────────────────────────────────────────────
 
 RESPONSE_MODEL_WINDOW = 200
 MAX_FINDINGS = 15
+ORPHANED_MAX = 10
 
 
 # ── Backend Route Extraction ──────────────────────────────────────
@@ -115,15 +118,19 @@ def extract_frontend_calls() -> list[dict]:
             continue
 
         for match in _RE_FETCH.finditer(content):
-            calls.append({
-                "path": f"/api/v1/{match.group(1)}",
-                "file": ts_file.name,
-            })
+            raw = match.group(1)
+            if _is_clean_frontend_path(raw):
+                calls.append({
+                    "path": f"/api/v1/{raw}",
+                    "file": ts_file.name,
+                })
         for match in _RE_CLIENT_METHOD.finditer(content):
-            calls.append({
-                "path": f"/api/v1/{match.group(1)}",
-                "file": ts_file.name,
-            })
+            raw = match.group(1)
+            if _is_clean_frontend_path(raw):
+                calls.append({
+                    "path": f"/api/v1/{raw}",
+                    "file": ts_file.name,
+                })
 
     return calls
 
@@ -131,11 +138,39 @@ def extract_frontend_calls() -> list[dict]:
 # ── Path Normalization ────────────────────────────────────────────
 
 
+def _camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case for path comparison."""
+    return _RE_CAMEL_CASE.sub('_', name).lower()
+
+
 def normalize_path(path: str) -> str:
-    """Normalize API path for comparison (convert params to tokens)."""
+    """Normalize API path for comparison.
+
+    - Converts ${param} and {param} to :param
+    - Converts camelCase param names to snake_case
+    - Strips trailing slashes
+    """
     normalized = _RE_PARAM_TOKEN.sub(r':\1', path)
     normalized = _RE_PARAM_BRACE.sub(r':\1', normalized)
+    # Convert camelCase params to snake_case: :agentId → :agent_id
+    parts = normalized.split('/')
+    result_parts = []
+    for part in parts:
+        if part.startswith(':'):
+            result_parts.append(':' + _camel_to_snake(part[1:]))
+        else:
+            result_parts.append(part)
+    normalized = '/'.join(result_parts)
     return normalized.rstrip("/")
+
+
+def _is_clean_frontend_path(raw: str) -> bool:
+    """Check if a frontend path string is a clean API path (not template garbage)."""
+    if _RE_TEMPLATE_GARBAGE.search(raw):
+        return False
+    if '${' in raw:
+        return False
+    return True
 
 
 # ── Main Hook ─────────────────────────────────────────────────────
@@ -187,11 +222,13 @@ def run_hook() -> HookResult:
 
     backend_norms = {normalize_path(r["path"]) for r in backend_routes}
     orphaned = backend_norms - frontend_paths
-    system_routes = {"/health", "/docs", "/openapi.json", "/redoc"}
+    system_routes = {"/health", "/docs", "/openapi.json", "/redoc", "/health/live", "/health/ready"}
     orphaned = orphaned - system_routes
 
-    for path in sorted(orphaned):
+    for path in sorted(orphaned)[:ORPHANED_MAX]:
         findings.append(f"Orphaned backend route (no frontend call): {path}")
+    if len(orphaned) > ORPHANED_MAX:
+        findings.append(f"... and {len(orphaned) - ORPHANED_MAX} more orphaned routes")
 
     missing = frontend_paths - backend_norms
     missing_filtered: set[str] = set()
