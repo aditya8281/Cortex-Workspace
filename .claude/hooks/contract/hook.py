@@ -222,7 +222,11 @@ def run_hook() -> HookResult:
 
     backend_norms = {normalize_path(r["path"]) for r in backend_routes}
     orphaned = backend_norms - frontend_paths
-    system_routes = {"/health", "/docs", "/openapi.json", "/redoc", "/health/live", "/health/ready"}
+    system_routes = {
+        "/health", "/docs", "/openapi.json", "/redoc",
+        "/health/live", "/health/ready", "/health/deep",
+        "/ws", "/ws/models", "/ws/system",
+    }
     orphaned = orphaned - system_routes
 
     for path in sorted(orphaned)[:ORPHANED_MAX]:
