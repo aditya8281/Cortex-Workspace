@@ -50,45 +50,109 @@ View Registry (lazy, cached — build on demand per mode)
 
 Immutable, versioned, in-memory semantic model of the repository. Built once per run. All engines read, none write.
 
+Every entity carries a stable UUID. All relationships reference IDs, not names. Each collected fact records its confidence and source collector.
+
 ```python
+@dataclass(frozen=True)
+class EntityBase:
+    id: UUID                           # stable identifier — never changes
+    confidence: float                   # 1.0 = exact, <1.0 = inferred
+    source_collector: str              # which extractor produced this
+    source_version: str                # collector version
+
 @dataclass(frozen=True)
 class RepositoryKnowledgeModel:
     # Versioning
     version: str                         # RKM schema version
+    relationship_schema_version: str     # relationship type catalog version (#4)
     repository_hash: str                 # hash of all collected files
     git_commit: str | None
     generated_at: datetime
-    collector_versions: dict[str, str]
+    collector_versions: dict[str, str]   # {collector_name: version}
     
     # Filesystem
-    files: dict[Path, FileInfo]
+    files: dict[UUID, FileInfo]          # keyed by UUID, not path
     directories: set[Path]
     
     # Code entities
-    symbols: dict[str, list[SymbolDef]]
+    symbols: dict[UUID, SymbolDef]
     imports: list[ImportEdge]
-    schemas: dict[str, SchemaDef]
-    types: dict[str, TypeDef]
-    routes: list[RouteDef]
-    routers: list[RouterDef]
-    middleware: list[MiddlewareDef]
-    models: dict[str, ORMModelDef]
-    migrations: list[MigrationDef]
+    schemas: dict[UUID, SchemaDef]
+    types: dict[UUID, TypeDef]
+    routes: dict[UUID, RouteDef]
+    routers: dict[UUID, RouterDef]
+    middleware: dict[UUID, MiddlewareDef]
+    models: dict[UUID, ORMModelDef]
+    migrations: dict[UUID, MigrationDef]
     db_config: DbConfigDef
-    components: list[ComponentDef]
-    api_clients: list[APIClientDef]
-    configs: dict[str, ConfigDef]
+    components: dict[UUID, ComponentDef]
+    api_clients: dict[UUID, APIClientDef]
+    configs: dict[UUID, ConfigDef]
     
     # Ecosystem
-    commands: list[CommandDef]
-    skills: list[SkillDef]
-    hooks: list[HookDef]
-    workflows: list[WorkflowDef]
-    plans: list[PlanDef]
+    commands: dict[UUID, CommandDef]
+    skills: dict[UUID, SkillDef]
+    hooks: dict[UUID, HookDef]
+    workflows: dict[UUID, WorkflowDef]
+    plans: dict[UUID, PlanDef]
     
-    # Explicit typed relationships
+    # Typed relationships — engines operate primarily on these
     relationships: list[Relationship]
 ```
+
+Every entity type extends `EntityBase`:
+
+```python
+@dataclass(frozen=True)
+class RouteDef(EntityBase):
+    path: str
+    methods: list[str]
+    ...
+
+@dataclass(frozen=True)
+class SchemaDef(EntityBase):
+    name: str
+    fields: list[FieldDef]
+    ...
+```
+
+### Relationships
+
+First-class typed edges between entities. Most engines operate on relationships rather than raw entities.
+
+```python
+class RelationshipType(Enum):
+    IMPORTS       = "imports"
+    IMPLEMENTS    = "implements"
+    CALLS         = "calls"
+    RETURNS       = "returns"
+    ACCEPTS       = "accepts"
+    SERIALIZES    = "serializes"
+    DESERIALIZES  = "deserializes"
+    DEPENDS_ON    = "depends_on"
+    PRODUCES      = "produces"
+    CONSUMES      = "consumes"
+    REFERENCES    = "references"
+    DOCUMENTS     = "documents"
+    EXTENDS       = "extends"
+    MIGRATES_TO   = "migrates_to"
+    CONFIGURES    = "configures"
+    OWNS          = "owns"
+    TESTS         = "tests"
+    VALIDATES     = "validates"
+
+@dataclass(frozen=True)
+class Relationship:
+    id: UUID
+    type: RelationshipType
+    source_id: UUID                    # source entity UUID
+    target_id: UUID                    # target entity UUID
+    metadata: dict[str, str] | None    # e.g. {"line": "42", "file": "app.py"}
+    confidence: float
+    source_collector: str
+```
+
+The relationship schema version (`relationship_schema_version` on RKM) tracks the RelationshipType catalog, allowing future evolution.
 
 ### Findings
 
@@ -131,21 +195,38 @@ class Finding:
 
 ### Metrics
 
+Repository intelligence metrics — structural health signals that serve both Integrity findings and broader Cortex analytics. V1 captures basic scores; the set expands in V2.
+
 ```python
 @dataclass
-class IntegrityMetrics:
-    integrity_score: float     # 0-100
+class RepositoryMetrics:
+    # Integrity scores
+    integrity_score: float       # 0-100
     structural_score: float
     semantic_score: float
     evolution_score: float
+    
+    # Finding distribution
     total_findings: int
     by_severity: dict[Severity, int]
     by_classification: dict[Classification, int]
     by_engine: dict[str, int]
-    coverage: float
+    
+    # Structural health
+    dependency_density: float    # edges / nodes in import graph
+    fan_in_distribution: dict[str, int]    # most-imported modules
+    fan_out_distribution: dict[str, int]   # modules with widest deps
+    architectural_hotspots: list[str]      # high churn + high deps
+    coupling_coefficient: float            # interconnectedness
+    cycles: int                            # circular dependency count
+    
+    # Coverage
+    coverage: float              # % of repository entities inspected
     confidence_distribution: list[float]
     execution_time_ms: int
 ```
+
+V2 adds: ownership concentration, documentation coverage, test coverage, instability scores.
 
 ### Analysis Context
 
@@ -231,11 +312,24 @@ Lazy-built from the RKM on demand. Each is a graph structure reused across engin
 ## Engine Interface
 
 ```python
+class Capability(Enum):
+    SCHEMA     = "schema"
+    API        = "api"
+    CONFIG     = "config"
+    DOCS       = "docs"
+    GRAPH      = "graph"
+    IMPORT     = "import"
+    DEPENDENCY = "dependency"
+    MIGRATION  = "migration"
+    FILESYSTEM = "filesystem"
+    PLANNING   = "planning"
+    METRICS    = "metrics"
+
 class IntegrityEngine:
     name: str
-    domain: IntegrityDomain          # STRUCTURAL | SEMANTIC | EVOLUTION
-    profiles: set[ExecutionProfile]  # which profiles include this engine
-    dependencies: list[str]          # other engines that must run first
+    domain: IntegrityDomain                  # STRUCTURAL | SEMANTIC | EVOLUTION
+    capabilities: set[Capability]            # what this engine knows about
+    dependencies: list[str]                  # engines that must analyze first
     
     def analyze(
         self,
@@ -245,11 +339,107 @@ class IntegrityEngine:
     ) -> list[Finding]: ...
 ```
 
-Engines register via decorator. Registry resolves topological execution order.
+Engines register via decorator. Registry resolves execution order by dependency graph and supports capability-based lookups (e.g. "find all engines with SCHEMA capability").
 
 ---
 
-## Execution Profiles and Command Integration
+## Query API
+
+A semantic query layer on the RKM that engines use instead of ad-hoc traversal. Reduces duplicated traversal logic across engines.
+
+```python
+class RepositoryKnowledgeModel:
+    # ... (entity dictionaries above)
+    
+    # ── Query API ─────────────────────────────────────
+    def find_routes(self, path_pattern: str | None = None) -> list[RouteDef]: ...
+    def find_schemas(self, field_name: str) -> list[SchemaDef]: ...
+    def find_consumers(self, schema_id: UUID) -> list[EntityBase]: ...
+    def find_producers(self, schema_id: UUID) -> list[EntityBase]: ...
+    
+    def trace(self, entity_id: UUID, relationship_types: list[RelationshipType]) -> list[EntityBase]:
+        """Follow typed edges from entity to connected entities."""
+    
+    def trace_api(self, route_id: UUID) -> list[EntityBase]:
+        """Route → handler → schema → model chain."""
+    
+    def trace_schema(self, schema_id: UUID) -> list[EntityBase]:
+        """Schema → field types → referenced schemas → serializers."""
+    
+    def trace_frontend(self, component_id: UUID) -> list[EntityBase]:
+        """Component → API client → route → schema chain."""
+    
+    def find_dependencies(self, entity_id: UUID, *, transitive: bool = False) -> list[DependencyEdge]:
+        """Import/dependency graph traversal, with optional transitive closure."""
+    
+    def find_impact(self, entity_ids: list[UUID]) -> ImpactSet:
+        """For changed entities, find all potentially affected entities."""
+```
+
+The Query API is the primary interface between engines and the model. Engines should rarely access raw entity dictionaries directly.
+
+---
+
+## Dependency Closure Service
+
+```python
+@dataclass
+class DependencyEdge:
+    source_id: UUID
+    target_id: UUID
+    reason: str                          # WHY: "imports", "extends", "calls" (#9)
+    path: list[UUID]                     # transitive chain for traceability
+
+class DependencyClosureService:
+    def compute_impact_set(
+        self,
+        changed_files: list[Path],
+        model: RepositoryKnowledgeModel,
+    ) -> ImpactSet:
+        """Compute transitive closure with dependency reasons.
+        
+        Returns:
+            directly_changed: list[UUID]
+            transitively_affected: list[UUID]
+            dependency_chains: list[DependencyEdge]  # full WHY trace
+            affected_symbols: list[str]
+            affected_components: list[str]
+        """
+```
+
+---
+
+## Source-of-Truth Registry
+
+A registry of canonical sources in the repository that Evolution engines reason against generically, rather than hardcoding each artifact type. (#13)
+
+```python
+@dataclass(frozen=True)
+class SourceOfTruth:
+    id: UUID
+    name: str                              # e.g. "architecture", "plans", "docs"
+    entity_type: str                       # PLANS | DOCS | ARCHITECTURE | COMMANDS | SKILLS | WORKFLOWS
+    path: Path                             # location in repository
+    schema_version: str | None             # version of the source format
+    validation_rules: list[str]            # e.g. "every command must have a matching skill"
+```
+
+Evolution engines query the registry; they don't hardcode artifact locations.
+
+---
+
+## Event Bus (Architecture Note)
+
+Deferred to V2. The workflow is designed so that a pub/sub layer can be inserted between engine outputs without changing engine interfaces:
+
+```
+Before (V1): Workflow → Engine A → Engine B  (sequential)
+After  (V2): Workflow → Engine A → Event → Engine B subscribes
+```
+
+Engine outputs remain the same `list[Finding]` — only the orchestration changes.
+
+---
 
 | Command | Execution Profile | V1 Engines (10) | V2+ Engines (11) |
 |---------|-------------------|-----------------|-------------------|
@@ -397,9 +587,14 @@ backend/app/agents/integrity/
 
 - Incremental cache layer (previous RKM → changed files → patch)
 - Remaining 11 engines (P-C, Serialization, Type, State Flow, Middleware, Lifecycle, Route, Command, Skill, Repository Metrics, remaining Evolution)
-- Auto-fix pipeline
+- **Test Engine** — verify every public API, route, migration, command has tests (#12)
+- **Test coverage awareness** — RKM tracks test↔implementation relationships
+- Auto-fix pipeline + **Fix Provider plugin system** (#8)
+- Event bus architecture — pub/sub between engine outputs (#5)
 - Persistent RKM storage
 - Web dashboard for integrity metrics over time
+- **Analytics expansion** — ownership concentration, instability scores, documentation coverage (#10)
+- **Split Cross-Layer Engine** into independent Frontend→API, API→Service, Service→ORM, ORM→Migration, Migration→DB engines (#14)
 
 ---
 
