@@ -94,6 +94,21 @@ Invoke `cortex-version-integration` to verify pre-merge gate and run merge verif
 
 ---
 
+## Phase: Integrity Analysis
+
+Used by: `/project:develop` (INCREMENTAL profile), `/project:review` (VERIFICATION profile), `/project:verify` (FULL profile), `/project:reflect` (EVOLUTION profile), `/project:release` (COMPLETE profile)
+
+Invoke `cortex-integrity` skill or `/project:integrity` command to run repository integrity analysis.
+
+**Execution profiles by caller:**
+- `/project:develop` — INCREMENTAL (structural engines + dependency closure)
+- `/project:review` — VERIFICATION (structural + semantic engines)
+- `/project:verify` — FULL (all available engines)
+- `/project:reflect` — EVOLUTION engines (documentation + planning)
+- `/project:release` — COMPLETE (all engines, strict gates)
+
+---
+
 ## Phase: Repository Health Scan
 
 Used by: `/project:health`, `/project:improve`
