@@ -19,17 +19,41 @@ Architected as a **platform service** — existing Cortex commands (`develop`, `
 ```
 /project:integrity (thin orchestrator)
         │
+IntegrityService (stable public API — analyze / analyze_incremental / report)
+        │
 Integrity Workflow (phases, resolution, caching)
         │
 Extractors (raw AST, JSON, YAML, filesystem metadata)
         │
 Normalizers (convert to normalized entities)
         │
-Repository Knowledge Model (versioned, immutable, with relationships)
+Validator (reject malformed entities before they enter the model)
         │
-Dependency Closure Service (changed files → impact set)
+┌───────────────────────────────────────────────┐
+│      Repository Knowledge Model (façade)      │
+│  ┌───────────┐ ┌────────────┐ ┌────────────┐ │
+│  │CodeModel  │ │EcosystemMdl│ │DocModel    │ │
+│  ├───────────┤ ├────────────┤ ├────────────┤ │
+│  │ symbols   │ │ commands   │ │ plans      │ │
+│  │ schemas   │ │ skills     │ │ docs       │ │
+│  │ routes    │ │ hooks      │ │ specs      │ │
+│  │ models    │ │ workflows  │ │            │ │
+│  │ imports   │ │ configs    │ │            │ │
+│  │ types     │ └────────────┘ └────────────┘ │
+│  └───────────┘                                │
+│  ┌───────────┐ ┌────────────────────────────┐ │
+│  │RelMdl     │ │MetadataModel               │ │
+│  ├───────────┤ ├────────────────────────────┤ │
+│  │relationshp│ │ version, repo_hash,        │ │
+│  │edges      │ │ generated_at, capabilitie  │ │
+│  └───────────┘ └────────────────────────────┘ │
+└───────────────────────────────────────────────┘
         │
-View Registry (lazy, cached — build on demand per mode)
+RepositoryQueryService (graph traversal — trace / find / impact)
+        │
+Dependency Closure Service (changed files → impact set + dependency reasons)
+        │
+View Registry (lazy, cached, invalidatable — build on demand per mode)
         │
 ┌──────────────┬───────────────┬──────────────┐
 │ Structural   │ Semantic      │ Evolution    │
@@ -38,8 +62,11 @@ View Registry (lazy, cached — build on demand per mode)
         │              │                │
         └──────────────┼────────────────┘
                        ▼
-              Findings Report
-    (findings → recommendations → candidate fixes → metrics)
+              Aggregator + Reporter
+     (findings → aggregate → markdown/json/html/cli)
+                       ▼
+              Metrics (split: Integrity / Repository Analytics /
+                      Performance / Execution)
 ```
 
 ---
@@ -48,7 +75,7 @@ View Registry (lazy, cached — build on demand per mode)
 
 ### Repository Knowledge Model
 
-Immutable, versioned, in-memory semantic model of the repository. Built once per run. All engines read, none write.
+Immutable, versioned, in-memory semantic model of the repository. Built once per run. All engines read, none write. Implemented as a **façade over bounded sub-models** to prevent god-object growth. (#1)
 
 Every entity carries a stable UUID. All relationships reference IDs, not names. Each collected fact records its confidence and source collector.
 
@@ -61,20 +88,30 @@ class EntityBase:
     source_version: str                # collector version
 
 @dataclass(frozen=True)
-class RepositoryKnowledgeModel:
-    # Versioning
+class MetadataModel:
     version: str                         # RKM schema version
-    relationship_schema_version: str     # relationship type catalog version (#4)
+    relationship_schema_version: str     # relationship type catalog version
     repository_hash: str                 # hash of all collected files
     git_commit: str | None
     generated_at: datetime
     collector_versions: dict[str, str]   # {collector_name: version}
-    
-    # Filesystem
-    files: dict[UUID, FileInfo]          # keyed by UUID, not path
+    capabilities: RepositoryCapabilities  # languages/frameworks detected in repo (#6)
+
+# Repository capabilities — engines auto-disable if their capability is absent
+@dataclass(frozen=True)
+class RepositoryCapabilities:
+    languages: set[str]       # {"python", "typescript", "yaml", ...}
+    frameworks: set[str]      # {"fastapi", "react", "sqlalchemy", ...}
+    has_frontend: bool
+    has_backend: bool
+    has_database_migrations: bool
+    has_docker: bool
+    has_ci: bool
+
+@dataclass(frozen=True)
+class CodeModel:
+    files: dict[UUID, FileInfo]
     directories: set[Path]
-    
-    # Code entities
     symbols: dict[UUID, SymbolDef]
     imports: list[ImportEdge]
     schemas: dict[UUID, SchemaDef]
@@ -88,16 +125,34 @@ class RepositoryKnowledgeModel:
     components: dict[UUID, ComponentDef]
     api_clients: dict[UUID, APIClientDef]
     configs: dict[UUID, ConfigDef]
-    
-    # Ecosystem
+
+@dataclass(frozen=True)
+class EcosystemModel:
     commands: dict[UUID, CommandDef]
     skills: dict[UUID, SkillDef]
     hooks: dict[UUID, HookDef]
     workflows: dict[UUID, WorkflowDef]
     plans: dict[UUID, PlanDef]
-    
-    # Typed relationships — engines operate primarily on these
-    relationships: list[Relationship]
+
+@dataclass(frozen=True)
+class DocumentationModel:
+    plans: dict[UUID, PlanDef]         # same entities, bounded context view
+    source_of_truths: dict[UUID, SourceOfTruth]
+    adrs: list[ADREntry]
+
+@dataclass(frozen=True)
+class RelationshipModel:
+    edges: list[Relationship]          # typed edges between entities
+    relationship_schema_version: str
+
+# ── Façade ────────────────────────────────────────
+@dataclass(frozen=True)
+class RepositoryKnowledgeModel:
+    metadata: MetadataModel
+    code: CodeModel
+    ecosystem: EcosystemModel
+    documentation: DocumentationModel
+    relationships: RelationshipModel
 ```
 
 Every entity type extends `EntityBase`:
@@ -118,9 +173,24 @@ class SchemaDef(EntityBase):
 
 ### Relationships
 
-First-class typed edges between entities. Most engines operate on relationships rather than raw entities.
+First-class typed edges between entities. Most engines operate on relationships rather than raw entities. Every relationship carries direction semantics — not all dependencies are equal. (#5)
 
 ```python
+class RelationshipDirection(Enum):
+    DIRECTED   = "directed"    # one-way: A → B
+    BIDIRECTIONAL = "bidirectional"  # A ↔ B
+    TRANSITIVE = "transitive"  # A → B → C (derived)
+
+class Multiplicity(Enum):
+    ONE_TO_ONE     = "1:1"
+    ONE_TO_MANY    = "1:N"
+    MANY_TO_MANY   = "N:N"
+
+class EdgeStrength(Enum):
+    STRONG    = "strong"     # structural (import, extends)
+    MEDIUM    = "medium"     # semantic (calls, produces)
+    WEAK      = "weak"       # inferred (references, documents)
+
 class RelationshipType(Enum):
     IMPORTS       = "imports"
     IMPLEMENTS    = "implements"
@@ -145,6 +215,9 @@ class RelationshipType(Enum):
 class Relationship:
     id: UUID
     type: RelationshipType
+    direction: RelationshipDirection
+    multiplicity: Multiplicity
+    strength: EdgeStrength
     source_id: UUID                    # source entity UUID
     target_id: UUID                    # target entity UUID
     metadata: dict[str, str] | None    # e.g. {"line": "42", "file": "app.py"}
@@ -152,30 +225,19 @@ class Relationship:
     source_collector: str
 ```
 
-The relationship schema version (`relationship_schema_version` on RKM) tracks the RelationshipType catalog, allowing future evolution.
+Relationship schema versioning (`relationship_schema_version` on `MetadataModel`) tracks the RelationshipType catalog.
 
 ### Findings
 
 ```python
-@dataclass
-class Recommendation:
-    description: str
-    priority: Priority
-
-@dataclass
-class CandidateFix:
-    fix_type: FixType          # MANUAL | SCRIPT | PATCH
-    fix_code: str | None
-    autofix_available: bool
-    estimated_effort: str
-    breaking_change: bool
-
 @dataclass
 class Finding:
     id: str
     title: str
     description: str
     severity: Severity         # CRITICAL | HIGH | MEDIUM | LOW | INSIGHT
+    priority: Priority         # P0 | P1 | P2 | P3 (urgency for ordering) (#11)
+    urgency: int               # 1-10, independent of severity
     classification: Classification  # MISSING | INCOMPATIBLE | AMBIGUOUS | UNUSED |
                                      # DUPLICATE | CIRCULAR | OBSOLETE | UNREACHABLE |
                                      # INCONSISTENT | DRIFTED
@@ -184,7 +246,7 @@ class Finding:
     dependency_chain: list[str]
     root_cause: str
     downstream_impact: str
-    recommendation: Recommendation
+    recommendation: str        # human-readable suggested action
     fix: CandidateFix | None
     confidence: float
     related_findings: list[str]
@@ -193,40 +255,48 @@ class Finding:
     references: list[str]
 ```
 
-### Metrics
+### Metrics (Four Categories)
 
-Repository intelligence metrics — structural health signals that serve both Integrity findings and broader Cortex analytics. V1 captures basic scores; the set expands in V2.
+Repository intelligence metrics split into four categories. V1 captures core Integrity scores and basic Execution metrics; Repository Analytics and Performance metrics expand in V2.
 
 ```python
+# ── Integrity Scores (V1) ──────────────────────────
 @dataclass
-class RepositoryMetrics:
-    # Integrity scores
-    integrity_score: float       # 0-100
+class IntegrityScores:
+    integrity_score: float       # 0-100 — weighted composite
     structural_score: float
     semantic_score: float
     evolution_score: float
-    
-    # Finding distribution
+
+# ── Repository Analytics (V2+) ─────────────────────
+@dataclass
+class RepositoryAnalytics:
+    dependency_density: float               # edges / nodes
+    fan_in_distribution: dict[str, int]     # most-imported modules
+    fan_out_distribution: dict[str, int]    # widest deps
+    architectural_hotspots: list[str]       # high churn + high deps
+    coupling_coefficient: float             # interconnectedness
+    cycles: int                             # circular dependency count
+    # V2 adds: ownership, documentation coverage, test coverage, instability
+
+# ── Performance Metrics (V2+) ──────────────────────
+@dataclass
+class PerformanceMetrics:
+    collection_time_ms: int
+    view_build_time_ms: int
+    analysis_time_ms: int
+    peak_memory_mb: float
+
+# ── Execution Metrics (V1) ─────────────────────────
+@dataclass
+class ExecutionMetrics:
     total_findings: int
     by_severity: dict[Severity, int]
     by_classification: dict[Classification, int]
     by_engine: dict[str, int]
-    
-    # Structural health
-    dependency_density: float    # edges / nodes in import graph
-    fan_in_distribution: dict[str, int]    # most-imported modules
-    fan_out_distribution: dict[str, int]   # modules with widest deps
-    architectural_hotspots: list[str]      # high churn + high deps
-    coupling_coefficient: float            # interconnectedness
-    cycles: int                            # circular dependency count
-    
-    # Coverage
-    coverage: float              # % of repository entities inspected
+    coverage: float              # % of repo entities inspected
     confidence_distribution: list[float]
-    execution_time_ms: int
 ```
-
-V2 adds: ownership concentration, documentation coverage, test coverage, instability scores.
 
 ### Analysis Context
 
@@ -263,37 +333,82 @@ class AnalysisContext:
 
 ---
 
+## Validation Stage
+
+Inserted between normalization and model construction to keep the RKM trustworthy. Malformed entities are rejected before they enter the model. (#3)
+
+```python
+class ValidationResult:
+    passed: bool
+    errors: list[ValidationError]
+    warnings: list[str]
+
+class Validator:
+    def validate_entity(self, entity: EntityBase) -> ValidationResult:
+        """Check required fields, type constraints, UUID consistency."""
+    
+    def validate_relationship(self, rel: Relationship) -> ValidationResult:
+        """Verify source/target IDs exist, direction is valid."""
+    
+    def validate_model(self, model: RepositoryKnowledgeModel) -> ValidationResult:
+        """Cross-entity consistency checks (e.g. all referenced UUIDs resolve)."""
+
+# Pipeline: Extractor → Normalizer → Validator → RepositoryKnowledgeModel
+```
+
+V1 checks: required fields present, UUIDs non-null, confidence in [0,1], source references resolve. V2 adds cross-entity and cross-model consistency.
+
+---
+
 ## Plugin-Based Collectors
 
-Extractors and Normalizers are separate concerns:
+Each plugin declares its compatibility — plugin version, supported RKM schema version, and supported language/framework version — enabling safe evolution. (#4)
 
-```
-Filesystem
-    │
-    ├── Language Plugins
-    │   ├── PythonExtractor    → PythonNormalizer
-    │   ├── TypeScriptExtractor → TypeScriptNormalizer
-    │   ├── YAMLExtractor      → YAMLNormalizer
-    │   ├── JSONExtractor      → JSONNormalizer
-    │   ├── MarkdownExtractor  → MarkdownNormalizer
-    │
-    ├── Framework Plugins
-    │   ├── FastAPIExtractor   → FastAPINormalizer
-    │   ├── ReactExtractor     → ReactNormalizer
-    │   ├── SQLAlchemyExtractor→ SQLAlchemyNormalizer
-    │
-    └── Ecosystem Plugins
-        ├── CommandExtractor   → CommandNormalizer
-        ├── SkillExtractor     → SkillNormalizer
-        ├── HookExtractor      → HookNormalizer
-        └── WorkflowExtractor  → WorkflowNormalizer
+```python
+@dataclass
+class CollectorPlugin:
+    name: str
+    plugin_version: str               # plugin itself versioned
+    supported_rkm_version: str        # e.g. "1.x"
+    supported_language_version: str | None  # e.g. "3.9+"
+
+class Extractor(ABC):
+    def __init__(self, plugin: CollectorPlugin): ...
+    @abstractmethod
+    def extract(self, path: Path) -> dict[str, Any]: ...
+
+class Normalizer(ABC):
+    def __init__(self, plugin: CollectorPlugin): ...
+    @abstractmethod
+    def normalize(self, raw: dict[str, Any]) -> list[EntityBase]: ...
+
+# Plugin tree
+# Filesystem
+#     ├── Language Plugins
+#     │   ├── PythonExtractor(version="1.0", rkm="1.x", lang="3.9+")
+#     │   │   → PythonNormalizer
+#     │   ├── TypeScriptExtractor → TypeScriptNormalizer
+#     │   ├── YAMLExtractor → YAMLNormalizer
+#     │   ├── JSONExtractor → JSONNormalizer
+#     │   └── MarkdownExtractor → MarkdownNormalizer
+#     ├── Framework Plugins
+#     │   ├── FastAPIExtractor → FastAPINormalizer
+#     │   ├── ReactExtractor → ReactNormalizer
+#     │   └── SQLAlchemyExtractor → SQLAlchemyNormalizer
+#     └── Ecosystem Plugins
+#         ├── CommandExtractor → CommandNormalizer
+#         ├── SkillExtractor → SkillNormalizer
+#         ├── HookExtractor → HookNormalizer
+#         └── WorkflowExtractor → WorkflowNormalizer
 ```
 
 ---
 
 ## Derived Views
 
-Lazy-built from the RKM on demand. Each is a graph structure reused across engines.
+Lazy-built from the RKM on demand and cached. Views support invalidation when the RKM is updated, enabling incremental scans without full rebuild. (#10)
+
+Each view is a graph structure reused across engines.
 
 | View | Source Entities | Purpose |
 |------|----------------|---------|
@@ -306,6 +421,63 @@ Lazy-built from the RKM on demand. Each is a graph structure reused across engin
 | Configuration Graph | configs | Inheritance, overrides |
 | Producer-Consumer Graph | symbols + imports + routes | Who produces, who consumes |
 | Cross-Layer Chain | components → api_clients → routes → models → migrations | Full front-to-back |
+
+---
+
+## IntegrityService (Public API)
+
+The stable public interface that all Cortex commands interact with. This is the boundary between the Integrity platform and the rest of the ecosystem — commands never call engines, views, or the workflow directly. (#4)
+
+```python
+class IntegrityService:
+    def __init__(self, repository_root: Path): ...
+    
+    def analyze(
+        self,
+        profile: ExecutionProfile = ExecutionProfile.FULL,
+        changed_files: list[Path] | None = None,
+    ) -> IntegrityReport:
+        """Run integrity analysis. The primary entry point.
+        
+        Args:
+            profile: Which execution profile to use.
+            changed_files: For INCREMENTAL profile — only these and their
+                          transitive dependencies are analyzed.
+        Returns:
+            IntegrityReport containing findings, metrics, and metadata.
+        """
+    
+    def analyze_incremental(self, changed_files: list[Path]) -> IntegrityReport:
+        """Convenience wrapper — runs INCREMENTAL profile."""
+    
+    def analyze_target(
+        self,
+        paths: list[Path],
+        engines: list[str] | None = None,
+    ) -> IntegrityReport:
+        """Analyze only specific paths, optionally with specific engines."""
+    
+    def build_model(self) -> RepositoryKnowledgeModel:
+        """Collect and normalize the repository into the RKM (cached per run)."""
+    
+    def build_views(self, model: RepositoryKnowledgeModel) -> DerivedViews:
+        """Build derived graph views from the model."""
+    
+    def query(self, model: RepositoryKnowledgeModel) -> RepositoryQueryService:
+        """Get a query service for the model."""
+    
+    def report(self, findings: list[Finding], metrics: ...) -> IntegrityReport:
+        """Aggregate and format findings into a report."""
+
+@dataclass
+class IntegrityReport:
+    model: RepositoryKnowledgeModel
+    findings: list[Finding]
+    metrics: IntegrityScores | ExecutionMetrics
+    execution_profile: ExecutionProfile
+    execution_time_ms: int
+    metadata: dict[str, Any]
+```
 
 ---
 
@@ -329,11 +501,13 @@ class IntegrityEngine:
     name: str
     domain: IntegrityDomain                  # STRUCTURAL | SEMANTIC | EVOLUTION
     capabilities: set[Capability]            # what this engine knows about
-    dependencies: list[str]                  # engines that must analyze first
+    required_dependencies: list[str]         # engines that MUST run first (#9)
+    optional_dependencies: list[str]         # degrades gracefully if absent
     
     def analyze(
         self,
         model: RepositoryKnowledgeModel,
+        query: RepositoryQueryService,
         views: DerivedViews,
         context: AnalysisContext,
     ) -> list[Finding]: ...
@@ -343,22 +517,38 @@ Engines register via decorator. Registry resolves execution order by dependency 
 
 ---
 
-## Query API
+## RepositoryQueryService
 
-A semantic query layer on the RKM that engines use instead of ad-hoc traversal. Reduces duplicated traversal logic across engines.
+A dedicated service for graph traversal over the RKM. Separated from the model to prevent mixing storage with querying — which enables future caching and optimizations without changing the model. (#2)
 
 ```python
-class RepositoryKnowledgeModel:
-    # ... (entity dictionaries above)
+class RepositoryQueryService:
+    """Graph traversal over the Repository Knowledge Model.
     
-    # ── Query API ─────────────────────────────────────
+    The primary interface between engines and the model. Engines should
+    rarely access RKM sub-models directly.
+    """
+    
+    def __init__(self, model: RepositoryKnowledgeModel): ...
+    
+    # ── Entity lookup ────────────────────────────────
     def find_routes(self, path_pattern: str | None = None) -> list[RouteDef]: ...
     def find_schemas(self, field_name: str) -> list[SchemaDef]: ...
-    def find_consumers(self, schema_id: UUID) -> list[EntityBase]: ...
-    def find_producers(self, schema_id: UUID) -> list[EntityBase]: ...
+    def find_by_id(self, entity_id: UUID) -> EntityBase | None: ...
+    def find_by_tag(self, tag: str) -> list[EntityBase]: ...
     
-    def trace(self, entity_id: UUID, relationship_types: list[RelationshipType]) -> list[EntityBase]:
-        """Follow typed edges from entity to connected entities."""
+    # ── Consumer / Producer ──────────────────────────
+    def find_consumers(self, entity_id: UUID) -> list[EntityBase]:
+        """Everything that references entity_id."""
+    def find_producers(self, entity_id: UUID) -> list[EntityBase]:
+        """Everything that entity_id references."""
+    
+    # ── Trace ────────────────────────────────────────
+    def trace(
+        self, entity_id: UUID,
+        relationship_types: list[RelationshipType],
+    ) -> list[EntityBase]:
+        """Follow typed edges from entity."""
     
     def trace_api(self, route_id: UUID) -> list[EntityBase]:
         """Route → handler → schema → model chain."""
@@ -369,14 +559,18 @@ class RepositoryKnowledgeModel:
     def trace_frontend(self, component_id: UUID) -> list[EntityBase]:
         """Component → API client → route → schema chain."""
     
-    def find_dependencies(self, entity_id: UUID, *, transitive: bool = False) -> list[DependencyEdge]:
-        """Import/dependency graph traversal, with optional transitive closure."""
+    def trace_cross_layer(self, entity_id: UUID) -> list[list[EntityBase]]:
+        """Full front-to-back chain: component → client → route → schema → model → migration."""
+    
+    # ── Dependency ───────────────────────────────────
+    def find_dependencies(
+        self, entity_id: UUID, *, transitive: bool = False,
+    ) -> list[DependencyEdge]:
+        """Import/dependency graph traversal."""
     
     def find_impact(self, entity_ids: list[UUID]) -> ImpactSet:
-        """For changed entities, find all potentially affected entities."""
+        """For changed entities, find all potentially affected."""
 ```
-
-The Query API is the primary interface between engines and the model. Engines should rarely access raw entity dictionaries directly.
 
 ---
 
@@ -473,16 +667,53 @@ Engine outputs remain the same `list[Finding]` — only the orchestration change
 
 ---
 
+## Non-Goals
+
+What Integrity explicitly does **not** do — preventing scope creep.
+
+- Does **not** execute code. Static analysis only.
+- Does **not** replace tests. Integrity finds *structural* mismatches, not logic bugs.
+- Does **not** benchmark runtime. No performance profiling, no latency measurement.
+- Does **not** lint style. Code formatting, naming conventions, and docstring coverage are out of scope.
+- Does **not** perform security penetration testing. No injection detection, no secret scanning, no vuln assessment.
+- Does **not** deploy changes. Analysis only; no auto-fix execution (V2 adds optional patches).
+- Does **not** persist the RKM across runs. In-memory only (persistence is V2).
+
+## Performance Characteristics
+
+Expected computational complexity by analysis stage:
+
+| Stage | Complexity | Notes |
+|-------|-----------|-------|
+| Collection | O(files) | Linear in repository file count |
+| Normalization | O(entities) | One pass per extracted entity |
+| Validation | O(entities) | One pass per normalized entity |
+| Import Graph construction | O(edges) | Edges = import statements |
+| Dependency Closure | O(V + E) | BFS/DFS over import graph |
+| View construction | O(entities × relationships) | Per-view filters |
+| Schema Graph | O(nodes) | Schema hierarchy traversal |
+| Cross-Layer Trace | O(layers × edges) | Depth bounded by architecture depth |
+| Engine execution | O(engine_count × graph_size) | Parallelizable per engine |
+
+**Target:** Full-repository scan < 5 seconds for repos under 50k files. Incremental scans (< 20 changed files) complete in < 1 second.
+
+---
+
 ## Implementation Milestones
 
 ### Milestone 1 — Foundation
-- Repository Knowledge Model
-- Collectors (Python + YAML + JSON + Markdown)
+- RKM sub-models: `MetadataModel`, `CodeModel`, `EcosystemModel`, `DocumentationModel`, `RelationshipModel`, `RepositoryCapabilities`
+- RKM façade assembling sub-models
+- Collectors (Python + YAML + JSON + Markdown) with plugin versioning
 - Normalizers
-- Derived Views (Import, Dependency, API, Cross-Layer)
+- **Validator** — entity and relationship validation
+- `RepositoryQueryService` — graph traversal API
+- Derived Views (Import, Dependency, API, Cross-Layer) with invalidation
 - Dependency Closure Service
-- Engine Registry
-- Metrics
+- Engine Registry with capability-based lookup
+- `IntegrityService` — stable public API
+- Metrics (IntegrityScores + ExecutionMetrics)
+- Aggregator + Reporter
 - Integrity Workflow
 
 **No real engines yet** — infrastructure only.
@@ -522,17 +753,33 @@ Engine outputs remain the same `list[Finding]` — only the orchestration change
 ```
 backend/app/agents/integrity/
     __init__.py
-    workflow.py                # Integrity workflow orchestrator
-    model.py                   # RKM + Finding + Relationship dataclasses
-    context.py                 # AnalysisContext
-    views.py                   # View registry + lazy builders
-    closure.py                 # DependencyClosureService
-    metrics.py                 # IntegrityMetrics
-    registry.py                # EngineRegistry + @register decorator
+    service.py               # IntegrityService — stable public API (#4)
+    workflow.py               # Integrity workflow orchestrator
+    
+    model/
+        __init__.py           # RKM façade — assembles sub-models
+        _base.py              # EntityBase, EntityType
+        metadata_model.py     # MetadataModel, RepositoryCapabilities (#6)
+        code_model.py         # CodeModel — files, symbols, routes, schemas, types, models
+        ecosystem_model.py    # EcosystemModel — commands, skills, hooks, workflows
+        documentation_model.py# DocumentationModel — plans, SoT registries, ADRs
+        relationship_model.py # RelationshipModel — typed edges between entities
+        finding.py            # Finding, Recommendation, CandidateFix
+        metrics.py            # IntegrityScores, RepositoryAnalytics, ExecutionMetrics
+        context.py            # AnalysisContext, ExecutionProfile, AnalysisScope
+        source_of_truth.py    # SourceOfTruth registry (#13)
+    
+    query.py                  # RepositoryQueryService — graph traversal (#2)
+    validation.py             # Validator — entity + relationship + model validation (#3)
+    views.py                  # View registry + lazy builders (invalidatable) (#10)
+    closure.py                # DependencyClosureService
+    registry.py               # EngineRegistry + @register decorator
+    
+    report.py                 # Aggregator + Reporter — findings → markdown/json/html/cli (#8)
     
     engines/
         __init__.py
-        _base.py               # IntegrityEngine protocol + Finding sub-types
+        _base.py              # IntegrityEngine protocol + Capability enum
         
         structural/
             import_engine.py
@@ -550,9 +797,9 @@ backend/app/agents/integrity/
             documentation_engine.py
             planning_engine.py
     
-    extractors/
-        __init__.py            # plugin registry
-        _base.py               # Extractor + Normalizer protocols
+    extractors/               # Plugin-based collectors (#1, #4)
+        __init__.py           # CollectorsPlugin registry
+        _base.py              # Extractor, Normalizer, CollectorPlugin protocols
         
         python_extractor.py
         python_normalizer.py
@@ -576,9 +823,9 @@ backend/app/agents/integrity/
         workflow_extractor.py
         workflow_normalizer.py
 
-.claude/commands/project/integrity.md
-.claude/skills/cortex-integrity/SKILL.md
-.agents/plans/shared-phases.md          # updated with integrity phase
+.claude/commands/project/integrity.md     # thin orchestrator → calls IntegrityService
+.claude/skills/cortex-integrity/SKILL.md  # reusable skill → calls IntegrityService
+.agents/plans/shared-phases.md            # updated with integrity phase
 ```
 
 ---
@@ -591,10 +838,14 @@ backend/app/agents/integrity/
 - **Test coverage awareness** — RKM tracks test↔implementation relationships
 - Auto-fix pipeline + **Fix Provider plugin system** (#8)
 - Event bus architecture — pub/sub between engine outputs (#5)
-- Persistent RKM storage
+- Persistent RKM storage (SQLite-backed, incremental updates)
+- **Knowledge Graph persistence** — RKM written to local store for reuse across sessions
+- **Historical integrity** — track integrity scores over time, trend detection, regression alerts
 - Web dashboard for integrity metrics over time
 - **Analytics expansion** — ownership concentration, instability scores, documentation coverage (#10)
 - **Split Cross-Layer Engine** into independent Frontend→API, API→Service, Service→ORM, ORM→Migration, Migration→DB engines (#14)
+- **AI fix planning** — Finding → Planning Engine → Patch Proposal → Review → Apply
+- **Engine composition** — engines call other engines through capabilities instead of directly
 
 ---
 
