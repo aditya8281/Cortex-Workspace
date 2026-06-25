@@ -4,6 +4,8 @@ Run this before pushing code or creating a PR. Reviews changed code for correctn
 
 ## Instructions
 
+**Scope:** Code quality — correctness, patterns, completeness. For automated pass/fail checks (tests, lint, build), use `/project:verify` instead.
+
 1. **Identify changed files.** Run `git diff --name-only HEAD~1` and `git diff HEAD~1` to see all changes.
 
 2. **Run linting and tests.**
