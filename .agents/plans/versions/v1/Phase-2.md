@@ -298,6 +298,15 @@ This IS the agent phase. Summary:
 - In-memory approval → database-backed
 - No persistence → server-side runs with replay
 
+## Repository Impact
+
+- **Commands:** `/project:*` command set expanded with the addition of `/project:integrity` for repository integrity analysis.
+- **Skills:** New `cortex-integrity` skill added for structural, semantic, dependency, documentation, and planning verification.
+- **Documentation:**
+  - `docs/superpowers/specs/2026-06-25-integrity-system-design.md` — Integrity System specification
+  - `docs/superpowers/plans/2026-06-25-integrity-system-plan.md` — Integrity System implementation plan
+  - `.agents/plans/shared-phases.md` — Added "Integrity Analysis" as shared phase (12th phase)
+
 ## Dependencies
 
 | Dependency | Action |

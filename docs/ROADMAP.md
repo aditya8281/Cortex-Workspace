@@ -1,13 +1,14 @@
 # CORTEX Roadmap
 
-**Last updated:** 2026-06-25 (V1 phase names/statuses corrected)
+**Last updated:** 2026-06-25
 
 ## Current Status
 
 | Area | State |
 |------|-------|
-| Tests | 928 passing |
+| Tests | 1188 passing (1095 backend pytest + 93 frontend vitest) |
 | Frontend build | Passes |
+| Integrity System | ✅ Complete — 40+ files, 95 tests, 10 engines, service/command/skill |
 | Linting | ruff + ESLint + mypy — all clean |
 | Auth + vault backend | Production-quality foundation |
 | Vault UI | Full file browser with table/list/grid views |
@@ -40,9 +41,9 @@ Cortex development follows a 6-version system. Each version is a complete, relea
 
 | Phase | Name | Status |
 |-------|------|--------|
-| Phase 1 | Daemon Foundation | ✅ Complete |
-| Phase 2 | Agent Loop Rebuild | 🟢 ACTIVE |
-| Phase 3 | CLI + Bug Fixes | ⬜ Pending |
+| Phase 1 | Agent Intelligence | 🟢 ACTIVE |
+| Phase 2 | Indexing & Knowledge Graph | ⬜ Pending |
+| Phase 3 | Unified Search & Agents | ⬜ Pending |
 
 ### V2: The Architecture
 
@@ -97,6 +98,7 @@ Cortex development follows a 6-version system. Each version is a complete, relea
 
 ### Quality
 
+- [x] Integrity System (V1) now available as a code-governance tool (structural, semantic, evolution scans)
 - [ ] Achieve 80%+ backend test coverage (focus on services)
 - [ ] Achieve 60%+ frontend test coverage (focus on hooks and API modules)
 - [ ] Add E2E tests (Playwright or Cypress) for auth flow, vault, chat

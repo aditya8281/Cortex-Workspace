@@ -14,7 +14,7 @@ Adopt a convention-first governance system:
 - 12 mandatory rules (docs/GOVERNANCE.md)
 - 11 hooks (Claude Code hooks, governance hooks)
 - 10 workflows (docs/WORKFLOWS.md)
-- 7 strategic commands (.claude/commands/project/)
+- Strategic commands ecosystem (.claude/commands/project/) — 17 commands and growing
 - Authority hierarchy: CLAUDE.md > guide.md > AGENTS.md > versions/ > docs/
 
 ## Consequences
@@ -37,3 +37,4 @@ Adopt a convention-first governance system:
 - `AGENTS.md` — Agent behavior rules
 - `docs/GOVERNANCE.md` — Governance rules
 - `docs/WORKFLOWS.md` — Workflow definitions
+- Integrity System: `/project:integrity` command and `cortex-integrity` skill as governance ecosystem additions

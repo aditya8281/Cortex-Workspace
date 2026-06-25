@@ -23,6 +23,7 @@ This document defines the rules of engagement for all participants (human and ag
 | Hook system | .claude/hooks/ | `/.claude/hooks/` |
 | Automation scripts | scripts/automation/ | `/scripts/automation/` |
 | Developer guide | docs/DEVELOPER_GUIDE.md | `/docs/DEVELOPER_GUIDE.md` |
+| [Integrity System Design](docs/superpowers/specs/2026-06-25-integrity-system-design.md) | Implementation spec (architecture, RKM, engines, service, V1 scope) | `docs/superpowers/specs/2026-06-25-integrity-system-design.md` |
 
 **Rule:** If a topic appears in multiple files, the source of truth wins. Other files must reference it, not duplicate it.
 
@@ -131,6 +132,7 @@ Actively build a library of Cortex-specific skills:
 - Cortex Desktop Readiness Audit
 - Cortex Release Readiness Audit
 - Cortex Frontend/Backend Contract Audit
+- cortex-integrity — Repository integrity analysis (structural, semantic, evolution scans)
 
 Whenever a Cortex-specific workflow becomes mature and reusable, convert it into a dedicated skill.
 

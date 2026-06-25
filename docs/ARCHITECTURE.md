@@ -73,7 +73,7 @@ backend/app/
 ├── services/            # Business logic (48 files)
 │   ├── llm/             # LLM provider abstraction
 │   └── ...              # embedding, retrieval, vault, indexing, etc.
-├── agents/              # Agent system (base, planner, executor, tools)
+├── agents/              # Agent system (tools, integrity, run_manager, run_store)
 ├── intelligence/        # Intelligence features
 └── tasks/               # arq task queue (worker, memory_tasks)
 ```
@@ -153,6 +153,62 @@ from backend.app.agents.tools import ToolPolicy, ToolRule, default_policy
 policy = default_policy()
 decision = policy.evaluate("exec_command", iteration=0)
 # → "ask" (shell commands require approval)
+```
+
+**Integrity System (`backend/app/agents/integrity/`):**
+
+The Integrity System provides repository integrity analysis — exploring codebases as structured knowledge graphs, extracting entities and relationships, validating consistency. Public API is `IntegrityService`; commands and skills never access engines directly.
+
+**Core Model:**
+
+| File | Purpose |
+|------|---------|
+| `model/_base.py` | **EntityBase** — frozen dataclass with UUID, confidence `[0,1]`, source metadata |
+| `model/__init__.py` | **RepositoryKnowledgeModel (RKM)** — facade over 5 frozen sub-models (Metadata, Code, Ecosystem, Documentation, Relationships) |
+| `model/context.py` | ExecutionProfile enum (QUICK, INCREMENTAL, VERIFICATION, FULL, COMPLETE, TARGET) |
+| `model/finding.py` | **Finding** — 16-field dataclass with severity, classification, candidate fixes |
+| `model/relationship_model.py` | 18 relationship types, direction, edge strength, multiplicity |
+| `model/metrics.py` | IntegrityScores, RepositoryAnalytics, PerformanceMetrics |
+
+**Extraction & Validation:**
+
+| File | Purpose |
+|------|---------|
+| `extractors/python_extractor.py` | **PythonExtractor** — `ast.parse`-based entity extraction (classes, functions, imports) |
+| `extractors/python_normalizer.py` | **PythonNormalizer** — normalizes to `FileEntity` objects |
+| `validation.py` | **Validator** — validates EntityBase confidence, Relationship self-refs, RKM version |
+
+**Analysis Engines (10 engines across 3 domains):**
+
+| File | Purpose |
+|------|---------|
+| `registry.py` | **EngineRegistry** — singleton with `@register` decorator, `for_profile()`, DFS topological sort |
+| `engines/structural/` | 5 engines: import-graph, dependency, migration, filesystem, configuration |
+| `engines/semantic/` | 3 engines: schema-engine, api-contract, cross-layer |
+| `engines/evolution/` | 2 engines: documentation, planning |
+| `views.py` | **ViewRegistry** — lazy-built, cached, invalidatable derived views (9 graph types) |
+| `query.py` | **RepositoryQueryService** — graph traversal, BFS impact analysis, find_consumers/find_producers |
+| `closure.py` | **DependencyClosureService** — impact set computation via BFS on relationship edges |
+| `workflow.py` | **IntegrityWorkflow** — internal orchestrator: build_model → build_views → run engines → aggregate |
+
+**Public API:**
+
+| File | Purpose |
+|------|---------|
+| `service.py` | **IntegrityService** — `analyze()`, `analyze_incremental()`, `analyze_target()`, `build_model()`, `query()` |
+| `report.py` | **Aggregator** + **Reporter** — aggregate by severity/classification; Markdown and JSON output |
+
+**Engine Registration:**
+```python
+from backend.app.agents.integrity.registry import register
+from backend.app.agents.integrity.engines._base import IntegrityEngine
+
+@register(name="import-graph", domain=IntegrityDomain.STRUCTURAL,
+          capabilities={Capability.IMPORT, Capability.GRAPH},
+          required_dependencies=[],
+          profiles={ExecutionProfile.QUICK, ExecutionProfile.VERIFICATION})
+class ImportGraphEngine(IntegrityEngine):
+    ...
 ```
 
 Feature flag: `CORTEX_NEW_AGENT_LOOP` (default: False) in Settings. When True, dispatch to the new streaming loop instead of the legacy Planner→Executor path.

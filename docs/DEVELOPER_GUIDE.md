@@ -56,7 +56,7 @@ Before any significant task, search for existing skills:
 
 ```bash
 # Check available skills
-ls .claude/skills/
+ls .agents/skills/
 # Or use the skill list from system-reminder messages
 ```
 
@@ -282,6 +282,8 @@ Every topic has exactly one authoritative file:
 | API routers | `backend/app/api/v1/` |
 | Services | `backend/app/services/` |
 | Managers | `backend/app/managers/` |
+| Agents | `backend/app/agents/` |
+| Integrity System | `backend/app/agents/integrity/` |
 | Middleware | `backend/app/middleware/` |
 | Background tasks | `backend/app/tasks/` |
 | Tests | `tests/` |
@@ -289,8 +291,11 @@ Every topic has exactly one authoritative file:
 | Docs | `docs/` |
 | ADRs | `docs/decisions/` |
 | Audits | `docs/audits/` |
-| Skills | `.claude/skills/` |
+| Superpowers Specs | `docs/superpowers/specs/` |
+| Superpowers Plans | `docs/superpowers/plans/` |
+| Skills | `.agents/skills/` |
 | Hooks | `.claude/hooks/` |
+| Project Commands | `.claude/commands/project/` |
 
 ### Forbidden Paths
 
@@ -392,7 +397,7 @@ All checks must pass before merge.
 ### Adding a New Skill
 
 1. Identify the reusable workflow (repetitive? Cortex-specific? Difficult enough?)
-2. Create directory in `.claude/skills/your-skill/`
+2. Create directory in `.agents/skills/your-skill/`
 3. Write skill definition with: purpose, steps, examples, validation
 4. Test the skill on a real task
 5. Update AGENTS.md or GOVERNANCE.md if it's a core workflow
@@ -423,6 +428,15 @@ Skills should evolve alongside Cortex. Never leave a skill static.
 3. Register in `.claude/hooks/run_hooks.py`
 4. Add to appropriate phase in PHASES dict
 5. Test with `make hooks`
+
+### Adding a New Project Command
+
+1. Create file at `.claude/commands/project/<name>.md`
+2. File starts with `# /project:<name> — Description`
+3. Command is a thin orchestrator — it calls skills, never contains reusable logic
+4. Starts with `cortex-repo-discovery` to find the repository root
+5. Structure with 4-5 sections: Purpose, Usage, Execution, Example Output
+6. Test by running `/<name>` in Claude Code
 
 ---
 
@@ -462,6 +476,8 @@ from backend.app.models.your_model import YourModel  # noqa: F401
 
 ```
 .claude/
+├── commands/
+│   └── project/               # Project commands
 ├── hooks/
 │   ├── run_hooks.py           # Master hook runner
 │   ├── shared/
@@ -477,6 +493,9 @@ from backend.app.models.your_model import YourModel  # noqa: F401
 │   ├── repo-health/hook.py    # Hook 9
 │   └── decision-tracking/     # Hook 10
 ├── settings.local.json        # Claude Code config
+
+backend/app/
+├── agents/                    # Agent system
 
 scripts/automation/
 ├── run_all.py                 # Master automation runner
