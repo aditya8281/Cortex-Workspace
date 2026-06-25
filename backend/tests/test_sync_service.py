@@ -60,7 +60,11 @@ async def test_sync_library_creates_job_with_running_status(service, db):
 
     with (
         patch("backend.app.services.sync_service.provider_registry") as registry,
-        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=([], CatalogSourceStatus())),
+        patch(
+            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            new_callable=AsyncMock,
+            return_value=([], CatalogSourceStatus()),
+        ),
     ):
         registry.enabled.return_value = [adapter]
         registry.get.return_value = adapter
@@ -91,7 +95,11 @@ async def test_sync_library_discovers_models(service, db):
 
     with (
         patch("backend.app.services.sync_service.provider_registry") as registry,
-        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=([], CatalogSourceStatus())),
+        patch(
+            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            new_callable=AsyncMock,
+            return_value=([], CatalogSourceStatus()),
+        ),
     ):
         registry.enabled.return_value = [adapter]
         registry.get.return_value = adapter
@@ -108,12 +116,22 @@ async def test_sync_library_filters_by_provider_name(service, db):
     db.scalars.return_value.all.return_value = []
 
     ollama_models = [
-        {"name": "llama3:8b", "family": "llama", "parameter_size": "8B", "capabilities": ["chat"], "description": "A Llama 3 model"},
+        {
+            "name": "llama3:8b",
+            "family": "llama",
+            "parameter_size": "8B",
+            "capabilities": ["chat"],
+            "description": "A Llama 3 model",
+        },
     ]
 
     with (
         patch("backend.app.services.sync_service.provider_registry") as registry,
-        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=(ollama_models, CatalogSourceStatus())),
+        patch(
+            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            new_callable=AsyncMock,
+            return_value=(ollama_models, CatalogSourceStatus()),
+        ),
     ):
         registry.get.return_value = adapter
         job = await service.sync_library(provider_name="ollama")
@@ -127,7 +145,11 @@ async def test_sync_library_no_adapter_returns_empty_job(service, db):
 
     with (
         patch("backend.app.services.sync_service.provider_registry") as registry,
-        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=([], CatalogSourceStatus())),
+        patch(
+            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            new_callable=AsyncMock,
+            return_value=([], CatalogSourceStatus()),
+        ),
     ):
         registry.get.return_value = None
         job = await service.sync_library(provider_name="nonexistent")
@@ -154,7 +176,11 @@ async def test_sync_library_sets_provider_id(service, db):
 
     with (
         patch("backend.app.services.sync_service.provider_registry") as registry,
-        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=([], CatalogSourceStatus())),
+        patch(
+            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            new_callable=AsyncMock,
+            return_value=([], CatalogSourceStatus()),
+        ),
     ):
         registry.enabled.return_value = [adapter]
         registry.get.return_value = adapter
@@ -190,7 +216,11 @@ async def test_sync_library_handles_adapter_exception(service, db):
 
     with (
         patch("backend.app.services.sync_service.provider_registry") as registry,
-        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=([], CatalogSourceStatus())),
+        patch(
+            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            new_callable=AsyncMock,
+            return_value=([], CatalogSourceStatus()),
+        ),
     ):
         registry.enabled.return_value = [adapter]
         job = await service.sync_library()
@@ -216,7 +246,11 @@ async def test_sync_library_sets_failed_on_global_error(service, db):
 
     with (
         patch("backend.app.services.sync_service.provider_registry") as registry,
-        patch("backend.app.services.ollama_catalog.get_ollama_catalog", new_callable=AsyncMock, return_value=([], CatalogSourceStatus())),
+        patch(
+            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            new_callable=AsyncMock,
+            return_value=([], CatalogSourceStatus()),
+        ),
     ):
         registry.enabled.return_value = [adapter]
         job = await service.sync_library()
