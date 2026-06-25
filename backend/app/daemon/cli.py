@@ -74,7 +74,7 @@ class CortexDaemon:
         lifecycle.register(
             LifecycleHook(
                 name="start_sleep_manager",
-                callback=self._async_start_sleep,
+                callback=self._sleep_manager.start,
                 phase="post_start",
                 order=200,
             )
@@ -115,10 +115,6 @@ class CortexDaemon:
         if not server.started:
             raise RuntimeError("uvicorn failed to start")
 
-    async def _async_start_sleep(self) -> None:
-        """Async wrapper for sleep manager start."""
-        self._sleep_manager.start()
-
     async def _shutdown(self, lifecycle) -> None:
         """Perform orderly shutdown."""
         click.echo("Shutting down CORTEX daemon...")
@@ -145,11 +141,8 @@ def cli():
     """CORTEX daemon — process lifecycle management."""
 
 
-@cli.command()
-@click.option("--daemon", is_flag=True, help="Run as background daemon")
-@click.option("--config", "config_path", type=click.Path(exists=True), help="Path to config file")
-def start(daemon: bool, config_path: str | None) -> None:
-    """Start the CORTEX daemon."""
+def _start_daemon(daemon: bool = False, config_path: str | None = None) -> None:
+    """Shared start logic for `start` and `restart` commands."""
     if is_running():
         pid_info = read_pid()
         pid = pid_info["pid"] if pid_info else "unknown"
@@ -159,16 +152,11 @@ def start(daemon: bool, config_path: str | None) -> None:
         sys.exit(1)
 
     if daemon:
-        # Fork into background (Unix only)
         pid = os.fork()
         if pid > 0:
-            # Parent exits
             click.echo(f"CORTEX daemon starting in background (PID {pid})")
             sys.exit(0)
-
-        # Child continues — detach from terminal
         os.setsid()
-        # Second fork to fully detach
         pid2 = os.fork()
         if pid2 > 0:
             sys.exit(0)
@@ -184,6 +172,14 @@ def start(daemon: bool, config_path: str | None) -> None:
     except Exception as exc:
         click.echo(f"Fatal error: {exc}", err=True)
         sys.exit(1)
+
+
+@cli.command()
+@click.option("--daemon", is_flag=True, help="Run as background daemon")
+@click.option("--config", "config_path", type=click.Path(exists=True), help="Path to config file")
+def start(daemon: bool, config_path: str | None) -> None:
+    """Start the CORTEX daemon."""
+    _start_daemon(daemon=daemon, config_path=config_path)
 
 
 @cli.command()
@@ -294,11 +290,8 @@ def logs(tail: int, follow: bool) -> None:
 @cli.command()
 def restart() -> None:
     """Restart the CORTEX daemon."""
-    # Use type: ignore because click sets callback at runtime
-    if start.callback:  # type: ignore[truthy-function]
-        stop()
-        sys.argv = [sys.argv[0], "start"]
-        start.callback(None, None)  # type: ignore[misc]
+    stop()
+    _start_daemon()
 
 
 def main() -> None:

@@ -1,8 +1,8 @@
 # Active Version
 
 **Current Version:** V1 — The Brain Works
-**Current Phase:** Phase 1 — Agent Intelligence
-**Status:** Active (no components started yet)
+**Current Phase:** Phase 1 — Daemon Foundation
+**Status:** Active (5/19 components complete)
 
 ## How This File Works
 
@@ -32,7 +32,7 @@ This file is the **single source of truth** for what version/phase is currently 
 
 | Phase | Name | Status | Plan |
 |-------|------|--------|------|
-| **Phase 1** | Agent Intelligence | 🟢 ACTIVE | `versions/v1/Phase-1.md` |
+| **Phase 1** | Daemon Foundation | 🟢 ACTIVE | `versions/v1/Phase-1.md` |
 | Phase 2 | Indexing & Knowledge Graph | ⬜ Pending | `versions/v1/Phase-2.md` |
 | Phase 3 | Unified Search & Agents | ⬜ Pending | `versions/v1/Phase-3.md` |
 

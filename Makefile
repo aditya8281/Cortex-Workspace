@@ -1,4 +1,4 @@
-.PHONY: help install dev dev-no-reload migrate migration shell test test-cov test-watch lint format check clean db-reset db-shell db-backup docker-build docker-up docker-down docker-restart docker-reset docker-logs docker-shell docs lock ci prod-check logs-app logs-error auto auto-pre auto-dev auto-health auto-bugs auto-complete auto-report auto-release auto-docs auto-skills auto-status hooks hooks-pre hooks-push hooks-merge hooks-onchange
+.PHONY: help install dev daemon dev-no-reload migrate migration shell test test-cov test-watch lint format check clean db-reset db-shell db-backup docker-build docker-up docker-down docker-restart docker-reset docker-logs docker-shell docs lock ci prod-check logs-app logs-error auto auto-pre auto-dev auto-health auto-bugs auto-complete auto-report auto-release auto-docs auto-skills auto-status hooks hooks-pre hooks-push hooks-merge hooks-onchange
 
 # ============================================================================
 # HELP
@@ -12,6 +12,7 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev            Run dev server (hot reload)"
+	@echo "  make daemon         Start cortexd daemon"
 	@echo "  make shell          Open Python shell"
 	@echo ""
 	@echo "Database:"
@@ -61,6 +62,9 @@ install:
 
 dev:
 	uv run uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+
+daemon:
+	cortexd start
 
 dev-no-reload:
 	uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000

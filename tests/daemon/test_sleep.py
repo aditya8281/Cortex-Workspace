@@ -78,7 +78,7 @@ class TestSleepManager:
         assert self.mgr.state == DaemonState.ACTIVE
 
     async def test_start_stop_loop(self):
-        self.mgr.start()
+        await self.mgr.start()
         assert self.mgr._sleep_task is not None
         assert not self.mgr._sleep_task.done()
 
@@ -86,9 +86,9 @@ class TestSleepManager:
         assert self.mgr._sleep_task is None
 
     async def test_start_is_idempotent(self):
-        self.mgr.start()
+        await self.mgr.start()
         task1 = self.mgr._sleep_task
-        self.mgr.start()
+        await self.mgr.start()
         assert self.mgr._sleep_task is task1
         await self.mgr.stop()
 

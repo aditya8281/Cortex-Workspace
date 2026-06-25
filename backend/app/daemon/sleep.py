@@ -108,7 +108,7 @@ class SleepManager:
             if self._state == DaemonState.ACTIVE and self.idle_seconds >= self._config.idle_timeout_seconds:
                 await self._sleep()
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Start the idle detection loop."""
         if self._sleep_task is None or self._sleep_task.done():
             self._sleep_task = asyncio.create_task(self._idle_check_loop())
