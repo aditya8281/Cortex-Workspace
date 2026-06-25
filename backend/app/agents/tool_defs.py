@@ -7,6 +7,7 @@ Both systems are maintained during V1 Phase-2 transition.
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import os
 import shlex
@@ -15,12 +16,25 @@ from typing import Any
 from urllib.parse import urlparse
 
 from backend.app.agents.tools.registry import tool
+from backend.app.agents.tools.security import BLOCKED_URL_SCHEMES, has_blocked_command
 
 logger = logging.getLogger(__name__)
 
 AGENT_WORKSPACE = os.environ.get(
     "AGENT_WORKSPACE",
     os.path.join(os.path.expanduser("~"), ".cortex-agent-workspace"),
+)
+
+BLOCKED_HOSTS = frozenset(
+    {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "0.0.0.0",
+        "169.254.169.254",
+        "metadata.google.internal",
+        "metadata.google.internal.",
+    }
 )
 
 
@@ -41,15 +55,7 @@ def _is_private_url(url: str) -> bool:
         hostname = parsed.hostname
         if not hostname:
             return False
-        blocked_hosts = {
-            "localhost",
-            "127.0.0.1",
-            "::1",
-            "0.0.0.0",
-            "169.254.169.254",
-            "metadata.google.internal",
-        }
-        if hostname in blocked_hosts:
+        if hostname in BLOCKED_HOSTS:
             return True
         try:
             ip = ipaddress.ip_address(hostname)
@@ -61,9 +67,6 @@ def _is_private_url(url: str) -> bool:
         return False
     except Exception:
         return False
-
-
-import ipaddress  # noqa: E402 — avoid circular import at module top
 
 
 class UserInputRequired(Exception):
@@ -97,41 +100,19 @@ def list_tools() -> dict[str, str]:
 
 
 @tool(description="Run a shell command with safety limits", requires_approval=True, category="system")
-async def exec_command(command: str, cwd: str = ".") -> str:
-    """Execute a shell command safely with workspace restriction and timeout."""
+async def exec_command(command: str) -> str:
+    """Execute a shell command safely with safety limits and timeout.
+
+    Args:
+        command: The shell command to execute
+    """
     command = command.strip()
     if not command:
         raise ValueError("Command is required")
 
-    blocked_patterns = [
-        "rm -rf /",
-        "mkfs",
-        "dd if=",
-        ":(){ :|:& };:",
-        "chmod 777",
-        "chown",
-        "passwd",
-        "shutdown",
-        "reboot",
-        "halt",
-        "init 0",
-        "systemctl",
-        "service",
-        "kill -9 1",
-        "killall",
-        "apt ",
-        "yum ",
-        "pip install",
-        "npm install",
-        "curl ",
-        "wget ",
-        "eval ",
-        "exec ",
-    ]
-    cmd_lower = command.lower()
-    for pattern in blocked_patterns:
-        if pattern in cmd_lower:
-            raise ValueError(f"Blocked dangerous command pattern: {pattern}")
+    blocked = has_blocked_command(command)
+    if blocked:
+        raise ValueError(f"Blocked dangerous command pattern: {blocked}")
 
     try:
         parts = shlex.split(command)
@@ -162,8 +143,12 @@ async def exec_command(command: str, cwd: str = ".") -> str:
 
 
 @tool(description="Show recent git commits", category="code")
-async def git_log(repo_path: str = ".", count: int = 10) -> str:
-    """Show recent git commits."""
+async def git_log(count: int = 10) -> str:
+    """Show recent git commits.
+
+    Args:
+        count: Number of recent commits to show
+    """
     try:
         proc = await asyncio.create_subprocess_exec(
             "git",
@@ -186,7 +171,11 @@ async def git_log(repo_path: str = ".", count: int = 10) -> str:
 
 @tool(description="Show file changes (git diff)", category="code")
 async def git_diff(file_path: str | None = None) -> str:
-    """Show file changes (git diff)."""
+    """Show file changes (git diff).
+
+    Args:
+        file_path: Optional specific file to diff
+    """
     try:
         if file_path and file_path.startswith("-"):
             return "Error: invalid file path"
@@ -211,9 +200,12 @@ async def git_diff(file_path: str | None = None) -> str:
 
 @tool(description="Fetch URL content (max 100KB)", requires_approval=True, category="web")
 async def web_fetch(url: str) -> str | dict[str, str]:
-    """Fetch URL content (max 100KB)."""
-    blocked_schemes = ("javascript:", "data:", "file:", "ftp:")
-    if any(url.lower().startswith(s) for s in blocked_schemes):
+    """Fetch URL content (max 100KB).
+
+    Args:
+        url: The URL to fetch
+    """
+    if any(url.lower().startswith(s) for s in BLOCKED_URL_SCHEMES):
         return {"error": f"URL scheme not allowed: {url}"}
 
     if _is_private_url(url):
@@ -232,7 +224,11 @@ async def web_fetch(url: str) -> str | dict[str, str]:
 
 @tool(description="Ask user for input — raises a signal for the run manager to handle", category="system")
 async def ask_user(question: str) -> str:
-    """Ask user for input. Raises UserInputRequired for run manager to handle."""
+    """Ask user for input. Raises UserInputRequired for run manager to handle.
+
+    Args:
+        question: The question to ask the user
+    """
     raise UserInputRequired(question)
 
 

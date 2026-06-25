@@ -46,18 +46,20 @@ def _make_property(name: str, tp: Any, description: str = "") -> dict:
         non_none = [a for a in args if a is not type(None)]
         if len(non_none) == 1:
             return _make_property(name, non_none[0], description)
+        # Complex union (str | int) — fall back to string
+        return {"type": "string", "description": description}
 
     # list[X]
-    if origin in (list, list):
-        item_type = _get_std_type(args[0]) if args else "string"
+    if origin is list:
+        item_tp = _get_std_type(args[0]) if args else "string"
         return {
             "type": "array",
-            "items": {"type": item_type, "description": description},
+            "items": {"type": item_tp, "description": description},
             "description": description,
         }
 
     # dict[str, X]
-    if origin in (dict, dict):
+    if origin is dict:
         return {
             "type": "object",
             "description": description,
