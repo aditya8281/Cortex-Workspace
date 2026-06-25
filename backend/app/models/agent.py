@@ -46,6 +46,8 @@ class AgentRun(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     output: Mapped[str | None] = mapped_column(Text, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pid: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    state_snapshot: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

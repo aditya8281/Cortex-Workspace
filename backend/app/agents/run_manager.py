@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.agents.executor import ExecutorAgent
 from backend.app.agents.planner import PlannerAgent
+from backend.app.agents.run_store import RunStore
 from backend.app.core.config import settings
 from backend.app.models.agent import Agent, AgentFeedback, AgentRun, AgentStep
 from backend.app.services.llm.manager import llm_manager
@@ -112,6 +113,9 @@ class AgentRunManager:
         run.status = "running"
         self.db.commit()
 
+        # Track PID for orphan detection
+        RunStore(self.db).attach_pid(run.id)
+
         if settings.CORTEX_NEW_AGENT_LOOP:
             return await self._run_new_loop(run, agent, agent_id, user_id, input_text)
         else:
@@ -154,7 +158,7 @@ class AgentRunManager:
                 self.db.commit()
                 await self._emit_step_event(step)
 
-            self._finalize_run(run, results[-1] if results else "No output")
+            self._save_final_snapshot(run)
             await self._emit(
                 {
                     "type": "done",
@@ -254,6 +258,7 @@ class AgentRunManager:
                     )
 
             # Finalize run
+            self._save_final_snapshot(run)
             self._finalize_run(run, final_output or input_text)
             await self._emit({"type": "done", "status": "completed"})
 
@@ -292,6 +297,20 @@ class AgentRunManager:
         run.error = "Agent execution failed"
         run.completed_at = datetime.now(timezone.utc)
         self.db.commit()
+
+    def _save_final_snapshot(self, run: AgentRun) -> None:
+        """Save a final state snapshot for crash recovery."""
+        from backend.app.agents.run_store import RunStore
+
+        RunStore(self.db).save_snapshot(
+            run.id,
+            {
+                "status": run.status,
+                "output": run.output,
+                "error": run.error,
+                "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+            },
+        )
 
     async def _emit_step_event(self, step: AgentStep) -> None:
         """Emit a step event to the callback."""
