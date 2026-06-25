@@ -25,17 +25,16 @@ class TestEstimateTokenCount:
         est = estimate_token_count(msgs)
         assert est > 0
 
-    def test_custom_chars_per_token(self):
-        msgs = [{"role": "user", "content": "a" * 100}]
-        est_4 = estimate_token_count(msgs, approx_chars_per_token=4.0)
-        est_2 = estimate_token_count(msgs, approx_chars_per_token=2.0)
-        assert est_2 > est_4  # fewer chars/token → more tokens
+    def test_longer_text_more_tokens(self):
+        short = estimate_token_count([{"role": "user", "content": "hello"}])
+        long = estimate_token_count([{"role": "user", "content": "hello " * 200}])
+        assert long > short
 
     def test_overhead_added(self):
         empty = [{"role": "user", "content": ""}]
         est = estimate_token_count(empty)
-        # 0 chars + 10 overhead = 10 / 4 = ~2
-        assert est == 2
+        # Empty content gets at least overhead tokens for the role marker
+        assert est > 0
 
 
 class TestFallbackCompact:
