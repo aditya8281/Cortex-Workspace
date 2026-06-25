@@ -215,6 +215,25 @@ Branch → Skill Discovery → Brainstorm → Plan → Implement → Test → Va
 
 Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for details.
 
+### Skill-First Architecture
+
+The Cortex ecosystem follows a skill-first hierarchy:
+
+```text
+Commands (orchestrate)
+    ↓
+Workflows (coordinate)
+    ↓
+Skills (contain reusable intelligence)
+    ↓
+Hooks (enforce quality automatically)
+```
+
+- **Commands** are thin orchestrators. They invoke skills and compose workflows. They do not contain reusable logic.
+- **Skills** (in `.agents/skills/`) contain reusable intelligence. Each has a documented purpose, step-by-step process, and output definition.
+- **Shared phases** (`.agents/plans/shared-phases.md`) delegate to skills. Updating a skill updates all commands that reference it.
+- **Discovery is automatic.** Every command starts with `cortex-repo-discovery` to find the repository root from any directory.
+
 ### Mandatory Reviews
 
 | Review | When | Command |

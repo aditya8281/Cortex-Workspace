@@ -1,33 +1,28 @@
 # /project:release — Release Readiness Check
 
-Determine if the current state is ready for release of the active version/phase. Combines verification, documentation, governance, and version completeness.
+Determine if the current state is ready for release. Combines verification, documentation, governance, and version completeness.
 
-**Scope:** Version/phase release gate. For just test/lint/build results, use `/project:verify` instead.
+**Scope:** Version/phase release gate. For just test/lint/build results, use `/project:verify`.
 
 ## Instructions
 
 ### 1. Read Version Context
 
-Run `.agents/plans/shared-phases.md#repository-intelligence`.
-Run `.agents/plans/shared-phases.md#planning-ecosystem-load`.
+Invoke `cortex-repo-discovery` then `cortex-repository-intelligence`. Invoke `cortex-planning-ecosystem`.
 
-Identify the phase exit criteria from the active phase plan.
+Identify phase exit criteria from the active phase plan.
 
 ### 2. Run Verification
 
-Run `.agents/plans/shared-phases.md#system-validation`.
+Invoke `cortex-system-validation`.
 
 ### 3. Check Phase Completeness
 
-For each exit criterion in the phase plan:
-- Is it met? (Yes/No)
-- What evidence supports this? (test output, code reference, doc reference)
-
-Flag any incomplete items.
+For each exit criterion in the phase plan: Is it met? What evidence? Flag incomplete items.
 
 ### 4. Check Documentation
 
-Run `.agents/plans/shared-phases.md#documentation-consistency-check`.
+Invoke `cortex-documentation-consistency`.
 
 ### 5. Check Governance
 
@@ -35,8 +30,7 @@ Run `.agents/plans/shared-phases.md#documentation-consistency-check`.
 |-------|--------|
 | All hooks passing | ✅/❌ |
 | `progress.md` up to date | ✅/❌ |
-| No unresolved P0/P1 from code review | ✅/❌ |
-| No unresolved P0/P1 from adversarial review | ✅/❌ |
+| No unresolved P0/P1 from reviews | ✅/❌ |
 
 ### 6. Check Git State
 
@@ -48,8 +42,7 @@ Run `.agents/plans/shared-phases.md#documentation-consistency-check`.
 
 ### 7. Check Version Boundaries
 
-- Does anything in this release belong in a different version?
-- Is scope creep present? (features from V2+ leaking into V1)
+- Scope creep from later version? Items belonging in different version?
 
 ## Output
 
@@ -57,29 +50,12 @@ Run `.agents/plans/shared-phases.md#documentation-consistency-check`.
 ## Release Readiness: [date]
 
 ### Version: VX — Phase N: [name]
-
-### Verification
-[Results from verify checks]
-
-### Phase Completeness
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-
-### Documentation
-| Check | Status |
-|-------|--------|
-
-### Governance
-| Check | Status |
-|-------|--------|
-
-### Git State
-| Check | Status |
-|-------|--------|
-
-### Version Boundaries
-| Check | Status |
-|-------|--------|
+### Verification [results]
+### Phase Completeness | Criterion | Status | Evidence |
+### Documentation | Check | Status |
+### Governance | Check | Status |
+### Git State | Check | Status |
+### Version Boundaries | Check | Status |
 
 ### Verdict: READY / NOT READY
 ### Blockers: [list if any]

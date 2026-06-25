@@ -2,67 +2,55 @@
 
 Run weekly or before major milestones. Comprehensive health check across all systems.
 
+**Scope:** Broad ecosystem health — skills, docs, governance, tech debt trends. For deep code-level scanning, use `/project:audit`.
+
 ## Instructions
 
-**Scope:** Broad ecosystem health — skills, docs, governance, tech debt trends. For deep code-level scanning (runtime errors, dead code, integration issues), use `/project:audit` instead.
+### 1. Run System Validation
 
-1. **Run system validation.**
-Run `.agents/plans/shared-phases.md#system-validation`.
+Invoke `cortex-repo-discovery`. Invoke `cortex-system-validation`.
 
-2. **Run repository health scan.**
-Run `.agents/plans/shared-phases.md#repository-health-scan`.
+### 2. Run Repository Health Scan
 
-3. **Check skill health.**
+Invoke `cortex-repo-health-scan`.
+
+### 3. Check Skill Health
+
 - List all skills in `.agents/skills/`
-- For each, check if it has a definition file (`.md`, `.txt`, `.yaml`, `.py`)
-- Check last modification date — flag skills not updated in 30+ days as stale
-- List any skills that appear unused (no references in docs or workflows)
+- For each, check if it has a definition file
+- Flag skills not updated in 30+ days as stale
+- List any unused skills (no references in docs or workflows)
 
-4. **Check documentation freshness.**
-- For each doc in `docs/`, check if it has a "Last updated" date
-- Flag docs that reference outdated information (old phase numbers, stale links)
-- Check for broken cross-references between docs
+### 4. Check Documentation Freshness
 
-5. **Check tech debt hotspots.**
+- For each doc in `docs/`, check for "Last updated" date
+- Flag outdated references, stale links, broken cross-references
+
+### 5. Check Tech Debt Hotspots
+
 ```bash
 git log --oneline --since="2 weeks ago" | head -50
 ```
+
 - Identify files changed 5+ times in recent commits
-- Count TODO/FIXME/HACK/XXX/TBD comments in codebase
-- List files with the most technical debt indicators
+- Count TODO/FIXME/HACK/XXX/TBD comments
+- List files with most tech debt indicators
 
-6. **Output** format:
+### 6. Output
 
-```
+```text
 ## Health Report: [date]
 
 ### Hooks: X/N passed
-[Per-hook results — N is the total count from run_hooks.py output]
-
-### Automation Health
-[Per-phase results]
-
-### Bug Discovery
-[Per-category results]
-
-### Skill Health
-- Total: N
-- Complete: N
-- Stale: N
-- Unused: N
-
-### Documentation
-- Total: N
-- With dates: N
-- Outdated: N
-- Broken links: N
-
-### Tech Debt
-- Hotspot files: N
-- TODO/FIXME count: N
-- Recommendations: N
+### Automation Health [per-phase]
+### Bug Discovery [per-category]
+### Skill Health (Total: N, Complete: N, Stale: N, Unused: N)
+### Documentation (Total: N, With dates: N, Outdated: N, Broken links: N)
+### Tech Debt (Hotspot files: N, TODO/FIXME: N)
 
 ### Health Score: X/100
 ```
 
-7. Save report to `docs/audits/YYYY-MM-DD-health-report.md`.
+### 7. Save Report
+
+Save to `docs/audits/YYYY-MM-DD-health-report-{N}.md`.

@@ -1,77 +1,48 @@
 # /project:challenge — Adversarial Review
 
-Run this before implementing a significant feature or making an architectural choice. Actively tries to poke holes in the current approach.
+Run before implementing a significant feature or making an architectural choice. Actively tries to poke holes in the current approach.
 
 ## Instructions
 
-1. **Read the current plan/spec/design.** Check for:
-- `.agents/plans/` — latest implementation plan (WHOLE REPO PLAN CONATINING EVERYTHING - SOURCE OF TRUTH)
-- `docs/superpowers/specs/` — latest design spec (temporary)
-- `docs/superpowers/plans/` — latest implementation plan (temporary artifact)
+### 1. Read Context
+
+Invoke `cortex-repo-discovery`. Read:
+- `.agents/plans/` — latest implementation plan (source of truth)
 - Recent git commits — what's being worked on
 
-2. **Challenge the approach.** For each challenge, be specific — reference actual code, actual dependencies, actual constraints.
+### 2. Run Adversarial Challenge
 
-### Risks and Failure Modes
-- What could go wrong?
-- What are the single points of failure?
-- What happens under load/error conditions?
+Invoke `cortex-adversarial-challenge` for risks, edge cases, over/under-engineering, assumptions, version boundaries, and principle alignment.
 
-### Edge Cases
-- What boundary conditions aren't handled?
-- What happens with empty inputs, large inputs, concurrent access?
-- What happens when external services are unavailable?
+### 3. Additional: Unexplored Alternatives
 
-### Over/Under-Engineering
-- Is this more complex than it needs to be?
-- Is this too simple for the actual requirements?
-- Are there simpler approaches that achieve the same goal?
-
-### Wrong Assumptions
-- What assumptions might be incorrect?
-- What data contradicts these assumptions?
-- What would invalidate this approach?
-
-### Version Boundaries
-- Does this change belong in the current version?
-- Is this scope creep from a later version?
-- Would this be better deferred to a future phase?
-
-### Unexplored Alternatives
 - What other approaches were considered?
 - What would a different architecture look like?
 - What do similar projects do?
 
-3. **Verify alignment with CORTEX principles:**
-- **Privacy-first:** Does this introduce any external data leaks?
-- **Compound learning:** Does this contribute to or hinder knowledge accumulation?
-- **Two-tier trust:** Does this respect the account/vault separation?
-- **Graceful degradation:** Does this work when optional services are unavailable?
-- **Model freedom:** Does this lock into a specific model/provider?
-- **Living knowledge:** Does this connect to or fragment the knowledge graph?
+### 4. CORTEX Principle Alignment
 
-4. **Output** format:
+- **Privacy-first:** External data leaks?
+- **Compound learning:** Contributes to or hinders knowledge accumulation?
+- **Two-tier trust:** Respects account/vault separation?
+- **Graceful degradation:** Works when optional services unavailable?
+- **Model freedom:** Locks into specific model/provider?
+- **Living knowledge:** Connects to or fragments knowledge graph?
 
-```
+### 5. Output
+
+```text
 ## Challenge: [date]
 
 ### Approach Being Challenged
-[Brief description]
-
 ### Challenges
 | # | Severity | Category | Challenge | Alternative |
-|---|----------|----------|-----------|-------------|
-| 1 | critical | risk | ... | ... |
 
 ### CORTEX Principle Alignment
 | Principle | Status | Notes |
-|-----------|--------|-------|
-| Privacy-first | ✅/⚠️/❌ | ... |
 
 ### Summary
-- Critical: N
-- Warning: N
-- Nit: N
+Critical: N | Warning: N | Nit: N
 ```
 
-5. Challenges are advisory — they inform the decision, they don't block it.
+Challenges are advisory — they inform, not block.
