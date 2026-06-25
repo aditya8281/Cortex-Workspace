@@ -1,4 +1,8 @@
-"""Executor agent — completes tasks using available tools."""
+"""Executor agent — completes tasks using available tools.
+
+Deprecated: Will be replaced by the V1 Phase-2 streaming loop (loop.py).
+Kept as fallback until the new loop is feature-complete.
+"""
 
 from __future__ import annotations
 
@@ -264,7 +268,7 @@ class ExecutorAgent(BaseAgent):
     async def _read_file_tool(self, path: str) -> str:
         """Read a file's contents."""
         try:
-            from backend.app.agents.tool_defs import _ensure_within_workspace
+            from backend.app.agents.tools.security import ensure_within_workspace as _ensure_within_workspace
 
             target = _ensure_within_workspace(path)
             if not target.exists():
@@ -282,7 +286,7 @@ class ExecutorAgent(BaseAgent):
     async def _write_file_tool(self, path: str, content: str = "") -> str:
         """Write content to a file."""
         try:
-            from backend.app.agents.tool_defs import _ensure_within_workspace
+            from backend.app.agents.tools.security import ensure_within_workspace as _ensure_within_workspace
 
             target = _ensure_within_workspace(path)
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -296,7 +300,7 @@ class ExecutorAgent(BaseAgent):
     async def _list_files_tool(self, path: str = ".") -> str:
         """List files in a directory."""
         try:
-            from backend.app.agents.tool_defs import _ensure_within_workspace
+            from backend.app.agents.tools.security import ensure_within_workspace as _ensure_within_workspace
 
             dir_path = _ensure_within_workspace(path)
             if not dir_path.is_dir():

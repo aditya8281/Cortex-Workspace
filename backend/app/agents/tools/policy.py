@@ -8,6 +8,7 @@ Default decision (if no rule matches) is configurable.
 from __future__ import annotations
 
 import fnmatch
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -44,17 +45,31 @@ class ToolPolicy:
     rules: list[ToolRule] = field(default_factory=list)
     default_decision: Decision = "allow"
     max_uses_per_tool: int = 0  # 0 = unlimited
+    _use_counts: Counter[str] = field(default_factory=Counter, repr=False, init=False)
 
     def evaluate(self, tool_name: str, iteration: int = 0) -> Decision:
         """Evaluate policy for a tool call at the given iteration.
 
-        Returns 'allow', 'deny', or 'ask'.
+        If max_uses_per_tool is set (> 0), denies the tool when its
+        use count exceeds the limit. The `iteration` param is reserved
+        for iteration-aware policies (e.g. "ask on first use, allow
+        subsequently") and is not currently consumed by any built-in rule.
         """
+        # Enforce per-tool usage limit
+        if self.max_uses_per_tool > 0:
+            self._use_counts[tool_name] += 1
+            if self._use_counts[tool_name] > self.max_uses_per_tool:
+                return "deny"
+
         for rule in self.rules:
             if rule.matches(tool_name):
                 return rule.decision
 
         return self.default_decision
+
+    def reset_use_counts(self) -> None:
+        """Reset per-tool use counters (e.g. at the start of a new agent run)."""
+        self._use_counts.clear()
 
     def allow(self, pattern: str, reason: str = "") -> None:
         """Add an allow rule."""

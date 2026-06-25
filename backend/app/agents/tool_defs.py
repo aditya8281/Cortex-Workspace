@@ -7,16 +7,24 @@ Both systems are maintained during V1 Phase-2 transition.
 from __future__ import annotations
 
 import asyncio
-import ipaddress
 import logging
 import os
 import shlex
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 from backend.app.agents.tools.registry import tool
-from backend.app.agents.tools.security import BLOCKED_URL_SCHEMES, has_blocked_command
+from backend.app.agents.tools.security import (
+    BLOCKED_URL_SCHEMES,
+    ensure_within_workspace,
+    has_blocked_command,
+    is_private_url,
+)
+
+# Re-export with legacy names for backward compat during V1 Phase-2 transition.
+# After executor.py is replaced by the streaming loop, remove these aliases.
+_ensure_within_workspace = ensure_within_workspace
+_is_private_url = is_private_url
 
 logger = logging.getLogger(__name__)
 
@@ -24,49 +32,6 @@ AGENT_WORKSPACE = os.environ.get(
     "AGENT_WORKSPACE",
     os.path.join(os.path.expanduser("~"), ".cortex-agent-workspace"),
 )
-
-BLOCKED_HOSTS = frozenset(
-    {
-        "localhost",
-        "127.0.0.1",
-        "::1",
-        "0.0.0.0",
-        "169.254.169.254",
-        "metadata.google.internal",
-        "metadata.google.internal.",
-    }
-)
-
-
-def _ensure_within_workspace(file_path: str) -> Path:
-    """Resolve and validate that a file path is within the agent workspace."""
-    workspace = Path(AGENT_WORKSPACE).resolve()
-    workspace.mkdir(parents=True, exist_ok=True)
-    target = (workspace / file_path).resolve()
-    if not str(target).startswith(str(workspace)):
-        raise ValueError(f"Path traversal denied: {file_path}")
-    return target
-
-
-def _is_private_url(url: str) -> bool:
-    """Check if URL targets a private/internal network."""
-    try:
-        parsed = urlparse(url)
-        hostname = parsed.hostname
-        if not hostname:
-            return False
-        if hostname in BLOCKED_HOSTS:
-            return True
-        try:
-            ip = ipaddress.ip_address(hostname)
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-                return True
-        except ValueError:
-            if hostname.endswith(".internal") or hostname.endswith(".local") or hostname.endswith(".localhost"):
-                return True
-        return False
-    except Exception:
-        return False
 
 
 class UserInputRequired(Exception):
@@ -117,7 +82,7 @@ async def exec_command(command: str) -> str:
     try:
         parts = shlex.split(command)
     except ValueError:
-        parts = command.split()
+        return f"Error: malformed quoting in command — {command}"
 
     workspace = Path(AGENT_WORKSPACE).resolve()
     workspace.mkdir(parents=True, exist_ok=True)
@@ -199,17 +164,17 @@ async def git_diff(file_path: str | None = None) -> str:
 
 
 @tool(description="Fetch URL content (max 100KB)", requires_approval=True, category="web")
-async def web_fetch(url: str) -> str | dict[str, str]:
+async def web_fetch(url: str) -> str:
     """Fetch URL content (max 100KB).
 
     Args:
         url: The URL to fetch
     """
     if any(url.lower().startswith(s) for s in BLOCKED_URL_SCHEMES):
-        return {"error": f"URL scheme not allowed: {url}"}
+        return f"Error: URL scheme not allowed: {url}"
 
     if _is_private_url(url):
-        return {"error": "SSRF protection: URL targets a private/internal network and is blocked"}
+        return "Error: SSRF protection — URL targets a private/internal network and is blocked"
 
     try:
         import urllib.request

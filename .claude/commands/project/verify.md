@@ -14,10 +14,10 @@ make test
 
 Report: pass/fail, total count, any failures with file:line.
 
-### 2. Frontend Tests
+### 2. Frontend Tests (if frontend exists)
 
 ```bash
-cd frontend && npm test
+if [ -f frontend/package.json ]; then cd frontend && npm test; else echo "No frontend directory — skipping"; fi
 ```
 
 Report: pass/fail, total count, any failures.
@@ -38,10 +38,10 @@ make format --check
 
 Report: pass/fail, list files needing format if any.
 
-### 5. Build
+### 5. Build (if frontend exists)
 
 ```bash
-cd frontend && npm run build
+if [ -f frontend/package.json ]; then cd frontend && npm run build; else echo "No frontend directory — skipping"; fi
 ```
 
 Report: pass/fail, any errors.
@@ -49,7 +49,7 @@ Report: pass/fail, any errors.
 ### 6. Hooks
 
 ```bash
-python3 .claude/hooks/run_hooks.py
+uv run python .claude/hooks/run_hooks.py
 ```
 
 Report: pass/fail per hook.

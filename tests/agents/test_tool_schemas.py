@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import textwrap
 from typing import Literal
 
 from backend.app.agents.tools.schemas import generate_schema
@@ -35,9 +36,7 @@ def test_default_values_not_required():
 
 
 def test_optional_param():
-    from typing import Optional
-
-    def func(name: Optional[str] = None) -> str:
+    def func(name: str | None = None) -> str:
         """Do something."""
 
     schema = generate_schema(func)
@@ -130,3 +129,41 @@ def test_empty_docstring_fallback():
     schema = generate_schema(func)
     desc = schema["function"]["description"]
     assert desc == "" or desc == f"Tool: {func.__name__}"
+
+
+def test_pep563_future_annotations():
+    """Regression: `from __future__ import annotations` makes all annotations
+    strings. generate_schema must resolve them via typing.get_type_hints().
+    Without the fix, 'int' resolves to 'string' instead of 'integer'.
+    """
+    import typing
+
+    # exec() is needed because `from __future__ import annotations` only
+    # applies at module level in the module where it's written. We simulate
+    # a separate module with future annotations active.
+    ns = {"generate_schema": generate_schema, "typing": typing}
+    exec(
+        textwrap.dedent("""\
+        from __future__ import annotations
+        def f(x: int, y: str) -> str:
+            \"\"\"Test.\"\"\"
+            return ""
+        """),
+        ns,
+    )
+    f = ns["f"]
+    schema = generate_schema(f)
+    params = schema["function"]["parameters"]["properties"]
+    assert params["x"]["type"] == "integer", f"Expected integer, got {params['x']['type']}"
+    assert params["y"]["type"] == "string", f"Expected string, got {params['y']['type']}"
+
+
+def test_union_multiple_types_fallback():
+    def func(value: str | int) -> str:
+        """Do something."""
+        return str(value)
+
+    schema = generate_schema(func)
+    params = schema["function"]["parameters"]
+    # Union with 2+ non-None types falls back to string
+    assert params["properties"]["value"]["type"] == "string"

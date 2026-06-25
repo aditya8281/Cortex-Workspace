@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from backend.app.agents.tools.registry import Tool, ToolRegistry, tool, get_tool_registry
+from backend.app.agents.tools.registry import Tool, ToolRegistry, get_tool_registry, tool
 
 
 class TestToolRegistry:
@@ -76,8 +76,6 @@ class TestToolRegistry:
 class TestToolDecorator:
     def test_tool_decorator_registers(self):
         registry = get_tool_registry()
-        # Clean up any pre-existing tools for this test
-        existing = [t.name for t in registry.get_all()]
 
         @tool(name="_test_my_fn", description="A test function")
         async def _test_my_fn(query: str, limit: int = 10) -> str:
@@ -99,9 +97,6 @@ class TestToolDecorator:
             assert registered.schema["function"]["name"] == "_test_my_fn"
         finally:
             registry.remove("_test_my_fn")
-            # Restore pre-existing tools
-            for name in ["_test_my_fn"]:
-                pass
 
     def test_tool_auto_schema_false(self):
         registry = get_tool_registry()
@@ -157,6 +152,79 @@ class TestToolDecorator:
             assert t.requires_approval is True
         finally:
             registry.remove("_test_approval")
+
+
+class TestToolDecoratorSync:
+    """Tests for @tool decorator behavior with sync vs async functions."""
+
+    def test_decorated_sync_function_stays_callable_sync(self):
+        """A sync function wrapped with @tool should remain directly callable
+        without `await`, returning the value — not a coroutine.
+        """
+        registry = get_tool_registry()
+
+        @tool(name="_test_sync_direct", description="Sync test")
+        def sync_tool(x: str) -> str:
+            """Sync test.
+
+            Args:
+                x: Input string
+            """
+            return f"got:{x}"
+
+        try:
+            # Direct sync call should work and return value, not coroutine
+            result = sync_tool(x="hello")
+            assert result == "got:hello", f"Expected 'got:hello', got {result!r}"
+            # Verify it's registered with handler being the original function
+            registered = registry.get("_test_sync_direct")
+            assert registered is not None
+        finally:
+            registry.remove("_test_sync_direct")
+
+    def test_sync_tool_works_in_async_context(self):
+        """Sync tools can be called directly from async functions."""
+        registry = get_tool_registry()
+
+        @tool(name="_test_sync_await2", description="Sync await test")
+        def sync_tool(x: str) -> str:
+            """Sync await test.
+
+            Args:
+                x: Input string
+            """
+            return f"res:{x}"
+
+        try:
+
+            async def caller():
+                # Sync tool returns value directly (no await needed)
+                return sync_tool(x="test")
+
+            import asyncio
+
+            result = asyncio.run(caller())
+            assert result == "res:test"
+        finally:
+            registry.remove("_test_sync_await2")
+
+
+class TestToolRegistrySync:
+    """Additional ToolRegistry regression tests."""
+
+    def test_register_with_empty_schema_listeds(self):
+        """Tool with empty schema is included in list_tools but excluded from schemas_for."""
+        reg = ToolRegistry()
+        reg.register(Tool(name="no_schema", description="No schema", handler=lambda: "", schema={}))
+        reg.register(Tool(name="with_schema", description="Has schema", handler=lambda: "", schema={"s": 1}))
+
+        listing = reg.list_tools()
+        assert "no_schema" in listing
+        assert "with_schema" in listing
+
+        schemas = reg.schemas_for()
+        assert len(schemas) == 1  # only with_schema
+        assert schemas[0]["s"] == 1
 
 
 class TestSingletonRegistry:

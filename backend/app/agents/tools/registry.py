@@ -143,13 +143,22 @@ def tool(
         )
         _TOOL_REGISTRY.register(reg)
 
-        @wraps(func)
-        async def wrapper(**kwargs: Any) -> Any:
-            if inspect.iscoroutinefunction(func):
-                return await func(**kwargs)
-            return func(**kwargs)
+        # Match the original function's sync/async nature so direct calls work
+        # without surprise coroutine objects from wrapped sync functions.
+        if inspect.iscoroutinefunction(func):
 
-        return wrapper
+            @wraps(func)
+            async def async_wrapper(**kwargs: Any) -> Any:  # type: ignore[misc]
+                return await func(**kwargs)
+
+            return async_wrapper
+        else:
+
+            @wraps(func)
+            def sync_wrapper(**kwargs: Any) -> Any:  # type: ignore[misc]
+                return func(**kwargs)
+
+            return sync_wrapper
 
     return decorator
 

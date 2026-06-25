@@ -94,6 +94,9 @@ def get_hybrid_retrieval(db: Session) -> HybridRetrievalV2:
 
 ### Agent System
 
+The agent system is being rebuilt during V1 Phase 2. Current architecture (legacy) and target architecture coexist behind a feature flag.
+
+**Current (Legacy):**
 ```
 User Request → PlannerAgent → ExecutorAgent → RunManager
                  │                │                │
@@ -104,6 +107,55 @@ User Request → PlannerAgent → ExecutorAgent → RunManager
                                   Approval gates
                                   for dangerous ops
 ```
+
+**Target (V1 Phase 2+):**
+```
+User Request → Intent Classifier → [casual: fast path | agent: streaming loop]
+Agent loop:  single async generator, max 25 iter, stall detection
+             @tool decorator → ToolRegistry → JSON Schema for LLM function-calling
+             per-turn ToolPolicy (allow/deny/ask)
+             auto-compaction at 85% (tiktoken)
+             completion verifier (fresh-context LLM subagent)
+```
+
+**Tool System (`backend/app/agents/tools/`):**
+
+| Module | Purpose |
+|--------|---------|
+| `registry.py` | `@tool` decorator + `ToolRegistry` singleton — auto-registers tools with JSON Schema |
+| `schemas.py` | Generate OpenAI-compatible function-calling schemas from Python type hints + docstrings |
+| `policy.py` | Per-turn tool policy — ordered `ToolRule` list with first-match-wins, allow/deny/ask decisions |
+| `security.py` | SSRF protection (`is_private_url`), command blocklist (`has_blocked_command`), path traversal prevention |
+
+**Tool Registration:**
+```python
+from backend.app.agents.tools import tool, get_tool_registry
+
+@tool(description="Search the codebase", requires_approval=False, category="code")
+async def search(query: str, limit: int = 10) -> str:
+    \"\"\"Search for matching code.
+
+    Args:
+        query: The search term
+        limit: Maximum results to return
+    \"\"\"
+    ...
+
+registry = get_tool_registry()
+all_tools = registry.get_all()
+schemas = registry.schemas_for(names=["search", "read_file"])
+```
+
+**Tool Policy:**
+```python
+from backend.app.agents.tools import ToolPolicy, ToolRule, default_policy
+
+policy = default_policy()
+decision = policy.evaluate("exec_command", iteration=0)
+# → "ask" (shell commands require approval)
+```
+
+Feature flag: `CORTEX_NEW_AGENT_LOOP` (default: False) in Settings. When True, dispatch to the new streaming loop instead of the legacy Planner→Executor path.
 
 ### Task Queue (arq + Redis)
 

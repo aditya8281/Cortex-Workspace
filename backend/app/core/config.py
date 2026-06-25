@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 
     # Feature flags
+    # Reserved for V1 Phase-2 streaming agent loop (loop.py).
+    # When True, run_manager.py dispatches to the new single-streaming loop
+    # instead of the legacy Planner→Executor path. Currently False — the
+    # streaming loop is not yet built (next Phase 2 component).
     CORTEX_NEW_AGENT_LOOP: bool = Field(
         default=False,
         validation_alias=AliasChoices("CORTEX_NEW_AGENT_LOOP", "CORTEX_NEW_AGENT"),

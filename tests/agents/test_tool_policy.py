@@ -83,6 +83,51 @@ class TestToolPolicy:
         policy = ToolPolicy()
         assert policy.max_uses_per_tool == 0
 
+    def test_max_uses_enforced(self):
+        policy = ToolPolicy(max_uses_per_tool=2)
+        # First use allowed
+        assert policy.evaluate("any_tool") == "allow"
+        # Second use allowed
+        assert policy.evaluate("any_tool") == "allow"
+        # Third use denied (exceeds limit)
+        assert policy.evaluate("any_tool") == "deny"
+
+    def test_max_uses_respected_per_tool(self):
+        policy = ToolPolicy(max_uses_per_tool=1)
+        # tool_a consumes its single use
+        assert policy.evaluate("tool_a") == "allow"
+        assert policy.evaluate("tool_a") == "deny"
+        # tool_b still has its use
+        assert policy.evaluate("tool_b") == "allow"
+        assert policy.evaluate("tool_b") == "deny"
+
+    def test_reset_use_counts(self):
+        policy = ToolPolicy(max_uses_per_tool=1)
+        assert policy.evaluate("tool") == "allow"
+        assert policy.evaluate("tool") == "deny"
+        policy.reset_use_counts()
+        assert policy.evaluate("tool") == "allow"  # reset
+
+    def test_copy_has_fresh_counts(self):
+        policy = ToolPolicy(max_uses_per_tool=1)
+        assert policy.evaluate("tool") == "allow"
+        assert policy.evaluate("tool") == "deny"
+        copied = policy.copy()
+        assert copied.evaluate("tool") == "allow"  # fresh counts
+
+    def test_rules_still_respected_with_max_uses(self):
+        policy = ToolPolicy(
+            rules=[ToolRule("dangerous_*", "deny", "Always blocked")],
+            max_uses_per_tool=3,
+        )
+        # Rule evaluation happens regardless of use count
+        assert policy.evaluate("dangerous_thing") == "deny"
+
+    def test_uses_not_exceeded_under_limit(self):
+        policy = ToolPolicy(max_uses_per_tool=5)
+        for _ in range(5):
+            assert policy.evaluate("tool") == "allow"
+
 
 class TestDefaultPolicy:
     def test_default_policy_has_rules(self):

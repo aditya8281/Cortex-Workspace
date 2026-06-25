@@ -97,7 +97,7 @@ This is not a feature release. This is the version where CORTEX stops being a te
 
 | Bug | Source | V1 Fix |
 |-----|--------|--------|
-| `write_file` in `_REQUIRES_APPROVAL` but not in TOOL_REGISTRY (dead code) | contradictions.md 3.1 | Either register in new @tool system or remove |
+| `write_file` in `_REQUIRES_APPROVAL` but not in TOOL_REGISTRY (dead code) | contradictions.md 3.1 | Kept as ExecutorAgent._write_file_tool() method. Not in TOOL_REGISTRY — addressed by V1 Phase 3 cleanup |
 | SSRF bypass via `exec_command` + `curl` | contradictions.md 3.2 | Block `curl`/`wget` in exec_command or add output filtering |
 | Command blocking bypass (`pip3 install`, `python -m pip install`) | contradictions.md 3.3 | Broader pattern blocking or allowlist approach |
 | Embedding sync/async mismatch (`asyncio.run()` in async context) | contradictions.md 3.4 | Use `loop.run_in_executor()` when event loop exists |

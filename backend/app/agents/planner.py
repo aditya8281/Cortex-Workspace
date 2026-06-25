@@ -1,4 +1,9 @@
-"""Planner agent — breaks tasks into structured subtask plans."""
+"""Planner agent — breaks tasks into structured subtask plans.
+
+Deprecated: Will be replaced by the V1 Phase-2 streaming loop (loop.py).
+Planning becomes a tool call within the loop, not a separate agent.
+Kept as fallback until the new loop is feature-complete.
+"""
 
 from __future__ import annotations
 

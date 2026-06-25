@@ -134,6 +134,12 @@ check: lint test
 test:
 	uv run pytest -v --tb=short
 
+test-tools:
+	uv run pytest tests/agents/ -v --tb=short
+
+test-security:
+	uv run pytest tests/agents/test_tool_security.py -v --tb=short
+
 test-cov:
 	uv run pytest --cov=backend --cov-report=term-missing --cov-report=html -v
 

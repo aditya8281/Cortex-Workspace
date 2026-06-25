@@ -163,28 +163,25 @@ async def agent_loop(
 
 **@tool Decorator (`tools/registry.py`):**
 ```python
+# Actual implementation — see backend/app/agents/tools/registry.py
+
 def tool(
-    name: str,
-    description: str,
+    name: str | None = None,
+    description: str | None = None,
     *,
     requires_approval: bool = False,
     category: str = "general",
+    auto_schema: bool = True,
 ):
     """Decorator to register a tool with auto-generated JSON Schema."""
     def decorator(func):
-        schema = generate_schema(func)  # From type hints + docstrings
-        TOOL_REGISTRY.register(Tool(
-            name=name,
-            description=description,
-            handler=func,
-            schema=schema,
-            requires_approval=requires_approval,
-            category=category,
-        ))
-        @wraps(func)
-        async def wrapper(**kwargs):
-            return await func(**kwargs)
-        return wrapper
+        tool_name = name or func.__name__
+        tool_desc = description or (func.__doc__ or "").split("\n\n")[0].strip()
+        schema = generate_schema(func) if auto_schema else {}
+        reg = Tool(name=tool_name, description=tool_desc, handler=func,
+                    schema=schema, requires_approval=requires_approval, category=category)
+        get_tool_registry().register(reg)
+        return func  # Return original — wrapper not needed (LLM uses schema)
     return decorator
 ```
 

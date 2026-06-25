@@ -1,4 +1,9 @@
-"""Agent run manager — orchestrates planner + executor runs."""
+"""Agent run manager — orchestrates planner + executor runs.
+
+NOTE: When the V1 Phase-2 streaming loop (loop.py) is implemented,
+check settings.CORTEX_NEW_AGENT_LOOP here to dispatch to the new
+loop instead of the legacy Planner→Executor path.
+"""
 
 from __future__ import annotations
 

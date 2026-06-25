@@ -10,7 +10,10 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 
-# Blocked command patterns — match lowercase version
+# Blocked command patterns — match lowercase version.
+# Convention: patterns with trailing space block a command invocation (e.g. "apt " blocks "apt install"
+# but not "aptitude"). Patterns without trailing space block the word as a substring, used for
+# unique tokens unlikely in innocent commands (e.g. "mkfs", "pacman", "xmrig").
 BLOCKED_COMMANDS: list[str] = [
     # System destruction
     "rm -rf /",
@@ -53,7 +56,11 @@ BLOCKED_COMMANDS: list[str] = [
     "wget ",
     # Eval / exec
     "eval ",
-    "exec ",
+    "exec /",  # exec with absolute path
+    "exec sh",  # exec shell
+    "exec bash",  # exec bash
+    "exec python",  # exec python
+    "exec .",  # exec with relative path (./)
     # Cryptominers and known bad
     "minerd",
     "xmrig",
@@ -125,6 +132,10 @@ def ensure_within_workspace(file_path: str, workspace_root: str | None = None) -
     workspace = Path(root).resolve()
     workspace.mkdir(parents=True, exist_ok=True)
     target = (workspace / file_path).resolve()
-    if not str(target).startswith(str(workspace)):
+    # Use relative_to instead of startswith to prevent prefix-based bypass
+    # (e.g. /workspace-extra/file passes startswith("/workspace") but is outside workspace)
+    try:
+        target.relative_to(workspace)
+    except ValueError:
         raise ValueError(f"Path traversal denied: {file_path}")
     return target
