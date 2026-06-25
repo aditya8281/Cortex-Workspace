@@ -37,7 +37,7 @@ def update_user_endpoint(
     return updated_user
 
 
-@router.delete("/users/{user_id}")
+@router.delete("/users/{user_id}", response_model=dict)
 def delete_user_endpoint(user_id: int, db: Session = Depends(get_db), admin_user: User = Depends(require_admin)):
     success = delete_user(db, user_id)
     if not success:

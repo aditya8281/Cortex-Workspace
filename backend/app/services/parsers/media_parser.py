@@ -147,7 +147,7 @@ def _parse_id3_header(header: bytes, f) -> dict:
     meta = {"format": "MP3", "id3_version": f"{header[3]}.{header[4]}"}
     size_bytes = header[6:10]
     tag_size = (size_bytes[0] << 21) | (size_bytes[1] << 14) | (size_bytes[2] << 7) | size_bytes[3]
-    meta["id3_tag_size_bytes"] = tag_size
+    meta["id3_tag_size_bytes"] = tag_size  # type: ignore[assignment]
     return meta
 
 

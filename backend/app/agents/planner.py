@@ -62,6 +62,7 @@ class PlannerAgent(BaseAgent):
                 {"role": "system", "content": self.system_prompt},
                 {"role": "user", "content": task},
             ]
+            assert self._llm_chat is not None
             result = await self._llm_chat(messages)
             text = result[0] if isinstance(result, tuple) else str(result)
             return self._parse_plan(text)

@@ -9,6 +9,10 @@
 
 Cortex needs background task processing for long-running operations: memory consolidation, embedding generation, health checks, scheduled automations.
 
+## Decision
+
+Use **arq** (Redis-based async job queue) for background task processing. A cron-style health check runs every 30 minutes to monitor queue health and task completion.
+
 ## Current Decision
 
 Use arq (Redis-based) for background task queue. Cron health check every 30 minutes.

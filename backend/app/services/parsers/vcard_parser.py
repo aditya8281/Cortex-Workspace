@@ -84,8 +84,9 @@ def _parse_vcard(text: str) -> dict[str, str | list[str]]:
         elif prop_name == "TITLE":
             result["title"] = value
         elif prop_name == "NOTE":
-            if "notes" in result:
-                result["notes"] = result["notes"] + "\n" + value
+            existing = result.get("notes")
+            if existing:
+                result["notes"] = f"{existing}\n{value}"
             else:
                 result["notes"] = value
         elif prop_name == "URL":

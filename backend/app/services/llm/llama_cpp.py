@@ -15,7 +15,7 @@ class LlamaCppProvider(LLMProvider):
         self._model_path = model_path
         self._n_ctx = n_ctx
         self._n_gpu_layers = n_gpu_layers
-        self._llama = None
+        self._llama: Any = None
         self._model_lock = asyncio.Lock()
         self._semaphore = asyncio.Semaphore(4)
 

@@ -45,24 +45,24 @@ class _ChangeHandler(FileSystemEventHandler):
             self._callback(change)
 
     def on_created(self, event: FileSystemEvent) -> None:
-        if not event.is_directory:
-            self._schedule(FileChange(path=event.src_path, event_type="created"))
+        if not event.is_directory and event.src_path is not None:
+            self._schedule(FileChange(path=str(event.src_path), event_type="created"))
 
     def on_modified(self, event: FileSystemEvent) -> None:
-        if not event.is_directory:
-            self._schedule(FileChange(path=event.src_path, event_type="modified"))
+        if not event.is_directory and event.src_path is not None:
+            self._schedule(FileChange(path=str(event.src_path), event_type="modified"))
 
     def on_deleted(self, event: FileSystemEvent) -> None:
-        if not event.is_directory:
-            self._schedule(FileChange(path=event.src_path, event_type="deleted"))
+        if not event.is_directory and event.src_path is not None:
+            self._schedule(FileChange(path=str(event.src_path), event_type="deleted"))
 
     def on_moved(self, event: FileSystemEvent) -> None:
-        if not event.is_directory:
+        if not event.is_directory and event.src_path is not None and event.dest_path is not None:
             self._schedule(
                 FileChange(
-                    path=event.dest_path,
+                    path=str(event.dest_path),
                     event_type="moved",
-                    old_path=event.src_path,
+                    old_path=str(event.src_path),
                 )
             )
 
@@ -71,7 +71,7 @@ class FileWatcherV2:
     """Event-driven file watcher using watchdog for OS-level filesystem events."""
 
     def __init__(self, debounce_seconds: float = 2.0):
-        self._observer: Observer | None = None
+        self._observer: Observer | None = None  # type: ignore[valid-type]
         self._watched: dict[str, bool] = {}
         self._debounce = debounce_seconds
         self._on_change: Callable[[FileChange], None] | None = None
@@ -92,7 +92,7 @@ class FileWatcherV2:
             logger.warning("Path does not exist: %s", repo_path)
             return False
 
-        self._observer.schedule(handler, str(path), recursive=True)
+        self._observer.schedule(handler, str(path), recursive=True)  # type: ignore[union-attr]
         self._watched[repo_path] = True
         logger.info("Watching: %s", repo_path)
         return True
@@ -102,7 +102,7 @@ class FileWatcherV2:
             return False
 
         if self._observer:
-            for subscription in self._observer.emitters:
+            for subscription in self._observer.emitters:  # type: ignore[attr-defined]
                 if subscription.path == repo_path:
                     subscription.stop()
                     break
@@ -112,17 +112,17 @@ class FileWatcherV2:
         return True
 
     def start(self) -> None:
-        if self._observer and self._observer.is_alive():
+        if self._observer and self._observer.is_alive():  # type: ignore[union-attr]
             return
         self._observer = Observer()
-        self._observer.start()
+        self._observer.start()  # type: ignore[union-attr]
         logger.info("File watcher started")
 
     def stop(self) -> None:
-        if self._observer and self._observer.is_alive():
-            self._observer.stop()
-            self._observer.join(timeout=5.0)
-            if self._observer.is_alive():
+        if self._observer and self._observer.is_alive():  # type: ignore[union-attr]
+            self._observer.stop()  # type: ignore[union-attr]
+            self._observer.join(timeout=5.0)  # type: ignore[union-attr]
+            if self._observer.is_alive():  # type: ignore[union-attr]
                 logger.warning("File watcher did not stop within timeout")
             else:
                 logger.info("File watcher stopped")
@@ -131,7 +131,7 @@ class FileWatcherV2:
 
     @property
     def is_running(self) -> bool:
-        return self._observer is not None and self._observer.is_alive()
+        return self._observer is not None and self._observer.is_alive()  # type: ignore[valid-type, union-attr]
 
     @property
     def watched_count(self) -> int:

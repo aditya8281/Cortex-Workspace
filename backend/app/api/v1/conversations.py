@@ -91,7 +91,7 @@ class RenameConversationPayload(BaseModel):
     title: str
 
 
-@router.patch("/conversations/{conversation_id}/title")
+@router.patch("/conversations/{conversation_id}/title", response_model=dict)
 async def rename_conversation(
     conversation_id: int,
     payload: RenameConversationPayload,
@@ -108,7 +108,7 @@ async def rename_conversation(
     return {"status": "updated", "title": payload.title.strip()}
 
 
-@router.delete("/conversations/{conversation_id}")
+@router.delete("/conversations/{conversation_id}", response_model=dict)
 async def delete_conversation(
     conversation_id: int,
     db: Session = Depends(get_db),

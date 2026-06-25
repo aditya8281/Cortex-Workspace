@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func
+from sqlalchemy import CursorResult, func
 from sqlalchemy.orm import Session
 
 from backend.app.models.long_term_memory import LongTermMemory
@@ -71,7 +71,7 @@ class LongTermMemoryService:
                 decayed_at=now,
             )
         )
-        result = self.db.execute(stmt)
+        result = self.db.execute(stmt)  # type: ignore[assignment]
         self.db.commit()
         return result.rowcount
 

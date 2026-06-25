@@ -15,6 +15,7 @@ from backend.app.schemas.model import (
     AutocompleteResponse,
     CatalogSourceStatusResponse,
     HardwareInfoResponse,
+    InferenceConfigResponse,
     ModelComparisonResponse,
     ModelDetailResponse,
     ModelListResponse,
@@ -313,7 +314,7 @@ async def get_model_detail(
     }
 
 
-@router.get("/models/{model_id}/inference-config")
+@router.get("/models/{model_id}/inference-config", response_model=InferenceConfigResponse)
 async def get_inference_config(
     model_id: str,
     current_user: User = Depends(get_current_user),

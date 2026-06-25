@@ -10,76 +10,82 @@ from backend.app.models.indexing_config import IndexingConfig
 from backend.app.services.chunker import SKIP_DIRS
 
 # Default exclusion rules — things that should NEVER be indexed
-DEFAULT_EXCLUSIONS: dict[str, set[str] | list[str] | int] = {
-    "directories": SKIP_DIRS
-    | {
-        ".pytest_cache",
-        ".mypy_cache",
-        ".ruff_cache",
-        ".venv",
-        "env",
-        ".env",
-        ".cache",
-        "coverage",
-        ".coverage",
-        "htmlcov",
-        "vendor",
-        ".bundle",
-        "tmp",
-        ".tmp",
-        ".DS_Store",
-        "Thumbs.db",
-        ".svn",
-        ".hg",
-        "logs",
-        "dist",
-        "build",
-        ".next",
-        ".nuxt",
-    },
-    "patterns": [
-        "*.min.js",
-        "*.min.css",
-        "*.map",
-        "*.pyc",
-        "*.pyo",
-        "*.so",
-        "*.dylib",
-        "*.dll",
-        "*.exe",
-        "*.bin",
-        "*.jpg",
-        "*.jpeg",
-        "*.png",
-        "*.gif",
-        "*.bmp",
-        "*.ico",
-        "*.svg",
-        "*.mp3",
-        "*.mp4",
-        "*.wav",
-        "*.avi",
-        "*.mov",
-        "*.zip",
-        "*.tar",
-        "*.gz",
-        "*.rar",
-        "*.7z",
-        "*.pdf",
-        "*.doc",
-        "*.docx",
-        "*.xls",
-        "*.xlsx",
-        "*.lock",
-        "*.sum",
-        "package-lock.json",
-        "yarn.lock",
-        ".env.*",
-        "*.log",
-        "*.tmp",
-        "*.temp",
-    ],
-    "max_size_bytes": 1_000_000,
+EXCLUDED_DIRECTORIES: set[str] = SKIP_DIRS | {
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "env",
+    ".env",
+    ".cache",
+    "coverage",
+    ".coverage",
+    "htmlcov",
+    "vendor",
+    ".bundle",
+    "tmp",
+    ".tmp",
+    ".DS_Store",
+    "Thumbs.db",
+    ".svn",
+    ".hg",
+    "logs",
+    "dist",
+    "build",
+    ".next",
+    ".nuxt",
+}
+
+EXCLUDED_PATTERNS: list[str] = [
+    "*.min.js",
+    "*.min.css",
+    "*.map",
+    "*.pyc",
+    "*.pyo",
+    "*.so",
+    "*.dylib",
+    "*.dll",
+    "*.exe",
+    "*.bin",
+    "*.jpg",
+    "*.jpeg",
+    "*.png",
+    "*.gif",
+    "*.bmp",
+    "*.ico",
+    "*.svg",
+    "*.mp3",
+    "*.mp4",
+    "*.wav",
+    "*.avi",
+    "*.mov",
+    "*.zip",
+    "*.tar",
+    "*.gz",
+    "*.rar",
+    "*.7z",
+    "*.pdf",
+    "*.doc",
+    "*.docx",
+    "*.xls",
+    "*.xlsx",
+    "*.lock",
+    "*.sum",
+    "package-lock.json",
+    "yarn.lock",
+    ".env.*",
+    "*.log",
+    "*.tmp",
+    "*.temp",
+]
+
+DEFAULT_MAX_SIZE_BYTES: int = 1_000_000
+
+# Backward-compatible dict for callers using DEFAULT_EXCLUSIONS["key"]
+DEFAULT_EXCLUSIONS: dict[str, object] = {
+    "directories": EXCLUDED_DIRECTORIES,
+    "patterns": EXCLUDED_PATTERNS,
+    "max_size_bytes": DEFAULT_MAX_SIZE_BYTES,
 }
 
 
@@ -102,7 +108,7 @@ class IndexingRules:
 
         try:
             size = os.path.getsize(file_path)
-            max_size = self._config.max_file_size_bytes if self._config else DEFAULT_EXCLUSIONS["max_size_bytes"]
+            max_size = self._config.max_file_size_bytes if self._config else DEFAULT_MAX_SIZE_BYTES
             if size > max_size:
                 return False
         except OSError:
@@ -136,13 +142,13 @@ class IndexingRules:
         )
 
     def _is_excluded_directory(self, parts: tuple[str, ...]) -> bool:
-        excluded = DEFAULT_EXCLUSIONS["directories"]
+        excluded: set[str] = EXCLUDED_DIRECTORIES
         if self._config and self._config.exclude_paths:
             excluded = excluded | set(self._config.exclude_paths)
         return any(part in excluded or part.endswith(".egg-info") for part in parts[:-1])
 
     def _is_excluded_pattern(self, filename: str) -> bool:
-        patterns = DEFAULT_EXCLUSIONS["patterns"]
+        patterns: list[str] = EXCLUDED_PATTERNS
         if self._config and self._config.exclude_patterns:
             patterns = patterns + self._config.exclude_patterns
         return any(fnmatch.fnmatch(filename, p) for p in patterns)
@@ -170,7 +176,7 @@ class IndexingRules:
                     continue
                 try:
                     if os.path.getsize(fp) > (
-                        self._config.max_file_size_bytes if self._config else DEFAULT_EXCLUSIONS["max_size_bytes"]
+                        self._config.max_file_size_bytes if self._config else DEFAULT_MAX_SIZE_BYTES
                     ):
                         excluded_by_size += 1
                         continue

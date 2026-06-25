@@ -84,14 +84,41 @@ def extract_backend_routes() -> list[dict]:
         if not content:
             continue
 
-        for match in _RE_ROUTE.finditer(content):
+        # Detect handler functions that return StreamingResponse or FileResponse
+        # directly — these endpoints must NOT have response_model.
+        streaming_funcs = set()
+        _RE_NEXT_FUNC = re.compile(r'\n(?:async\s+)?def\s+')
+        for sm in re.finditer(
+            r'def\s+(\w+)\s*\(', content
+        ):
+            func_name = sm.group(1)
+            if func_name.startswith('_'):
+                continue
+            # Check if function body contains a return of streaming types.
+            # Split on the next function definition (sync or async) to isolate
+            # just this function's body.
+            func_body = content[sm.end():]
+            next_func = _RE_NEXT_FUNC.search(func_body)
+            body_text = func_body[:next_func.start()] if next_func else func_body
+            if 'StreamingResponse(' in body_text or 'FileResponse(' in body_text:
+                streaming_funcs.add(func_name)
+
+        # Map decorator positions to function names by finding the first `def`
+        # after each decorator.
+        route_entries = list(_RE_ROUTE.finditer(content))
+        for idx, match in enumerate(route_entries):
             method = match.group(1).upper()
             path = match.group(2)
             has_response = _check_has_response_model(content, match.end())
+            # Find the def that follows this decorator (sync or async)
+            next_def = re.search(r'\n(?:async\s+)?def\s+(\w+)\s*\(', content[match.end():])
+            func_name = next_def.group(1) if next_def else ''
+            is_streaming = func_name in streaming_funcs
             routes.append({
                 "method": method,
                 "path": path,
                 "has_response_model": has_response,
+                "is_streaming": is_streaming,
                 "file": router_file.name,
             })
     return routes
@@ -216,7 +243,7 @@ def run_hook() -> HookResult:
 
     findings: list[str] = []
 
-    missing_model = [r for r in backend_routes if not r["has_response_model"]]
+    missing_model = [r for r in backend_routes if not r["has_response_model"] and not r.get("is_streaming", False)]
     for r in missing_model:
         findings.append(f"{r['file']}: {r['method']} {r['path']} — missing response_model")
 

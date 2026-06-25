@@ -186,7 +186,7 @@ async def git_diff(repo_path: str = ".", file_path: str | None = None) -> str:
         return "Error: git not available"
 
 
-async def web_fetch(url: str) -> str:
+async def web_fetch(url: str) -> str | dict[str, str]:
     """Fetch URL content (max 100KB)."""
     blocked_schemes = ("javascript:", "data:", "file:", "ftp:")
     if any(url.lower().startswith(s) for s in blocked_schemes):

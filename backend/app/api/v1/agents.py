@@ -478,7 +478,7 @@ def update_agent(
     return {"status": "updated"}
 
 
-@router.delete("/agents/{agent_id}")
+@router.delete("/agents/{agent_id}", response_model=dict)
 def delete_agent(
     agent_id: int,
     db: Session = Depends(get_db),

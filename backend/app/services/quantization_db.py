@@ -127,5 +127,5 @@ class QuantizationService:
                         "score": round(score, 1),
                     }
                 )
-        recommendations.sort(key=lambda x: x["score"], reverse=True)
+        recommendations.sort(key=lambda x: x["score"], reverse=True)  # type: ignore[arg-type]
         return recommendations
