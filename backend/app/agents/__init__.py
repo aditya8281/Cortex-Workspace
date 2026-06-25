@@ -1,6 +1,16 @@
-"""Agent system — planner, executor, tool infrastructure, and run management."""
+"""Agent system — planner, executor, tool infrastructure, streaming loop, and run management."""
 
 from backend.app.agents.base import BaseAgent
+from backend.app.agents.events import (
+    AgentEvent,
+    AgentMessage,
+    Compaction,
+    Done,
+    Thinking,
+    ToolCall,
+    ToolDenied,
+    ToolResult,
+)
 from backend.app.agents.executor import ExecutorAgent
 from backend.app.agents.planner import PlannerAgent
 from backend.app.agents.run_manager import AgentRunManager
@@ -17,13 +27,21 @@ from backend.app.agents.tools import (
 )
 
 __all__ = [
+    "AgentEvent",
+    "AgentMessage",
+    "AgentRunManager",
     "BaseAgent",
+    "Compaction",
+    "Done",
     "ExecutorAgent",
     "PlannerAgent",
-    "AgentRunManager",
+    "Thinking",
     "Tool",
+    "ToolCall",
+    "ToolDenied",
     "ToolPolicy",
     "ToolRegistry",
+    "ToolResult",
     "ToolRule",
     "default_policy",
     "get_tool_registry",

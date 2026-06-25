@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.agents.executor import ExecutorAgent
 from backend.app.agents.planner import PlannerAgent
+from backend.app.core.config import settings
 from backend.app.models.agent import Agent, AgentFeedback, AgentRun, AgentStep
 from backend.app.services.llm.manager import llm_manager
 
@@ -97,7 +98,11 @@ class AgentRunManager:
         user_id: int,
         input_text: str,
     ) -> AgentRun:
-        """Execute an agent run: plan → execute → record."""
+        """Execute an agent run.
+
+        When CORTEX_NEW_AGENT_LOOP is True, dispatches to the new streaming
+        agent loop (loop.py). Otherwise uses the legacy Planner→Executor path.
+        """
         agent = self.get_agent(agent_id)
         if not agent:
             raise ValueError(f"Agent {agent_id} not found")
@@ -107,27 +112,31 @@ class AgentRunManager:
         run.status = "running"
         self.db.commit()
 
+        if settings.CORTEX_NEW_AGENT_LOOP:
+            return await self._run_new_loop(run, agent, agent_id, user_id, input_text)
+        else:
+            return await self._run_legacy(run, agent, agent_id, user_id)
+
+    async def _run_legacy(
+        self,
+        run: AgentRun,
+        agent: Any,
+        agent_id: int,
+        user_id: int,
+    ) -> AgentRun:
+        """Legacy Planner→Executor path."""
         try:
             # Attach agent model to executor for model_id/tools_json access
             self.executor._agent = agent
 
             # Plan the task
-            plan = await self.planner.plan(input_text)
+            plan = await self.planner.plan(run.input_text)
             logger.info("Agent %d planned %d steps for run %d", agent_id, len(plan), run.id)
 
             # Execute each step
             results: list[str] = []
             for i, step_plan in enumerate(plan):
-                step = AgentStep(
-                    run_id=run.id,
-                    step_number=i + 1,
-                    thought=step_plan.get("thought", ""),
-                    action=step_plan.get("agent", "executor"),
-                    action_input_json=json.dumps(step_plan),
-                    status="running",
-                )
-                self.db.add(step)
-                self.db.commit()
+                step = self._create_step(run.id, i + 1, step_plan)
 
                 try:
                     result = await self.executor.run(
@@ -138,30 +147,14 @@ class AgentRunManager:
                     step.status = "completed"
                     results.append(result)
                 except Exception as e:
-                    # Sanitize error — don't store raw exception messages that may
-                    # contain internal paths, stack traces, or sensitive info
                     logger.error("Step %d failed: %s", i + 1, e)
                     step.observation = "Step execution failed. Check logs for details."
                     step.status = "failed"
 
                 self.db.commit()
+                await self._emit_step_event(step)
 
-                await self._emit(
-                    {
-                        "type": "step",
-                        "step_number": step.step_number,
-                        "thought": step.thought or "",
-                        "action": step.action or "",
-                        "observation": step.observation or "",
-                    }
-                )
-
-            # Finalize run
-            run.status = "completed"
-            run.output = results[-1] if results else "No output"
-            run.completed_at = datetime.now(timezone.utc)
-            self.db.commit()
-
+            self._finalize_run(run, results[-1] if results else "No output")
             await self._emit(
                 {
                     "type": "done",
@@ -171,21 +164,127 @@ class AgentRunManager:
             )
 
         except Exception as e:
-            run.status = "failed"
-            run.error = "Agent execution failed"
-            run.completed_at = datetime.now(timezone.utc)
-            self.db.commit()
+            self._fail_run(run)
             logger.error("Agent run %d failed: %s", run.id, e)
-
-            await self._emit(
-                {
-                    "type": "error",
-                    "message": "Agent execution failed",
-                }
-            )
+            await self._emit({"type": "error", "message": "Agent execution failed"})
 
         self.db.refresh(run)
         return run
+
+    async def _run_new_loop(
+        self,
+        run: AgentRun,
+        agent: Any,
+        agent_id: int,
+        user_id: int,
+        input_text: str,
+    ) -> AgentRun:
+        """New streaming agent loop path."""
+        try:
+            from backend.app.agents.events import Done
+            from backend.app.agents.loop import agent_loop
+            from backend.app.agents.tools import default_policy, get_tool_registry
+
+            registry = get_tool_registry()
+            policy = default_policy()
+
+            step_number = 0
+            final_output = ""
+
+            async for event in agent_loop(
+                message=input_text,
+                conversation_id=str(run.id),
+                user=agent.user if hasattr(agent, "user") else None,
+                registry=registry,
+                policy=policy,
+            ):
+                # Persist AgentStep for tool calls
+                if event.__class__.__name__ in ("ToolCall", "ToolResult", "ToolDenied", "AgentMessage"):
+                    step_number += 1
+                    step = AgentStep(
+                        run_id=run.id,
+                        step_number=step_number,
+                        thought="",
+                        action=event.__class__.__name__,
+                        action_input_json=json.dumps(
+                            {
+                                "name": getattr(event, "name", ""),
+                                "args": getattr(event, "args", getattr(event, "result", "")),
+                            }
+                        ),
+                        observation=str(event),
+                        status="completed",
+                    )
+                    self.db.add(step)
+                    self.db.commit()
+
+                    # Emit to callback
+                    await self._emit_step_event(step)
+
+                # Capture final output from Done event
+                if isinstance(event, Done):
+                    final_output = event.summary
+
+                # Stream to callback
+                if hasattr(event, "text") and event.text:
+                    await self._emit(
+                        {
+                            "type": "stream",
+                            "content": event.text,
+                        }
+                    )
+
+            # Finalize run
+            self._finalize_run(run, final_output or input_text)
+            await self._emit({"type": "done", "status": "completed"})
+
+        except Exception as e:
+            self._fail_run(run)
+            logger.error("New agent loop run %d failed: %s", run.id, e)
+            await self._emit({"type": "error", "message": "Agent execution failed"})
+
+        self.db.refresh(run)
+        return run
+
+    def _create_step(self, run_id: int, step_number: int, step_plan: dict) -> AgentStep:
+        """Create a new AgentStep record."""
+        step = AgentStep(
+            run_id=run_id,
+            step_number=step_number,
+            thought=step_plan.get("thought", ""),
+            action=step_plan.get("agent", "executor"),
+            action_input_json=json.dumps(step_plan),
+            status="running",
+        )
+        self.db.add(step)
+        self.db.commit()
+        return step
+
+    def _finalize_run(self, run: AgentRun, output: str) -> None:
+        """Mark a run as completed."""
+        run.status = "completed"
+        run.output = output
+        run.completed_at = datetime.now(timezone.utc)
+        self.db.commit()
+
+    def _fail_run(self, run: AgentRun) -> None:
+        """Mark a run as failed."""
+        run.status = "failed"
+        run.error = "Agent execution failed"
+        run.completed_at = datetime.now(timezone.utc)
+        self.db.commit()
+
+    async def _emit_step_event(self, step: AgentStep) -> None:
+        """Emit a step event to the callback."""
+        await self._emit(
+            {
+                "type": "step",
+                "step_number": step.step_number,
+                "thought": step.thought or "",
+                "action": step.action or "",
+                "observation": step.observation or "",
+            }
+        )
 
     def get_run(self, run_id: int) -> AgentRun | None:
         """Get a run by ID."""

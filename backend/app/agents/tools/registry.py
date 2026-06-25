@@ -74,6 +74,29 @@ class ToolRegistry:
             filtered = list(matched)
         return [t.schema for t in filtered if t.schema]
 
+    async def execute(self, name: str, **kwargs: Any) -> str:
+        """Execute a registered tool by name, returning its result as a string.
+
+        Handles both sync and async tool handlers automatically.
+        Raises ValueError if the tool is not found.
+        """
+        tool = self.get(name)
+        if not tool:
+            raise ValueError(f"Unknown tool: {name}")
+
+        handler = tool.handler
+        if inspect.iscoroutinefunction(handler):
+            result = await handler(**kwargs)
+        else:
+            result = handler(**kwargs)
+
+        # Coerce result to string for consistent LLM context injection
+        if result is None:
+            return ""
+        if isinstance(result, str):
+            return result
+        return str(result)
+
     def remove(self, name: str) -> None:
         """Remove a tool by name. No-op if not found."""
         self._tools.pop(name, None)
