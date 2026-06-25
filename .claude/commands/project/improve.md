@@ -6,91 +6,63 @@ Run weekly or after completing significant work. Reviews and enhances skills, ho
 
 ### 0. Load Ecosystem State
 
-Run `.agents/plans/shared-phases.md#repository-intelligence`.
+Invoke `cortex-repo-discovery`. Invoke `cortex-repository-intelligence`. Invoke `cortex-repo-health-scan`.
 
 ### 1. Review Skill Usage
 
-1. **Review skill usage.**
 - Check git log for recent skill invocations
-- Which skills from `.agents/skills/` were used?
-- Which were skipped? Why?
-- Were there skill creation opportunities that weren't acted on?
-- Are any skills stale (not updated in 30+ days)?
-- Is there any skill which is not listed in our docs but we have it and can use it.
+- Which skills from `.agents/skills/` were used? Which skipped? Why?
+- Skill creation opportunities not acted on?
+- Stale skills (not updated in 30+ days)?
 
-2. **Review hook effectiveness.**
-- Run `python3 .claude/hooks/run_hooks.py` — any false positives?
-- Are there checks that should be hooks but aren't?
-- Are any hooks producing noisy/irrelevant findings?
-- Is the hook phase configuration optimal?
+### 2. Review Hook Effectiveness
 
-3. **Review workflow gaps.**
+- Run hooks — any false positives?
+- Checks that should be hooks but aren't?
+- Hooks producing noisy/irrelevant findings?
+
+### 3. Review Workflow Gaps
+
 - Read `docs/WORKFLOWS.md`
-- Are there manual steps that could be automated?
-- Are any workflows unclear or incomplete?
-- Do workflows match actual development practices?
-- Are there missing workflows for common tasks?
+- Manual steps that could be automated?
+- Unclear or incomplete workflows?
+- Missing workflows for common tasks?
 
-4. **Review documentation.**
+### 4. Review Documentation
+
 - Check all docs in `docs/` for completeness
-- Are cross-references valid?
-- Are there topics not covered by any doc?
-- Is the developer guide up to date?
+- Cross-references valid?
+- Topics not covered?
 
-5. **Review governance rules.**
+### 5. Review Governance Rules
+
 - Read `docs/GOVERNANCE.md`
-- Are there rules that need updating?
-- Are there new patterns that should be codified?
-- Are clarification rules still appropriate?
+- Rules needing updating?
+- New patterns to codify?
 
-6. **Check for generation opportunities.** Based on patterns observed during this review:
-   - Should any new command be created? (recurring manual process)
-   - Should any new hook be created? (recurring quality issue)
-   - Should any new skill be created? (recurring workflow pattern)
-   - If yes, recommend with justification.
+### 6. Generation Opportunities
 
-7. **Generate improvement recommendations.** For each:
-- What: specific improvement
-- Why: what problem it solves
-- Effort: S/M/L
-- Priority: now / soon / later
+- New command needed? (recurring manual process)
+- New hook needed? (recurring quality issue)
+- New skill needed? (recurring workflow pattern)
 
-8. **Output** format:
+### 7. Output
 
-```
+```text
 ## Ecosystem Improvement: [date]
 
-### Skill Review
-- Used: N
-- Stale: N
-- Creation opportunities: N
-
-### Hook Review
-- False positives: N
-- Missing hooks: N
-- Recommendations: N
-
-### Workflow Review
-- Gaps found: N
-- Recommendations: N
-
-### Documentation Review
-- Outdated: N
-- Missing topics: N
-- Recommendations: N
-
-### Governance Review
-- Updates needed: N
-- Recommendations: N
+### Skill Review (Used: N, Stale: N, Creation opportunities: N)
+### Hook Review (False positives: N, Missing hooks: N, Recommendations: N)
+### Workflow Review (Gaps found: N, Recommendations: N)
+### Documentation Review (Outdated: N, Missing topics: N, Recommendations: N)
+### Governance Review (Updates needed: N, Recommendations: N)
 
 ### Improvement Recommendations
 | # | Priority | Category | What | Why | Effort |
-|---|----------|----------|------|-----|--------|
-| 1 | now | skill | ... | ... | S |
 
-### Summary
-- Total recommendations: N
-- Now: N, Soon: N, Later: N
+### Summary (Total: N, Now: N, Soon: N, Later: N)
 ```
 
-9. If action-items found, save to `docs/audits/YYYY-MM-DD-improve-{N}.md`. (N= number of improve taht day)
+### 8. Save
+
+If action-items found, save to `docs/audits/YYYY-MM-DD-improve-{N}.md`.

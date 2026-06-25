@@ -1,6 +1,6 @@
 # Skills Index
 
-69 skills in `.agents/skills/`. Each has a `SKILL.md` entry point.
+81 skills in `.agents/skills/`. Each has a `SKILL.md` entry point. Cortex-specific skills provide reusable intelligence for the command ecosystem.
 
 ---
 
@@ -8,6 +8,18 @@
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
+| cortex-repository-intelligence | Discover git state, version, repo structure | First step of every command |
+| cortex-repo-discovery | Find repo root from any working directory | Universal command access |
+| cortex-planning-ecosystem | Load all planning artifacts | Before planning analysis |
+| cortex-system-validation | Run full validation pipeline (test, lint, format, hooks) | Before merge, after implementation |
+| cortex-engineering-review | Review code for correctness, patterns, quality | Before push, after implementation |
+| cortex-architecture-drift | Detect divergence between docs and code | Before release, architecture changes |
+| cortex-adversarial-challenge | Stress-test plans/specs/implementations | Before major decisions, spec approval |
+| cortex-post-reflection | Systematic reflection after completing work | Before merge, after implementation |
+| cortex-repo-cleanup | Remove temp files, dead code, verify clean state | Before final commit, before merge |
+| cortex-version-integration | Verify version readiness before merge | Before merge, release gate |
+| cortex-repo-health-scan | Check hook/skill/tech debt/docs health | Weekly health check, before release |
+| cortex-documentation-consistency | Cross-reference docs against codebase | Before release, after implementation |
 | cortex-architecture-audit | Validate against 10 architecture principles | Before merge, after phase, architecture drift |
 | cortex-health-review | Comprehensive health check | Weekly, before release, quality concerns |
 | cortex-status | Report current development status | On entry, "what version are we on?" |

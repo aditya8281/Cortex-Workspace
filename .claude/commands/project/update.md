@@ -62,35 +62,11 @@ Scale automatically. Do not over-generate for simple requests. Do not under-desi
 
 #### 0.1 Discover Repository State
 
-```bash
-# Current state
-git status
-git branch --show-current
-git log --oneline -10
+Invoke `cortex-repo-discovery` then `cortex-repository-intelligence`. Invoke `cortex-planning-ecosystem`.
 
-# Active version and phase
-cat .agents/plans/ACTIVE_VERSION.md 2>/dev/null
-grep -r "in_progress\|active\|complete" .agents/plans/versions/*/progress.md 2>/dev/null
+Additionally read `docs/ARCHITECTURE.md` and `CLAUDE.md` for execution contract and constraints.
 
-# Architecture
-cat .agents/plans/guide.md | head -40
-
-# Roadmap
-cat docs/ROADMAP.md 2>/dev/null | head -40
-```
-
-Read:
-
-- `.agents/plans/guide.md` — the constitution, architecture principles
-- `.agents/plans/implementation_steps.md` — execution order, version structure
-- `.agents/plans/FinalCompatibilities.md` — what's been planned vs what's from the council
-- `docs/ROADMAP.md` — the public roadmap
-- `docs/ARCHITECTURE.md` — system architecture (if exists)
-- `CLAUDE.md` — execution contract, constraints
-- Active phase plan: `.agents/plans/versions/v{ACTIVE}/Phase-{N}.md`
-- Active progress: `.agents/plans/versions/v{ACTIVE}/progress.md`
-
-Also check whether the requested update **already exists** in plans or implementation:
+Check whether the requested update **already exists** in plans or implementation:
 
 - Is it in any phase plan? Check all Phase-N.md files for matching keywords.
 - Is it in ROADMAP.md? Check roadmap sections.
@@ -733,35 +709,9 @@ After applying changes, verify:
 
 Before seeking approval, stress-test the specification.
 
-#### 5.1 Challenge the Approach
+Invoke `cortex-adversarial-challenge` to challenge completeness, feasibility, risks, coherence, and scale.
 
-Run through these challenge questions:
-
-**Completeness:**
-- Does the spec cover all the user's stated needs?
-- Are there implicit needs the spec might be missing?
-- Are the success criteria measurable?
-
-**Feasibility:**
-- Are any assumptions potentially wrong?
-- What would invalidate the design?
-- Are there dependencies that don't exist yet?
-
-**Risks:**
-- What's the worst case if this is built wrong?
-- What's the single point of failure?
-- What happens if key dependencies are delayed?
-
-**Coherence:**
-- Does the spec contradict any existing ADR?
-- Does it conflict with the constitution (guide.md)?
-- Does it step on another version's scope?
-
-**Scale:**
-- Is this too big for one update? Should it be split?
-- Is this too small for the process? Should it go directly to `/project:develop`?
-
-#### 5.2 Present Challenges
+After the skill completes, present challenges:
 
 ```text
 ## Adversarial Review
