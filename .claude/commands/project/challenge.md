@@ -31,6 +31,11 @@ Run this before implementing a significant feature or making an architectural ch
 - What data contradicts these assumptions?
 - What would invalidate this approach?
 
+### Version Boundaries
+- Does this change belong in the current version?
+- Is this scope creep from a later version?
+- Would this be better deferred to a future phase?
+
 ### Unexplored Alternatives
 - What other approaches were considered?
 - What would a different architecture look like?

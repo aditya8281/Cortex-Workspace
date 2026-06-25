@@ -54,6 +54,12 @@ Before completing any major task, run through this reflection framework systemat
 - Are there new APIs, patterns, or decisions that need documenting?
 - Should docs/ARCHITECTURE.md or other docs be updated?
 
+### Ecosystem Growth
+- Should any finding become a new skill? (recurring process pattern)
+- Should any finding become a new hook? (recurring quality issue)
+- Should any finding become a new command? (recurring workflow)
+- Should any finding become a new workflow? (multi-step process without automation)
+
 ### Test Gap
 - Is any behavior untested that should be?
 - Are edge cases covered?

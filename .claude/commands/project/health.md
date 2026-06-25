@@ -4,6 +4,8 @@ Run weekly or before major milestones. Comprehensive health check across all sys
 
 ## Instructions
 
+**Scope:** Broad ecosystem health — skills, docs, governance, tech debt trends. For deep code-level scanning (runtime errors, dead code, integration issues), use `/project:audit` instead.
+
 1. **Run all hooks.**
 ```bash
 python3 .claude/hooks/run_hooks.py

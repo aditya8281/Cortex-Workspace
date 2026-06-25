@@ -111,6 +111,13 @@ Branch → Skill Discovery → Triage → Plan → Build → Review → Reflect 
 
 **Gate:** All validation passes, human merges.
 
+**Command equivalents:**
+- Code quality: `/project:review`
+- Adversarial: `/project:challenge`
+- Reflection: `/project:reflect`
+- Verification: `/project:verify`
+- Release readiness: `/project:release`
+
 ---
 
 ## 2. Bug-Finding Workflow

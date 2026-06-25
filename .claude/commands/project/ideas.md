@@ -12,9 +12,11 @@ What was built? What patterns emerge? What's accelerating?
 
 2. **Read the roadmap.** Read `docs/ROADMAP.md`. What's next? What's partially complete? What's blocked?
 
-3. **Read the vision.** Read the Vision section of `README.md`. What's the gap between current state and the vision?
+3. **Check feature gaps.** If a `/project:feature-gap` report exists in `docs/audits/`, read it. Prioritize ideas that address identified gaps.
 
-4. **Identify opportunities** in each category:
+4. **Read the vision.** Read the Vision section of `README.md`. What's the gap between current state and the vision?
+
+5. **Identify opportunities** in each category:
 
 ### Feature Opportunities
 - What new features would advance the CORTEX vision?
@@ -41,13 +43,13 @@ What was built? What patterns emerge? What's accelerating?
 - What new hooks would improve quality?
 - What workflows could be automated?
 
-5. **Prioritize** each idea:
+6. **Prioritize** each idea:
 - **P0** — critical for vision, do soon
 - **P1** — important, plan for next phase
 - **P2** — valuable, Backlog
 - **P3** — interesting, future consideration
 
-6. **Output** format:
+7. **Output** format:
 
 ```
 ## Ideas: [date]
@@ -69,4 +71,4 @@ What was built? What patterns emerge? What's accelerating?
 - Top recommendation: ...
 ```
 
-7. If 3+ ideas found, save to `docs/ideas/YYYY-MM-DD.md`.
+8. If 3+ ideas found, save to `docs/ideas/YYYY-MM-DD.md`.
