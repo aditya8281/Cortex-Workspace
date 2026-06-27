@@ -33,10 +33,14 @@ from backend.app.models.interaction.conversation import Conversation, Conversati
 from backend.app.models.interaction.notification import Notification
 from backend.app.models.interaction.user import User
 from backend.app.models.memory.document import Document, DocumentChunk, DocumentType
+from backend.app.models.memory.episodic import EpisodicMemory
 from backend.app.models.memory.graph import GraphEdge, GraphNode
 from backend.app.models.memory.long_term_memory import LongTermMemory
+from backend.app.models.memory.memory_graph import MemoryEdge, MemoryNode
 from backend.app.models.memory.path_index import PathIndex
+from backend.app.models.memory.semantic import SemanticMemory
 from backend.app.models.memory.storage_registry import StorageRegistry
+from backend.app.models.memory.working import WorkingMemory
 
 # Privacy domain
 from backend.app.models.privacy.auth_event import AuthEvent
@@ -56,11 +60,16 @@ __all__ = [
     "Document",
     "DocumentChunk",
     "DocumentType",
+    "EpisodicMemory",
     "GraphEdge",
     "GraphNode",
     "LongTermMemory",
+    "MemoryEdge",
+    "MemoryNode",
     "PathIndex",
+    "SemanticMemory",
     "StorageRegistry",
+    "WorkingMemory",
     # Awareness
     "IndexedFile",
     "IndexingConfig",

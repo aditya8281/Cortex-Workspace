@@ -20,7 +20,11 @@ from backend.app.models.intelligence.embedding_cache import EmbeddingCache  # no
 from backend.app.models.intelligence.model_catalog import ModelCatalog, ModelVariant  # noqa: F401
 from backend.app.models.interaction.user import User  # noqa: F401
 from backend.app.models.memory.document import Document, DocumentChunk  # noqa: F401
+from backend.app.models.memory.episodic import EpisodicMemory  # noqa: F401
+from backend.app.models.memory.memory_graph import MemoryEdge, MemoryNode  # noqa: F401
+from backend.app.models.memory.semantic import SemanticMemory  # noqa: F401
 from backend.app.models.memory.storage_registry import StorageRegistry  # noqa: F401
+from backend.app.models.memory.working import WorkingMemory  # noqa: F401
 from backend.app.models.privacy.auth_event import AuthEvent  # noqa: F401
 from backend.app.models.privacy.user_settings import UserModelSettings  # noqa: F401
 
