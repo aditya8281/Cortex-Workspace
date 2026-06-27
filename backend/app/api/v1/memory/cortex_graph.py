@@ -57,12 +57,12 @@ def create_node(
 ) -> MemoryNodeResponse:
     """Create a graph node for a memory."""
     service = MemoryGraphService(db)
-    return service.add_node(
+    return MemoryNodeResponse.model_validate(service.add_node(
         user_id=current_user.id,
         memory_type=data.memory_type,
         memory_id=data.memory_id,
         label=data.label,
-    )
+    ))
 
 
 @router.get("/node/{node_id}/connections")
@@ -103,12 +103,12 @@ def create_edge(
     """Create an edge between two nodes."""
     service = MemoryGraphService(db)
     try:
-        return service.add_edge(
+        return MemoryEdgeResponse.model_validate(service.add_edge(
             source_id=data.source_id,
             target_id=data.target_id,
             edge_type=data.edge_type,
             weight=data.weight,
-        )
+        ))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -125,7 +125,7 @@ def strengthen_edge(
     edge = service.strengthen_edge(edge_id, amount)
     if not edge:
         raise HTTPException(status_code=404, detail="Edge not found")
-    return edge
+    return MemoryEdgeResponse.model_validate(edge)
 
 
 @router.delete("/edge/{edge_id}", status_code=204)

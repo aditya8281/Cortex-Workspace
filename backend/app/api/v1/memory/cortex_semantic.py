@@ -26,7 +26,7 @@ def create_semantic_memory(
 ) -> SemanticMemoryResponse:
     """Create a new semantic memory. Deduplicates identical content."""
     service = SemanticMemoryService(db)
-    return service.create(current_user.id, data)
+    return SemanticMemoryResponse.model_validate(service.create(current_user.id, data))
 
 
 @router.get("", response_model=SemanticMemoryList)
@@ -42,7 +42,7 @@ def list_semantic_memories(
     if category:
         memories = service.list_by_category(current_user.id, category, limit)
         return SemanticMemoryList(
-            memories=memories,
+            memories=[SemanticMemoryResponse.model_validate(m) for m in memories],
             total=len(memories),
         )
     memories, total = service.list_all(current_user.id, limit, offset)
@@ -93,7 +93,7 @@ def get_semantic_memory(
     memory = service.retrieve(current_user.id, memory_id)
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
-    return memory
+    return SemanticMemoryResponse.model_validate(memory)
 
 
 @router.patch("/{memory_id}", response_model=SemanticMemoryResponse)
@@ -108,7 +108,7 @@ def update_semantic_memory(
     memory = service.update(current_user.id, memory_id, data)
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
-    return memory
+    return SemanticMemoryResponse.model_validate(memory)
 
 
 @router.delete("/{memory_id}", status_code=204)

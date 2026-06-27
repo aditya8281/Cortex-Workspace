@@ -26,7 +26,7 @@ def create_episodic_memory(
 ) -> EpisodicMemoryResponse:
     """Create a new episodic memory."""
     service = EpisodicMemoryService(db)
-    return service.create(current_user.id, data)
+    return EpisodicMemoryResponse.model_validate(service.create(current_user.id, data))
 
 
 @router.get("", response_model=EpisodicMemoryList)
@@ -76,7 +76,7 @@ def get_episodic_memory(
     memory = service.retrieve(current_user.id, memory_id)
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
-    return memory
+    return EpisodicMemoryResponse.model_validate(memory)
 
 
 @router.patch("/{memory_id}", response_model=EpisodicMemoryResponse)
@@ -91,7 +91,7 @@ def update_episodic_memory(
     memory = service.update(current_user.id, memory_id, data)
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
-    return memory
+    return EpisodicMemoryResponse.model_validate(memory)
 
 
 @router.delete("/{memory_id}", status_code=204)

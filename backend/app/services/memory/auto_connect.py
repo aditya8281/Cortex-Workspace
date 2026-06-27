@@ -186,11 +186,11 @@ class AutoConnectionService:
             semantic_query = semantic_query.filter(SemanticMemory.id != memory_id)
         semantic = semantic_query.all()
 
-        for mem in semantic:
-            mem_keywords = self._extract_keywords(mem.content)
+        for smem in semantic:
+            mem_keywords = self._extract_keywords(smem.content)
             overlap = keywords & mem_keywords
             if overlap:
-                related_memories.append(("semantic", mem.id, len(overlap), mem.content))
+                related_memories.append(("semantic", smem.id, len(overlap), smem.content))
 
         # Sort by keyword overlap (most related first)
         related_memories.sort(key=lambda x: x[2], reverse=True)

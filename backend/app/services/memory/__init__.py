@@ -1,5 +1,7 @@
 """CORTEX memory domain services."""
 
+from sqlalchemy.orm import Session
+
 from backend.app.services.memory.auto_connect import AutoConnectionService
 from backend.app.services.memory.decay import ForgettingService
 from backend.app.services.memory.episodic import EpisodicMemoryService
@@ -23,7 +25,7 @@ class MemoryServiceFactory:
         forgetting_stats = factory.forgetting.get_forgetting_stats(user_id)
     """
 
-    def __init__(self, db: object) -> None:
+    def __init__(self, db: Session) -> None:
         self._db = db
         self._episodic: EpisodicMemoryService | None = None
         self._semantic: SemanticMemoryService | None = None
