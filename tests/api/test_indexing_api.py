@@ -37,7 +37,7 @@ def test_save_indexing_config(client, mock_auth):
     assert data["config"]["max_file_size_bytes"] == 2_000_000
 
 
-@patch("backend.app.api.v1.indexing.IndexingRules")
+@patch("backend.app.api.v1.awareness.indexing.IndexingRules")
 def test_indexing_preview(mock_rules_cls, client, mock_auth):
     mock_rules = MagicMock()
     mock_rules.get_stats.return_value = {

@@ -1,58 +1,43 @@
+"""Master API router — aggregates all domain routers.
+
+After v1.02 domain reorganization, each domain router aggregates its sub-routers.
+Endpoint files define their own paths (e.g., /knowledge/health, /users, /me/vault/files).
+Domain routers include sub-routers WITHOUT prefixes — paths come from the endpoint files.
+This master router includes domain routers WITHOUT extra prefixes — the
+API_V1_PREFIX applied by main.py (/api/v1) is the only prefix needed.
+"""
+
 from fastapi import APIRouter
 
 from backend.app.api.memory import router as memory_router
 from backend.app.api.metrics import router as metrics_router
-from backend.app.api.v1.agents import router as agents_router
-from backend.app.api.v1.conversations import router as conversations_router
-from backend.app.api.v1.github import router as github_router
-from backend.app.api.v1.health import router as health_router
-from backend.app.api.v1.indexing import router as indexing_router
-from backend.app.api.v1.knowledge import router as knowledge_router
-from backend.app.api.v1.long_term_memory import router as long_term_memory_router
-from backend.app.api.v1.models import router as models_router
-from backend.app.api.v1.notifications import router as notifications_router
-from backend.app.api.v1.profile import router as profile_router
-from backend.app.api.v1.repository import router as repository_router
-from backend.app.api.v1.search import router as search_router
-from backend.app.api.v1.sync import router as sync_router
-from backend.app.api.v1.system import router as system_router
-from backend.app.api.v1.users import router as users_router
-from backend.app.api.v1.vault import router as vault_router
+from backend.app.api.v1.awareness.router import router as awareness_router
+from backend.app.api.v1.cognition.router import router as cognition_router
+from backend.app.api.v1.developer.router import router as developer_router
+from backend.app.api.v1.integration.router import router as integration_router
+from backend.app.api.v1.intelligence.router import router as intelligence_router
+from backend.app.api.v1.interaction.router import router as interaction_router
+from backend.app.api.v1.memory.router import router as v1_memory_router
+from backend.app.api.v1.privacy.router import router as privacy_router
+from backend.app.api.v1.system.router import router as system_router
 
 api_router = APIRouter()
 
+# ── Legacy domains (pre-v1.02, kept for backward compatibility) ──
 api_router.include_router(memory_router, tags=["Memory"])
-
-api_router.include_router(health_router, tags=["Health"])
-
-api_router.include_router(users_router, tags=["Users"])
-
-api_router.include_router(profile_router, prefix="/me/profile", tags=["Profile"])
-
-api_router.include_router(github_router, prefix="/me/github", tags=["GitHub"])
-
-api_router.include_router(vault_router, prefix="/me/vault", tags=["Vault"])
-
 api_router.include_router(metrics_router, tags=["Metrics"])
 
-api_router.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])
-
-api_router.include_router(system_router, tags=["System"])
-
-api_router.include_router(search_router, tags=["Search"])
-
-api_router.include_router(repository_router, tags=["Repository"])
-
-api_router.include_router(agents_router, tags=["Agents"])
-
-api_router.include_router(models_router, tags=["Models"])
-
-api_router.include_router(indexing_router, tags=["Indexing"])
-
-api_router.include_router(sync_router, tags=["Sync"])
-
-api_router.include_router(conversations_router, tags=["Conversations"])
-
-api_router.include_router(knowledge_router, tags=["Knowledge"])
-
-api_router.include_router(long_term_memory_router, tags=["Long-Term Memory"])
+# ── v1.02 domain routers (paths defined in endpoint files, no prefix here) ──
+# IMPORTANT: Specific routes MUST be registered BEFORE parameterized routes.
+# system_router (has /models/health, /models/metrics) and integration_router
+# (has /models/installed) must come BEFORE developer_router (has /models/{model_id})
+# and integration_router parameterized routes (has /models/{model_name}/download).
+api_router.include_router(v1_memory_router, tags=["Knowledge", "Long-Term Memory", "Search"])
+api_router.include_router(awareness_router, tags=["Indexing", "Repository"])
+api_router.include_router(cognition_router, tags=["Agents"])
+api_router.include_router(interaction_router, tags=["Conversations", "Notifications", "Profile", "Users", "WebSocket"])
+api_router.include_router(system_router, tags=["Health", "System", "LLM Health", "WebSocket"])
+api_router.include_router(intelligence_router, tags=["Models Intelligence"])
+api_router.include_router(integration_router, tags=["Downloads", "Sync"])
+api_router.include_router(privacy_router, tags=["Settings", "Vault"])
+api_router.include_router(developer_router, tags=["Models", "GitHub"])

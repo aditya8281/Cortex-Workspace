@@ -10,7 +10,7 @@ def test_list_models(client, mock_auth):
             new_callable=AsyncMock,
             return_value=([], MagicMock()),
         ),
-        patch("backend.app.api.v1.catalog.llm_manager") as mock_llm,
+        patch("backend.app.api.v1.developer.catalog.llm_manager") as mock_llm,
     ):
         mock_llm.list_all_models = AsyncMock(return_value=[])
         resp = client.get("/api/v1/models", headers=HEADERS)
@@ -60,7 +60,7 @@ def test_recommended_models(client, mock_auth):
     }
 
     with (
-        patch("backend.app.api.v1.catalog._detect_hardware_full", return_value=mock_hw),
+        patch("backend.app.api.v1.developer.catalog._detect_hardware_full", return_value=mock_hw),
         patch("backend.app.services.awareness.hardware.detect_hardware", return_value=mock_hw),
         patch("backend.app.services.intelligence.recommendation.RecommendationEngine", return_value=mock_engine),
         patch("backend.app.services.intelligence.model_catalog.CatalogueManager") as mock_cat_mgr,
@@ -85,7 +85,7 @@ def test_hardware_info(client, mock_auth):
         "supports_cuda": True,
         "supports_metal": False,
     }
-    with patch("backend.app.api.v1.catalog._detect_hardware_full", return_value=mock_profile):
+    with patch("backend.app.api.v1.developer.catalog._detect_hardware_full", return_value=mock_profile):
         resp = client.get("/api/v1/models/hardware", headers=HEADERS)
         assert resp.status_code == 200
         data = resp.json()
@@ -94,7 +94,7 @@ def test_hardware_info(client, mock_auth):
 
 
 def test_model_health(client, mock_auth):
-    with patch("backend.app.api.v1.llm_health.llm_manager") as mock_llm:
+    with patch("backend.app.api.v1.system.llm_health.llm_manager") as mock_llm:
         mock_llm.health_check = AsyncMock(return_value={"ollama": {"available": True}})
         resp = client.get("/api/v1/models/health", headers=HEADERS)
         assert resp.status_code == 200
@@ -104,7 +104,7 @@ def test_model_health(client, mock_auth):
 
 
 def test_model_metrics(client, mock_auth):
-    with patch("backend.app.api.v1.llm_health.llm_manager") as mock_llm:
+    with patch("backend.app.api.v1.system.llm_health.llm_manager") as mock_llm:
         mock_llm.get_metrics.return_value = {
             "total_prompt_tokens": 700,
             "total_completion_tokens": 300,
@@ -127,8 +127,8 @@ def test_model_storage(client, mock_auth):
     mock_path.exists.return_value = False
 
     with (
-        patch("backend.app.api.v1.settings.psutil") as mock_psutil,
-        patch("backend.app.api.v1.settings.Path", return_value=mock_path),
+        patch("backend.app.api.v1.privacy.settings.psutil") as mock_psutil,
+        patch("backend.app.api.v1.privacy.settings.Path", return_value=mock_path),
     ):
         mock_psutil.disk_usage.return_value = mock_disk
         resp = client.get("/api/v1/models/storage", headers=HEADERS)
@@ -143,7 +143,7 @@ def test_model_autocomplete(client, mock_auth):
     mock_service = MagicMock()
     mock_service.autocomplete.return_value = ["llama-3.1-8b", "llama-3.2-3b"]
 
-    with patch("backend.app.api.v1.catalog.ModelSearchService", return_value=mock_service):
+    with patch("backend.app.api.v1.developer.catalog.ModelSearchService", return_value=mock_service):
         resp = client.get("/api/v1/models/autocomplete?q=llama", headers=HEADERS)
         assert resp.status_code == 200
         data = resp.json()
@@ -166,7 +166,7 @@ def test_model_search(client, mock_auth):
     mock_service = MagicMock()
     mock_service.search.return_value = [mock_model]
 
-    with patch("backend.app.api.v1.catalog.ModelSearchService", return_value=mock_service):
+    with patch("backend.app.api.v1.developer.catalog.ModelSearchService", return_value=mock_service):
         resp = client.get("/api/v1/models/search?q=llama", headers=HEADERS)
         assert resp.status_code == 200
         data = resp.json()
@@ -205,7 +205,7 @@ def test_model_installed(client, mock_auth):
 
 
 def test_model_detail_not_found(client, mock_auth):
-    with patch("backend.app.api.v1.catalog.get_db") as mock_get_db:
+    with patch("backend.app.api.v1.developer.catalog.get_db") as mock_get_db:
         mock_db = MagicMock()
         mock_get_db.return_value.__next__ = MagicMock(return_value=mock_db)
         mock_db.execute.return_value.scalar_one_or_none.return_value = None

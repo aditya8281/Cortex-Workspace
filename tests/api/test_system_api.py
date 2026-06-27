@@ -3,10 +3,10 @@ from unittest.mock import patch
 HEADERS = {"Authorization": "Bearer fake-token"}
 
 
-@patch("backend.app.api.v1.system.psutil")
-@patch("backend.app.api.v1.system.get_disk_info")
-@patch("backend.app.api.v1.system.get_gpu_info")
-@patch("backend.app.api.v1.system.get_ram_info")
+@patch("backend.app.api.v1.system.system.psutil")
+@patch("backend.app.api.v1.system.system.get_disk_info")
+@patch("backend.app.api.v1.system.system.get_gpu_info")
+@patch("backend.app.api.v1.system.system.get_ram_info")
 def test_system_metrics(mock_ram, mock_gpu, mock_disk, mock_psutil, client, mock_auth):
     mock_ram.return_value = {"total_gb": 16.0, "available_gb": 8.0}
     mock_gpu.return_value = {"name": "RTX 3080", "type": "cuda", "utilization_gpu": 75.0, "detected": True}

@@ -117,7 +117,7 @@ def test_index_repo(client, mock_auth, db_session):
     db_session.commit()
     db_session.refresh(repo)
 
-    with patch("backend.app.api.v1.repository.enqueue_task", new_callable=AsyncMock) as mock_enqueue:
+    with patch("backend.app.api.v1.awareness.repository.enqueue_task", new_callable=AsyncMock) as mock_enqueue:
         mock_enqueue.return_value = "job-123"
         resp = client.post(f"/api/v1/repos/{repo.id}/index", headers=HEADERS)
         assert resp.status_code == 200
@@ -166,7 +166,7 @@ def test_get_repo_graph(client, mock_auth, db_session):
     mock_builder = MagicMock()
     mock_builder.get_graph.return_value = {"nodes": [], "edges": []}
 
-    with patch("backend.app.api.v1.repository.GraphBuilder", return_value=mock_builder):
+    with patch("backend.app.api.v1.awareness.repository.GraphBuilder", return_value=mock_builder):
         resp = client.get(f"/api/v1/repos/{repo.id}/graph", headers=HEADERS)
         assert resp.status_code == 200
         data = resp.json()

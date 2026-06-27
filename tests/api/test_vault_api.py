@@ -46,7 +46,7 @@ def test_vault_status_locked(mock_is_unlocked, client, mock_auth):
     assert data["locked"] is True
 
 
-@patch("backend.app.api.v1.vault.vault_service")
+@patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_vault_unlock(mock_svc, client, mock_auth):
     mock_svc.unlock_vault.return_value = True
     resp = client.post("/api/v1/me/vault/unlock", json={"vault_password": "test1234!"}, headers=HEADERS)
@@ -55,14 +55,14 @@ def test_vault_unlock(mock_svc, client, mock_auth):
     assert data["unlocked"] is True
 
 
-@patch("backend.app.api.v1.vault.vault_service")
+@patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_vault_unlock_invalid(mock_svc, client, mock_auth):
     mock_svc.unlock_vault.return_value = False
     resp = client.post("/api/v1/me/vault/unlock", json={"vault_password": "wrong"}, headers=HEADERS)
     assert resp.status_code == 401
 
 
-@patch("backend.app.api.v1.vault.vault_service")
+@patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_vault_lock(mock_svc, client, mock_auth):
     resp = client.post("/api/v1/me/vault/lock", headers=HEADERS)
     assert resp.status_code == 200
@@ -71,7 +71,7 @@ def test_vault_lock(mock_svc, client, mock_auth):
     mock_svc.lock_vault.assert_called_once()
 
 
-@patch("backend.app.api.v1.vault.vault_service")
+@patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_vault_list_files(mock_svc, client, mock_unlocked_auth):
     mock_svc._require_unlocked.return_value = None
     mock_svc.list_vault_files.return_value = [{"name": "doc.txt", "path": "doc.txt", "is_dir": False, "size": 100}]
@@ -82,7 +82,7 @@ def test_vault_list_files(mock_svc, client, mock_unlocked_auth):
     assert data[0]["name"] == "doc.txt"
 
 
-@patch("backend.app.api.v1.vault.vault_service")
+@patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_vault_list_files_locked(mock_svc, client, mock_auth):
     mock_svc._require_unlocked.side_effect = HTTPException(status_code=403, detail="Vault is locked")
     resp = client.get("/api/v1/me/vault/files")
