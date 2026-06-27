@@ -96,6 +96,68 @@ Interactive docs: `http://localhost:8000/docs`
 |-------|---------|------|
 | `/api/v1/long-term-memory` | CRUD + decay management | Required |
 
+## Cortex Memory (v1.03)
+
+### Episodic Memory
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/episodic` | POST | Create episodic memory |
+| `/api/v1/episodic` | GET | List recent (paginated) |
+| `/api/v1/episodic/search` | GET | Search by content |
+| `/api/v1/episodic/{id}` | GET | Get by ID |
+| `/api/v1/episodic/{id}` | PATCH | Partial update |
+| `/api/v1/episodic/{id}` | DELETE | Delete |
+
+### Semantic Memory
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/semantic` | POST | Create (dedup on exact content match) |
+| `/api/v1/semantic` | GET | List (filter by category) |
+| `/api/v1/semantic/categories` | GET | Get all categories with counts |
+| `/api/v1/semantic/search` | GET | Search by content |
+| `/api/v1/semantic/{id}` | GET | Get by ID |
+| `/api/v1/semantic/{id}` | PATCH | Partial update |
+| `/api/v1/semantic/{id}` | DELETE | Delete |
+
+### Working Memory
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/working` | POST | Add item (session-scoped) |
+| `/api/v1/working` | GET | Get active items (query: session_id, slot) |
+| `/api/v1/working/{id}/promote` | POST | Promote to active slot |
+| `/api/v1/working/{id}/archive` | POST | Archive item |
+| `/api/v1/working/{id}/demote` | POST | Demote to buffer |
+| `/api/v1/working/{id}` | DELETE | Remove item |
+| `/api/v1/working/session/{session_id}` | DELETE | Clear entire session |
+| `/api/v1/working/session/{session_id}/summary` | GET | Session stats (active/buffer/archive/expired counts) |
+
+### Memory Graph
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/graph/node` | POST | Create node (links to episodic or semantic memory) |
+| `/api/v1/graph/edge` | POST | Create edge (self-loops rejected, duplicates strengthen) |
+| `/api/v1/graph/stats` | GET | Graph statistics (node/edge counts, avg weight, strongest) |
+| `/api/v1/graph/strongest` | GET | Strongest edges (query: limit) |
+| `/api/v1/graph/node/{id}/connections` | GET | BFS neighbors (query: depth 1-5) |
+| `/api/v1/graph/path/{src}/{dst}` | GET | Shortest path BFS (query: max_depth 1-10) |
+| `/api/v1/graph/edge/{id}/strengthen` | POST | Strengthen edge weight |
+| `/api/v1/graph/edge/{id}` | DELETE | Delete edge |
+
+### Cross-Type Search & Forgetting
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/cortex-search` | GET | Multi-signal search across all memory types |
+| `/api/v1/cortex-search/related` | GET | Graph-connected related memories |
+| `/api/v1/cortex-search/importance` | GET | Search by importance threshold |
+| `/api/v1/cortex-search/recency` | GET | Search by most recent |
+| `/api/v1/forget` | POST | Apply Ebbinghaus-style forgetting decay |
+| `/api/v1/forget/stats` | GET | Forgetting statistics (counts, avg confidence) |
+
 ## Knowledge
 
 | Route | Purpose | Auth |

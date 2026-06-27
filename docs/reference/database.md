@@ -42,6 +42,11 @@ PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations.
 | `indexing_configs` | `p00000000015` | Per-repo indexing rules (include/exclude paths, file types) |
 | `embedding_cache` | `r00000000017` | Cached embeddings to avoid recomputation |
 | `notifications` | `k00000000011` | System notifications for users |
+| `episodic_memories` | `v10300000001` | Episodic memories (content, context, emotion, importance, confidence, recency, access_count) |
+| `semantic_memories` | `v10300000002` | Semantic memories (content, category, confidence, source, access_count) |
+| `working_memories` | `v10300000003` | Working memory (session_id, content, slot [active/buffer/archive], priority, expires_at) |
+| `memory_nodes` | `v10300000004` | Memory graph nodes (memory_type, memory_id, label, embedding_id) — polymorphic link |
+| `memory_edges` | `v10300000005` | Memory graph edges (source_id, target_id, edge_type, weight) — bidirectional |
 
 ---
 
