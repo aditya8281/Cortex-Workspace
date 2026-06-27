@@ -26,25 +26,40 @@ MAX_EXTERNAL_CONTENT_LENGTH = 100_000
 MAX_TOOL_OUTPUT_LENGTH = 500_000
 
 INJECTION_PATTERNS: list[str] = [
-    r"ignore\s+(all\s+)?previous\s+instructions",
-    r"ignore\s+prior\s+instructions",
-    r"disregard\s+(all\s+)?previous",
-    r"forget\s+(all\s+)?previous",
-    r"you\s+are\s+now\s+a\s+different\s+ai",
+    # Instruction override
+    r"ignore\s+.*previous\s+instructions",
+    r"ignore\s+.*prior\s+instructions",
+    r"disregard\s+.*previous",
+    r"forget\s+.*previous",
+    r"BEGIN\s+OF\s+INSTRUCTION",
+    r"OVERRIDE\s+safety\s+protocols",
+    # Role manipulation
+    r"you\s+are\s+now\s+a\s+different",
     r"you\s+are\s+now\s+unrestricted",
-    r"new\s+instructions?:\s*override",
+    r"new\s+instructions?:\s*(override|bypass)",
     r"system:\s*override\s+safety",
+    r"note\s+to\s+ai:",
+    # Delimiters
     r"<\|system\|>",
     r"<\|user\|>",
     r"<\|assistant\|>",
     r"\[INST\]",
     r"###\s*Instruction:",
     r"###\s*System:",
-    r"BEGIN\s+OF\s+INSTRUCTION",
-    r"OVERRIDE\s+safety\s+protocols",
+    r"```system",
+    # Encoded / obfuscated
     r"ADMIN\s+MODE",
     r"DAN\s+MODE",
     r"jailbreak",
+    # Code execution patterns
+    r"os\.system\s*\(",
+    r"import\s+os.*system",
+    # Instruction replacement
+    r"previous\s+instructions?\s+were\s+wrong",
+    r"follow\s+these\s+instead",
+    # Multilingual
+    r"ignorer\s+.*instructions?\s+pré",
+    r"ignoriere\s+.*anweisung",
 ]
 
 _CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
@@ -116,6 +131,7 @@ class PromptSecurityGuard:
         if not self.detect_injections:
             return False
 
+        # Regex patterns
         for pattern in self._compiled_patterns:
             if pattern.search(content):
                 if self.log_injections:
@@ -126,6 +142,45 @@ class PromptSecurityGuard:
                         }
                     )
                 return True
+
+        # Decode base64 chunks and check for injection keywords
+        import base64
+
+        for token in content.split():
+            token = token.strip()
+            # Base64 detection
+            if len(token) >= 8 and token.endswith("=="):
+                try:
+                    decoded = base64.b64decode(token).decode("ascii", errors="ignore")
+                    lower_decoded = decoded.lower()
+                    if any(kw in lower_decoded for kw in ("admin", "mode", "ignore", "override", "bypass", "system", "jailbreak")):
+                        if self.log_injections:
+                            self._injection_attempts.append(
+                                {
+                                    "content": content[:200],
+                                    "source_type": source_type,
+                                }
+                            )
+                        return True
+                except Exception:
+                    pass
+            # Hex-encoded detection (16+ hex chars)
+            if len(token) >= 16 and all(c in "0123456789abcdefABCDEF" for c in token):
+                try:
+                    decoded = bytes.fromhex(token).decode("ascii", errors="ignore")
+                    lower_decoded = decoded.lower()
+                    if any(kw in lower_decoded for kw in ("admin", "mode", "ignore", "override", "bypass", "system", "jailbreak")):
+                        if self.log_injections:
+                            self._injection_attempts.append(
+                                {
+                                    "content": content[:200],
+                                    "source_type": source_type,
+                                }
+                            )
+                        return True
+                except Exception:
+                    pass
+
         return False
 
     def get_system_prompt_addendum(self) -> str:
