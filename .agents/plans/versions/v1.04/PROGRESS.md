@@ -1,10 +1,10 @@
 # v1.04 Progress — CORTEX
 
-## Status: Not Started
+## Status: In Progress
 
-**Started:** —
+**Started:** 2026-06-27
 **Last Updated:** 2026-06-27
-**Estimated Completion:** —
+**Estimated Completion:** 2026-06-27
 
 ---
 
@@ -12,7 +12,7 @@
 
 | Phase | Name | Status | Started | Completed | Notes |
 |-------|------|--------|---------|-----------|-------|
-| P01 | Awareness Models & Schema | Not Started | — | — | Database models, Pydantic schemas, migrations |
+| P01 | Awareness Models & Schema | ✅ Completed | 2026-06-27 | 2026-06-27 | 5 models, 5 schemas, Alembic migration applied |
 | P02 | Filesystem & Repository | Not Started | — | — | Core awareness services, change detection |
 | P03 | Project & Device | Not Started | — | — | Project detection, device info, environment, health |
 | P04 | API & Integration | Not Started | — | — | REST endpoints, frontend hooks, dashboard, E2E |
@@ -36,20 +36,20 @@
 
 | Metric | Value |
 |--------|-------|
-| Files created | 0 |
-| Tests added | 0 |
+| Files created | 15 |
+| Tests added | 17 |
 | Test coverage | pending |
-| Migration applied | No |
-| Migration rolled back | No |
+| Migration applied | ✅ Yes |
+| Migration rolled back | ✅ Verified |
 
 ---
 
 ## Summary
 
 - Total Phases: 4
-- Completed: 0
+- Completed: 1
 - In Progress: 0
-- Remaining: 4
+- Remaining: 3
 - Estimated Duration: 4-5 days (2 developers) or 6-8 days (1 developer)
 
 ---
