@@ -109,6 +109,24 @@ Invoke `cortex-integrity` skill or `/project:integrity` command to run repositor
 
 ---
 
+## Phase: Phase Execution
+
+Used by: `/project:cortex` P3, `/project:next`, `/project:phase`, `/project:start`
+
+Invoke `cortex-phase-executor` to read a phase plan file, execute each task via TDD cycle, validate, and update progress.
+
+This is the core implementation engine. It reads the phase file, parses tasks, executes them sequentially (test → implement → verify → commit), runs validation, and marks progress.
+
+---
+
+## Phase: Progress Tracking
+
+Used by: `/project:cortex` P6, `/project:next`, `/project:start`
+
+Invoke `cortex-progress-tracker` to read/update progress.md, generate status reports, and detect version completion milestones.
+
+---
+
 ## Phase: Repository Health Scan
 
 Used by: `/project:health`, `/project:improve`

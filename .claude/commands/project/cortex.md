@@ -36,9 +36,17 @@ Verify clean tree, correct naming, repo ready.
 
 ### P3: Implementation Loop
 
-For each logical unit: plan smallest increment → implement → TDD where practical → self-review → lint/format → fix → commit. Extend existing code, avoid duplication, maintain consistency. Repeat until objectives complete.
+Invoke `cortex-phase-executor` for the active phase plan (e.g., `.agents/plans/versions/vX.XX/P0N.md`).
 
-**Outcome:** Working implementation, tests passing, clean commits.
+The skill reads the phase file, parses all tasks, and executes each sequentially via TDD cycle:
+1. Write failing test → verify fail
+2. Implement minimal code → verify pass
+3. Commit with descriptive message
+4. Repeat for next task
+
+After all tasks: run validation (`make test`, `make lint`, `make format`).
+
+**Outcome:** All phase tasks completed, tests passing, clean commits.
 
 ---
 
@@ -56,9 +64,11 @@ Invoke `cortex-engineering-review`, `cortex-architecture-drift`, `cortex-adversa
 
 ---
 
-### P6: Post-Completion Reflection
+### P6: Progress Update & Reflection
 
-Invoke `cortex-post-reflection`. Apply action-items. Update progress tracking, architecture docs, ADRs, plans as needed.
+Invoke `cortex-progress-tracker` to update progress.md with completion status and timestamp.
+
+Invoke `cortex-post-reflection` for systematic analysis. Apply action-items. Update architecture docs, ADRs, plans as needed.
 
 ---
 

@@ -31,11 +31,8 @@ If no version is active (all components show "Not started"), start with **V1: Th
 # Contributor guide with execution order and constraints
 cat .agents/plans/IMPLEMENTATION_STEPS.md
 
-# Architecture constitution (10 principles, what to keep/reject)
+# Architecture constitution (13 binding principles)
 cat .agents/plans/GUIDE.md
-
-# Cross-reference matrix (which items go in which version)
-cat .agents/plans/FinalCompatibilities.md
 ```
 
 ### 3. Verify Governance Infrastructure
@@ -215,6 +212,20 @@ Branch → Skill Discovery → Brainstorm → Plan → Implement → Test → Va
 
 Every significant task follows this. No shortcuts. See `.agents/plans/IMPLEMENTATION_STEPS.md` for details.
 
+### Quick Start — Automated Plan-Oriented Development
+
+```
+/project:start          → Show current state, find next phase
+    ↓ (auto-invoke)
+/project:cortex         → Execute phase (TDD: test → implement → verify → commit per task)
+    ↓ (auto-invoke after completion)
+/project:next           → Chain to next phase, or report version complete
+    ↓ (repeat)
+/project:phase vX P0N   → Manual jump to any phase
+```
+
+**Every command reads GUIDE.md and IMPLEMENTATION_STEPS.md for architecture context.**
+
 ### Skill-First Architecture
 
 The Cortex ecosystem follows a skill-first hierarchy:
@@ -268,7 +279,10 @@ Hooks (enforce quality automatically)
 
 | Command | When | Purpose |
 |---------|------|---------|
-| `/project:cortex` | Start development session | Full autonomous development iteration: strategic planning → branch → implementation → validation → review → reflection → cleanup → version integrity. |
+| `/project:start` | Start of session | **Quick start.** Reads active version/phase from progress.md, displays status, offers to execute next phase automatically. |
+| `/project:cortex` | After /project:start | Full autonomous development iteration: discovery → branch → TDD implementation → validation → review → reflection → cleanup → version integration. |
+| `/project:next` | After completing a phase | **Phase chaining.** Auto-detects next incomplete phase and invokes /project:cortex. Continues until version complete. |
+| `/project:phase` | Manual phase selection | Execute a specific phase by name (e.g., `/project:phase v1.02 P03`). Shows available phases if no args. |
 
 ### Specialist Commands
 
