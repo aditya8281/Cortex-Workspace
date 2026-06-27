@@ -6,7 +6,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.db.base import Base
 
@@ -26,13 +26,9 @@ class AgentRunEvent(Base):
     event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     event_data: Mapped[dict] = mapped_column(JSONB, nullable=False)
     sequence_num: Mapped[int] = mapped_column(Integer, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    __table_args__ = (
-        Index("ix_agent_run_events_sequence", "run_id", "sequence_num"),
-    )
+    __table_args__ = (Index("ix_agent_run_events_sequence", "run_id", "sequence_num"),)
 
 
 class AgentRunToolCall(Base):
@@ -53,6 +49,4 @@ class AgentRunToolCall(Base):
     success: Mapped[bool] = mapped_column(Boolean, nullable=False)
     duration_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
