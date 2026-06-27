@@ -1,2 +1,2 @@
 // Search Feature Module — Public API
-export {};
+export { default } from './page';
