@@ -118,7 +118,7 @@ async def lifespan(app: FastAPI):
     if "pytest" not in sys.modules:
         try:
             from backend.app.db.session import SessionLocal as _SyncSession
-            from backend.app.models.sync_state import SyncState as _SyncState
+            from backend.app.models.integration.sync_state import SyncState as _SyncState
 
             _sdb = _SyncSession()
             try:
@@ -166,7 +166,7 @@ async def lifespan(app: FastAPI):
     # Clean up orphaned agent runs left behind by a previous crash/restart
     if "pytest" not in sys.modules:
         from backend.app.db.session import SessionLocal as _SessionLocal
-        from backend.app.models.agent import AgentRun
+        from backend.app.models.cognition.agent import AgentRun
 
         db = _SessionLocal()
         try:

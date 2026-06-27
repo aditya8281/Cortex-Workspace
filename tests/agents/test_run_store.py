@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from backend.app.agents.run_store import RunStore
-from backend.app.models.agent import AgentRun, AgentStep
+from backend.app.models.cognition.agent import AgentRun, AgentStep
 
 # ── Fixtures ────────────────────────────────────────────────────────────
 

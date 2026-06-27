@@ -30,7 +30,7 @@ def test_create_repo(client, mock_auth):
 
 
 def test_get_repo(client, mock_auth, db_session):
-    from backend.app.models.repo_index import RepoIndex
+    from backend.app.models.awareness.repo_index import RepoIndex
 
     repo = RepoIndex(
         user_id=1,
@@ -55,7 +55,7 @@ def test_get_repo_not_found(client, mock_auth):
 
 
 def test_update_repo(client, mock_auth, db_session):
-    from backend.app.models.repo_index import RepoIndex
+    from backend.app.models.awareness.repo_index import RepoIndex
 
     repo = RepoIndex(
         user_id=1,
@@ -79,7 +79,7 @@ def test_update_repo(client, mock_auth, db_session):
 
 
 def test_delete_repo(client, mock_auth, db_session):
-    from backend.app.models.repo_index import RepoIndex
+    from backend.app.models.awareness.repo_index import RepoIndex
 
     repo = RepoIndex(
         user_id=1,
@@ -105,7 +105,7 @@ def test_delete_repo_not_found(client, mock_auth):
 
 
 def test_index_repo(client, mock_auth, db_session):
-    from backend.app.models.repo_index import RepoIndex
+    from backend.app.models.awareness.repo_index import RepoIndex
 
     repo = RepoIndex(
         user_id=1,
@@ -127,7 +127,7 @@ def test_index_repo(client, mock_auth, db_session):
 
 
 def test_get_repo_status(client, mock_auth, db_session):
-    from backend.app.models.repo_index import RepoIndex
+    from backend.app.models.awareness.repo_index import RepoIndex
 
     repo = RepoIndex(
         user_id=1,
@@ -151,7 +151,7 @@ def test_get_repo_status(client, mock_auth, db_session):
 
 
 def test_get_repo_graph(client, mock_auth, db_session):
-    from backend.app.models.repo_index import RepoIndex
+    from backend.app.models.awareness.repo_index import RepoIndex
 
     repo = RepoIndex(
         user_id=1,

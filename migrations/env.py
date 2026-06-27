@@ -35,16 +35,16 @@ if _db_url:
 # Import models so Alembic autogenerate can detect them.
 from backend.app.db.base import Base  # noqa: E402
 from backend.app.intelligence.models import KnowledgeEntry  # noqa: F401, E402
-from backend.app.models.agent import Agent, AgentFeedback, AgentRun, AgentStep  # noqa: F401, E402
-from backend.app.models.auth_event import AuthEvent  # noqa: F401, E402
-from backend.app.models.conversation import Conversation, ConversationMessage  # noqa: F401, E402
-from backend.app.models.document import Document, DocumentChunk  # noqa: F401, E402
-from backend.app.models.embedding_cache import EmbeddingCache  # noqa: F401, E402
-from backend.app.models.file_index import IndexedFile  # noqa: F401, E402
-from backend.app.models.graph import GraphEdge, GraphNode  # noqa: F401, E402
-from backend.app.models.indexing_config import IndexingConfig  # noqa: F401, E402
-from backend.app.models.long_term_memory import LongTermMemory  # noqa: F401, E402
-from backend.app.models.model_catalog import (  # noqa: F401, E402
+from backend.app.models.cognition.agent import Agent, AgentFeedback, AgentRun, AgentStep  # noqa: F401, E402
+from backend.app.models.privacy.auth_event import AuthEvent  # noqa: F401, E402
+from backend.app.models.interaction.conversation import Conversation, ConversationMessage  # noqa: F401, E402
+from backend.app.models.memory.document import Document, DocumentChunk  # noqa: F401, E402
+from backend.app.models.intelligence.embedding_cache import EmbeddingCache  # noqa: F401, E402
+from backend.app.models.awareness.file_index import IndexedFile  # noqa: F401, E402
+from backend.app.models.memory.graph import GraphEdge, GraphNode  # noqa: F401, E402
+from backend.app.models.awareness.indexing_config import IndexingConfig  # noqa: F401, E402
+from backend.app.models.memory.long_term_memory import LongTermMemory  # noqa: F401, E402
+from backend.app.models.intelligence.model_catalog import (  # noqa: F401, E402
     Capability,
     HardwareProfile,
     ModelCatalog,
@@ -57,13 +57,13 @@ from backend.app.models.model_catalog import (  # noqa: F401, E402
     Quantization,
     SyncJob,
 )
-from backend.app.models.notification import Notification  # noqa: F401, E402
-from backend.app.models.path_index import PathIndex  # noqa: F401, E402
-from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401, E402
-from backend.app.models.storage_registry import StorageRegistry  # noqa: F401, E402
-from backend.app.models.sync_state import SyncState  # noqa: F401, E402
-from backend.app.models.user import User  # noqa: F401, E402
-from backend.app.models.user_settings import UserModelSettings  # noqa: F401, E402
+from backend.app.models.interaction.notification import Notification  # noqa: F401, E402
+from backend.app.models.memory.path_index import PathIndex  # noqa: F401, E402
+from backend.app.models.awareness.repo_index import CodeChunk, RepoIndex  # noqa: F401, E402
+from backend.app.models.memory.storage_registry import StorageRegistry  # noqa: F401, E402
+from backend.app.models.integration.sync_state import SyncState  # noqa: F401, E402
+from backend.app.models.interaction.user import User  # noqa: F401, E402
+from backend.app.models.privacy.user_settings import UserModelSettings  # noqa: F401, E402
 
 target_metadata = Base.metadata
 

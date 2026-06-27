@@ -23,7 +23,7 @@ from cryptography.fernet import Fernet
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 
 logger = logging.getLogger(__name__)
 

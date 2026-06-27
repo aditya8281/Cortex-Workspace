@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.core.db import get_current_user, get_db
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 from backend.app.services.intelligence.hybrid_retrieval import HybridRetrievalV2
 from backend.app.services.intelligence.metrics import get_retrieval_metrics
 

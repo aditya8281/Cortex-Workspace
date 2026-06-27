@@ -27,7 +27,7 @@ def _make_user(user_id: int):
 
 
 def test_user_cannot_access_other_users_conversation(client, mock_auth, db_session):
-    from backend.app.models.conversation import Conversation
+    from backend.app.models.interaction.conversation import Conversation
 
     conv = Conversation(user_id=1, title="Private Conv")
     db_session.add(conv)
@@ -44,7 +44,7 @@ def test_user_cannot_access_other_users_conversation(client, mock_auth, db_sessi
 
 
 def test_user_cannot_delete_other_users_conversation(client, mock_auth, db_session):
-    from backend.app.models.conversation import Conversation
+    from backend.app.models.interaction.conversation import Conversation
 
     conv = Conversation(user_id=1, title="Do Not Delete")
     db_session.add(conv)
@@ -62,7 +62,7 @@ def test_user_cannot_delete_other_users_conversation(client, mock_auth, db_sessi
 
 @patch("backend.app.services.intelligence.rag_pipeline.get_rag_pipeline")
 def test_user_cannot_send_message_to_other_users_conversation(mock_get_rag, client, mock_auth, db_session):
-    from backend.app.models.conversation import Conversation
+    from backend.app.models.interaction.conversation import Conversation
 
     conv = Conversation(user_id=1, title="Chat Private")
     db_session.add(conv)
@@ -87,7 +87,7 @@ def test_user_cannot_send_message_to_other_users_conversation(mock_get_rag, clie
 
 
 def test_user_only_sees_own_conversations(client, mock_auth, db_session):
-    from backend.app.models.conversation import Conversation
+    from backend.app.models.interaction.conversation import Conversation
 
     for i in range(2):
         conv = Conversation(user_id=1, title=f"User1 Conv {i}")

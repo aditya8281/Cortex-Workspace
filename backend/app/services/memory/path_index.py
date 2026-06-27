@@ -14,7 +14,7 @@ from pathlib import Path
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
-from backend.app.models.path_index import PathIndex
+from backend.app.models.memory.path_index import PathIndex
 
 logger = logging.getLogger(__name__)
 

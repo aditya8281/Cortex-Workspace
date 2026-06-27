@@ -33,7 +33,7 @@ def test_create_agent(client, mock_auth):
 
 
 def test_get_agent(client, mock_auth, db_session):
-    from backend.app.models.agent import Agent
+    from backend.app.models.cognition.agent import Agent
 
     agent = Agent(
         user_id=mock_auth.id,
@@ -58,7 +58,7 @@ def test_get_agent_not_found(client, mock_auth):
 
 
 def test_update_agent(client, mock_auth, db_session):
-    from backend.app.models.agent import Agent
+    from backend.app.models.cognition.agent import Agent
 
     agent = Agent(
         user_id=mock_auth.id,
@@ -84,7 +84,7 @@ def test_update_agent(client, mock_auth, db_session):
 
 
 def test_delete_agent(client, mock_auth, db_session):
-    from backend.app.models.agent import Agent
+    from backend.app.models.cognition.agent import Agent
 
     agent = Agent(
         user_id=mock_auth.id,
@@ -110,7 +110,7 @@ def test_delete_agent_not_found(client, mock_auth):
 
 @patch("backend.app.agents.background.run_agent_background", new_callable=AsyncMock)
 def test_create_run(mock_bg, client, mock_auth, db_session):
-    from backend.app.models.agent import Agent
+    from backend.app.models.cognition.agent import Agent
 
     agent = Agent(
         user_id=mock_auth.id,
@@ -134,7 +134,7 @@ def test_create_run(mock_bg, client, mock_auth, db_session):
 
 
 def test_list_runs(client, mock_auth, db_session):
-    from backend.app.models.agent import Agent, AgentRun
+    from backend.app.models.cognition.agent import Agent, AgentRun
 
     agent = Agent(
         user_id=mock_auth.id,
@@ -163,7 +163,7 @@ def test_list_runs(client, mock_auth, db_session):
 
 
 def test_get_run(client, mock_auth, db_session):
-    from backend.app.models.agent import Agent, AgentRun
+    from backend.app.models.cognition.agent import Agent, AgentRun
 
     agent = Agent(
         user_id=mock_auth.id,
@@ -199,7 +199,7 @@ def test_get_run_not_found(client, mock_auth):
 
 
 def test_get_run_steps(client, mock_auth, db_session):
-    from backend.app.models.agent import Agent, AgentRun, AgentStep
+    from backend.app.models.cognition.agent import Agent, AgentRun, AgentStep
 
     agent = Agent(
         user_id=mock_auth.id,

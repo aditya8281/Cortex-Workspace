@@ -10,7 +10,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.app.models.model_catalog import Provider
+from backend.app.models.intelligence.model_catalog import Provider
 from backend.app.services.intelligence.providers.base import ProviderAdapter
 from backend.app.services.intelligence.providers.huggingface import HuggingFaceProvider
 from backend.app.services.intelligence.providers.ollama import OllamaProvider

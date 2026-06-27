@@ -155,7 +155,7 @@ class HybridRetrievalV2:
 
     def _graph_search(self, query: str, limit: int) -> list[RetrievalResult]:
         try:
-            from backend.app.models.graph import GraphEdge, GraphNode
+            from backend.app.models.memory.graph import GraphEdge, GraphNode
 
             terms = query.lower().split()
             results = []

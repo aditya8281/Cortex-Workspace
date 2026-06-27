@@ -13,8 +13,8 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from backend.app.core.redis import redis_cache
-from backend.app.models.document import Document, DocumentChunk
-from backend.app.models.repo_index import CodeChunk, RepoIndex
+from backend.app.models.awareness.repo_index import CodeChunk, RepoIndex
+from backend.app.models.memory.document import Document, DocumentChunk
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ import tempfile
 import pytest
 from sqlalchemy.orm import Session
 
-from backend.app.models.document import Document, DocumentType
+from backend.app.models.memory.document import Document, DocumentType
 from backend.app.services.memory.document_indexer import DocumentIndexer, _detect_doc_type, _file_hash
 
 

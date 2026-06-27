@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from backend.app.models.long_term_memory import LongTermMemory
+from backend.app.models.memory.long_term_memory import LongTermMemory
 
 CATEGORIES = ("preference", "pattern", "correction", "fact", "context")
 

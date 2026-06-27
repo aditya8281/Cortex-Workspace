@@ -75,7 +75,7 @@ class BatchIndexer:
 
         try:
             # Batch insert to PostgreSQL
-            from backend.app.models.repo_index import CodeChunk
+            from backend.app.models.awareness.repo_index import CodeChunk
 
             for item in items:
                 try:

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
-from backend.app.models.embedding_cache import EmbeddingCache
+from backend.app.models.intelligence.embedding_cache import EmbeddingCache
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ from collections.abc import Callable
 from fastapi import Depends, HTTPException
 
 from backend.app.core.db import get_current_user
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 
 
 def require_role(role: str) -> Callable:

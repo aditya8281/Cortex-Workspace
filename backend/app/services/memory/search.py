@@ -7,7 +7,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from backend.app.core.vector_db import get_vector_db
-from backend.app.models.graph import GraphEdge, GraphNode
+from backend.app.models.memory.graph import GraphEdge, GraphNode
 from backend.app.services.intelligence.embedding_service import get_embedding_service
 
 logger = logging.getLogger(__name__)

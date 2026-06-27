@@ -35,7 +35,7 @@ def mock_retrieval():
 def mock_conv_service():
     class Mock:
         def get_context_messages(self, conversation_id, max_tokens=32000):
-            from backend.app.models.conversation import ConversationMessage
+            from backend.app.models.interaction.conversation import ConversationMessage
 
             return [
                 ConversationMessage(id=1, conversation_id=1, role="user", content="Hello", tokens=1),
@@ -43,7 +43,7 @@ def mock_conv_service():
             ]
 
         def get_messages(self, conversation_id, limit=50):
-            from backend.app.models.conversation import ConversationMessage
+            from backend.app.models.interaction.conversation import ConversationMessage
 
             return [
                 ConversationMessage(
@@ -112,7 +112,7 @@ def test_consolidate(rag: RAGPipeline):
 def test_consolidate_too_few_messages(rag: RAGPipeline):
     class ShortConv:
         def get_messages(self, cid, limit=50):
-            from backend.app.models.conversation import ConversationMessage
+            from backend.app.models.interaction.conversation import ConversationMessage
 
             return [ConversationMessage(id=1, conversation_id=1, role="user", content="hi", tokens=1)]
 

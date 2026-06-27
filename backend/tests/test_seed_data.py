@@ -1,6 +1,6 @@
 """Tests for seed data service."""
 
-from backend.app.models.model_catalog import Capability, Provider, Quantization
+from backend.app.models.intelligence.model_catalog import Capability, Provider, Quantization
 from backend.app.services.system.seed_data import (
     CAPABILITIES,
     PROVIDERS,

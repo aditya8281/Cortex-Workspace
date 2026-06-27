@@ -20,7 +20,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from backend.app.models.agent import AgentRun
+from backend.app.models.cognition.agent import AgentRun
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +166,7 @@ class RunStore:
 
         Steps are ordered oldest-first (chronological).
         """
-        from backend.app.models.agent import AgentStep
+        from backend.app.models.cognition.agent import AgentStep
 
         steps = (
             self.db.query(AgentStep)

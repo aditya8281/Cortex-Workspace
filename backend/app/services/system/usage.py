@@ -6,7 +6,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from backend.app.models.model_catalog import ModelUsage
+from backend.app.models.intelligence.model_catalog import ModelUsage
 
 logger = logging.getLogger(__name__)
 

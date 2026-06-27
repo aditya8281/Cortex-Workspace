@@ -12,8 +12,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.app.core.db import get_current_user, get_db
-from backend.app.models.conversation import Conversation
-from backend.app.models.user import User
+from backend.app.models.interaction.conversation import Conversation
+from backend.app.models.interaction.user import User
 
 logger = logging.getLogger(__name__)
 from backend.app.schemas.conversation import (

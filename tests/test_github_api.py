@@ -5,7 +5,7 @@ HEADERS = {"Authorization": "Bearer fake-token"}
 
 def _make_real_user(db_session):
     from backend.app.core.security import hash_password
-    from backend.app.models.user import User
+    from backend.app.models.interaction.user import User
 
     user = User(
         username="test_user",

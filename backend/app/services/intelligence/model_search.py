@@ -10,7 +10,7 @@ from sqlalchemy import cast as sa_cast
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from backend.app.models.model_catalog import ModelCatalog
+from backend.app.models.intelligence.model_catalog import ModelCatalog
 
 logger = logging.getLogger(__name__)
 

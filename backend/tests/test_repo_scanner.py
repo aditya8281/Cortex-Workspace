@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from backend.app.db.base import Base
-from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401
+from backend.app.models.awareness.repo_index import CodeChunk, RepoIndex  # noqa: F401
 from backend.app.services.awareness.repository import RepoScanner
 from backend.app.services.intelligence.chunker import chunk_code, chunk_text, detect_language
 

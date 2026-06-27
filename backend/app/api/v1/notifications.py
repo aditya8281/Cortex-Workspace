@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 from backend.app.schemas.notification import NotificationListResponse, NotificationResponse
 from backend.app.schemas.notification_extra import NotificationMarkReadResponse, NotificationOkResponse
 from backend.app.services.interaction import notifications as notification_service

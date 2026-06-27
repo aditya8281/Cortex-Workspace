@@ -23,9 +23,9 @@ from backend.app.api.deps import get_db
 from backend.app.core.security import hash_password
 from backend.app.db.base import Base
 from backend.app.main import app
-from backend.app.models.auth_event import AuthEvent  # noqa: F401
-from backend.app.models.storage_registry import StorageRegistry  # noqa: F401
-from backend.app.models.user import User  # noqa: F401
+from backend.app.models.interaction.user import User  # noqa: F401
+from backend.app.models.memory.storage_registry import StorageRegistry  # noqa: F401
+from backend.app.models.privacy.auth_event import AuthEvent  # noqa: F401
 from backend.app.services.memory import vault as vault_service
 from backend.app.services.memory.storage_registry import register_user_storage
 from backend.app.services.memory.vault import (

@@ -157,8 +157,8 @@ def test_delete_user_soft_delete(client):
 
     from backend.app.api.deps import get_db
     from backend.app.main import app
-    from backend.app.models.storage_registry import StorageRegistry
-    from backend.app.models.user import User
+    from backend.app.models.interaction.user import User
+    from backend.app.models.memory.storage_registry import StorageRegistry
 
     storage = _make_test_storage("cortex_sd_")
     try:

@@ -28,7 +28,7 @@ def test_create_conversation(client, mock_auth):
 
 
 def test_get_conversation(client, mock_auth, db_session):
-    from backend.app.models.conversation import Conversation
+    from backend.app.models.interaction.conversation import Conversation
 
     conv = Conversation(user_id=1, title="Get Me")
     db_session.add(conv)
@@ -49,7 +49,7 @@ def test_get_conversation_not_found(client, mock_auth):
 
 
 def test_delete_conversation(client, mock_auth, db_session):
-    from backend.app.models.conversation import Conversation
+    from backend.app.models.interaction.conversation import Conversation
 
     conv = Conversation(user_id=1, title="Delete Me")
     db_session.add(conv)
@@ -72,7 +72,7 @@ def test_delete_conversation_not_found(client, mock_auth):
 @patch("backend.app.services.intelligence.rag_pipeline.get_rag_pipeline")
 @patch("backend.app.services.intelligence.llm.manager.llm_manager")
 def test_send_message(mock_llm, mock_get_rag, client, mock_auth, db_session):
-    from backend.app.models.conversation import Conversation
+    from backend.app.models.interaction.conversation import Conversation
 
     conv = Conversation(user_id=1, title="Chat Conv")
     db_session.add(conv)

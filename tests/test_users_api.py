@@ -8,7 +8,7 @@ def mock_admin(db_session):
     from backend.app.api.deps import get_current_user
     from backend.app.core.security import hash_password
     from backend.app.main import app
-    from backend.app.models.user import User
+    from backend.app.models.interaction.user import User
 
     admin = User(
         username="admin_user",
@@ -32,7 +32,7 @@ def mock_admin(db_session):
 
 def _create_test_user(db_session):
     from backend.app.core.security import hash_password
-    from backend.app.models.user import User
+    from backend.app.models.interaction.user import User
 
     user = User(
         username="target_user",

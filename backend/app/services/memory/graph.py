@@ -9,8 +9,8 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from backend.app.models.graph import GraphEdge, GraphNode
-from backend.app.models.repo_index import CodeChunk, RepoIndex
+from backend.app.models.awareness.repo_index import CodeChunk, RepoIndex
+from backend.app.models.memory.graph import GraphEdge, GraphNode
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ class GraphBuilder:
         """Build graph nodes and edges from a Document's chunks."""
         from datetime import datetime
 
-        from backend.app.models.document import Document, DocumentChunk
+        from backend.app.models.memory.document import Document, DocumentChunk
         from backend.app.services.intelligence.entity_extraction import EntityExtractor
 
         extractor = EntityExtractor()

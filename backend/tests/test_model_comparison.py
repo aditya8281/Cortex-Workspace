@@ -2,7 +2,7 @@
 
 import pytest
 
-from backend.app.models.model_catalog import ModelCatalog, ModelVariant
+from backend.app.models.intelligence.model_catalog import ModelCatalog, ModelVariant
 from backend.app.services.awareness.hardware import HardwareProfile
 from backend.app.services.intelligence.model_comparison import (
     COMPARISON_DIMENSIONS,

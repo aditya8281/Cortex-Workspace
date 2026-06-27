@@ -4,7 +4,7 @@ import pytest
 
 from backend.app.api.deps import get_current_user
 from backend.app.main import app
-from backend.app.models.long_term_memory import LongTermMemory
+from backend.app.models.memory.long_term_memory import LongTermMemory
 
 HEADERS = {"Authorization": "Bearer fake-token"}
 

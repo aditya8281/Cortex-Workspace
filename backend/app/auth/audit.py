@@ -33,7 +33,7 @@ def log_event(
         db = SessionLocal()
         owns_db = True
     try:
-        from backend.app.models.auth_event import AuthEvent
+        from backend.app.models.privacy.auth_event import AuthEvent
 
         ev = AuthEvent(
             user_id=user_id,

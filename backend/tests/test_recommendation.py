@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
-from backend.app.models.model_catalog import ModelCatalog, ModelStatistics
+from backend.app.models.intelligence.model_catalog import ModelCatalog, ModelStatistics
 from backend.app.services.awareness.hardware import HardwareProfile
 from backend.app.services.intelligence.recommendation import WORKLOADS, RecommendationEngine
 

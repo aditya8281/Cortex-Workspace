@@ -11,7 +11,7 @@ def test_list_notifications_empty(client, mock_auth):
 
 
 def test_mark_notification_read(client, mock_auth, db_session):
-    from backend.app.models.notification import Notification
+    from backend.app.models.interaction.notification import Notification
 
     notif = Notification(user_id=1, type="system", title="Test", message="Hello", read=False)
     db_session.add(notif)
@@ -29,7 +29,7 @@ def test_mark_notification_read_not_found(client, mock_auth):
 
 
 def test_mark_all_read(client, mock_auth, db_session):
-    from backend.app.models.notification import Notification
+    from backend.app.models.interaction.notification import Notification
 
     for i in range(3):
         db_session.add(Notification(user_id=1, type="system", title=f"N{i}", message="m", read=False))
@@ -43,7 +43,7 @@ def test_mark_all_read(client, mock_auth, db_session):
 
 
 def test_delete_notification(client, mock_auth, db_session):
-    from backend.app.models.notification import Notification
+    from backend.app.models.interaction.notification import Notification
 
     notif = Notification(user_id=1, type="system", title="Del", message="x", read=False)
     db_session.add(notif)

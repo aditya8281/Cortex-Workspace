@@ -18,7 +18,7 @@ from backend.app.agents.executor import ExecutorAgent
 from backend.app.agents.planner import PlannerAgent
 from backend.app.agents.run_store import RunStore
 from backend.app.core.config import settings
-from backend.app.models.agent import Agent, AgentFeedback, AgentRun, AgentStep
+from backend.app.models.cognition.agent import Agent, AgentFeedback, AgentRun, AgentStep
 from backend.app.services.intelligence.llm.manager import llm_manager
 
 logger = logging.getLogger(__name__)

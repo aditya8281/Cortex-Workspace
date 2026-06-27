@@ -2,7 +2,7 @@
 
 from sqlalchemy.orm import Session
 
-from backend.app.models.document import Document, DocumentChunk, DocumentType
+from backend.app.models.memory.document import Document, DocumentChunk, DocumentType
 
 
 def test_document_creation(db_session: Session):

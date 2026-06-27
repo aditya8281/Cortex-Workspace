@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 from backend.app.schemas.sync import SyncStopResponse, SyncValidatePathResponse
 from backend.app.services.awareness.file_watcher import get_file_watcher_v2
 from backend.app.tasks.worker import enqueue_task
@@ -288,8 +288,8 @@ async def start_sync(
     current_user: User = Depends(get_current_user),
 ):
     from backend.app.core.system_paths import get_blocked_system_paths
-    from backend.app.models.repo_index import RepoIndex
-    from backend.app.models.sync_state import SyncState
+    from backend.app.models.awareness.repo_index import RepoIndex
+    from backend.app.models.integration.sync_state import SyncState
 
     repo_path = str(Path(payload.repo_path).expanduser().resolve())
 
@@ -372,7 +372,7 @@ async def stop_sync(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from backend.app.models.sync_state import SyncState
+    from backend.app.models.integration.sync_state import SyncState
 
     repo_path = str(Path(payload.repo_path).expanduser().resolve())
     watcher = get_file_watcher_v2()
@@ -399,7 +399,7 @@ async def get_sync_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from backend.app.models.sync_state import SyncState
+    from backend.app.models.integration.sync_state import SyncState
 
     watcher = get_file_watcher_v2()
     user_states = db.query(SyncState).filter(SyncState.user_id == current_user.id).all()

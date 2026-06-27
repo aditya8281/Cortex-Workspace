@@ -8,7 +8,7 @@ import time
 from fastapi import APIRouter, Depends
 
 from backend.app.core.db import get_current_user
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 from backend.app.schemas.model import LLMHealthResponse, LLMMetricsResponse
 from backend.app.services.intelligence.llm.manager import llm_manager
 

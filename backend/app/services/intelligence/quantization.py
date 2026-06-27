@@ -7,7 +7,7 @@ from typing import cast
 import structlog
 from sqlalchemy.orm import Session
 
-from backend.app.models.model_catalog import Quantization
+from backend.app.models.intelligence.model_catalog import Quantization
 
 logger = structlog.get_logger()
 

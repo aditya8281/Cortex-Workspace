@@ -6,7 +6,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from backend.app.models.notification import Notification
+from backend.app.models.interaction.notification import Notification
 
 logger = logging.getLogger(__name__)
 

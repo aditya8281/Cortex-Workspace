@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.core.db import get_current_user, get_db
-from backend.app.models.repo_index import RepoIndex
-from backend.app.models.user import User
+from backend.app.models.awareness.repo_index import RepoIndex
+from backend.app.models.interaction.user import User
 from backend.app.schemas.repository import (
     GraphBuildResponse,
     RepoCreateResponse,
@@ -222,7 +222,7 @@ def index_status(
     if repo.user_id is not None and repo.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Repository not found")
 
-    from backend.app.models.file_index import IndexedFile
+    from backend.app.models.awareness.file_index import IndexedFile
 
     files = db.query(IndexedFile).filter(IndexedFile.repo_id == repo_id).all()
 

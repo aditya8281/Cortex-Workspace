@@ -14,8 +14,8 @@ from sqlalchemy.orm import Session
 from backend.app.api.deps import get_current_user, get_db
 from backend.app.core.db import get_current_user_optional
 from backend.app.db.session import SessionLocal
-from backend.app.models.storage_registry import StorageRegistry
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
+from backend.app.models.memory.storage_registry import StorageRegistry
 from backend.app.schemas.user import UserResponse
 from backend.app.services.interaction.user import to_user_response
 

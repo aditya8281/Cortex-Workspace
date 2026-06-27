@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
-from backend.app.models.long_term_memory import LongTermMemory
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
+from backend.app.models.memory.long_term_memory import LongTermMemory
 from backend.app.services.memory.long_term import LongTermMemoryService
 
 router = APIRouter()

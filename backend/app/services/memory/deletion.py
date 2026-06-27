@@ -9,7 +9,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from backend.app.core.vector_db import VectorDB, get_vector_db
-from backend.app.models.document import Document, DocumentChunk
+from backend.app.models.memory.document import Document, DocumentChunk
 from backend.app.services.intelligence.embedding_cache import EmbeddingCacheService, get_embedding_cache
 
 logger = logging.getLogger(__name__)
@@ -139,7 +139,7 @@ class DeletionPipeline:
 
     def _invalidate_orphaned_embeddings(self) -> int:
         """Invalidate cache entries with no referencing chunks."""
-        from backend.app.models.embedding_cache import EmbeddingCache
+        from backend.app.models.intelligence.embedding_cache import EmbeddingCache
 
         cached_hashes = {row[0] for row in self._db.query(EmbeddingCache.content_hash).all()}
         used_ids = {

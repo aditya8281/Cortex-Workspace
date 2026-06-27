@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from backend.app.core.storage_abstraction import validate_storage_path
-from backend.app.models.storage_registry import StorageRegistry
+from backend.app.models.memory.storage_registry import StorageRegistry
 
 
 def get_registry_for_user(db: Session, user_id: int) -> StorageRegistry | None:

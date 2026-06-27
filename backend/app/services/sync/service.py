@@ -13,7 +13,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.app.models.model_catalog import ModelCatalog, Provider, SyncJob
+from backend.app.models.intelligence.model_catalog import ModelCatalog, Provider, SyncJob
 from backend.app.services.intelligence.providers.base import ProviderModelInfo
 from backend.app.services.intelligence.providers.registry import provider_registry
 

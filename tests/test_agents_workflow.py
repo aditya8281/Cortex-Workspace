@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from backend.app.models.agent import Agent, AgentFeedback, AgentRun, AgentStep
+from backend.app.models.cognition.agent import Agent, AgentFeedback, AgentRun, AgentStep
 
 HEADERS = {"Authorization": "Bearer fake-token"}
 

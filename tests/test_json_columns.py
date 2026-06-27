@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 
 
 def test_json_roundtrip(client):

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 
 router = APIRouter()
 

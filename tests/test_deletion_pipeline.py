@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from backend.app.models.document import Document, DocumentChunk, DocumentType
+from backend.app.models.memory.document import Document, DocumentChunk, DocumentType
 from backend.app.services.memory.deletion import DeletionPipeline
 
 

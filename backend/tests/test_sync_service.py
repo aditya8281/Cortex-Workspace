@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from backend.app.models.model_catalog import ModelCatalog, SyncJob
+from backend.app.models.intelligence.model_catalog import ModelCatalog, SyncJob
 from backend.app.services.intelligence.ollama_catalog import CatalogSourceStatus
 from backend.app.services.intelligence.providers.base import ProviderModelInfo
 from backend.app.services.sync.service import SyncService

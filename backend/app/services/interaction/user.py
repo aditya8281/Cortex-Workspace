@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.app.core.security import hash_password, verify_password
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 from backend.app.schemas.user import UserCreate, UserRegisterPayload, UserResponse, UserUpdate
 
 logger = logging.getLogger(__name__)

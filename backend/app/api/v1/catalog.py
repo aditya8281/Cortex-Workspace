@@ -10,8 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.core.db import get_current_user, get_db
-from backend.app.models.model_catalog import ModelCatalog, ModelVariant
-from backend.app.models.user import User
+from backend.app.models.intelligence.model_catalog import ModelCatalog, ModelVariant
+from backend.app.models.interaction.user import User
 from backend.app.schemas.model import (
     AutocompleteResponse,
     CatalogSourceStatusResponse,

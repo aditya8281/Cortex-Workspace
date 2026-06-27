@@ -6,7 +6,7 @@ import fnmatch
 import os
 from pathlib import Path
 
-from backend.app.models.indexing_config import IndexingConfig
+from backend.app.models.awareness.indexing_config import IndexingConfig
 from backend.app.services.intelligence.chunker import SKIP_DIRS
 
 # Default exclusion rules — things that should NEVER be indexed

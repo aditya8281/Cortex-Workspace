@@ -32,7 +32,7 @@ async def get_current_user(
     token: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
-    from backend.app.models.user import User
+    from backend.app.models.interaction.user import User
 
     raw_token = _extract_token(request, token)
     if not raw_token:
@@ -88,7 +88,7 @@ async def get_current_user_optional(
     token: HTTPAuthorizationCredentials | None = Depends(oauth2_scheme_optional),
     db: Session = Depends(get_db),
 ):
-    from backend.app.models.user import User
+    from backend.app.models.interaction.user import User
 
     raw_token = _extract_token(request, token)
     if raw_token is None:

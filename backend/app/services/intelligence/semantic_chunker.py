@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from backend.app.models.document import DocumentType
+from backend.app.models.memory.document import DocumentType
 
 
 @dataclass

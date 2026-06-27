@@ -6,7 +6,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.app.models.model_catalog import Capability, Provider, Quantization
+from backend.app.models.intelligence.model_catalog import Capability, Provider, Quantization
 
 logger = structlog.get_logger()
 

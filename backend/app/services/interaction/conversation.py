@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 import builtins
 
-from backend.app.models.conversation import Conversation, ConversationMessage
+from backend.app.models.interaction.conversation import Conversation, ConversationMessage
 
 # Approximate tokens per character (English text ~4 chars per token)
 CHARS_PER_TOKEN = 4

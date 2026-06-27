@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from backend.app.core.db import get_current_user
 from backend.app.core.logging import get_recent_logs
 from backend.app.core.system_info import get_disk_info, get_gpu_info, get_ram_info
-from backend.app.models.user import User
+from backend.app.models.interaction.user import User
 from backend.app.schemas.system import SystemLogsResponse, SystemMetricsResponse
 
 router = APIRouter()

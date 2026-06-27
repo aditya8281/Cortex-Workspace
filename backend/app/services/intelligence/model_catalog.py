@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.app.models.model_catalog import ModelCatalog, ModelVariant
+from backend.app.models.intelligence.model_catalog import ModelCatalog, ModelVariant
 
 logger = logging.getLogger(__name__)
 

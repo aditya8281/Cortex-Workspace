@@ -2,7 +2,7 @@
 
 import pytest
 
-from backend.app.models.document import DocumentType
+from backend.app.models.memory.document import DocumentType
 from backend.app.services.intelligence.semantic_chunker import SemanticChunker, estimate_tokens
 
 
