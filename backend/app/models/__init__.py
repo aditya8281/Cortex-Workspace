@@ -42,6 +42,15 @@ from backend.app.models.memory.storage_registry import StorageRegistry
 from backend.app.models.privacy.auth_event import AuthEvent
 from backend.app.models.privacy.user_settings import UserModelSettings
 
+# System domain — v1.02 new models
+from backend.app.models.system.agent_run_event import AgentRunEvent, AgentRunToolCall
+from backend.app.models.system.mcp_server import MCPServer, MCPServerTool
+from backend.app.models.system.observability import (  # noqa: F401
+    PerformanceBaseline,
+    TokenUsage,
+    ToolExecutionMetrics,
+)
+
 __all__ = [
     # Memory
     "Document",
@@ -85,4 +94,12 @@ __all__ = [
     "UserModelSettings",
     # Integration
     "SyncState",
+    # System — v1.02
+    "MCPServer",
+    "MCPServerTool",
+    "AgentRunEvent",
+    "AgentRunToolCall",
+    "TokenUsage",
+    "ToolExecutionMetrics",
+    "PerformanceBaseline",
 ]
