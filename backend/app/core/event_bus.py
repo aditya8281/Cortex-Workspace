@@ -107,11 +107,7 @@ class EventBus:
         return {
             "total_events_published": self._event_count,
             "total_handler_errors": self._error_count,
-            "handler_count_by_type": {
-                et.value: len(handlers)
-                for et, handlers in self._handlers.items()
-                if handlers
-            },
+            "handler_count_by_type": {et.value: len(handlers) for et, handlers in self._handlers.items() if handlers},
         }
 
     async def start(self) -> None:

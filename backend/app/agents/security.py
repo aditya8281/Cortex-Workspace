@@ -153,7 +153,10 @@ class PromptSecurityGuard:
                 try:
                     decoded = base64.b64decode(token).decode("ascii", errors="ignore")
                     lower_decoded = decoded.lower()
-                    if any(kw in lower_decoded for kw in ("admin", "mode", "ignore", "override", "bypass", "system", "jailbreak")):
+                    if any(
+                        kw in lower_decoded
+                        for kw in ("admin", "mode", "ignore", "override", "bypass", "system", "jailbreak")
+                    ):
                         if self.log_injections:
                             self._injection_attempts.append(
                                 {
@@ -169,7 +172,10 @@ class PromptSecurityGuard:
                 try:
                     decoded = bytes.fromhex(token).decode("ascii", errors="ignore")
                     lower_decoded = decoded.lower()
-                    if any(kw in lower_decoded for kw in ("admin", "mode", "ignore", "override", "bypass", "system", "jailbreak")):
+                    if any(
+                        kw in lower_decoded
+                        for kw in ("admin", "mode", "ignore", "override", "bypass", "system", "jailbreak")
+                    ):
                         if self.log_injections:
                             self._injection_attempts.append(
                                 {

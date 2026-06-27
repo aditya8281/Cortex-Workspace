@@ -217,9 +217,7 @@ class CompletionVerifier:
         return {
             "verification_count": self._verification_count,
             "average_confidence": (
-                self._total_confidence / self._verification_count
-                if self._verification_count > 0
-                else 0.0
+                self._total_confidence / self._verification_count if self._verification_count > 0 else 0.0
             ),
         }
 

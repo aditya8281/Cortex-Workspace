@@ -213,7 +213,7 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 |---------|------|------|--------|-------------|-------------------|
 | v1.0 | Current State | Snapshot | 0 | 0 | — |
 | v1.01 | Repository Restructure | Structural | 8 | 0 | 12-20 days |
-| v1.02 | Backend Architecture + Agent Hardening | Architectural | 8 | 0 | 25-35 days |
+| v1.02 | Backend Architecture + Agent Hardening | Architectural | 8 | 8 | 25-35 days |
 | v1.03 | Memory Foundation | Capability | 5 | 7 | 5-7 days |
 | v1.04 | Awareness Foundation | Capability | 4 | 6 | 4-5 days |
 | v1.05 | Privacy & Trust | Capability | 4 | 9 | 4-5 days |

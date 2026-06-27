@@ -182,8 +182,8 @@ All binding architecture decisions are recorded here. Once an ADR is marked **Im
 | **AD-005** | Embeddings: ONNX (local) → Ollama (local) → mock (fallback). 768-dim in Qdrant | Planned | v1.03 |
 | **AD-006** | RAG: HybridRetrievalV2 — vector + fulltext + graph via RRF + MMR | Planned | v1.03 |
 | **AD-007** | Vault: Fernet encryption per-user. SecurePasswordCache. AES-256 at rest | Planned | v1.05 |
-| **AD-008** | Agent: Streaming loop + tool policy + context compaction + multi-step reasoning | Planned | v1.02 |
-| **AD-009** | MCP: Model Context Protocol for external tool server integration | Planned | v1.02 |
+| **AD-008** | Agent: Streaming loop + tool policy + context compaction + multi-step reasoning | Implemented | v1.02 |
+| **AD-009** | MCP: Model Context Protocol for external tool server integration | Implemented | v1.02 |
 | **AD-010** | Memory: Qdrant (vector) + Neo4j (graph) + FTS5 (fulltext). Triple-store pattern | Planned | v1.03 |
 | **AD-011** | Awareness: File indexing + code intelligence (Rust crate) + change tracking | Planned | v1.04 |
 | **AD-012** | Learning: Preferences + patterns + outcomes. On-device ML with no cloud sync | Planned | v1.09 |

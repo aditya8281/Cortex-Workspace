@@ -29,6 +29,7 @@ class CompactionResult:
     reduction_ratio: float  # (before - after) / before
     sections: dict[str, str]  # Parsed GOAL/DONE/STATE/PENDING
 
+
 # Default compaction prompt — instructs the LLM to produce a structured summary
 _COMPACTION_PROMPT = (
     "You are a context compaction assistant. Your job is to summarize the following "

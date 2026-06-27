@@ -1,6 +1,6 @@
 # ADR-020: Token Estimation
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-06-24
 **Deciders:** Adi + Claude Code
 **Phase:** V2 Phase 2
