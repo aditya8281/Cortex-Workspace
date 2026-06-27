@@ -9,6 +9,7 @@ def create_user(
 ) -> User:
     """Create a User model instance for testing."""
     from faker import Faker
+
     fake = Faker()
     return User(
         id=kwargs.get("id", user_id),

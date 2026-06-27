@@ -1,7 +1,7 @@
 """Mock LLM responses for testing agent system."""
 
+from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock
-from typing import Generator
 
 
 def create_mock_llm_response(
@@ -51,9 +51,7 @@ def create_mock_streaming_response(
 def create_mock_llm_client() -> MagicMock:
     """Create a fully mocked LLM client for testing."""
     client = MagicMock()
-    client.chat.completions.create = AsyncMock(
-        return_value=create_mock_llm_response()
-    )
+    client.chat.completions.create = AsyncMock(return_value=create_mock_llm_response())
     return client
 
 

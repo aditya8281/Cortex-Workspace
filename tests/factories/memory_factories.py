@@ -1,7 +1,6 @@
 """Factory functions for memory domain models."""
 
-from backend.app.models.memory.document import Document, DocumentChunk
-from backend.app.models.memory.storage_registry import StorageRegistry
+from backend.app.models.memory.document import Document
 
 
 def create_document(
@@ -10,6 +9,7 @@ def create_document(
 ) -> Document:
     """Create a Document model instance for testing."""
     from faker import Faker
+
     fake = Faker()
     return Document(
         id=kwargs.get("id", fake.uuid4()),

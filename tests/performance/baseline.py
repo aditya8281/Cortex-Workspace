@@ -75,25 +75,19 @@ def capture_code_metrics() -> dict:
         capture_output=True,
         text=True,
     )
-    metrics["python_files"] = (
-        len(result.stdout.strip().split("\n")) if result.stdout.strip() else 0
-    )
+    metrics["python_files"] = len(result.stdout.strip().split("\n")) if result.stdout.strip() else 0
     result = subprocess.run(
         ["find", "frontend/src/", "-name", "*.ts", "-o", "-name", "*.tsx"],
         capture_output=True,
         text=True,
     )
-    metrics["typescript_files"] = (
-        len(result.stdout.strip().split("\n")) if result.stdout.strip() else 0
-    )
+    metrics["typescript_files"] = len(result.stdout.strip().split("\n")) if result.stdout.strip() else 0
     result = subprocess.run(
-        ["find", "tests/", "-name", "test_*.py", "-o", "-name "*_test.py""],
+        ["find", "tests/", "-name", "test_*.py", "-o", "-name", "*_test.py"],
         capture_output=True,
         text=True,
     )
-    metrics["test_files"] = (
-        len(result.stdout.strip().split("\n")) if result.stdout.strip() else 0
-    )
+    metrics["test_files"] = len(result.stdout.strip().split("\n")) if result.stdout.strip() else 0
     return metrics
 
 
