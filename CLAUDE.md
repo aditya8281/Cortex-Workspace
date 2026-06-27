@@ -323,13 +323,14 @@ Required: `SECRET_KEY`, `DATABASE_URL` (port 5435), `APP_NAME`, `API_V1_PREFIX`.
 
 | Topic | Location |
 |-------|----------|
-| Architecture | `docs/ARCHITECTURE.md` |
+| Architecture | `docs/architecture/overview.md` |
 | Constitution | `.agents/plans/GUIDE.md` |
-| Governance | `docs/GOVERNANCE.md` |
+| Governance | `docs/guides/governance.md` |
 | Implementation Guide | `.agents/plans/IMPLEMENTATION_STEPS.md` |
-| API Reference | `docs/API.md` |
-| Database Schema | `docs/DATABASE.md` |
+| API Reference | `docs/reference/api.md` |
+| Database Schema | `docs/reference/database.md` |
 | Design System | `DESIGN.md` |
-| Implementation Guide | `.agents/plans/IMPLEMENTATION_STEPS.md` |
 | Phase Plans | `.agents/plans/versions/vX/Phase-N.md` |
 | Progress Tracking | `.agents/plans/versions/vX/progress.md` |
+| ADRs | `docs/decisions/` |
+| Domain Docs | `docs/domains/` |
