@@ -1,9 +1,10 @@
 """Tests for metrics models."""
+
 from backend.app.agents.integrity.model.metrics import (
-    IntegrityScores,
     ExecutionMetrics,
-    RepositoryAnalytics,
+    IntegrityScores,
     PerformanceMetrics,
+    RepositoryAnalytics,
 )
 
 

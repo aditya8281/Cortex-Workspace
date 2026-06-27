@@ -2,15 +2,15 @@
 
 import uuid
 
-from backend.app.agents.integrity.validation import Validator, ValidationResult
 from backend.app.agents.integrity.model._base import EntityBase
 from backend.app.agents.integrity.model.relationship_model import (
-    Relationship,
-    RelationshipType,
-    RelationshipDirection,
-    Multiplicity,
     EdgeStrength,
+    Multiplicity,
+    Relationship,
+    RelationshipDirection,
+    RelationshipType,
 )
+from backend.app.agents.integrity.validation import Validator
 
 
 def test_validate_entity_valid():

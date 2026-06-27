@@ -7,8 +7,8 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from backend.app.agents.integrity.model.context import (
-    IntegrityDomain,
     ExecutionProfile,
+    IntegrityDomain,
 )
 from backend.app.agents.integrity.model.finding import Finding
 

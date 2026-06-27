@@ -4,15 +4,13 @@ import uuid
 from pathlib import Path
 
 from backend.app.agents.integrity.closure import (
-    DependencyEdge,
     DependencyClosureService,
+    DependencyEdge,
 )
 
 
 def test_dependency_edge():
-    e = DependencyEdge(
-        source_id=uuid.uuid4(), target_id=uuid.uuid4(), reason="imports"
-    )
+    e = DependencyEdge(source_id=uuid.uuid4(), target_id=uuid.uuid4(), reason="imports")
     assert e.reason == "imports"
     assert len(e.path) == 0
 
@@ -26,8 +24,6 @@ def test_empty_closure():
 
 def test_single_file_closure():
     svc = DependencyClosureService()
-    result = svc.compute_impact_set(
-        [Path("tests/test_demo.py")], None
-    )
+    result = svc.compute_impact_set([Path("tests/test_demo.py")], None)
     assert len(result.directly_changed) == 1
     assert len(result.transitively_affected) == 0

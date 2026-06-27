@@ -74,9 +74,7 @@ class RepositoryQueryService:
     def find_by_tag(self, tag: str) -> list[Any]:
         return []
 
-    def find_consumers(
-        self, entity_id: uuid.UUID
-    ) -> list[EntityBase]:
+    def find_consumers(self, entity_id: uuid.UUID) -> list[EntityBase]:
         consumers: list[EntityBase] = []
         for edge in self._model.relationships.edges:
             if edge.target_id == entity_id:
@@ -85,9 +83,7 @@ class RepositoryQueryService:
                     consumers.append(consumer)
         return consumers
 
-    def find_producers(
-        self, entity_id: uuid.UUID
-    ) -> list[EntityBase]:
+    def find_producers(self, entity_id: uuid.UUID) -> list[EntityBase]:
         producers: list[EntityBase] = []
         for edge in self._model.relationships.edges:
             if edge.source_id == entity_id:
@@ -157,7 +153,5 @@ class RepositoryQueryService:
                         to_visit.append(edge.source_id)
         return results
 
-    def find_impact(
-        self, entity_ids: list[uuid.UUID]
-    ) -> ImpactSet:
+    def find_impact(self, entity_ids: list[uuid.UUID]) -> ImpactSet:
         return ImpactSet(directly_changed=list(entity_ids))

@@ -1,8 +1,8 @@
 """Tests for EngineRegistry and @register decorator."""
 
+from backend.app.agents.integrity.engines._base import Capability, IntegrityEngine
+from backend.app.agents.integrity.model.context import ExecutionProfile, IntegrityDomain
 from backend.app.agents.integrity.registry import EngineRegistry, register
-from backend.app.agents.integrity.engines._base import IntegrityEngine, Capability
-from backend.app.agents.integrity.model.context import IntegrityDomain, ExecutionProfile
 
 
 def test_register_decorator():

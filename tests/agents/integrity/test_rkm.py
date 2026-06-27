@@ -2,19 +2,19 @@
 
 from datetime import datetime, timezone
 
+from backend.app.agents.integrity.model import RepositoryKnowledgeModel
+from backend.app.agents.integrity.model.code_model import CodeModel
+from backend.app.agents.integrity.model.documentation_model import (
+    DocumentationModel,
+)
+from backend.app.agents.integrity.model.ecosystem_model import EcosystemModel
 from backend.app.agents.integrity.model.metadata_model import (
     MetadataModel,
     RepositoryCapabilities,
 )
-from backend.app.agents.integrity.model.code_model import CodeModel
-from backend.app.agents.integrity.model.ecosystem_model import EcosystemModel
-from backend.app.agents.integrity.model.documentation_model import (
-    DocumentationModel,
-)
 from backend.app.agents.integrity.model.relationship_model import (
     RelationshipModel,
 )
-from backend.app.agents.integrity.model import RepositoryKnowledgeModel
 
 
 def test_metadata_model_version():
@@ -68,9 +68,7 @@ def test_code_model():
 
 
 def test_ecosystem_model():
-    em = EcosystemModel(
-        commands={}, skills={}, hooks={}, workflows={}, plans={}
-    )
+    em = EcosystemModel(commands={}, skills={}, hooks={}, workflows={}, plans={})
     assert len(em.commands) == 0
 
 
@@ -91,20 +89,25 @@ def test_rkm_facade():
             capabilities=RepositoryCapabilities(),
         ),
         code=CodeModel(
-            files={}, directories=set(), symbols={}, imports=[],
-            schemas={}, types={}, routes={}, routers={},
-            middleware={}, models={}, migrations={},
-            db_config=None, components={}, api_clients={}, configs={},
+            files={},
+            directories=set(),
+            symbols={},
+            imports=[],
+            schemas={},
+            types={},
+            routes={},
+            routers={},
+            middleware={},
+            models={},
+            migrations={},
+            db_config=None,
+            components={},
+            api_clients={},
+            configs={},
         ),
-        ecosystem=EcosystemModel(
-            commands={}, skills={}, hooks={}, workflows={}, plans={}
-        ),
-        documentation=DocumentationModel(
-            plans={}, source_of_truths={}, adrs=[]
-        ),
-        relationships=RelationshipModel(
-            edges=[], relationship_schema_version="1.0"
-        ),
+        ecosystem=EcosystemModel(commands={}, skills={}, hooks={}, workflows={}, plans={}),
+        documentation=DocumentationModel(plans={}, source_of_truths={}, adrs=[]),
+        relationships=RelationshipModel(edges=[], relationship_schema_version="1.0"),
     )
     assert rkm.metadata.version == "1.0"
     assert rkm.relationships.relationship_schema_version == "1.0"

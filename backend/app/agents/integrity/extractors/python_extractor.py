@@ -25,16 +25,8 @@ class PythonExtractor(Extractor):
 
     def extract(self, path: Path) -> dict[str, Any]:
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        classes = [
-            node.name
-            for node in ast.walk(tree)
-            if isinstance(node, ast.ClassDef)
-        ]
-        functions = [
-            node.name
-            for node in ast.walk(tree)
-            if isinstance(node, ast.FunctionDef)
-        ]
+        classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+        functions = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
         imports = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):

@@ -1,8 +1,5 @@
 """Tests for PlanningEngine."""
 
-from backend.app.agents.integrity.engines.evolution.planning_engine import (
-    PlanningEngine,
-)
 from backend.app.agents.integrity.registry import EngineRegistry
 
 

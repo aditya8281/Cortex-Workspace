@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from backend.app.agents.integrity.service import IntegrityService, IntegrityReport
 from backend.app.agents.integrity.model.context import ExecutionProfile
+from backend.app.agents.integrity.service import IntegrityReport, IntegrityService
 
 
 def test_service_init():
@@ -30,9 +30,7 @@ def test_service_analyze_full():
 
 def test_service_analyze_incremental():
     svc = IntegrityService(repository_root=Path("backend/app/agents/integrity"))
-    report = svc.analyze_incremental(
-        [Path("backend/app/agents/integrity/model/_base.py")]
-    )
+    report = svc.analyze_incremental([Path("backend/app/agents/integrity/model/_base.py")])
     assert report is not None
     assert report.execution_profile == ExecutionProfile.INCREMENTAL
 

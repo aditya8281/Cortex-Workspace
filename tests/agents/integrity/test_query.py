@@ -3,20 +3,20 @@
 import uuid
 from datetime import datetime, timezone
 
-from backend.app.agents.integrity.query import RepositoryQueryService
 from backend.app.agents.integrity.model import RepositoryKnowledgeModel
+from backend.app.agents.integrity.model.code_model import CodeModel
+from backend.app.agents.integrity.model.documentation_model import (
+    DocumentationModel,
+)
+from backend.app.agents.integrity.model.ecosystem_model import EcosystemModel
 from backend.app.agents.integrity.model.metadata_model import (
     MetadataModel,
     RepositoryCapabilities,
 )
-from backend.app.agents.integrity.model.code_model import CodeModel
-from backend.app.agents.integrity.model.ecosystem_model import EcosystemModel
-from backend.app.agents.integrity.model.documentation_model import (
-    DocumentationModel,
-)
 from backend.app.agents.integrity.model.relationship_model import (
     RelationshipModel,
 )
+from backend.app.agents.integrity.query import RepositoryQueryService
 
 
 def _make_empty_rkm() -> RepositoryKnowledgeModel:
@@ -47,15 +47,9 @@ def _make_empty_rkm() -> RepositoryKnowledgeModel:
             api_clients={},
             configs={},
         ),
-        ecosystem=EcosystemModel(
-            commands={}, skills={}, hooks={}, workflows={}, plans={}
-        ),
-        documentation=DocumentationModel(
-            plans={}, source_of_truths={}, adrs=[]
-        ),
-        relationships=RelationshipModel(
-            edges=[], relationship_schema_version="1.0"
-        ),
+        ecosystem=EcosystemModel(commands={}, skills={}, hooks={}, workflows={}, plans={}),
+        documentation=DocumentationModel(plans={}, source_of_truths={}, adrs=[]),
+        relationships=RelationshipModel(edges=[], relationship_schema_version="1.0"),
     )
 
 

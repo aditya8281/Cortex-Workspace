@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
+from backend.app.agents.integrity.model import RepositoryKnowledgeModel
 from backend.app.agents.integrity.model._base import EntityBase
 from backend.app.agents.integrity.model.relationship_model import Relationship
-from backend.app.agents.integrity.model import RepositoryKnowledgeModel
 
 
 @dataclass
@@ -34,9 +33,7 @@ class Validator:
             errors.append(
                 ValidationError(
                     field="confidence",
-                    message=(
-                        f"confidence must be in [0, 1], got {entity.confidence}"
-                    ),
+                    message=(f"confidence must be in [0, 1], got {entity.confidence}"),
                 )
             )
 
@@ -67,10 +64,7 @@ class Validator:
             errors.append(
                 ValidationError(
                     field="target_id",
-                    message=(
-                        "self-referencing relationship "
-                        "(source_id == target_id)"
-                    ),
+                    message=("self-referencing relationship (source_id == target_id)"),
                 )
             )
 
@@ -81,9 +75,7 @@ class Validator:
         warnings: list[str] = []
 
         if not model.metadata.version:
-            errors.append(
-                ValidationError("version", "RKM version must not be empty")
-            )
+            errors.append(ValidationError("version", "RKM version must not be empty"))
 
         return ValidationResult(
             passed=len(errors) == 0,

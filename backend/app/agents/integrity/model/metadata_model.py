@@ -24,6 +24,4 @@ class MetadataModel:
     repository_hash: str
     generated_at: datetime
     collector_versions: dict[str, str] = field(default_factory=dict)
-    capabilities: RepositoryCapabilities = field(
-        default_factory=RepositoryCapabilities
-    )
+    capabilities: RepositoryCapabilities = field(default_factory=RepositoryCapabilities)

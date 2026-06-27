@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.app.agents.integrity.engines._base import IntegrityEngine, Capability
-from backend.app.agents.integrity.model.context import IntegrityDomain, ExecutionProfile
+from backend.app.agents.integrity.engines._base import Capability
+from backend.app.agents.integrity.model.context import ExecutionProfile, IntegrityDomain
 
 
 class EngineRegistry:
@@ -54,11 +54,7 @@ class EngineRegistry:
         return list(self._engines.values())
 
     def for_profile(self, profile: ExecutionProfile) -> list[dict[str, Any]]:
-        return [
-            e
-            for e in self._engines.values()
-            if profile in e["profiles"] or not e["profiles"]
-        ]
+        return [e for e in self._engines.values() if profile in e["profiles"] or not e["profiles"]]
 
     def resolve_execution_order(self, profiles: set[ExecutionProfile]) -> list[str]:
         candidates: set[str] = set()
@@ -85,11 +81,7 @@ class EngineRegistry:
         return ordered
 
     def find_by_capability(self, capability: Capability) -> list[dict[str, Any]]:
-        return [
-            e
-            for e in self._engines.values()
-            if capability in e["capabilities"]
-        ]
+        return [e for e in self._engines.values() if capability in e["capabilities"]]
 
 
 def register(
@@ -101,6 +93,7 @@ def register(
     profiles: set[ExecutionProfile] | None = None,
 ) -> Any:
     """Decorator that registers an engine class into the EngineRegistry."""
+
     def decorator(cls: type) -> type:
         EngineRegistry.get_instance().register(
             cls,

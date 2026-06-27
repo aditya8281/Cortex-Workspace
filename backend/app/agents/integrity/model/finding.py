@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from typing import Any
 
 from backend.app.agents.integrity.model.context import (
-    Severity,
     Classification,
     Priority,
+    Severity,
 )
 
 

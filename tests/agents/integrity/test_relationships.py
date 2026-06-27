@@ -1,23 +1,33 @@
 import uuid
+
 from backend.app.agents.integrity.model.relationship_model import (
-    RelationshipType, RelationshipDirection, Multiplicity, EdgeStrength,
-    Relationship, RelationshipModel,
+    EdgeStrength,
+    Multiplicity,
+    Relationship,
+    RelationshipDirection,
+    RelationshipModel,
+    RelationshipType,
 )
+
 
 def test_relationship_type_count():
     assert len(RelationshipType) >= 18
+
 
 def test_relationship_direction_values():
     assert RelationshipDirection.DIRECTED.value == "directed"
     assert RelationshipDirection.BIDIRECTIONAL.value == "bidirectional"
 
+
 def test_multiplicity_values():
     assert Multiplicity.ONE_TO_ONE.value == "1:1"
     assert Multiplicity.MANY_TO_MANY.value == "N:N"
 
+
 def test_edge_strength_values():
     assert EdgeStrength.STRONG.value == "strong"
     assert EdgeStrength.WEAK.value == "weak"
+
 
 def test_relationship_creation():
     source = uuid.uuid4()
@@ -36,6 +46,7 @@ def test_relationship_creation():
     assert rel.target_id == target
     assert isinstance(rel.id, uuid.UUID)
 
+
 def test_relationship_metadata():
     rel = Relationship(
         type=RelationshipType.CALLS,
@@ -48,6 +59,7 @@ def test_relationship_metadata():
         source_collector="test",
     )
     assert rel.metadata["line"] == "42"
+
 
 def test_relationship_model():
     model = RelationshipModel(edges=[], relationship_schema_version="1.0")

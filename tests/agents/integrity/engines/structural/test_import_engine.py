@@ -1,9 +1,9 @@
 """Tests for ImportGraphEngine."""
 
+from backend.app.agents.integrity.engines._base import Capability
 from backend.app.agents.integrity.engines.structural.import_engine import (
     ImportGraphEngine,
 )
-from backend.app.agents.integrity.engines._base import Capability
 from backend.app.agents.integrity.registry import EngineRegistry
 
 

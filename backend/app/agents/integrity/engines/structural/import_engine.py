@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.app.agents.integrity.engines._base import IntegrityEngine, Capability
-from backend.app.agents.integrity.registry import register
+from backend.app.agents.integrity.engines._base import Capability, IntegrityEngine
 from backend.app.agents.integrity.model.context import (
-    IntegrityDomain,
     ExecutionProfile,
+    IntegrityDomain,
 )
 from backend.app.agents.integrity.model.finding import (
-    Finding,
-    Severity,
-    Priority,
     Classification,
+    Finding,
+    Priority,
+    Severity,
 )
+from backend.app.agents.integrity.registry import register
 
 
 @register(
@@ -53,18 +53,12 @@ class ImportGraphEngine(IntegrityEngine):
         seen_modules: set[str] = set()
 
         for imp in imports:
-            file = (
-                getattr(imp, "file", "")
-                if hasattr(imp, "file")
-                else str(imp)
-            )
+            file = getattr(imp, "file", "") if hasattr(imp, "file") else str(imp)
             if file in seen_modules:
                 findings.append(
                     Finding(
                         title="Potential circular import",
-                        description=(
-                            f"File imported multiple times: {file}"
-                        ),
+                        description=(f"File imported multiple times: {file}"),
                         severity=Severity.LOW,
                         priority=Priority.P3,
                         urgency=3,

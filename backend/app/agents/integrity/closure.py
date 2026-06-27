@@ -39,16 +39,12 @@ class DependencyClosureService:
             matched = False
             if model and hasattr(model, "code"):
                 for uid, finfo in model.code.files.items():
-                    if hasattr(finfo, "path") and str(finfo.path) == str(
-                        path
-                    ):
+                    if hasattr(finfo, "path") and str(finfo.path) == str(path):
                         directly.append(uid)
                         matched = True
                         break
             if not matched:
-                directly.append(
-                    uuid.uuid5(uuid.NAMESPACE_URL, str(path))
-                )
+                directly.append(uuid.uuid5(uuid.NAMESPACE_URL, str(path)))
 
         transitive: list[uuid.UUID] = []
         chains: list[DependencyEdge] = []
@@ -60,10 +56,7 @@ class DependencyClosureService:
                 while to_visit:
                     current = to_visit.pop(0)
                     for edge in model.relationships.edges:
-                        if (
-                            edge.source_id == current
-                            and edge.target_id not in seen
-                        ):
+                        if edge.source_id == current and edge.target_id not in seen:
                             seen.add(edge.target_id)
                             transitive.append(edge.target_id)
                             chains.append(

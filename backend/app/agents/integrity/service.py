@@ -56,9 +56,7 @@ class IntegrityService:
             execution_time_ms=elapsed,
         )
 
-    def analyze_incremental(
-        self, changed_files: list[Path]
-    ) -> IntegrityReport:
+    def analyze_incremental(self, changed_files: list[Path]) -> IntegrityReport:
         return self.analyze(
             profile=ExecutionProfile.INCREMENTAL,
             changed_files=changed_files,

@@ -1,13 +1,14 @@
 """Tests for Finding model."""
-from backend.app.agents.integrity.model.finding import (
-    Finding,
-    CandidateFix,
-    FixType,
-)
+
 from backend.app.agents.integrity.model.context import (
-    Severity,
     Classification,
     Priority,
+    Severity,
+)
+from backend.app.agents.integrity.model.finding import (
+    CandidateFix,
+    Finding,
+    FixType,
 )
 
 

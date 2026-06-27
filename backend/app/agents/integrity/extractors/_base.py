@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -20,9 +20,7 @@ class CollectorPlugin:
 
 class Extractor(ABC):
     def __init__(self, plugin: CollectorPlugin | None = None) -> None:
-        self.plugin = plugin or CollectorPlugin(
-            name="unknown", plugin_version="0.1"
-        )
+        self.plugin = plugin or CollectorPlugin(name="unknown", plugin_version="0.1")
 
     @abstractmethod
     def extract(self, path: Path) -> dict[str, Any]: ...
@@ -30,9 +28,7 @@ class Extractor(ABC):
 
 class Normalizer(ABC):
     def __init__(self, plugin: CollectorPlugin | None = None) -> None:
-        self.plugin = plugin or CollectorPlugin(
-            name="unknown", plugin_version="0.1"
-        )
+        self.plugin = plugin or CollectorPlugin(name="unknown", plugin_version="0.1")
 
     @abstractmethod
     def normalize(self, raw: dict[str, Any]) -> list[EntityBase]: ...

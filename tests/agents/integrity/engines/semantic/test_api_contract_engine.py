@@ -1,8 +1,5 @@
 """Tests for APIContractEngine."""
 
-from backend.app.agents.integrity.engines.semantic.api_contract_engine import (
-    APIContractEngine,
-)
 from backend.app.agents.integrity.registry import EngineRegistry
 
 

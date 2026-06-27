@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.app.agents.integrity.engines._base import IntegrityEngine, Capability
-from backend.app.agents.integrity.registry import register
+from backend.app.agents.integrity.engines._base import Capability, IntegrityEngine
 from backend.app.agents.integrity.model.context import (
-    IntegrityDomain,
     ExecutionProfile,
+    IntegrityDomain,
 )
 from backend.app.agents.integrity.model.finding import Finding
+from backend.app.agents.integrity.registry import register
 
 
 @register(
@@ -40,22 +40,10 @@ class SchemaEngine(IntegrityEngine):
         seen_fields: dict[str, list[str]] = {}
 
         for sid, schema in schemas.items():
-            name = (
-                getattr(schema, "name", str(sid))
-                if hasattr(schema, "name")
-                else str(sid)
-            )
-            fields = (
-                getattr(schema, "fields", [])
-                if hasattr(schema, "fields")
-                else []
-            )
+            name = getattr(schema, "name", str(sid)) if hasattr(schema, "name") else str(sid)
+            fields = getattr(schema, "fields", []) if hasattr(schema, "fields") else []
             for field in fields:
-                fname = (
-                    getattr(field, "name", str(field))
-                    if hasattr(field, "name")
-                    else str(field)
-                )
+                fname = getattr(field, "name", str(field)) if hasattr(field, "name") else str(field)
                 if fname not in seen_fields:
                     seen_fields[fname] = []
                 seen_fields[fname].append(name)

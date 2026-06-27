@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from typing import Any
 
 from backend.app.agents.integrity.model.finding import Finding
 
@@ -24,16 +23,8 @@ class Aggregator:
         by_classification: dict[str, int] = {}
 
         for f in findings:
-            sev = (
-                f.severity.name
-                if hasattr(f.severity, "name")
-                else str(f.severity)
-            )
-            cls_ = (
-                f.classification.name
-                if hasattr(f.classification, "name")
-                else str(f.classification)
-            )
+            sev = f.severity.name if hasattr(f.severity, "name") else str(f.severity)
+            cls_ = f.classification.name if hasattr(f.classification, "name") else str(f.classification)
             by_severity[sev] = by_severity.get(sev, 0) + 1
             by_classification[cls_] = by_classification.get(cls_, 0) + 1
 
@@ -61,9 +52,7 @@ class Reporter:
             "",
             "### By Severity",
         ]
-        for sev, count in sorted(
-            metrics.by_severity.items(), reverse=True
-        ):
+        for sev, count in sorted(metrics.by_severity.items(), reverse=True):
             lines.append(f"- **{sev}**: {count}")
 
         lines.extend(["", "### By Classification"])
@@ -72,16 +61,8 @@ class Reporter:
 
         lines.extend(["", "## Findings"])
         for f in findings:
-            sev_name = (
-                f.severity.name
-                if hasattr(f.severity, "name")
-                else str(f.severity)
-            )
-            cls_name = (
-                f.classification.name
-                if hasattr(f.classification, "name")
-                else str(f.classification)
-            )
+            sev_name = f.severity.name if hasattr(f.severity, "name") else str(f.severity)
+            cls_name = f.classification.name if hasattr(f.classification, "name") else str(f.classification)
             lines.extend(
                 [
                     "",
@@ -108,15 +89,9 @@ class Reporter:
             "findings": [
                 {
                     "title": f.title,
-                    "severity": (
-                        f.severity.name
-                        if hasattr(f.severity, "name")
-                        else str(f.severity)
-                    ),
+                    "severity": (f.severity.name if hasattr(f.severity, "name") else str(f.severity)),
                     "classification": (
-                        f.classification.name
-                        if hasattr(f.classification, "name")
-                        else str(f.classification)
+                        f.classification.name if hasattr(f.classification, "name") else str(f.classification)
                     ),
                     "location": f.location,
                     "description": f.description,

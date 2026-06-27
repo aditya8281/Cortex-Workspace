@@ -1,12 +1,12 @@
 """Tests for Aggregator and Reporter."""
 
-from backend.app.agents.integrity.report import Aggregator, Reporter
-from backend.app.agents.integrity.model.finding import Finding
 from backend.app.agents.integrity.model.context import (
-    Severity,
     Classification,
     Priority,
+    Severity,
 )
+from backend.app.agents.integrity.model.finding import Finding
+from backend.app.agents.integrity.report import Aggregator, Reporter
 
 
 def test_aggregator_empty():

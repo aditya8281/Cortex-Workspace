@@ -1,6 +1,6 @@
 """Tests for ViewRegistry and DerivedViews."""
 
-from backend.app.agents.integrity.views import ViewRegistry, DerivedViews
+from backend.app.agents.integrity.views import DerivedViews, ViewRegistry
 
 
 def test_view_registry_creates_views():

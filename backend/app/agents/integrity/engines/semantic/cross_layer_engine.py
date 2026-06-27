@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.app.agents.integrity.engines._base import IntegrityEngine, Capability
-from backend.app.agents.integrity.registry import register
+from backend.app.agents.integrity.engines._base import Capability, IntegrityEngine
 from backend.app.agents.integrity.model.context import (
-    IntegrityDomain,
     ExecutionProfile,
+    IntegrityDomain,
 )
 from backend.app.agents.integrity.model.finding import (
-    Finding,
-    Severity,
-    Priority,
     Classification,
+    Finding,
+    Priority,
+    Severity,
 )
+from backend.app.agents.integrity.registry import register
 
 
 @register(
@@ -45,43 +45,21 @@ class CrossLayerEngine(IntegrityEngine):
 
         schemas = getattr(model.code, "schemas", {})
         for sid, schema in schemas.items():
-            name = (
-                getattr(schema, "name", "")
-                if hasattr(schema, "name")
-                else ""
-            )
+            name = getattr(schema, "name", "") if hasattr(schema, "name") else ""
             if not name:
                 continue
-            fields = (
-                getattr(schema, "fields", [])
-                if hasattr(schema, "fields")
-                else []
-            )
+            fields = getattr(schema, "fields", []) if hasattr(schema, "fields") else []
             for field in fields:
-                fname = (
-                    getattr(field, "name", "")
-                    if hasattr(field, "name")
-                    else ""
-                )
+                fname = getattr(field, "name", "") if hasattr(field, "name") else ""
                 if not fname:
                     continue
                 # Check naming consistency across layers
                 if fname != fname.lower():
-                    location = (
-                        getattr(schema, "location", str(sid))
-                        if hasattr(schema, "location")
-                        else str(sid)
-                    )
+                    location = getattr(schema, "location", str(sid)) if hasattr(schema, "location") else str(sid)
                     findings.append(
                         Finding(
-                            title=(
-                                f"Inconsistent field naming: "
-                                f"{name}.{fname}"
-                            ),
-                            description=(
-                                f"Field '{fname}' in schema '{name}' "
-                                f"uses non-standard casing"
-                            ),
+                            title=(f"Inconsistent field naming: {name}.{fname}"),
+                            description=(f"Field '{fname}' in schema '{name}' uses non-standard casing"),
                             severity=Severity.LOW,
                             priority=Priority.P3,
                             urgency=2,

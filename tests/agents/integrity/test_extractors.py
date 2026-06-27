@@ -45,7 +45,7 @@ def test_python_normalizer():
 def test_extractor_is_abstract():
     try:
         Extractor()
-        assert False, "Should have raised TypeError"
+        raise AssertionError("Should have raised TypeError")
     except TypeError:
         pass
 
@@ -53,6 +53,6 @@ def test_extractor_is_abstract():
 def test_normalizer_is_abstract():
     try:
         Normalizer()
-        assert False, "Should have raised TypeError"
+        raise AssertionError("Should have raised TypeError")
     except TypeError:
         pass
