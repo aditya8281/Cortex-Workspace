@@ -38,10 +38,7 @@ class TestPromptInjection:
     def test_injection_detection_rate(self):
         """Should detect >= 95% of injection attempts."""
         guard = PromptSecurityGuard()
-        detected = sum(
-            1 for payload in self.INJECTION_PAYLOADS
-            if guard._check_injection(payload, "test")
-        )
+        detected = sum(1 for payload in self.INJECTION_PAYLOADS if guard._check_injection(payload, "test"))
         rate = detected / len(self.INJECTION_PAYLOADS)
         assert rate >= 0.95, f"Detection rate {rate:.1%} below 95% threshold"
 

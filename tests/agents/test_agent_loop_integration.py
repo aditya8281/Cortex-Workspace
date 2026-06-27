@@ -33,10 +33,7 @@ class TestToolCallParsing:
         assert calls[0]["args"]["path"] == "/etc/hosts"
 
     def test_multiple_tool_calls(self):
-        text = (
-            'TOOL_CALL: search_memory(query="auth bug")\n'
-            'TOOL_CALL: read_file(path="/app/main.py")'
-        )
+        text = 'TOOL_CALL: search_memory(query="auth bug")\nTOOL_CALL: read_file(path="/app/main.py")'
         calls = _parse_tool_calls(text)
         assert len(calls) == 2
         assert calls[0]["name"] == "search_memory"
@@ -58,7 +55,7 @@ class TestStripToolCalls:
     """Test tool call removal from text."""
 
     def test_strip_preserves_text(self):
-        text = "Let me check.\nTOOL_CALL: read_file(path=\"/app/main.py\")\nDone."
+        text = 'Let me check.\nTOOL_CALL: read_file(path="/app/main.py")\nDone.'
         result = _strip_tool_calls(text)
         assert "Let me check." in result
         assert "Done." in result

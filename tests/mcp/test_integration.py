@@ -15,9 +15,7 @@ from backend.app.mcp.search import MCPToolSearch
 from backend.app.mcp.transport import StdioTransport
 from backend.app.mcp.wrapper import MCPToolWrapper
 
-MOCK_SERVER = os.path.join(
-    os.path.dirname(__file__), "..", "fixtures", "mock_mcp_server.py"
-)
+MOCK_SERVER = os.path.join(os.path.dirname(__file__), "..", "fixtures", "mock_mcp_server.py")
 
 
 @pytest.fixture
@@ -32,18 +30,28 @@ class TestMockMCPServer:
     @pytest.mark.asyncio
     async def test_initialize(self, mock_server_script):
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, mock_server_script,
+            sys.executable,
+            mock_server_script,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         try:
-            request = json.dumps({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "initialize",
-                "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test", "version": "1.0.0"}},
-            }) + "\n"
+            request = (
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": "2024-11-05",
+                            "capabilities": {},
+                            "clientInfo": {"name": "test", "version": "1.0.0"},
+                        },
+                    }
+                )
+                + "\n"
+            )
             proc.stdin.write(request.encode())
             await proc.stdin.drain()
 
@@ -58,7 +66,8 @@ class TestMockMCPServer:
     @pytest.mark.asyncio
     async def test_tools_list(self, mock_server_script):
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, mock_server_script,
+            sys.executable,
+            mock_server_script,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -88,7 +97,8 @@ class TestMockMCPServer:
     @pytest.mark.asyncio
     async def test_tool_call(self, mock_server_script):
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, mock_server_script,
+            sys.executable,
+            mock_server_script,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -101,11 +111,17 @@ class TestMockMCPServer:
             await proc.stdout.readline()
 
             # Call mock_tool
-            call = json.dumps({
-                "jsonrpc": "2.0", "id": 3,
-                "method": "tools/call",
-                "params": {"name": "mock_tool", "arguments": {"input": "hello world"}},
-            }) + "\n"
+            call = (
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 3,
+                        "method": "tools/call",
+                        "params": {"name": "mock_tool", "arguments": {"input": "hello world"}},
+                    }
+                )
+                + "\n"
+            )
             proc.stdin.write(call.encode())
             await proc.stdin.drain()
 
@@ -122,7 +138,8 @@ class TestMockMCPServer:
     @pytest.mark.asyncio
     async def test_add_numbers_tool(self, mock_server_script):
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, mock_server_script,
+            sys.executable,
+            mock_server_script,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -135,11 +152,17 @@ class TestMockMCPServer:
             await proc.stdout.readline()
 
             # Call add_numbers
-            call = json.dumps({
-                "jsonrpc": "2.0", "id": 4,
-                "method": "tools/call",
-                "params": {"name": "add_numbers", "arguments": {"a": 3, "b": 7}},
-            }) + "\n"
+            call = (
+                json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 4,
+                        "method": "tools/call",
+                        "params": {"name": "add_numbers", "arguments": {"a": 3, "b": 7}},
+                    }
+                )
+                + "\n"
+            )
             proc.stdin.write(call.encode())
             await proc.stdin.drain()
 
@@ -158,7 +181,8 @@ class TestMCPToolWrapperWithMockServer:
     @pytest.mark.asyncio
     async def test_execute_mock_tool(self, mock_server_script):
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, mock_server_script,
+            sys.executable,
+            mock_server_script,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -173,11 +197,18 @@ class TestMCPToolWrapperWithMockServer:
             transport = StdioTransport(proc)
             await transport.start()
 
-            wrapper = MCPToolWrapper("test-server", {
-                "name": "mock_tool",
-                "description": "A mock tool",
-                "inputSchema": {"type": "object", "properties": {"input": {"type": "string"}}, "required": ["input"]},
-            })
+            wrapper = MCPToolWrapper(
+                "test-server",
+                {
+                    "name": "mock_tool",
+                    "description": "A mock tool",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {"input": {"type": "string"}},
+                        "required": ["input"],
+                    },
+                },
+            )
 
             result = await wrapper.execute({"input": "test data"}, transport)
             assert result == {"text": "Mock result: test data"}
@@ -194,7 +225,8 @@ class TestRegisterMCPToolsEndToEnd:
     @pytest.mark.asyncio
     async def test_full_pipeline(self, mock_server_script):
         proc = await asyncio.create_subprocess_exec(
-            sys.executable, mock_server_script,
+            sys.executable,
+            mock_server_script,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -243,10 +275,34 @@ class TestMCPToolSearchIntegration:
     async def test_search_finds_mcp_tools(self):
         search = MCPToolSearch(top_k=3)
         tools = [
-            {"function": {"name": "mcp_fs_read_file", "description": "[MCP:filesystem] Read a file from disk", "parameters": {}}},
-            {"function": {"name": "mcp_fs_write_file", "description": "[MCP:filesystem] Write content to a file", "parameters": {}}},
-            {"function": {"name": "mcp_db_query", "description": "[MCP:database] Execute a SQL query", "parameters": {}}},
-            {"function": {"name": "mcp_github_list_prs", "description": "[MCP:github] List pull requests", "parameters": {}}},
+            {
+                "function": {
+                    "name": "mcp_fs_read_file",
+                    "description": "[MCP:filesystem] Read a file from disk",
+                    "parameters": {},
+                }
+            },
+            {
+                "function": {
+                    "name": "mcp_fs_write_file",
+                    "description": "[MCP:filesystem] Write content to a file",
+                    "parameters": {},
+                }
+            },
+            {
+                "function": {
+                    "name": "mcp_db_query",
+                    "description": "[MCP:database] Execute a SQL query",
+                    "parameters": {},
+                }
+            },
+            {
+                "function": {
+                    "name": "mcp_github_list_prs",
+                    "description": "[MCP:github] List pull requests",
+                    "parameters": {},
+                }
+            },
         ]
         await search.index_tools(tools)
 

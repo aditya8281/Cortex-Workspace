@@ -10,15 +10,9 @@ from pydantic import BaseModel, Field, field_validator
 class SemanticMemoryCreate(BaseModel):
     """Schema for creating a new semantic memory."""
 
-    content: str = Field(
-        ..., min_length=1, max_length=10000, description="The fact/knowledge"
-    )
-    category: str | None = Field(
-        None, max_length=100, description="Category: preference, fact, concept, rule"
-    )
-    source: str | None = Field(
-        None, max_length=200, description="Where this knowledge came from"
-    )
+    content: str = Field(..., min_length=1, max_length=10000, description="The fact/knowledge")
+    category: str | None = Field(None, max_length=100, description="Category: preference, fact, concept, rule")
+    source: str | None = Field(None, max_length=200, description="Where this knowledge came from")
 
     @field_validator("category")
     @classmethod

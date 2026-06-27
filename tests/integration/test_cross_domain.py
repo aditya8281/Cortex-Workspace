@@ -50,9 +50,7 @@ class TestEventBusCrossDomain:
         async def good_handler(event: Event) -> None:
             results["good"] = True
 
-        await bus.publish(
-            Event(type=EventType.MEMORY_CREATED, source="test", data={}, user_id=1)
-        )
+        await bus.publish(Event(type=EventType.MEMORY_CREATED, source="test", data={}, user_id=1))
         assert results["good"] is True
 
     @pytest.mark.asyncio
@@ -69,9 +67,7 @@ class TestEventBusCrossDomain:
         async def observability_handler(event: Event) -> None:
             handlers_called.append("observability")
 
-        await bus.publish(
-            Event(type=EventType.RUN_COMPLETED, source="test", data={}, user_id=1)
-        )
+        await bus.publish(Event(type=EventType.RUN_COMPLETED, source="test", data={}, user_id=1))
         assert "agent" in handlers_called
         assert "observability" in handlers_called
 
@@ -84,9 +80,7 @@ class TestEventBusCrossDomain:
         async def handler(event: Event) -> None:
             pass
 
-        await bus.publish(
-            Event(type=EventType.MEMORY_CREATED, source="test", data={}, user_id=1)
-        )
+        await bus.publish(Event(type=EventType.MEMORY_CREATED, source="test", data={}, user_id=1))
         stats = bus.get_stats()
         assert stats["total_events_published"] >= 1
 
@@ -114,9 +108,7 @@ class TestEventBusCrossDomain:
         async def handler_b(event: Event) -> None:
             pass
 
-        await bus.publish(
-            Event(type=EventType.MEMORY_CREATED, source="test", data={}, user_id=1)
-        )
+        await bus.publish(Event(type=EventType.MEMORY_CREATED, source="test", data={}, user_id=1))
         # Should not infinitely recurse
         assert call_count < 10
 

@@ -58,9 +58,7 @@ class TestP02Regression:
         async def handler(event: Event) -> None:
             received.append(event)
 
-        await bus.publish(
-            Event(type=EventType.MEMORY_CREATED, source="test", data={"id": 1}, user_id=1)
-        )
+        await bus.publish(Event(type=EventType.MEMORY_CREATED, source="test", data={"id": 1}, user_id=1))
         assert len(received) == 1
 
     @pytest.mark.asyncio
@@ -77,9 +75,7 @@ class TestP02Regression:
         async def good_handler(event: Event) -> None:
             results["good"] = True
 
-        await bus.publish(
-            Event(type=EventType.MEMORY_CREATED, source="test", data={}, user_id=1)
-        )
+        await bus.publish(Event(type=EventType.MEMORY_CREATED, source="test", data={}, user_id=1))
         assert results["good"] is True
 
 

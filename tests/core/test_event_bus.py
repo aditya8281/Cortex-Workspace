@@ -130,6 +130,7 @@ def test_event_serialization():
 
 def test_get_stats(bus):
     """Stats should reflect handler registration."""
+
     async def handler(event):
         pass
 

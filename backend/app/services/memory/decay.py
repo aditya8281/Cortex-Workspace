@@ -46,24 +46,14 @@ class ForgettingService:
 
     def _decay_episodic(self, user_id: int) -> int:
         """Apply decay to episodic memories. Returns count decayed."""
-        memories = (
-            self.db.query(EpisodicMemory)
-            .filter(EpisodicMemory.user_id == user_id)
-            .all()
-        )
+        memories = self.db.query(EpisodicMemory).filter(EpisodicMemory.user_id == user_id).all()
 
         count = 0
         for memory in memories:
-            days_since_access = self._days_since(
-                memory.last_accessed or memory.created_at
-            )
+            days_since_access = self._days_since(memory.last_accessed or memory.created_at)
 
-            effective_rate = EPISODIC_DECAY_RATE / max(
-                1.0, memory.access_count * 0.1
-            )
-            decay_factor = max(
-                CONFIDENCE_FLOOR, 1.0 - (days_since_access * effective_rate)
-            )
+            effective_rate = EPISODIC_DECAY_RATE / max(1.0, memory.access_count * 0.1)
+            decay_factor = max(CONFIDENCE_FLOOR, 1.0 - (days_since_access * effective_rate))
 
             importance_damping = 0.5 + (memory.importance * 0.5)
             decay_factor = max(CONFIDENCE_FLOOR, decay_factor * importance_damping)
@@ -79,24 +69,14 @@ class ForgettingService:
 
     def _decay_semantic(self, user_id: int) -> int:
         """Apply decay to semantic memories (slower rate)."""
-        memories = (
-            self.db.query(SemanticMemory)
-            .filter(SemanticMemory.user_id == user_id)
-            .all()
-        )
+        memories = self.db.query(SemanticMemory).filter(SemanticMemory.user_id == user_id).all()
 
         count = 0
         for memory in memories:
-            days_since_access = self._days_since(
-                memory.last_accessed or memory.created_at
-            )
+            days_since_access = self._days_since(memory.last_accessed or memory.created_at)
 
-            effective_rate = SEMANTIC_DECAY_RATE / max(
-                1.0, memory.access_count * 0.1
-            )
-            decay_factor = max(
-                CONFIDENCE_FLOOR, 1.0 - (days_since_access * effective_rate)
-            )
+            effective_rate = SEMANTIC_DECAY_RATE / max(1.0, memory.access_count * 0.1)
+            decay_factor = max(CONFIDENCE_FLOOR, 1.0 - (days_since_access * effective_rate))
 
             new_confidence = memory.confidence * decay_factor
             if new_confidence != memory.confidence:
@@ -131,8 +111,7 @@ class ForgettingService:
             )
             for node in nodes:
                 self.db.query(MemoryEdge).filter(
-                    (MemoryEdge.source_id == node.id)
-                    | (MemoryEdge.target_id == node.id)
+                    (MemoryEdge.source_id == node.id) | (MemoryEdge.target_id == node.id)
                 ).delete(synchronize_session="fetch")
                 self.db.delete(node)
 
@@ -166,8 +145,7 @@ class ForgettingService:
             )
             for node in nodes:
                 self.db.query(MemoryEdge).filter(
-                    (MemoryEdge.source_id == node.id)
-                    | (MemoryEdge.target_id == node.id)
+                    (MemoryEdge.source_id == node.id) | (MemoryEdge.target_id == node.id)
                 ).delete(synchronize_session="fetch")
                 self.db.delete(node)
 
@@ -179,16 +157,8 @@ class ForgettingService:
 
     def get_forgetting_stats(self, user_id: int) -> dict:
         """Get statistics about memory decay state."""
-        episodic_count = (
-            self.db.query(EpisodicMemory)
-            .filter(EpisodicMemory.user_id == user_id)
-            .count()
-        )
-        semantic_count = (
-            self.db.query(SemanticMemory)
-            .filter(SemanticMemory.user_id == user_id)
-            .count()
-        )
+        episodic_count = self.db.query(EpisodicMemory).filter(EpisodicMemory.user_id == user_id).count()
+        semantic_count = self.db.query(SemanticMemory).filter(SemanticMemory.user_id == user_id).count()
         episodic_low = (
             self.db.query(EpisodicMemory)
             .filter(
@@ -207,16 +177,10 @@ class ForgettingService:
         )
 
         avg_ep_confidence = (
-            self.db.query(func.avg(EpisodicMemory.confidence))
-            .filter(EpisodicMemory.user_id == user_id)
-            .scalar()
-            or 0.0
+            self.db.query(func.avg(EpisodicMemory.confidence)).filter(EpisodicMemory.user_id == user_id).scalar() or 0.0
         )
         avg_sem_confidence = (
-            self.db.query(func.avg(SemanticMemory.confidence))
-            .filter(SemanticMemory.user_id == user_id)
-            .scalar()
-            or 0.0
+            self.db.query(func.avg(SemanticMemory.confidence)).filter(SemanticMemory.user_id == user_id).scalar() or 0.0
         )
 
         return {

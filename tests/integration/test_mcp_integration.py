@@ -44,12 +44,8 @@ class TestMCPToolWrapping:
 
     def test_wrap_tool_namespacing(self):
         """MCP tools from different servers should be namespaced."""
-        tool1 = MCPToolWrapper(
-            "server_a", {"name": "search", "description": "Search A"}
-        )
-        tool2 = MCPToolWrapper(
-            "server_b", {"name": "search", "description": "Search B"}
-        )
+        tool1 = MCPToolWrapper("server_a", {"name": "search", "description": "Search A"})
+        tool2 = MCPToolWrapper("server_b", {"name": "search", "description": "Search B"})
         schema1 = tool1.to_cortex_schema()
         schema2 = tool2.to_cortex_schema()
 

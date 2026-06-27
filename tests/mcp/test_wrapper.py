@@ -53,27 +53,31 @@ class TestMCPToolWrapperSchema:
 
 class TestMCPToolWrapperParameters:
     def test_translates_properties(self):
-        schema = MCPToolWrapper("s", {})._translate_parameters({
-            "type": "object",
-            "properties": {
-                "count": {"type": "integer", "description": "How many"},
-                "mode": {"type": "string", "description": "Mode", "enum": ["a", "b"]},
-            },
-            "required": ["count"],
-        })
+        schema = MCPToolWrapper("s", {})._translate_parameters(
+            {
+                "type": "object",
+                "properties": {
+                    "count": {"type": "integer", "description": "How many"},
+                    "mode": {"type": "string", "description": "Mode", "enum": ["a", "b"]},
+                },
+                "required": ["count"],
+            }
+        )
         assert schema["type"] == "object"
         assert schema["required"] == ["count"]
         assert schema["properties"]["count"]["type"] == "integer"
         assert schema["properties"]["mode"]["enum"] == ["a", "b"]
 
     def test_preserves_default(self):
-        schema = MCPToolWrapper("s", {})._translate_parameters({
-            "type": "object",
-            "properties": {
-                "limit": {"type": "integer", "default": 10, "description": "Limit"},
-            },
-            "required": [],
-        })
+        schema = MCPToolWrapper("s", {})._translate_parameters(
+            {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "default": 10, "description": "Limit"},
+                },
+                "required": [],
+            }
+        )
         assert schema["properties"]["limit"]["default"] == 10
 
     def test_empty_schema(self):
@@ -85,17 +89,13 @@ class TestMCPToolWrapperParameters:
 
 class TestMCPToolWrapperResult:
     def test_single_text_json(self):
-        mcp_result = {
-            "result": {"content": [{"type": "text", "text": '{"key": "val"}'}]}
-        }
+        mcp_result = {"result": {"content": [{"type": "text", "text": '{"key": "val"}'}]}}
         wrapper = MCPToolWrapper("s", {"name": "t"})
         result = wrapper._translate_result(mcp_result)
         assert result == {"key": "val"}
 
     def test_single_text_plain(self):
-        mcp_result = {
-            "result": {"content": [{"type": "text", "text": "hello world"}]}
-        }
+        mcp_result = {"result": {"content": [{"type": "text", "text": "hello world"}]}}
         wrapper = MCPToolWrapper("s", {"name": "t"})
         result = wrapper._translate_result(mcp_result)
         assert result == {"text": "hello world"}
@@ -120,9 +120,7 @@ class TestMCPToolWrapperResult:
         assert result == {"content": []}
 
     def test_non_text_content(self):
-        mcp_result = {
-            "result": {"content": [{"type": "image", "data": "abc"}]}
-        }
+        mcp_result = {"result": {"content": [{"type": "image", "data": "abc"}]}}
         wrapper = MCPToolWrapper("s", {"name": "t"})
         result = wrapper._translate_result(mcp_result)
         assert result == {"content": [{"type": "image", "data": "abc"}]}
@@ -139,9 +137,7 @@ class TestMCPToolWrapperExecute:
     async def test_execute_sends_request(self):
         wrapper = MCPToolWrapper("srv", {"name": "do_thing"})
         mock_transport = AsyncMock()
-        mock_transport.send_request.return_value = {
-            "result": {"content": [{"type": "text", "text": "ok"}]}
-        }
+        mock_transport.send_request.return_value = {"result": {"content": [{"type": "text", "text": "ok"}]}}
         await wrapper.execute({"arg1": "val"}, mock_transport)
         mock_transport.send_request.assert_called_once()
         call_args = mock_transport.send_request.call_args[0][0]

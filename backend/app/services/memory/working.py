@@ -65,9 +65,7 @@ class WorkingMemoryService:
             .all()
         )
 
-    def get_by_slot(
-        self, user_id: int, session_id: str, slot: str
-    ) -> list[WorkingMemory]:
+    def get_by_slot(self, user_id: int, session_id: str, slot: str) -> list[WorkingMemory]:
         """Get items in a specific slot."""
         return (
             self.db.query(WorkingMemory)

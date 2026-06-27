@@ -23,9 +23,7 @@ TOOLS = [
         "description": "A mock tool for testing",
         "inputSchema": {
             "type": "object",
-            "properties": {
-                "input": {"type": "string", "description": "Input text"}
-            },
+            "properties": {"input": {"type": "string", "description": "Input text"}},
             "required": ["input"],
         },
     },

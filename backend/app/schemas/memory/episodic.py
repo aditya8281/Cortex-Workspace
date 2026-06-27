@@ -12,9 +12,7 @@ class EpisodicMemoryCreate(BaseModel):
     """Schema for creating a new episodic memory."""
 
     content: str = Field(..., min_length=1, max_length=10000, description="What happened")
-    context: dict | None = Field(
-        None, description="Provenance: source, trigger, environment"
-    )
+    context: dict | None = Field(None, description="Provenance: source, trigger, environment")
     emotion: str | None = Field(None, max_length=50, description="Emotional state tag")
     importance: float = Field(0.5, ge=0.0, le=1.0, description="Intrinsic importance 0.0-1.0")
 
@@ -30,9 +28,7 @@ class EpisodicMemoryCreate(BaseModel):
         ]
         for pattern in secret_patterns:
             if re.search(pattern, v):
-                raise ValueError(
-                    "Content must not contain API keys, passwords, or tokens"
-                )
+                raise ValueError("Content must not contain API keys, passwords, or tokens")
         return v
 
 

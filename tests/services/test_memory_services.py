@@ -685,12 +685,10 @@ class TestMemorySearchService:
         episodic = MemoryServiceFactory(db_session).episodic
         semantic = MemoryServiceFactory(db_session).semantic
 
-        episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Python debugging session"
-        ))
-        semantic.create(user_id=1, data=SemanticMemoryCreate(
-            content="Python is a programming language", category="fact"
-        ))
+        episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Python debugging session"))
+        semantic.create(
+            user_id=1, data=SemanticMemoryCreate(content="Python is a programming language", category="fact")
+        )
 
         search = MemoryServiceFactory(db_session).search
         results = search.search(user_id=1, query="Python")
@@ -701,12 +699,8 @@ class TestMemorySearchService:
     def test_search_scoring_ranks_by_relevance(self, db_session):
         episodic = MemoryServiceFactory(db_session).episodic
 
-        episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Critical Python bug fix", importance=0.9
-        ))
-        episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Python code formatting", importance=0.2
-        ))
+        episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Critical Python bug fix", importance=0.9))
+        episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Python code formatting", importance=0.2))
 
         search = MemoryServiceFactory(db_session).search
         results = search.search(user_id=1, query="Python")
@@ -740,9 +734,7 @@ class TestMemorySearchService:
 
     def test_search_min_score_threshold(self, db_session):
         episodic = MemoryServiceFactory(db_session).episodic
-        episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Low relevance content", importance=0.1
-        ))
+        episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Low relevance content", importance=0.1))
 
         search = MemoryServiceFactory(db_session).search
         results = search.search(user_id=1, query="Python", min_score=0.5)
@@ -750,12 +742,8 @@ class TestMemorySearchService:
 
     def test_search_by_importance(self, db_session):
         episodic = MemoryServiceFactory(db_session).episodic
-        episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Critical", importance=0.9
-        ))
-        episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Minor", importance=0.2
-        ))
+        episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Critical", importance=0.9))
+        episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Minor", importance=0.2))
 
         search = MemoryServiceFactory(db_session).search
         results = search.search_by_importance(1, min_importance=0.5)
@@ -786,16 +774,12 @@ class TestForgettingService:
 
     def test_decay_reduces_confidence(self, db_session):
         episodic = MemoryServiceFactory(db_session).episodic
-        memory = episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Old memory", importance=0.5
-        ))
+        memory = episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Old memory", importance=0.5))
 
         # Simulate old memory
         from backend.app.models.memory.episodic import EpisodicMemory
 
-        old_mem = db_session.query(EpisodicMemory).filter(
-            EpisodicMemory.id == memory.id
-        ).first()
+        old_mem = db_session.query(EpisodicMemory).filter(EpisodicMemory.id == memory.id).first()
         old_mem.last_accessed = datetime.utcnow() - timedelta(days=30)
         db_session.commit()
 
@@ -809,44 +793,30 @@ class TestForgettingService:
 
     def test_importance_dampens_decay(self, db_session):
         episodic = MemoryServiceFactory(db_session).episodic
-        high = episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Important", importance=0.9
-        ))
-        low = episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Unimportant", importance=0.1
-        ))
+        high = episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Important", importance=0.9))
+        low = episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Unimportant", importance=0.1))
 
         from backend.app.models.memory.episodic import EpisodicMemory
 
         for mem_id in [high.id, low.id]:
-            mem = db_session.query(EpisodicMemory).filter(
-                EpisodicMemory.id == mem_id
-            ).first()
+            mem = db_session.query(EpisodicMemory).filter(EpisodicMemory.id == mem_id).first()
             mem.last_accessed = datetime.utcnow() - timedelta(days=30)
         db_session.commit()
 
         forgetting = MemoryServiceFactory(db_session).forgetting
         forgetting.apply_decay(user_id=1)
 
-        high_mem = db_session.query(EpisodicMemory).filter(
-            EpisodicMemory.id == high.id
-        ).first()
-        low_mem = db_session.query(EpisodicMemory).filter(
-            EpisodicMemory.id == low.id
-        ).first()
+        high_mem = db_session.query(EpisodicMemory).filter(EpisodicMemory.id == high.id).first()
+        low_mem = db_session.query(EpisodicMemory).filter(EpisodicMemory.id == low.id).first()
         assert high_mem.confidence > low_mem.confidence
 
     def test_garbage_collection_removes_low_confidence(self, db_session):
         episodic = MemoryServiceFactory(db_session).episodic
-        memory = episodic.create(user_id=1, data=EpisodicMemoryCreate(
-            content="Very old", importance=0.1
-        ))
+        memory = episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Very old", importance=0.1))
 
         from backend.app.models.memory.episodic import EpisodicMemory
 
-        mem = db_session.query(EpisodicMemory).filter(
-            EpisodicMemory.id == memory.id
-        ).first()
+        mem = db_session.query(EpisodicMemory).filter(EpisodicMemory.id == memory.id).first()
         mem.confidence = 0.05  # Below GC_THRESHOLD
         db_session.commit()
 
@@ -854,9 +824,7 @@ class TestForgettingService:
         result = forgetting.apply_decay(user_id=1)
 
         assert result["episodic_gc"] >= 1
-        remaining = db_session.query(EpisodicMemory).filter(
-            EpisodicMemory.id == memory.id
-        ).first()
+        remaining = db_session.query(EpisodicMemory).filter(EpisodicMemory.id == memory.id).first()
         assert remaining is None
 
     def test_get_forgetting_stats(self, db_session):

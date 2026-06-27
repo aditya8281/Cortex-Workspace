@@ -14,8 +14,16 @@ class TestRegisterMCPTools:
     def test_registers_tools(self):
         registry = ToolRegistry()
         mcp_tools = [
-            {"name": "read_file", "description": "Read a file", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}},
-            {"name": "write_file", "description": "Write a file", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}},
+            {
+                "name": "read_file",
+                "description": "Read a file",
+                "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
+            },
+            {
+                "name": "write_file",
+                "description": "Write a file",
+                "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
+            },
         ]
         count = register_mcp_tools(registry, mcp_tools, "filesystem")
         assert count == 2
@@ -26,7 +34,11 @@ class TestRegisterMCPTools:
     def test_tool_schema_is_valid(self):
         registry = ToolRegistry()
         mcp_tools = [
-            {"name": "query", "description": "Run SQL", "inputSchema": {"type": "object", "properties": {"sql": {"type": "string"}}, "required": ["sql"]}},
+            {
+                "name": "query",
+                "description": "Run SQL",
+                "inputSchema": {"type": "object", "properties": {"sql": {"type": "string"}}, "required": ["sql"]},
+            },
         ]
         register_mcp_tools(registry, mcp_tools, "db")
         tool = registry.get("mcp_db_query")
@@ -38,7 +50,11 @@ class TestRegisterMCPTools:
     def test_tool_handler_is_callable(self):
         registry = ToolRegistry()
         mcp_tools = [
-            {"name": "greet", "description": "Greet someone", "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}},
+            {
+                "name": "greet",
+                "description": "Greet someone",
+                "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
+            },
         ]
         register_mcp_tools(registry, mcp_tools, "test")
         tool = registry.get("mcp_test_greet")
@@ -49,7 +65,11 @@ class TestRegisterMCPTools:
     async def test_tool_handler_executes_via_transport(self):
         registry = ToolRegistry()
         mcp_tools = [
-            {"name": "greet", "description": "Greet someone", "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}},
+            {
+                "name": "greet",
+                "description": "Greet someone",
+                "inputSchema": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
+            },
         ]
         mock_transport = AsyncMock()
         mock_transport.send_request.return_value = {

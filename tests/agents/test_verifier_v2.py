@@ -135,6 +135,7 @@ class TestVerifyCompletionAsync:
     async def test_llm_parsing(self):
         async def mock_chat(**kwargs):
             from backend.app.services.intelligence.llm.provider import LLMResponse
+
             return LLMResponse(
                 content="VERDICT: COMPLETE\nSUMMARY: Bug fixed in auth.py\nFEEDBACK: None",
                 model="test",

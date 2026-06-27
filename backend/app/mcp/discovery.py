@@ -148,9 +148,7 @@ class MCPServerDiscovery:
         config = state.config
         async with aiohttp.ClientSession() as session, session.get(config.sse_url) as resp:
             if resp.status != 200:
-                raise RuntimeError(
-                    f"MCP server {config.name} SSE endpoint unreachable: {resp.status}"
-                )
+                raise RuntimeError(f"MCP server {config.name} SSE endpoint unreachable: {resp.status}")
 
     async def _wait_for_ready(self, state: MCPServerState) -> None:
         """Wait for a stdio MCP server to be ready."""

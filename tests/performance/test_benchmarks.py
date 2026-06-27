@@ -31,9 +31,7 @@ class TestTokenCounterPerformance:
     async def test_counting_speed(self):
         """Token counting should be fast — < 5ms per call."""
         counter = TokenCounter()
-        messages = [
-            {"role": "user", "content": "Hello, this is a test message with content."}
-        ]
+        messages = [{"role": "user", "content": "Hello, this is a test message with content."}]
         start = time.monotonic()
         for _ in range(100):
             await counter.count_tokens(messages)

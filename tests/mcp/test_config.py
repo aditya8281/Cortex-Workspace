@@ -66,9 +66,7 @@ class TestMCPConfigManagerToolFiltering:
 
     def test_allowlist_filters(self):
         manager = MCPConfigManager()
-        manager._user_configs[1] = MCPConfig(
-            tool_allowlist={1: ["mcp_fs_read"]}
-        )
+        manager._user_configs[1] = MCPConfig(tool_allowlist={1: ["mcp_fs_read"]})
         tools = [
             {"function": {"name": "mcp_fs_read", "description": "Read"}},
             {"function": {"name": "mcp_db_query", "description": "Query"}},
@@ -79,9 +77,7 @@ class TestMCPConfigManagerToolFiltering:
 
     def test_denylist_filters(self):
         manager = MCPConfigManager()
-        manager._user_configs[1] = MCPConfig(
-            tool_denylist={1: ["mcp_db_query"]}
-        )
+        manager._user_configs[1] = MCPConfig(tool_denylist={1: ["mcp_db_query"]})
         tools = [
             {"function": {"name": "mcp_fs_read", "description": "Read"}},
             {"function": {"name": "mcp_db_query", "description": "Query"}},

@@ -17,8 +17,14 @@ from backend.app.mcp.discovery import (
 class TestMCPServerStatus:
     def test_all_statuses_exist(self):
         statuses = [
-            "discovered", "starting", "running", "healthy",
-            "unhealthy", "restarting", "stopped", "failed",
+            "discovered",
+            "starting",
+            "running",
+            "healthy",
+            "unhealthy",
+            "restarting",
+            "stopped",
+            "failed",
         ]
         for s in statuses:
             assert MCPServerStatus(s) == s

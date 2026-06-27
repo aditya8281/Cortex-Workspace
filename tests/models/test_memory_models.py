@@ -27,8 +27,7 @@ class TestEpisodicMemoryModel:
 
     def test_creation(self, db_session):
         memory = EpisodicMemory(
-            user_id=1, content="Test experience", importance=0.8,
-            context={"source": "chat"}, emotion="excited"
+            user_id=1, content="Test experience", importance=0.8, context={"source": "chat"}, emotion="excited"
         )
         db_session.add(memory)
         db_session.commit()
@@ -72,10 +71,7 @@ class TestSemanticMemoryModel:
     """Semantic memory model tests."""
 
     def test_creation(self, db_session):
-        memory = SemanticMemory(
-            user_id=1, content="Python is a language",
-            category="fact", source="user_input"
-        )
+        memory = SemanticMemory(user_id=1, content="Python is a language", category="fact", source="user_input")
         db_session.add(memory)
         db_session.commit()
         assert memory.id is not None
@@ -106,9 +102,12 @@ class TestWorkingMemoryModel:
 
     def test_creation(self, db_session):
         memory = WorkingMemory(
-            user_id=1, session_id="test-session-uuid",
-            content="Current task", slot="active", priority=5,
-            expires_at=datetime.utcnow() + timedelta(hours=1)
+            user_id=1,
+            session_id="test-session-uuid",
+            content="Current task",
+            slot="active",
+            priority=5,
+            expires_at=datetime.utcnow() + timedelta(hours=1),
         )
         db_session.add(memory)
         db_session.commit()
@@ -123,17 +122,18 @@ class TestWorkingMemoryModel:
         m2 = WorkingMemory(user_id=1, session_id="session-b", content="B", expires_at=now)
         db_session.add_all([m1, m2])
         db_session.commit()
-        results = db_session.query(WorkingMemory).filter(
-            WorkingMemory.user_id == 1, WorkingMemory.session_id == "session-a"
-        ).all()
+        results = (
+            db_session.query(WorkingMemory)
+            .filter(WorkingMemory.user_id == 1, WorkingMemory.session_id == "session-a")
+            .all()
+        )
         assert len(results) == 1
 
     def test_slot_values(self, db_session):
         now = datetime.utcnow() + timedelta(hours=1)
         for slot in ("active", "buffer", "archive"):
             memory = WorkingMemory(
-                user_id=1, session_id=f"sess-{slot}",
-                content=f"Item {slot}", slot=slot, expires_at=now
+                user_id=1, session_id=f"sess-{slot}", content=f"Item {slot}", slot=slot, expires_at=now
             )
             db_session.add(memory)
         db_session.commit()
@@ -145,10 +145,7 @@ class TestMemoryNodeModel:
     """Memory graph node tests."""
 
     def test_creation(self, db_session):
-        node = MemoryNode(
-            user_id=1, memory_type="episodic",
-            memory_id=1, label="Test node"
-        )
+        node = MemoryNode(user_id=1, memory_type="episodic", memory_id=1, label="Test node")
         db_session.add(node)
         db_session.commit()
         assert node.id is not None
@@ -171,10 +168,7 @@ class TestMemoryEdgeModel:
         db_session.add_all([n1, n2])
         db_session.commit()
 
-        edge = MemoryEdge(
-            source_id=n1.id, target_id=n2.id,
-            edge_type="related_to", weight=0.7
-        )
+        edge = MemoryEdge(source_id=n1.id, target_id=n2.id, edge_type="related_to", weight=0.7)
         db_session.add(edge)
         db_session.commit()
         assert edge.id is not None
@@ -213,10 +207,17 @@ class TestEpisodicSchemaValidation:
 
     def test_response_from_attributes(self):
         data = {
-            "id": 1, "user_id": 1, "content": "Test", "context": None,
-            "emotion": None, "importance": 0.5, "confidence": 0.5,
-            "access_count": 0, "last_accessed": None,
-            "created_at": datetime.utcnow(), "updated_at": None,
+            "id": 1,
+            "user_id": 1,
+            "content": "Test",
+            "context": None,
+            "emotion": None,
+            "importance": 0.5,
+            "confidence": 0.5,
+            "access_count": 0,
+            "last_accessed": None,
+            "created_at": datetime.utcnow(),
+            "updated_at": None,
             "recency_score": 1.0,
         }
         resp = EpisodicMemoryResponse(**data)
@@ -271,10 +272,7 @@ class TestGraphSchemaValidation:
             MemoryNodeCreate(memory_type="invalid", memory_id=1, label="Test")
 
     def test_edge_creation(self):
-        schema = MemoryEdgeCreate(
-            source_id=1, target_id=2,
-            edge_type="related_to", weight=0.7
-        )
+        schema = MemoryEdgeCreate(source_id=1, target_id=2, edge_type="related_to", weight=0.7)
         assert schema.weight == 0.7
         assert schema.edge_type == "related_to"
 

@@ -73,7 +73,10 @@ class TestStdioTransport:
         future = loop.create_future()
         transport._pending[1] = future
 
-        with patch("asyncio.wait_for", side_effect=asyncio.TimeoutError), pytest.raises(RuntimeError, match="timed out"):
+        with (
+            patch("asyncio.wait_for", side_effect=asyncio.TimeoutError),
+            pytest.raises(RuntimeError, match="timed out"),
+        ):
             await transport.send_request({"jsonrpc": "2.0", "id": 1, "method": "test", "params": {}})
 
     @pytest.mark.asyncio

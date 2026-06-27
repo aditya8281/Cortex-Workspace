@@ -42,9 +42,7 @@ class MemoryEdgeCreate(BaseModel):
 
     source_id: int = Field(..., gt=0, description="Source node ID")
     target_id: int = Field(..., gt=0, description="Target node ID")
-    edge_type: str = Field(
-        ..., min_length=1, max_length=100, description="Edge type"
-    )
+    edge_type: str = Field(..., min_length=1, max_length=100, description="Edge type")
     weight: float = Field(0.5, ge=0.0, le=1.0, description="Edge weight 0.0-1.0")
 
 

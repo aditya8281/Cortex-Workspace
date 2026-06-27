@@ -10,12 +10,8 @@ from pydantic import BaseModel, Field, field_validator
 class WorkingMemoryCreate(BaseModel):
     """Schema for adding an item to working memory."""
 
-    session_id: str = Field(
-        ..., min_length=1, max_length=100, description="Session UUID"
-    )
-    content: str = Field(
-        ..., min_length=1, max_length=5000, description="Context item"
-    )
+    session_id: str = Field(..., min_length=1, max_length=100, description="Session UUID")
+    content: str = Field(..., min_length=1, max_length=5000, description="Context item")
     slot: str = Field("active", description="Slot: active, buffer, archive")
     priority: int = Field(0, ge=0, le=100, description="Priority 0-100")
 
