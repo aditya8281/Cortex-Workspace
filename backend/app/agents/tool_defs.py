@@ -417,7 +417,7 @@ async def search_knowledge(query: str, limit: int = 10) -> str:
     try:
         # MemoryManager requires a db session. We create one lazily.
         from backend.app.core.database import SessionLocal
-        from backend.app.services.memory_manager import MemoryManager
+        from backend.app.services.memory.manager import MemoryManager
 
         db = SessionLocal()
         try:

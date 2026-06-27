@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from backend.app.services.memory_manager import DEFAULT_COLLECTION, MemoryManager
+from backend.app.services.memory.manager import DEFAULT_COLLECTION, MemoryManager
 
 
 @pytest.fixture

@@ -2,8 +2,8 @@
 
 from unittest.mock import patch
 
-from backend.app.services.catalogue import CatalogueManager
-from backend.app.services.ollama_catalog import CatalogSourceStatus
+from backend.app.services.intelligence.model_catalog import CatalogueManager
+from backend.app.services.intelligence.ollama_catalog import CatalogSourceStatus
 
 MOCK_CATALOG = [
     {
@@ -28,7 +28,7 @@ MOCK_CATALOG = [
 
 
 @patch(
-    "backend.app.services.ollama_catalog.get_ollama_catalog_sync",
+    "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync",
     return_value=(MOCK_CATALOG, CatalogSourceStatus()),
 )
 def test_ingest_from_catalog(mock_sync, _db_session):
@@ -38,7 +38,7 @@ def test_ingest_from_catalog(mock_sync, _db_session):
 
 
 @patch(
-    "backend.app.services.ollama_catalog.get_ollama_catalog_sync",
+    "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync",
     return_value=(MOCK_CATALOG, CatalogSourceStatus()),
 )
 def test_ingest_is_idempotent(mock_sync, _db_session):
@@ -49,7 +49,7 @@ def test_ingest_is_idempotent(mock_sync, _db_session):
 
 
 @patch(
-    "backend.app.services.ollama_catalog.get_ollama_catalog_sync",
+    "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync",
     return_value=(MOCK_CATALOG, CatalogSourceStatus()),
 )
 def test_get_all_catalogue(mock_sync, _db_session):
@@ -62,7 +62,7 @@ def test_get_all_catalogue(mock_sync, _db_session):
 def test_seed_curated_models_backward_compat(_db_session):
     """seed_curated_models() still works as a wrapper."""
     with patch(
-        "backend.app.services.ollama_catalog.get_ollama_catalog_sync",
+        "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync",
         return_value=(MOCK_CATALOG, CatalogSourceStatus()),
     ):
         cm = CatalogueManager(_db_session)

@@ -21,8 +21,8 @@ from backend.app.schemas.repository import (
     RepoListResponse,
     RepoUpdateResponse,
 )
-from backend.app.services.graph_builder import GraphBuilder
-from backend.app.services.incremental_indexer import IncrementalIndexer
+from backend.app.services.memory.graph import GraphBuilder
+from backend.app.services.memory.incremental_indexer import IncrementalIndexer
 from backend.app.tasks.worker import enqueue_task
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ def create_repo(
         raise HTTPException(status_code=400, detail=f"Path is not a directory: {payload.path}")
 
     # Validate repo path is within user's storage root
-    from backend.app.services.storage_registry import get_registry_for_user
+    from backend.app.services.memory.storage_registry import get_registry_for_user
 
     registry = get_registry_for_user(db, current_user.id)
     if registry:

@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from backend.app.services.model_downloader import (
+from backend.app.services.download.downloader import (
     DownloadManager,
     DownloadRecord,
     DownloadStatus,
@@ -28,8 +28,8 @@ def tmp_models_dir(tmp_path):
 def manager(tmp_models_dir):
     """Create a fresh DownloadManager with tmp state file."""
     with (
-        patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir),
-        patch("backend.app.services.model_downloader.STATE_FILE", tmp_models_dir / "state.json"),
+        patch("backend.app.services.download.downloader.MODELS_DIR", tmp_models_dir),
+        patch("backend.app.services.download.downloader.STATE_FILE", tmp_models_dir / "state.json"),
     ):
         mgr = DownloadManager(max_concurrent=2, max_retries=2)
         yield mgr
@@ -64,8 +64,8 @@ def manager_with_state(tmp_models_dir):
         )
     )
     with (
-        patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir),
-        patch("backend.app.services.model_downloader.STATE_FILE", state_file),
+        patch("backend.app.services.download.downloader.MODELS_DIR", tmp_models_dir),
+        patch("backend.app.services.download.downloader.STATE_FILE", state_file),
     ):
         yield DownloadManager(max_concurrent=2, max_retries=3)
 
@@ -110,8 +110,8 @@ def test_load_state_restores_queued(manager_with_state: DownloadManager):
 
 def test_load_state_handles_missing_file(tmp_models_dir):
     with (
-        patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir),
-        patch("backend.app.services.model_downloader.STATE_FILE", tmp_models_dir / "nonexistent.json"),
+        patch("backend.app.services.download.downloader.MODELS_DIR", tmp_models_dir),
+        patch("backend.app.services.download.downloader.STATE_FILE", tmp_models_dir / "nonexistent.json"),
     ):
         mgr = DownloadManager()
         assert len(mgr._records) == 0
@@ -121,8 +121,8 @@ def test_load_state_handles_corrupt_file(tmp_models_dir):
     bad_file = tmp_models_dir / "state.json"
     bad_file.write_text("not valid json {{{")
     with (
-        patch("backend.app.services.model_downloader.MODELS_DIR", tmp_models_dir),
-        patch("backend.app.services.model_downloader.STATE_FILE", bad_file),
+        patch("backend.app.services.download.downloader.MODELS_DIR", tmp_models_dir),
+        patch("backend.app.services.download.downloader.STATE_FILE", bad_file),
     ):
         mgr = DownloadManager()
         assert len(mgr._records) == 0
@@ -343,7 +343,7 @@ async def test_execute_download_fails_after_max_retries(manager: DownloadManager
 
 @pytest.mark.asyncio
 async def test_execute_download_paused_during_pull(manager: DownloadManager):
-    from backend.app.services.model_downloader import _DownloadPaused
+    from backend.app.services.download.downloader import _DownloadPaused
 
     async def pull_then_pause(record):
         record.status = DownloadStatus.PAUSED

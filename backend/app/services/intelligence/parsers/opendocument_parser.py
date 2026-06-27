@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from backend.app.services.parsers.base import BaseParser, ParsedDocument, ParsedSection
+from backend.app.services.intelligence.parsers.base import BaseParser, ParsedDocument, ParsedSection
 
 logger = logging.getLogger(__name__)
 

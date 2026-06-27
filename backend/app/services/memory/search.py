@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.vector_db import get_vector_db
 from backend.app.models.graph import GraphEdge, GraphNode
-from backend.app.services.embedding_service import get_embedding_service
+from backend.app.services.intelligence.embedding_service import get_embedding_service
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ class CrossFileSearch:
 
     def hybrid_search(self, query: str, repo_id: int | None = None, max_results: int = 20):
         """Use hybrid retrieval for better results."""
-        from backend.app.services.hybrid_retrieval import HybridRetrievalV2 as HybridRetrieval
+        from backend.app.services.intelligence.hybrid_retrieval import HybridRetrievalV2 as HybridRetrieval
 
         retrieval = HybridRetrieval(self.db)
         return retrieval.retrieve(query, repo_id, max_results)

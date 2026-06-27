@@ -20,7 +20,7 @@ from backend.app.schemas.user import (
     UserRegisterPayload,
     UserResponse,
 )
-from backend.app.services.user_service import _normalize_username, to_user_response
+from backend.app.services.interaction.user import _normalize_username, to_user_response
 
 router = APIRouter()
 
@@ -239,7 +239,7 @@ async def delete_me(
 
     # Clear vault cache
     try:
-        from backend.app.services.vault_service import _vault_cache_lock, _vault_passwords
+        from backend.app.services.memory.vault import _vault_cache_lock, _vault_passwords
 
         with _vault_cache_lock:
             _vault_passwords.pop(user.id, None)
@@ -247,7 +247,7 @@ async def delete_me(
         pass
 
     # Soft delete: set deleted_at, don't remove data
-    from backend.app.services.user_service import delete_user
+    from backend.app.services.interaction.user import delete_user
 
     delete_user(db, user.id)
 
@@ -297,7 +297,7 @@ async def restore_account(
     if not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid password")
 
-    from backend.app.services.user_service import restore_user
+    from backend.app.services.interaction.user import restore_user
 
     restore_user(db, user.id)
     return {"message": "Account restored successfully"}

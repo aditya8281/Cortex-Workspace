@@ -8,7 +8,7 @@ from collections.abc import Callable
 import httpx
 import structlog
 
-from backend.app.services.providers.base import (
+from backend.app.services.intelligence.providers.base import (
     ProviderAdapter,
     ProviderDownloadResult,
     ProviderModelInfo,

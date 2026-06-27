@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from backend.app.models.embedding_cache import EmbeddingCache
-from backend.app.services.embedding_cache import EmbeddingCacheService
+from backend.app.services.intelligence.embedding_cache import EmbeddingCacheService
 
 
 @pytest.fixture()

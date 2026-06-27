@@ -60,7 +60,7 @@ async def verify_completion(
         return _heuristic_verdict(final_response)
 
     try:
-        from backend.app.services.llm.provider import LLMMessage
+        from backend.app.services.intelligence.llm.provider import LLMMessage
 
         # Build a concise context for the verifier (no agent conversation history)
         messages = [

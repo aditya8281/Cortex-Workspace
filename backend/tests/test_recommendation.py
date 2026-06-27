@@ -3,8 +3,8 @@
 from datetime import datetime, timedelta, timezone
 
 from backend.app.models.model_catalog import ModelCatalog, ModelStatistics
-from backend.app.services.hardware import HardwareProfile
-from backend.app.services.recommendation import WORKLOADS, RecommendationEngine
+from backend.app.services.awareness.hardware import HardwareProfile
+from backend.app.services.intelligence.recommendation import WORKLOADS, RecommendationEngine
 
 
 def _make_hardware(**kwargs) -> HardwareProfile:
@@ -254,7 +254,7 @@ def test_efficiency_score_calculation():
     assert rec is not None
 
     # Verify efficiency calculation manually
-    from backend.app.services.catalogue import estimate_tps_gpu
+    from backend.app.services.intelligence.model_catalog import estimate_tps_gpu
 
     bandwidth = hw.gpu_memory_bandwidth_gbps
     tps = estimate_tps_gpu(

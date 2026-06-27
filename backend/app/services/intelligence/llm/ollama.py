@@ -7,7 +7,7 @@ from typing import Any
 import httpx
 
 from backend.app.core.config import settings
-from backend.app.services.llm.provider import LLMModelInfo, LLMProvider
+from backend.app.services.intelligence.llm.provider import LLMModelInfo, LLMProvider
 
 logger = logging.getLogger(__name__)
 

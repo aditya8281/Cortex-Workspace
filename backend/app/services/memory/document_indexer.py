@@ -17,9 +17,9 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.vector_db import VectorDB, get_vector_db
 from backend.app.models.document import Document, DocumentChunk, DocumentType
-from backend.app.services.embedding_cache import EmbeddingCacheService, get_embedding_cache
-from backend.app.services.embedding_service import EmbeddingService, get_embedding_service
-from backend.app.services.parsers import (
+from backend.app.services.intelligence.embedding_cache import EmbeddingCacheService, get_embedding_cache
+from backend.app.services.intelligence.embedding_service import EmbeddingService, get_embedding_service
+from backend.app.services.intelligence.parsers import (
     ArchiveParser,
     DocxParser,
     EPUBParser,
@@ -36,7 +36,7 @@ from backend.app.services.parsers import (
     VCardParser,
     XlsxParser,
 )
-from backend.app.services.semantic_chunker import SemanticChunker
+from backend.app.services.intelligence.semantic_chunker import SemanticChunker
 
 logger = logging.getLogger(__name__)
 

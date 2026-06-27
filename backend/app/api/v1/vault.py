@@ -36,7 +36,7 @@ from backend.app.schemas.vault import (
     VaultStatusResponse,
     VaultUploadResponse,
 )
-from backend.app.services import vault_service
+from backend.app.services.memory import vault as vault_service
 
 router = APIRouter()
 
@@ -157,7 +157,7 @@ def vault_status(
     current_user: User = Depends(get_current_user),
 ):
     """Check vault lock status."""
-    from backend.app.services.vault_service import is_vault_unlocked
+    from backend.app.services.memory.vault import is_vault_unlocked
 
     return {
         "locked": not is_vault_unlocked(current_user),

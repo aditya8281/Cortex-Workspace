@@ -2,7 +2,7 @@
 
 import tempfile
 
-from backend.app.services.file_watcher_v2 import FileChange, FileWatcherV2, _ChangeHandler
+from backend.app.services.awareness.file_watcher import FileChange, FileWatcherV2, _ChangeHandler
 
 
 def test_file_change_dataclass():

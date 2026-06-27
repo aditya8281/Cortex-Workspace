@@ -13,9 +13,9 @@ from sqlalchemy.orm import Session
 from backend.app.core.vector_db import get_vector_db
 from backend.app.models.file_index import IndexedFile
 from backend.app.models.repo_index import CodeChunk, RepoIndex
-from backend.app.services.chunker import SKIP_DIRS, Chunk, chunk_code, chunk_text, detect_language
-from backend.app.services.embedding_service import get_embedding_service
-from backend.app.services.indexing_rules import IndexingRules
+from backend.app.services.intelligence.chunker import SKIP_DIRS, Chunk, chunk_code, chunk_text, detect_language
+from backend.app.services.intelligence.embedding_service import get_embedding_service
+from backend.app.services.memory.indexing_rules import IndexingRules
 
 logger = logging.getLogger(__name__)
 

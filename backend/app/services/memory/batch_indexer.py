@@ -99,7 +99,7 @@ class BatchIndexer:
 
             # Batch upsert to Qdrant
             from backend.app.core.vector_db import get_vector_db
-            from backend.app.services.embedding_service import get_embedding_service
+            from backend.app.services.intelligence.embedding_service import get_embedding_service
 
             vector_db = get_vector_db()
             embedder = get_embedding_service()

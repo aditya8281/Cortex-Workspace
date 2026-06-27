@@ -18,7 +18,7 @@ def test_list_memory_empty(client: TestClient, mock_auth):
 
 def test_list_memory_with_entries(client: TestClient, mock_auth, db_session):
     """GET /api/v1/memory returns entries with correct structure."""
-    from backend.app.services.memory_manager import MemoryManager
+    from backend.app.services.memory.manager import MemoryManager
 
     manager = MemoryManager(db_session)
     manager.create(
@@ -40,7 +40,7 @@ def test_list_memory_with_entries(client: TestClient, mock_auth, db_session):
 
 def test_list_memory_with_category_filter(client: TestClient, mock_auth, db_session):
     """GET /api/v1/memory with category filter returns only matching entries."""
-    from backend.app.services.memory_manager import MemoryManager
+    from backend.app.services.memory.manager import MemoryManager
 
     manager = MemoryManager(db_session)
     manager.create(user_id=mock_auth.id, title="Fact 1", content="Content 1", category="fact")
@@ -104,7 +104,7 @@ def test_create_memory_invalid_category(client: TestClient, mock_auth):
 
 def test_get_memory(client: TestClient, mock_auth, db_session):
     """GET /api/v1/memory/{id} returns a specific memory."""
-    from backend.app.services.memory_manager import MemoryManager
+    from backend.app.services.memory.manager import MemoryManager
 
     manager = MemoryManager(db_session)
     entry = manager.create(
@@ -129,7 +129,7 @@ def test_get_memory_not_found(client: TestClient, mock_auth):
 
 def test_update_memory(client: TestClient, mock_auth, db_session):
     """PUT /api/v1/memory/{id} updates an existing memory."""
-    from backend.app.services.memory_manager import MemoryManager
+    from backend.app.services.memory.manager import MemoryManager
 
     manager = MemoryManager(db_session)
     entry = manager.create(
@@ -168,7 +168,7 @@ def test_update_memory_not_found(client: TestClient, mock_auth):
 def test_delete_memory(client: TestClient, mock_auth, db_session):
     """DELETE /api/v1/memory/{id} deletes a memory."""
     from backend.app.intelligence.models import KnowledgeEntry
-    from backend.app.services.memory_manager import MemoryManager
+    from backend.app.services.memory.manager import MemoryManager
 
     manager = MemoryManager(db_session)
     entry = manager.create(
@@ -198,7 +198,7 @@ def test_delete_memory_not_found(client: TestClient, mock_auth):
 
 def test_search_memory(client: TestClient, mock_auth, db_session):
     """POST /api/v1/memory/search performs semantic search."""
-    from backend.app.services.memory_manager import MemoryManager
+    from backend.app.services.memory.manager import MemoryManager
 
     manager = MemoryManager(db_session)
     manager.create(
@@ -231,7 +231,7 @@ def test_search_memory_empty_query(client: TestClient, mock_auth):
 
 def test_list_memory_pagination(client: TestClient, mock_auth, db_session):
     """GET /api/v1/memory respects limit and offset parameters."""
-    from backend.app.services.memory_manager import MemoryManager
+    from backend.app.services.memory.manager import MemoryManager
 
     manager = MemoryManager(db_session)
     for i in range(5):

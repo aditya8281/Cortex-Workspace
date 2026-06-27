@@ -332,7 +332,7 @@ def estimate_vram_for_gpu(
         - fits: whether the model fits in available VRAM (None if unknown)
         - arch: resolved architecture key used
     """
-    from backend.app.services.quantization_db import QuantizationService
+    from backend.app.services.intelligence.quantization import QuantizationService
 
     svc = QuantizationService()
     base_vram = svc.estimate_vram_gb(parameter_count, quantization, context_length)

@@ -17,7 +17,7 @@ from backend.app.db.session import SessionLocal
 from backend.app.models.storage_registry import StorageRegistry
 from backend.app.models.user import User
 from backend.app.schemas.user import UserResponse
-from backend.app.services.user_service import to_user_response
+from backend.app.services.interaction.user import to_user_response
 
 router = APIRouter()
 

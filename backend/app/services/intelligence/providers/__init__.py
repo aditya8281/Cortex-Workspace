@@ -1,3 +1,3 @@
-from backend.app.services.providers.base import ProviderAdapter
+from backend.app.services.intelligence.providers.base import ProviderAdapter
 
 __all__ = ["ProviderAdapter"]

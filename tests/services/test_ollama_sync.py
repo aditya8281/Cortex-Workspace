@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from backend.app.services.ollama_sync import OllamaSyncService
+from backend.app.services.intelligence.ollama_sync import OllamaSyncService
 
 
 @pytest.fixture
@@ -24,9 +24,9 @@ async def test_sync_marks_downloaded_variant(mock_db):
 
     mock_installed = [{"name": "llama3.1:8b", "size": 4700000000}]
 
-    with patch("backend.app.services.ollama_sync.settings") as mock_settings:
+    with patch("backend.app.services.intelligence.ollama_sync.settings") as mock_settings:
         mock_settings.OLLAMA_BASE_URL = "http://localhost:11434"
-        with patch("backend.app.services.ollama_sync.httpx.AsyncClient") as mock_client:
+        with patch("backend.app.services.intelligence.ollama_sync.httpx.AsyncClient") as mock_client:
             mock_response = MagicMock()
             mock_response.json.return_value = {"models": mock_installed}
             mock_response.raise_for_status = MagicMock()
@@ -47,9 +47,9 @@ async def test_sync_graceful_on_offline(mock_db):
     """Returns empty result when Ollama is offline."""
     import httpx
 
-    with patch("backend.app.services.ollama_sync.settings") as mock_settings:
+    with patch("backend.app.services.intelligence.ollama_sync.settings") as mock_settings:
         mock_settings.OLLAMA_BASE_URL = "http://localhost:11434"
-        with patch("backend.app.services.ollama_sync.httpx.AsyncClient") as mock_client:
+        with patch("backend.app.services.intelligence.ollama_sync.httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
             mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))

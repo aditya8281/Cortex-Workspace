@@ -1,6 +1,6 @@
 """Tests for quantization database service."""
 
-from backend.app.services.quantization_db import QuantizationService
+from backend.app.services.intelligence.quantization import QuantizationService
 
 
 def test_get_quant_info():

@@ -55,7 +55,7 @@ async def compact_context(
         user_prompt = f"Summarize this conversation:\n\n{history_text}"
 
         # Import LLMMessage locally to avoid circular imports
-        from backend.app.services.llm.provider import LLMMessage
+        from backend.app.services.intelligence.llm.provider import LLMMessage
 
         messages = [
             LLMMessage(role="system", content=_COMPACTION_PROMPT),

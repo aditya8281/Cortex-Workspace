@@ -14,8 +14,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.models.model_catalog import ModelCatalog, Provider, SyncJob
-from backend.app.services.providers.base import ProviderModelInfo
-from backend.app.services.providers.registry import provider_registry
+from backend.app.services.intelligence.providers.base import ProviderModelInfo
+from backend.app.services.intelligence.providers.registry import provider_registry
 
 logger = structlog.get_logger()
 
@@ -54,7 +54,7 @@ class SyncService:
         try:
             # Sync Ollama models from unified catalog
             try:
-                from backend.app.services.ollama_catalog import get_ollama_catalog
+                from backend.app.services.intelligence.ollama_catalog import get_ollama_catalog
 
                 ollama_models, _source_status = await get_ollama_catalog(force_refresh=True)
                 for model in ollama_models:

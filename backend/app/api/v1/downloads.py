@@ -19,7 +19,7 @@ from backend.app.schemas.model import (
     InstalledModelsResponse,
     SyncInstalledResponse,
 )
-from backend.app.services.model_downloader import model_downloader
+from backend.app.services.download.downloader import model_downloader
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ async def list_installed_models(
     installed_names = {m["name"] for m in installed}
 
     from backend.app.core.db import get_db
-    from backend.app.services.catalogue import CatalogueManager
+    from backend.app.services.intelligence.model_catalog import CatalogueManager
 
     db = next(get_db())
     try:
@@ -93,7 +93,7 @@ async def sync_installed_models(
 ):
     """Sync locally installed Ollama models to the database."""
     from backend.app.core.db import get_db
-    from backend.app.services.ollama_sync import OllamaSyncService
+    from backend.app.services.intelligence.ollama_sync import OllamaSyncService
 
     db = next(get_db())
     try:
@@ -118,7 +118,7 @@ async def get_download_queue(
     current_user: User = Depends(get_current_user),
 ):
     """Get current download queue status."""
-    from backend.app.services.model_downloader import download_manager
+    from backend.app.services.download.downloader import download_manager
 
     records = download_manager.list_downloads()
 
@@ -167,7 +167,7 @@ async def get_download_history(
     current_user: User = Depends(get_current_user),
 ):
     """Get download history."""
-    from backend.app.services.model_downloader import download_manager
+    from backend.app.services.download.downloader import download_manager
 
     records = download_manager.list_downloads()
 

@@ -12,8 +12,8 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.app.db.base import Base
 from backend.app.models.repo_index import CodeChunk, RepoIndex  # noqa: F401
-from backend.app.services.chunker import chunk_code, chunk_text, detect_language
-from backend.app.services.repo_scanner import RepoScanner
+from backend.app.services.intelligence.chunker import chunk_code, chunk_text, detect_language
+from backend.app.services.awareness.repository import RepoScanner
 
 
 @pytest.fixture
@@ -120,8 +120,8 @@ class TestChunkText:
 
 
 class TestScanRepo:
-    @patch("backend.app.services.repo_scanner.get_vector_db")
-    @patch("backend.app.services.repo_scanner.get_embedding_service")
+    @patch("backend.app.services.awareness.repository.get_vector_db")
+    @patch("backend.app.services.awareness.repository.get_embedding_service")
     def test_scan_python_repo(self, mock_get_emb, mock_get_vdb, db_session):
         """Test scanning a Python-only repository."""
         mock_emb = MagicMock()
@@ -144,8 +144,8 @@ class TestScanRepo:
             assert result.languages["python"] == 2
             assert result.status == "completed"
 
-    @patch("backend.app.services.repo_scanner.get_vector_db")
-    @patch("backend.app.services.repo_scanner.get_embedding_service")
+    @patch("backend.app.services.awareness.repository.get_vector_db")
+    @patch("backend.app.services.awareness.repository.get_embedding_service")
     def test_scan_mixed_repo(self, mock_get_emb, mock_get_vdb, db_session):
         """Test scanning a multi-language repo."""
         mock_emb = MagicMock()
@@ -168,8 +168,8 @@ class TestScanRepo:
             assert "javascript" in result.languages
             assert "markdown" in result.languages
 
-    @patch("backend.app.services.repo_scanner.get_vector_db")
-    @patch("backend.app.services.repo_scanner.get_embedding_service")
+    @patch("backend.app.services.awareness.repository.get_vector_db")
+    @patch("backend.app.services.awareness.repository.get_embedding_service")
     def test_scan_skips_dirs(self, mock_get_emb, mock_get_vdb, db_session):
         """Test that ignored directories are skipped."""
         mock_emb = MagicMock()
@@ -199,8 +199,8 @@ class TestScanRepo:
 
 
 class TestGetRepoStatus:
-    @patch("backend.app.services.repo_scanner.get_vector_db")
-    @patch("backend.app.services.repo_scanner.get_embedding_service")
+    @patch("backend.app.services.awareness.repository.get_vector_db")
+    @patch("backend.app.services.awareness.repository.get_embedding_service")
     def test_get_repo_status(self, mock_get_emb, mock_get_vdb, db_session):
         """Test getting repository status."""
         mock_emb = MagicMock()

@@ -14,8 +14,8 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
-from backend.app.services.hybrid_retrieval import HybridRetrievalV2
-from backend.app.services.retrieval_metrics import get_retrieval_metrics
+from backend.app.services.intelligence.hybrid_retrieval import HybridRetrievalV2
+from backend.app.services.intelligence.metrics import get_retrieval_metrics
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -187,8 +187,8 @@ async def search_with_answer(
     current_user: User = Depends(get_current_user),
 ):
     """Search and synthesize an AI answer from results."""
-    from backend.app.services.llm.manager import llm_manager
-    from backend.app.services.llm.provider import LLMMessage
+    from backend.app.services.intelligence.llm.manager import llm_manager
+    from backend.app.services.intelligence.llm.provider import LLMMessage
 
     retrieval = HybridRetrievalV2(db)
     results = retrieval.retrieve(

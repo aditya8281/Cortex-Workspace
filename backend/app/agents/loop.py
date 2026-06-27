@@ -44,7 +44,7 @@ from backend.app.agents.stall import StallDetector
 from backend.app.agents.tools.policy import ToolPolicy
 from backend.app.agents.tools.registry import ToolRegistry
 from backend.app.agents.verifier import verify_completion
-from backend.app.services.llm.provider import LLMMessage
+from backend.app.services.intelligence.llm.provider import LLMMessage
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ async def agent_loop(
     """
     # Resolve LLM chat function
     if llm_chat is None:
-        from backend.app.services.llm.manager import llm_manager
+        from backend.app.services.intelligence.llm.manager import llm_manager
 
         llm_chat = llm_manager.chat
 

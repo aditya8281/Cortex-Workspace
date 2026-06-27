@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from backend.app.services.ollama_catalog import (
+from backend.app.services.intelligence.ollama_catalog import (
     OllamaCatalogService,
     get_catalog_service,
     get_ollama_catalog,
@@ -21,7 +21,7 @@ from backend.app.services.ollama_catalog import (
 @pytest.fixture
 def service(tmp_path: Path) -> OllamaCatalogService:
     """Create a catalog service with a temp cache dir."""
-    import backend.app.services.ollama_catalog as mod
+    import backend.app.services.intelligence.ollama_catalog as mod
 
     svc = OllamaCatalogService()
     # Override cache path to use tmp
@@ -152,7 +152,7 @@ class TestCache:
         assert not service._is_cache_valid(old)
 
     def test_load_cache_corrupt_file(self, service: OllamaCatalogService) -> None:
-        from backend.app.services.ollama_catalog import CACHE_FILE
+        from backend.app.services.intelligence.ollama_catalog import CACHE_FILE
 
         CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
         CACHE_FILE.write_text("not json")

@@ -119,7 +119,7 @@ class CatalogueManager:
         instead of hardcoded model families.
         """
         try:
-            from backend.app.services.ollama_catalog import get_ollama_catalog_sync
+            from backend.app.services.intelligence.ollama_catalog import get_ollama_catalog_sync
 
             models, _source_status = get_ollama_catalog_sync(force_refresh=force_refresh)
         except Exception as e:

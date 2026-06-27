@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.vector_db import VectorDB, get_vector_db
 from backend.app.intelligence.models import KnowledgeEntry
-from backend.app.services.embedding_service import EmbeddingService, get_embedding_service
+from backend.app.services.intelligence.embedding_service import EmbeddingService, get_embedding_service
 
 logger = logging.getLogger(__name__)
 

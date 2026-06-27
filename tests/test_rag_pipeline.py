@@ -3,14 +3,14 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from backend.app.services.rag_pipeline import RAGPipeline
+from backend.app.services.intelligence.rag_pipeline import RAGPipeline
 
 
 @pytest.fixture()
 def mock_retrieval():
     class Mock:
         def retrieve(self, query, repo_id=None, limit=10, sources=None):
-            from backend.app.services.hybrid_retrieval import RetrievalResult
+            from backend.app.services.intelligence.hybrid_retrieval import RetrievalResult
 
             return [
                 RetrievalResult(
@@ -122,7 +122,7 @@ def test_consolidate_too_few_messages(rag: RAGPipeline):
 
 
 def test_context_token_limit():
-    from backend.app.services.hybrid_retrieval import RetrievalResult
+    from backend.app.services.intelligence.hybrid_retrieval import RetrievalResult
 
     class ManyResults:
         def retrieve(self, **kw):

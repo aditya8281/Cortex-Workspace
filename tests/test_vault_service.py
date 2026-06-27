@@ -26,9 +26,9 @@ from backend.app.main import app
 from backend.app.models.auth_event import AuthEvent  # noqa: F401
 from backend.app.models.storage_registry import StorageRegistry  # noqa: F401
 from backend.app.models.user import User  # noqa: F401
-from backend.app.services import vault_service
-from backend.app.services.storage_registry import register_user_storage
-from backend.app.services.vault_service import (
+from backend.app.services.memory import vault as vault_service
+from backend.app.services.memory.storage_registry import register_user_storage
+from backend.app.services.memory.vault import (
     _vault_cache_lock,
     _vault_passwords,
 )
@@ -227,7 +227,7 @@ def test_upload_encrypts_file_on_disk(_vault_user):
     vault_service.upload_vault_file(db, user.id, "secret.txt", content)
 
     # Read raw bytes from disk
-    from backend.app.services.storage_registry import get_registry_for_user
+    from backend.app.services.memory.storage_registry import get_registry_for_user
 
     registry = get_registry_for_user(db, user.id)
     raw = (Path(registry.storage_root) / "vault" / "secret.txt").read_bytes()

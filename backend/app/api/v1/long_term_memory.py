@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.long_term_memory import LongTermMemory
 from backend.app.models.user import User
-from backend.app.services.long_term_memory import LongTermMemoryService
+from backend.app.services.memory.long_term import LongTermMemoryService
 
 router = APIRouter()
 

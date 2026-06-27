@@ -108,10 +108,10 @@ def fixture_client():
     mock_fw = MagicMock()
 
     patches = [
-        patch("backend.app.services.model_downloader.download_manager", mock_dm),
-        patch("backend.app.services.file_watcher_v2.get_file_watcher_v2", return_value=mock_fw),
-        patch("backend.app.services.memory_manager.get_vector_db", return_value=mock_vdb),
-        patch("backend.app.services.memory_manager.get_embedding_service", return_value=mock_embedder),
+        patch("backend.app.services.download.downloader.download_manager", mock_dm),
+        patch("backend.app.services.awareness.file_watcher.get_file_watcher_v2", return_value=mock_fw),
+        patch("backend.app.services.memory.manager.get_vector_db", return_value=mock_vdb),
+        patch("backend.app.services.memory.manager.get_embedding_service", return_value=mock_embedder),
     ]
     for p in patches:
         p.start()

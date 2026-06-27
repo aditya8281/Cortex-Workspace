@@ -10,7 +10,7 @@ from backend.app.core.db import get_current_user, get_db
 from backend.app.models.indexing_config import IndexingConfig
 from backend.app.models.user import User
 from backend.app.schemas.indexing import IndexingConfigResponse, IndexingConfigSaveResponse, IndexingPreviewResponse
-from backend.app.services.indexing_rules import IndexingRules
+from backend.app.services.memory.indexing_rules import IndexingRules
 
 router = APIRouter()
 

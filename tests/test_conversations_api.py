@@ -69,8 +69,8 @@ def test_delete_conversation_not_found(client, mock_auth):
     assert resp.status_code == 404
 
 
-@patch("backend.app.services.rag_pipeline.get_rag_pipeline")
-@patch("backend.app.services.llm.manager.llm_manager")
+@patch("backend.app.services.intelligence.rag_pipeline.get_rag_pipeline")
+@patch("backend.app.services.intelligence.llm.manager.llm_manager")
 def test_send_message(mock_llm, mock_get_rag, client, mock_auth, db_session):
     from backend.app.models.conversation import Conversation
 

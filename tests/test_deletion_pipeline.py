@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from backend.app.models.document import Document, DocumentChunk, DocumentType
-from backend.app.services.deletion_pipeline import DeletionPipeline
+from backend.app.services.memory.deletion import DeletionPipeline
 
 
 @pytest.fixture()

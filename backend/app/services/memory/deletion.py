@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.vector_db import VectorDB, get_vector_db
 from backend.app.models.document import Document, DocumentChunk
-from backend.app.services.embedding_cache import EmbeddingCacheService, get_embedding_cache
+from backend.app.services.intelligence.embedding_cache import EmbeddingCacheService, get_embedding_cache
 
 logger = logging.getLogger(__name__)
 

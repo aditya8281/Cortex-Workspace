@@ -5,7 +5,7 @@ from backend.app.api.deps import get_db
 from backend.app.auth.dependencies import require_admin
 from backend.app.models.user import User
 from backend.app.schemas.user import UserResponse, UserUpdate
-from backend.app.services.user_service import delete_user, demote_user, get_user, get_users, promote_user, update_user
+from backend.app.services.interaction.user import delete_user, demote_user, get_user, get_users, promote_user, update_user
 
 router = APIRouter()
 

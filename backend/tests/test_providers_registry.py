@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.app.services.providers.huggingface import HuggingFaceProvider
-from backend.app.services.providers.ollama import OllamaProvider
-from backend.app.services.providers.registry import (
+from backend.app.services.intelligence.providers.huggingface import HuggingFaceProvider
+from backend.app.services.intelligence.providers.ollama import OllamaProvider
+from backend.app.services.intelligence.providers.registry import (
     ADAPTER_CLASS_MAP,
     ProviderRegistry,
     load_providers_from_db,
@@ -98,8 +98,8 @@ def test_singleton_exists():
 
 
 def test_singleton_is_shared():
-    from backend.app.services.providers.registry import provider_registry as pr1
-    from backend.app.services.providers.registry import provider_registry as pr2
+    from backend.app.services.intelligence.providers.registry import provider_registry as pr1
+    from backend.app.services.intelligence.providers.registry import provider_registry as pr2
 
     assert pr1 is pr2
 
@@ -123,7 +123,7 @@ def test_load_providers_from_db_ollama():
     db.scalars.return_value.all.return_value = [ollama_prov]
 
     registry = ProviderRegistry()
-    with patch("backend.app.services.providers.registry.provider_registry", registry):
+    with patch("backend.app.services.intelligence.providers.registry.provider_registry", registry):
         result = load_providers_from_db(db, registry)
 
     assert len(result.all()) == 1
@@ -138,7 +138,7 @@ def test_load_providers_from_db_huggingface():
     db.scalars.return_value.all.return_value = [hf_prov]
 
     registry = ProviderRegistry()
-    with patch("backend.app.services.providers.registry.provider_registry", registry):
+    with patch("backend.app.services.intelligence.providers.registry.provider_registry", registry):
         result = load_providers_from_db(db, registry)
 
     assert len(result.all()) == 1
@@ -153,7 +153,7 @@ def test_load_providers_from_db_skips_unknown():
     db.scalars.return_value.all.return_value = [unknown_prov]
 
     registry = ProviderRegistry()
-    with patch("backend.app.services.providers.registry.provider_registry", registry):
+    with patch("backend.app.services.intelligence.providers.registry.provider_registry", registry):
         result = load_providers_from_db(db, registry)
 
     assert result.all() == []
@@ -166,7 +166,7 @@ def test_load_providers_from_db_multiple():
     db.scalars.return_value.all.return_value = [ollama_prov, hf_prov]
 
     registry = ProviderRegistry()
-    with patch("backend.app.services.providers.registry.provider_registry", registry):
+    with patch("backend.app.services.intelligence.providers.registry.provider_registry", registry):
         result = load_providers_from_db(db, registry)
 
     assert len(result.all()) == 2
@@ -179,7 +179,7 @@ def test_load_providers_from_db_empty():
     db.scalars.return_value.all.return_value = []
 
     registry = ProviderRegistry()
-    with patch("backend.app.services.providers.registry.provider_registry", registry):
+    with patch("backend.app.services.intelligence.providers.registry.provider_registry", registry):
         result = load_providers_from_db(db, registry)
 
     assert result.all() == []
@@ -189,7 +189,7 @@ def test_load_providers_from_db_uses_singleton_by_default():
     db = MagicMock()
     db.scalars.return_value.all.return_value = []
 
-    with patch("backend.app.services.providers.registry.provider_registry") as mock_singleton:
+    with patch("backend.app.services.intelligence.providers.registry.provider_registry") as mock_singleton:
         load_providers_from_db(db)
         assert mock_singleton is not None
 
@@ -200,7 +200,7 @@ def test_load_providers_from_db_passes_base_url_to_ollama():
     db.scalars.return_value.all.return_value = [ollama_prov]
 
     registry = ProviderRegistry()
-    with patch("backend.app.services.providers.registry.provider_registry", registry):
+    with patch("backend.app.services.intelligence.providers.registry.provider_registry", registry):
         result = load_providers_from_db(db, registry)
 
     adapter = result.get("ollama")

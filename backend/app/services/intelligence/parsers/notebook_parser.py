@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from backend.app.services.parsers.base import BaseParser, ParsedDocument, ParsedSection
+from backend.app.services.intelligence.parsers.base import BaseParser, ParsedDocument, ParsedSection
 
 
 class NotebookParser(BaseParser):

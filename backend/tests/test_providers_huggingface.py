@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from backend.app.services.providers.huggingface import HuggingFaceProvider
+from backend.app.services.intelligence.providers.huggingface import HuggingFaceProvider
 
 
 @pytest.fixture

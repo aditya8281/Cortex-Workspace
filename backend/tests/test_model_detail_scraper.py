@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from backend.app.services.model_detail_scraper import (
+from backend.app.services.intelligence.model_scraper import (
     ModelDetail,
     ModelDetailScraper,
     ModelVariant,

@@ -125,9 +125,9 @@ class ConversationService:
         self, conversation_id: int, user_id: int, model: str | None = None
     ) -> builtins.list[dict]:
         try:
-            from backend.app.services.llm.manager import llm_manager
-            from backend.app.services.llm.provider import LLMMessage
-            from backend.app.services.long_term_memory import LongTermMemoryService
+            from backend.app.services.intelligence.llm.manager import llm_manager
+            from backend.app.services.intelligence.llm.provider import LLMMessage
+            from backend.app.services.memory.long_term import LongTermMemoryService
 
             messages = self.get_messages(conversation_id, limit=50)
             if len(messages) < 2:
@@ -188,8 +188,8 @@ class ConversationService:
 
     async def generate_title(self, content: str, model: str | None = None) -> str:
         try:
-            from backend.app.services.llm.manager import llm_manager
-            from backend.app.services.llm.provider import LLMMessage
+            from backend.app.services.intelligence.llm.manager import llm_manager
+            from backend.app.services.intelligence.llm.provider import LLMMessage
 
             messages = [
                 LLMMessage(

@@ -4,10 +4,10 @@ import json
 import os
 import tempfile
 
-from backend.app.services.parsers.base import ParsedDocument, ParsedSection
-from backend.app.services.parsers.markdown_parser import MarkdownParser
-from backend.app.services.parsers.notebook_parser import NotebookParser
-from backend.app.services.parsers.pdf_parser import PDFParser
+from backend.app.services.intelligence.parsers.base import ParsedDocument, ParsedSection
+from backend.app.services.intelligence.parsers.markdown_parser import MarkdownParser
+from backend.app.services.intelligence.parsers.notebook_parser import NotebookParser
+from backend.app.services.intelligence.parsers.pdf_parser import PDFParser
 
 
 def test_parsed_document_full_text():

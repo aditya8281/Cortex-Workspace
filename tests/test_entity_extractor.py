@@ -2,7 +2,7 @@
 
 import pytest
 
-from backend.app.services.entity_extractor import (
+from backend.app.services.intelligence.entity_extraction import (
     EntityExtractor,
 )
 

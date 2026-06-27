@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
     await redis_cache.ping()
 
     # Initialize LLM manager
-    from backend.app.services.llm.manager import llm_manager
+    from backend.app.services.intelligence.llm.manager import llm_manager
 
     llm_manager.configure(
         llama_model_path=settings.LLM_MODEL_PATH or None,
@@ -104,13 +104,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("Failed to initialize system database on startup: %s", e)
 
-    from backend.app.services.file_watcher_v2 import get_file_watcher_v2
+    from backend.app.services.awareness.file_watcher import get_file_watcher_v2
 
     get_file_watcher_v2().start()
     logger.info("File watcher started")
 
     # Start download manager for model downloads
-    from backend.app.services.model_downloader import download_manager
+    from backend.app.services.download.downloader import download_manager
 
     await download_manager.start()
     logger.info("Download manager started")
@@ -136,7 +136,7 @@ async def lifespan(app: FastAPI):
     # Background library scrape (non-blocking — updates library.json once)
     if "pytest" not in sys.modules:
         try:
-            from backend.app.services.library_scraper import scrape_library_background
+            from backend.app.services.intelligence.library_scraper import scrape_library_background
 
             asyncio.create_task(scrape_library_background())
             logger.info("Library scrape started in background")
@@ -147,7 +147,7 @@ async def lifespan(app: FastAPI):
     if "pytest" not in sys.modules:
         try:
             from backend.app.db.session import SessionLocal as _SyncSessionLocal
-            from backend.app.services.ollama_sync import OllamaSyncService
+            from backend.app.services.intelligence.ollama_sync import OllamaSyncService
 
             _sync_db = _SyncSessionLocal()
             try:
@@ -191,7 +191,7 @@ async def lifespan(app: FastAPI):
                 await asyncio.sleep(60)
                 try:
                     from backend.app.db.session import SessionLocal as _PeriodicSession
-                    from backend.app.services.ollama_sync import OllamaSyncService
+                    from backend.app.services.intelligence.ollama_sync import OllamaSyncService
 
                     _pdb = _PeriodicSession()
                     try:
@@ -208,7 +208,7 @@ async def lifespan(app: FastAPI):
 
     # Stop download manager
     try:
-        from backend.app.services.model_downloader import download_manager
+        from backend.app.services.download.downloader import download_manager
 
         await download_manager.stop()
         logger.info("Download manager stopped")
@@ -216,7 +216,7 @@ async def lifespan(app: FastAPI):
         logger.debug("Download manager stop skipped (test mode)")
 
     try:
-        from backend.app.services.file_watcher_v2 import get_file_watcher_v2
+        from backend.app.services.awareness.file_watcher import get_file_watcher_v2
 
         get_file_watcher_v2().stop()
         logger.info("File watcher stopped")

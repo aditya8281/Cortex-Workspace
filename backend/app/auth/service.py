@@ -18,8 +18,8 @@ from backend.app.core.security import (
 )
 from backend.app.core.storage_abstraction import validate_storage_path
 from backend.app.schemas.user import UserRegisterPayload
-from backend.app.services.storage_registry import get_registry_for_user, register_user_storage
-from backend.app.services.user_service import _normalize_username, authenticate_user, create_user, serialize_user
+from backend.app.services.memory.storage_registry import get_registry_for_user, register_user_storage
+from backend.app.services.interaction.user import _normalize_username, authenticate_user, create_user, serialize_user
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ async def login_user_service(db: Session, username: str, password: str, ip: str 
 
     log_event("login_success", user.id, ip, {}, db=db)
     try:
-        from backend.app.services.vault_service import _vault_cache_lock, _vault_passwords
+        from backend.app.services.memory.vault import _vault_cache_lock, _vault_passwords
 
         with _vault_cache_lock:
             _vault_passwords.pop(user.id, None)
@@ -159,7 +159,7 @@ async def logout_user(db: Session, refresh_token: str | None, ip: str | None = N
         log_event("logout", info.get("user_id"), ip, {}, db=db)
         # Ensure any cached vault password for this user is cleared on logout
         try:
-            from backend.app.services.vault_service import _vault_cache_lock, _vault_passwords
+            from backend.app.services.memory.vault import _vault_cache_lock, _vault_passwords
 
             user_id_raw = info.get("user_id")
             if user_id_raw is not None:

@@ -6,7 +6,7 @@ HEADERS = {"Authorization": "Bearer fake-token"}
 def test_list_models(client, mock_auth):
     with (
         patch(
-            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog",
             new_callable=AsyncMock,
             return_value=([], MagicMock()),
         ),
@@ -61,9 +61,9 @@ def test_recommended_models(client, mock_auth):
 
     with (
         patch("backend.app.api.v1.catalog._detect_hardware_full", return_value=mock_hw),
-        patch("backend.app.services.hardware.detect_hardware", return_value=mock_hw),
-        patch("backend.app.services.recommendation.RecommendationEngine", return_value=mock_engine),
-        patch("backend.app.services.catalogue.CatalogueManager") as mock_cat_mgr,
+        patch("backend.app.services.awareness.hardware.detect_hardware", return_value=mock_hw),
+        patch("backend.app.services.intelligence.recommendation.RecommendationEngine", return_value=mock_engine),
+        patch("backend.app.services.intelligence.model_catalog.CatalogueManager") as mock_cat_mgr,
     ):
         mock_cat_mgr.return_value.get_all_catalogue.return_value = []
         resp = client.get("/api/v1/models/recommended", headers=HEADERS)
@@ -193,7 +193,7 @@ def test_model_installed(client, mock_auth):
         yield mock_db
 
     with (
-        patch("backend.app.services.catalogue.CatalogueManager", return_value=mock_catalogue),
+        patch("backend.app.services.intelligence.model_catalog.CatalogueManager", return_value=mock_catalogue),
         patch("backend.app.core.db.get_db", _mock_get_db),
         patch("httpx.AsyncClient", return_value=mock_client),
     ):

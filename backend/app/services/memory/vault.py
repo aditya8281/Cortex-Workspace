@@ -182,7 +182,7 @@ def decrypt_bytes(data: bytes, vault_password: str) -> bytes:
 
 def _get_user_vault_dir(db: Session, user_id: int) -> Path:
     """Resolve the vault directory for a user from the central pointer DB."""
-    from backend.app.services.storage_registry import get_registry_for_user
+    from backend.app.services.memory.storage_registry import get_registry_for_user
 
     registry = get_registry_for_user(db, user_id)
     if not registry:

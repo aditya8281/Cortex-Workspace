@@ -1,7 +1,7 @@
 """Tests for model search service."""
 
-from backend.app.services.catalogue import CatalogueManager
-from backend.app.services.model_search import ModelSearchService
+from backend.app.services.intelligence.model_catalog import CatalogueManager
+from backend.app.services.intelligence.model_search import ModelSearchService
 
 
 def test_text_search(_db_session):

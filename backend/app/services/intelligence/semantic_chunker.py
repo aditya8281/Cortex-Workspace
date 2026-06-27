@@ -81,7 +81,7 @@ class SemanticChunker:
         return self._add_context(chunks)
 
     def _chunk_code(self, content: str, file_path: str) -> list[SemanticChunk]:
-        from backend.app.services.chunker import detect_language
+        from backend.app.services.intelligence.chunker import detect_language
 
         lang = detect_language(file_path)
         lines = content.splitlines(keepends=True)

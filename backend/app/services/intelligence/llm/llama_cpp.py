@@ -5,7 +5,7 @@ import logging
 import os
 from typing import Any
 
-from backend.app.services.llm.provider import LLMProvider
+from backend.app.services.intelligence.llm.provider import LLMProvider
 
 logger = logging.getLogger(__name__)
 

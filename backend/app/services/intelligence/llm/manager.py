@@ -4,9 +4,9 @@ import asyncio
 import logging
 
 from backend.app.agents.token_counter import count_message_tokens, count_tokens
-from backend.app.services.llm.llama_cpp import LlamaCppProvider
-from backend.app.services.llm.ollama import OllamaProvider
-from backend.app.services.llm.provider import LLMMessage, LLMModelInfo, LLMProvider, LLMResponse
+from backend.app.services.intelligence.llm.llama_cpp import LlamaCppProvider
+from backend.app.services.intelligence.llm.ollama import OllamaProvider
+from backend.app.services.intelligence.llm.provider import LLMMessage, LLMModelInfo, LLMProvider, LLMResponse
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class LLMManager:
                     else:
                         close_db = False
                     try:
-                        from backend.app.services.usage_tracker import UsageTracker
+                        from backend.app.services.system.usage import UsageTracker
 
                         tracker = UsageTracker(db)
                         tracker.record_usage(
@@ -191,7 +191,7 @@ class LLMManager:
                     else:
                         close_db = False
                     try:
-                        from backend.app.services.usage_tracker import UsageTracker
+                        from backend.app.services.system.usage import UsageTracker
 
                         tracker = UsageTracker(db)
                         tracker.record_usage(
@@ -233,7 +233,7 @@ class LLMManager:
           3. Local API (localhost:11434) — /api/tags + /api/show
         """
         try:
-            from backend.app.services.ollama_catalog import get_ollama_catalog
+            from backend.app.services.intelligence.ollama_catalog import get_ollama_catalog
 
             scraped, _source_status = await get_ollama_catalog(force_refresh=force_refresh)
             if scraped:

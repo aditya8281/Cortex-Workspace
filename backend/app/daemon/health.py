@@ -139,7 +139,7 @@ async def probe_qdrant(timeout: float = DEFAULT_PROBE_TIMEOUT) -> HealthProbeRes
 async def _get_qdrant_client():
     """Get Qdrant client, gracefully returning None if unavailable."""
     try:
-        from backend.app.services.memory_manager import get_vector_db
+        from backend.app.services.memory.manager import get_vector_db
 
         return get_vector_db()
     except Exception:

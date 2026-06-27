@@ -13,7 +13,7 @@ from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.document import Document, DocumentChunk
 from backend.app.models.graph import GraphEdge, GraphNode
 from backend.app.models.repo_index import CodeChunk, RepoIndex
-from backend.app.services.retrieval_metrics import get_retrieval_metrics
+from backend.app.services.intelligence.metrics import get_retrieval_metrics
 
 router = APIRouter()
 

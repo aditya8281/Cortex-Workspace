@@ -116,7 +116,7 @@ class GraphBuilder:
         from datetime import datetime
 
         from backend.app.models.document import Document, DocumentChunk
-        from backend.app.services.entity_extractor import EntityExtractor
+        from backend.app.services.intelligence.entity_extraction import EntityExtractor
 
         extractor = EntityExtractor()
         doc = self.db.query(Document).filter(Document.id == document_id).first()

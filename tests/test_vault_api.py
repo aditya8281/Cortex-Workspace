@@ -37,7 +37,7 @@ def mock_unlocked_auth():
     app.dependency_overrides.pop(get_current_user, None)
 
 
-@patch("backend.app.services.vault_service.is_vault_unlocked")
+@patch("backend.app.services.memory.vault.is_vault_unlocked")
 def test_vault_status_locked(mock_is_unlocked, client, mock_auth):
     mock_is_unlocked.return_value = False
     resp = client.get("/api/v1/me/vault/status")

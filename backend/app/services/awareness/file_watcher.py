@@ -12,7 +12,7 @@ from pathlib import Path
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from backend.app.services.chunker import SKIP_DIRS
+from backend.app.services.intelligence.chunker import SKIP_DIRS
 
 logger = logging.getLogger(__name__)
 

@@ -184,8 +184,8 @@ class ExecutorAgent(BaseAgent):
     async def _execute_direct(self, task: str, context: dict | None = None) -> str:
         """Execute task using LLM for real reasoning (with keyword fallback)."""
         try:
-            from backend.app.services.llm.manager import llm_manager
-            from backend.app.services.llm.provider import LLMMessage
+            from backend.app.services.intelligence.llm.manager import llm_manager
+            from backend.app.services.intelligence.llm.provider import LLMMessage
 
             system_prompt = self._build_system_prompt(context)
             messages = [

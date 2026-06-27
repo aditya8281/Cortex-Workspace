@@ -25,7 +25,7 @@ from backend.app.schemas.model import (
     SyncTriggerResponse,
     UsageStatsResponse,
 )
-from backend.app.services.sync_service import SyncService
+from backend.app.services.sync.service import SyncService
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ async def get_usage_stats(
     db: Session = Depends(get_db),
 ):
     """Get model usage statistics."""
-    from backend.app.services.usage_tracker import UsageTracker
+    from backend.app.services.system.usage import UsageTracker
 
     tracker = UsageTracker(db)
     return tracker.get_usage_stats()
@@ -278,8 +278,8 @@ async def refresh_catalogue(
     """Refresh the Ollama catalog."""
     import asyncio
 
-    from backend.app.services.library_scraper import scrape_library_background
-    from backend.app.services.ollama_catalog import get_catalog_service
+    from backend.app.services.intelligence.library_scraper import scrape_library_background
+    from backend.app.services.intelligence.ollama_catalog import get_catalog_service
 
     asyncio.create_task(scrape_library_background())
 

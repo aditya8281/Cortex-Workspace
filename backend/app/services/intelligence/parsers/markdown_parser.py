@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from backend.app.services.parsers.base import BaseParser, ParsedDocument, ParsedSection
+from backend.app.services.intelligence.parsers.base import BaseParser, ParsedDocument, ParsedSection
 
 
 class MarkdownParser(BaseParser):

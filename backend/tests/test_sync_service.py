@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from backend.app.models.model_catalog import ModelCatalog, SyncJob
-from backend.app.services.ollama_catalog import CatalogSourceStatus
-from backend.app.services.providers.base import ProviderModelInfo
-from backend.app.services.sync_service import SyncService
+from backend.app.services.intelligence.ollama_catalog import CatalogSourceStatus
+from backend.app.services.intelligence.providers.base import ProviderModelInfo
+from backend.app.services.sync.service import SyncService
 
 
 @pytest.fixture
@@ -59,9 +59,9 @@ async def test_sync_library_creates_job_with_running_status(service, db):
     db.scalars.return_value.all.return_value = []
 
     with (
-        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.sync.service.provider_registry") as registry,
         patch(
-            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog",
             new_callable=AsyncMock,
             return_value=([], CatalogSourceStatus()),
         ),
@@ -94,9 +94,9 @@ async def test_sync_library_discovers_models(service, db):
     db.scalars.return_value.all.return_value = []
 
     with (
-        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.sync.service.provider_registry") as registry,
         patch(
-            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog",
             new_callable=AsyncMock,
             return_value=([], CatalogSourceStatus()),
         ),
@@ -126,9 +126,9 @@ async def test_sync_library_filters_by_provider_name(service, db):
     ]
 
     with (
-        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.sync.service.provider_registry") as registry,
         patch(
-            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog",
             new_callable=AsyncMock,
             return_value=(ollama_models, CatalogSourceStatus()),
         ),
@@ -144,9 +144,9 @@ async def test_sync_library_no_adapter_returns_empty_job(service, db):
     db.scalars.return_value.all.return_value = []
 
     with (
-        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.sync.service.provider_registry") as registry,
         patch(
-            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog",
             new_callable=AsyncMock,
             return_value=([], CatalogSourceStatus()),
         ),
@@ -175,9 +175,9 @@ async def test_sync_library_sets_provider_id(service, db):
     mock_provider.id = 42
 
     with (
-        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.sync.service.provider_registry") as registry,
         patch(
-            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog",
             new_callable=AsyncMock,
             return_value=([], CatalogSourceStatus()),
         ),
@@ -215,9 +215,9 @@ async def test_sync_library_handles_adapter_exception(service, db):
     db.scalars.return_value.all.return_value = []
 
     with (
-        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.sync.service.provider_registry") as registry,
         patch(
-            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog",
             new_callable=AsyncMock,
             return_value=([], CatalogSourceStatus()),
         ),
@@ -245,9 +245,9 @@ async def test_sync_library_sets_failed_on_global_error(service, db):
     db.commit.side_effect = [None, RuntimeError("db down"), None]
 
     with (
-        patch("backend.app.services.sync_service.provider_registry") as registry,
+        patch("backend.app.services.sync.service.provider_registry") as registry,
         patch(
-            "backend.app.services.ollama_catalog.get_ollama_catalog",
+            "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog",
             new_callable=AsyncMock,
             return_value=([], CatalogSourceStatus()),
         ),

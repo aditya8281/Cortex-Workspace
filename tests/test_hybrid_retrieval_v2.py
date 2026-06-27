@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from backend.app.services.hybrid_retrieval import HybridRetrievalV2, RetrievalResult
+from backend.app.services.intelligence.hybrid_retrieval import HybridRetrievalV2, RetrievalResult
 
 
 @pytest.fixture()

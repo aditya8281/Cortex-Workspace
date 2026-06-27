@@ -57,7 +57,7 @@ def test_search_answer(client, mock_auth):
 
     with (
         patch("backend.app.api.v1.search.HybridRetrievalV2") as mock_retrieval,
-        patch("backend.app.services.llm.manager.llm_manager") as mock_llm,
+        patch("backend.app.services.intelligence.llm.manager.llm_manager") as mock_llm,
     ):
         mock_retrieval.return_value.retrieve.return_value = [result]
         mock_llm.chat = AsyncMock(return_value=MagicMock(content="This is the AI answer."))

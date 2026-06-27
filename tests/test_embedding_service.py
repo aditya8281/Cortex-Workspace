@@ -2,7 +2,7 @@
 
 import pytest
 
-from backend.app.services.embedding_service import EMBEDDING_DIM, EmbeddingService
+from backend.app.services.intelligence.embedding_service import EMBEDDING_DIM, EmbeddingService
 
 
 @pytest.fixture(name="svc")

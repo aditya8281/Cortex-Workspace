@@ -25,10 +25,10 @@ from backend.app.schemas.model import (
     RecommendedModelsSingleResponse,
     WorkloadRecommendations,
 )
-from backend.app.services.hardware import detect_hardware as _detect_hardware_full
-from backend.app.services.llm.manager import LLMManager, llm_manager
-from backend.app.services.model_comparison import ModelComparisonService
-from backend.app.services.model_search import ModelSearchService
+from backend.app.services.awareness.hardware import detect_hardware as _detect_hardware_full
+from backend.app.services.intelligence.llm.manager import LLMManager, llm_manager
+from backend.app.services.intelligence.model_comparison import ModelComparisonService
+from backend.app.services.intelligence.model_search import ModelSearchService
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ async def list_models(
     current_user: User = Depends(get_current_user),
 ):
     """List models from the unified Ollama catalog and available providers."""
-    from backend.app.services.ollama_catalog import get_ollama_catalog
+    from backend.app.services.intelligence.ollama_catalog import get_ollama_catalog
 
     catalog_models, source_status = await get_ollama_catalog()
 
@@ -109,13 +109,13 @@ async def recommended_models(
     db: Session = Depends(get_db),
 ):
     """Return hardware-appropriate model recommendations."""
-    from backend.app.services.hardware import detect_hardware as detect_hw
-    from backend.app.services.recommendation import WORKLOADS, RecommendationEngine
+    from backend.app.services.awareness.hardware import detect_hardware as detect_hw
+    from backend.app.services.intelligence.recommendation import WORKLOADS, RecommendationEngine
 
     hardware = detect_hw()
     engine = RecommendationEngine(hardware)
 
-    from backend.app.services.catalogue import CatalogueManager
+    from backend.app.services.intelligence.model_catalog import CatalogueManager
 
     catalogue_mgr = CatalogueManager(db)
     all_models = catalogue_mgr.get_all_catalogue()

@@ -11,9 +11,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.models.model_catalog import Provider
-from backend.app.services.providers.base import ProviderAdapter
-from backend.app.services.providers.huggingface import HuggingFaceProvider
-from backend.app.services.providers.ollama import OllamaProvider
+from backend.app.services.intelligence.providers.base import ProviderAdapter
+from backend.app.services.intelligence.providers.huggingface import HuggingFaceProvider
+from backend.app.services.intelligence.providers.ollama import OllamaProvider
 
 logger = structlog.get_logger()
 

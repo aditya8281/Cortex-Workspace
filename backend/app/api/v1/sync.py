@@ -15,7 +15,7 @@ from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.user import User
 from backend.app.schemas.sync import SyncStopResponse, SyncValidatePathResponse
-from backend.app.services.file_watcher_v2 import get_file_watcher_v2
+from backend.app.services.awareness.file_watcher import get_file_watcher_v2
 from backend.app.tasks.worker import enqueue_task
 
 router = APIRouter()

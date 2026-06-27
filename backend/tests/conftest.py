@@ -121,10 +121,10 @@ FAKE_CATALOG = [
 @pytest.fixture(autouse=True, scope="session")
 def _mock_ollama_catalog():
     """Replace the Ollama catalog fetch with deterministic test data."""
-    from backend.app.services.ollama_catalog import CatalogSourceStatus
+    from backend.app.services.intelligence.ollama_catalog import CatalogSourceStatus
 
     with patch(
-        "backend.app.services.ollama_catalog.get_ollama_catalog_sync",
+        "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync",
         return_value=(FAKE_CATALOG, CatalogSourceStatus()),
     ):
         yield

@@ -1,6 +1,6 @@
 """Tests for hardware detection service."""
 
-from backend.app.services.hardware import (
+from backend.app.services.awareness.hardware import (
     HardwareProfile,
     _resolve_arch,
     detect_hardware,

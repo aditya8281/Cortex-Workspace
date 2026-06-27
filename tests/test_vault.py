@@ -2,7 +2,7 @@
 
 import os
 
-from backend.app.services.vault_service import (
+from backend.app.services.memory.vault import (
     _vault_cache_lock,
     _vault_passwords,
     decrypt_bytes,

@@ -24,11 +24,11 @@ from backend.app.schemas.conversation import (
     CreateConversationRequest,
     SendMessageRequest,
 )
-from backend.app.services.conversation_service import (
+from backend.app.services.interaction.conversation import (
     ConversationService,
     estimate_tokens,
 )
-from backend.app.services.rag_pipeline import get_rag_pipeline
+from backend.app.services.intelligence.rag_pipeline import get_rag_pipeline
 
 router = APIRouter()
 
@@ -132,8 +132,8 @@ async def _stream_chat_response(
     user_id: int | None = None,
 ) -> AsyncGenerator[str, None]:
     """Generator that yields SSE events for the chat response."""
-    from backend.app.services.llm.manager import llm_manager
-    from backend.app.services.llm.provider import LLMMessage
+    from backend.app.services.intelligence.llm.manager import llm_manager
+    from backend.app.services.intelligence.llm.provider import LLMMessage
 
     svc = ConversationService(db)
 

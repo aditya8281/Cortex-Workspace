@@ -476,7 +476,7 @@ class _LegacyModelDownloader:
     async def download_model(self, model_name: str, catalog: list[dict], variant: str | None = None) -> dict:
         full_model_name = f"{model_name}:{variant}" if variant else model_name
 
-        from backend.app.services.llm.manager import llm_manager
+        from backend.app.services.intelligence.llm.manager import llm_manager
 
         available = await llm_manager.list_all_models()
         if any(m.name == full_model_name for m in available):

@@ -60,7 +60,7 @@ def test_user_cannot_delete_other_users_conversation(client, mock_auth, db_sessi
     app.dependency_overrides[get_current_user] = lambda: mock_auth
 
 
-@patch("backend.app.services.rag_pipeline.get_rag_pipeline")
+@patch("backend.app.services.intelligence.rag_pipeline.get_rag_pipeline")
 def test_user_cannot_send_message_to_other_users_conversation(mock_get_rag, client, mock_auth, db_session):
     from backend.app.models.conversation import Conversation
 

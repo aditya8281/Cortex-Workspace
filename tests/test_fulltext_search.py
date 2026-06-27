@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from backend.app.models.repo_index import CodeChunk, RepoIndex
-from backend.app.services.fulltext_search import FullTextSearch
+from backend.app.services.intelligence.fulltext import FullTextSearch
 
 
 @pytest.fixture()

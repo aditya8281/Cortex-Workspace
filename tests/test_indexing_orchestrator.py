@@ -4,8 +4,8 @@ import tempfile
 
 import pytest
 
-from backend.app.services.file_watcher_v2 import FileChange
-from backend.app.services.indexing_orchestrator import IndexingOrchestrator
+from backend.app.services.awareness.file_watcher import FileChange
+from backend.app.services.memory.indexing_orchestrator import IndexingOrchestrator
 
 
 @pytest.fixture()

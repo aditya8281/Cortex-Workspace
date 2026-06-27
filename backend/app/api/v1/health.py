@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 
-from backend.app.services.health_service import HealthService
+from backend.app.services.system.health import HealthService
 
 router = APIRouter()
 
