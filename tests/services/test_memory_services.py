@@ -1,10 +1,19 @@
-"""Tests for v1.03 P02 — episodic and semantic memory services."""
+"""Tests for v1.03 memory services — episodic, semantic, working, graph, auto-connect."""
 
 from __future__ import annotations
+
+from datetime import datetime, timedelta
+
+import pytest
 
 from backend.app.schemas.memory.episodic import EpisodicMemoryCreate, EpisodicMemoryUpdate
 from backend.app.schemas.memory.semantic import SemanticMemoryCreate, SemanticMemoryUpdate
 from backend.app.services.memory import MemoryServiceFactory
+from backend.app.services.memory.auto_connect import AutoConnectionService
+from backend.app.services.memory.memory_graph_service import MemoryGraphService
+from backend.app.services.memory.working import WorkingMemoryService
+
+# ── Episodic ──────────────────────────────────────────────────
 
 
 class TestEpisodicService:
@@ -78,7 +87,7 @@ class TestEpisodicService:
 
         updated = service.update(1, memory.id, EpisodicMemoryUpdate(content="Updated"))
         assert updated.content == "Updated"
-        assert updated.importance == 0.5  # Unchanged
+        assert updated.importance == 0.5
 
     def test_update_nonexistent(self, db_session):
         service = MemoryServiceFactory(db_session).episodic
@@ -118,6 +127,9 @@ class TestEpisodicService:
         assert u1[0].content == "User 1 memory"
 
 
+# ── Semantic ──────────────────────────────────────────────────
+
+
 class TestSemanticService:
     """SemanticMemoryService tests."""
 
@@ -146,7 +158,7 @@ class TestSemanticService:
 
         m1 = service.create(1, data)
         m2 = service.create(2, data)
-        assert m1.id != m2.id  # Different users don't dedup
+        assert m1.id != m2.id
 
     def test_retrieve_increments_access(self, db_session):
         service = MemoryServiceFactory(db_session).semantic
@@ -192,7 +204,7 @@ class TestSemanticService:
 
         updated = service.update(1, memory.id, SemanticMemoryUpdate(content="Updated"))
         assert updated.content == "Updated"
-        assert updated.category == "fact"  # Unchanged
+        assert updated.category == "fact"
 
     def test_delete(self, db_session):
         service = MemoryServiceFactory(db_session).semantic
@@ -224,15 +236,373 @@ class TestSemanticService:
         assert total1 == 1
 
 
+# ── Working Memory ────────────────────────────────────────────
+
+
+class TestWorkingMemoryService:
+    """WorkingMemoryService tests."""
+
+    def test_add(self, db_session):
+        service = WorkingMemoryService(db_session)
+        item = service.add(user_id=1, session_id="s1", content="Current task", slot="active", priority=5)
+        assert item.id is not None
+        assert item.slot == "active"
+        assert item.priority == 5
+        assert item.expires_at > datetime.utcnow()
+
+    def test_get_active_ordered_by_priority(self, db_session):
+        service = WorkingMemoryService(db_session)
+        service.add(user_id=1, session_id="s1", content="Low", priority=1)
+        service.add(user_id=1, session_id="s1", content="High", priority=10)
+        service.add(user_id=1, session_id="s1", content="Medium", priority=5)
+
+        active = service.get_active(user_id=1, session_id="s1")
+        assert len(active) == 3
+        assert active[0].priority == 10
+        assert active[1].priority == 5
+        assert active[2].priority == 1
+
+    def test_get_by_slot(self, db_session):
+        service = WorkingMemoryService(db_session)
+        service.add(user_id=1, session_id="s1", content="Active item", slot="active")
+        service.add(user_id=1, session_id="s1", content="Buffer item", slot="buffer")
+        service.add(user_id=1, session_id="s1", content="Archive item", slot="archive")
+
+        active = service.get_by_slot(1, "s1", "active")
+        assert len(active) == 1
+        assert active[0].content == "Active item"
+
+    def test_promote(self, db_session):
+        service = WorkingMemoryService(db_session)
+        item = service.add(user_id=1, session_id="s1", content="Buffer item", slot="buffer")
+
+        result = service.promote(user_id=1, memory_id=item.id)
+        assert result is True
+
+        active = service.get_by_slot(1, "s1", "active")
+        assert any(i.id == item.id for i in active)
+
+    def test_promote_overflow_demotes_lowest(self, db_session):
+        service = WorkingMemoryService(db_session)
+        # Fill active to MAX_ACTIVE_ITEMS (20)
+        for i in range(20):
+            service.add(user_id=1, session_id="s1", content=f"Item {i}", slot="active", priority=i)
+        buffer_item = service.add(user_id=1, session_id="s1", content="Promote me", slot="buffer", priority=100)
+
+        service.promote(user_id=1, memory_id=buffer_item.id)
+        active = service.get_by_slot(1, "s1", "active")
+        # Should still be 20 (one was demoted)
+        assert len(active) == 20
+
+    def test_archive(self, db_session):
+        service = WorkingMemoryService(db_session)
+        item = service.add(user_id=1, session_id="s1", content="To archive")
+
+        result = service.archive(user_id=1, memory_id=item.id)
+        assert result is True
+
+        archived = service.get_by_slot(1, "s1", "archive")
+        assert any(i.id == item.id for i in archived)
+
+    def test_demote(self, db_session):
+        service = WorkingMemoryService(db_session)
+        item = service.add(user_id=1, session_id="s1", content="Active", slot="active")
+
+        result = service.demote(user_id=1, memory_id=item.id)
+        assert result is True
+
+        buffer = service.get_by_slot(1, "s1", "buffer")
+        assert any(i.id == item.id for i in buffer)
+
+    def test_remove(self, db_session):
+        service = WorkingMemoryService(db_session)
+        item = service.add(user_id=1, session_id="s1", content="Remove me")
+        item_id = item.id
+
+        result = service.remove(user_id=1, memory_id=item_id)
+        assert result is True
+        # Verify deleted via direct query
+        from backend.app.models.memory.working import WorkingMemory
+
+        assert db_session.query(WorkingMemory).filter(WorkingMemory.id == item_id).first() is None
+
+    def test_remove_nonexistent(self, db_session):
+        service = WorkingMemoryService(db_session)
+        assert service.remove(user_id=1, memory_id=999) is False
+
+    def test_cleanup_expired(self, db_session):
+        service = WorkingMemoryService(db_session)
+        service.add(user_id=1, session_id="s1", content="Valid")
+        item = service.add(user_id=1, session_id="s1", content="Expired")
+
+        # Force expire
+        item.expires_at = datetime.utcnow() - timedelta(hours=1)
+        db_session.commit()
+
+        count = service.cleanup_expired(user_id=1, session_id="s1")
+        assert count == 1
+
+    def test_clear_session(self, db_session):
+        service = WorkingMemoryService(db_session)
+        service.add(user_id=1, session_id="s1", content="A")
+        service.add(user_id=1, session_id="s1", content="B")
+        service.add(user_id=1, session_id="s1", content="C")
+
+        count = service.clear_session(user_id=1, session_id="s1")
+        assert count == 3
+        assert len(service.get_active(user_id=1, session_id="s1")) == 0
+
+    def test_session_isolation(self, db_session):
+        service = WorkingMemoryService(db_session)
+        service.add(user_id=1, session_id="s1", content="Session 1")
+        service.add(user_id=1, session_id="s2", content="Session 2")
+
+        s1 = service.get_active(1, "s1")
+        s2 = service.get_active(1, "s2")
+        assert len(s1) == 1
+        assert len(s2) == 1
+        assert s1[0].content == "Session 1"
+
+    def test_get_session_summary(self, db_session):
+        service = WorkingMemoryService(db_session)
+        service.add(user_id=1, session_id="s1", content="A", slot="active")
+        service.add(user_id=1, session_id="s1", content="B", slot="buffer")
+        service.add(user_id=1, session_id="s1", content="C", slot="archive")
+
+        summary = service.get_session_summary(user_id=1, session_id="s1")
+        assert summary["active"] == 1
+        assert summary["buffer"] == 1
+        assert summary["archive"] == 1
+        assert summary["total_items"] == 3
+
+
+# ── Memory Graph ──────────────────────────────────────────────
+
+
+class TestMemoryGraphService:
+    """MemoryGraphService tests."""
+
+    def test_add_node(self, db_session):
+        service = MemoryGraphService(db_session)
+        node = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="Test")
+        assert node.id is not None
+        assert node.memory_type == "episodic"
+
+    def test_add_node_idempotent(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        n2 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        assert n1.id == n2.id
+
+    def test_add_edge(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="B")
+
+        edge = service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to", weight=0.7)
+        assert edge.id is not None
+        assert edge.weight == 0.7
+
+    def test_add_edge_self_loop_raises(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        with pytest.raises(ValueError, match="Self-loops"):
+            service.add_edge(source_id=n1.id, target_id=n1.id, edge_type="related_to")
+
+    def test_add_edge_duplicate_strengthens(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="B")
+
+        e1 = service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to", weight=0.5)
+        e2 = service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to", weight=0.5)
+        assert e1.id == e2.id
+        assert e2.weight == 0.55
+
+    def test_add_bidirectional_edge(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="B")
+
+        service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to", bidirectional=True)
+        edges = service.get_edges_for_node(n1.id)
+        assert len(edges) == 2
+
+    def test_strengthen_and_weaken_edge(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="B")
+        edge = service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to", weight=0.5)
+
+        service.strengthen_edge(edge.id, amount=0.2)
+        strengthened = service.strengthen_edge(edge.id, amount=0)
+        assert strengthened.weight == 0.7
+
+        service.weaken_edge(edge.id, amount=0.3)
+        weakened = service.strengthen_edge(edge.id, amount=0)
+        assert abs(weakened.weight - 0.4) < 1e-9
+
+    def test_get_connections_depth_1(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="Center")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="N1")
+        n3 = service.add_node(user_id=1, memory_type="semantic", memory_id=2, label="N2")
+
+        service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to")
+        service.add_edge(source_id=n1.id, target_id=n3.id, edge_type="related_to")
+
+        connections = service.get_connections(n1.id, depth=1)
+        assert len(connections) == 2
+
+    def test_get_connections_depth_2(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="Center")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="Hop1")
+        n3 = service.add_node(user_id=1, memory_type="semantic", memory_id=2, label="Hop2")
+
+        service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to")
+        service.add_edge(source_id=n2.id, target_id=n3.id, edge_type="related_to")
+
+        d1 = service.get_connections(n1.id, depth=1)
+        assert len(d1) == 1
+
+        d2 = service.get_connections(n1.id, depth=2)
+        assert len(d2) == 2
+
+    def test_find_path(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="Start")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="Middle")
+        n3 = service.add_node(user_id=1, memory_type="semantic", memory_id=2, label="End")
+
+        service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to")
+        service.add_edge(source_id=n2.id, target_id=n3.id, edge_type="related_to")
+
+        path = service.find_path(n1.id, n3.id)
+        assert path is not None
+        assert len(path) == 3
+        assert path[0].id == n1.id
+        assert path[2].id == n3.id
+
+    def test_find_path_no_path(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="B")
+
+        path = service.find_path(n1.id, n2.id)
+        assert path is None
+
+    def test_delete_node_cascades(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="B")
+        service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to")
+
+        deleted = service.delete_node(user_id=1, node_id=n1.id)
+        assert deleted is True
+
+        edges = service.get_edges_for_node(n2.id)
+        assert len(edges) == 0
+
+    def test_get_graph_stats(self, db_session):
+        service = MemoryGraphService(db_session)
+        n1 = service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="A")
+        n2 = service.add_node(user_id=1, memory_type="semantic", memory_id=1, label="B")
+        service.add_edge(source_id=n1.id, target_id=n2.id, edge_type="related_to", weight=0.6)
+
+        stats = service.get_graph_stats(1)
+        assert stats["total_nodes"] == 2
+        assert stats["total_edges"] == 1
+        assert stats["avg_edge_weight"] == 0.6
+        assert stats["nodes_by_type"]["episodic"] == 1
+
+    def test_user_isolation(self, db_session):
+        service = MemoryGraphService(db_session)
+        service.add_node(user_id=1, memory_type="episodic", memory_id=1, label="U1")
+        service.add_node(user_id=2, memory_type="episodic", memory_id=1, label="U2")
+
+        u1_nodes = service.get_user_nodes(1)
+        assert len(u1_nodes) == 1
+        assert u1_nodes[0].label == "U1"
+
+
+# ── Auto-Connection ───────────────────────────────────────────
+
+
+class TestAutoConnectionService:
+    """AutoConnectionService tests."""
+
+    def test_connect_related_finds_keyword_matches(self, db_session):
+        from backend.app.schemas.memory.episodic import EpisodicMemoryCreate
+        from backend.app.services.memory.episodic import EpisodicMemoryService
+
+        episodic = EpisodicMemoryService(db_session)
+        episodic.create(user_id=1, data=EpisodicMemoryCreate(content="Python debugging session with memory leak"))
+        episodic.create(user_id=1, data=EpisodicMemoryCreate(content="JavaScript refactoring project"))
+
+        auto = AutoConnectionService(db_session)
+        # memory_id=999 doesn't exclude existing memories from search
+        edges = auto.connect_related(
+            user_id=1, memory_type="episodic", memory_id=999, content="Python performance optimization"
+        )
+        assert len(edges) >= 1
+
+    def test_extract_keywords(self, db_session):
+        auto = AutoConnectionService(db_session)
+        keywords = auto._extract_keywords("The quick brown fox jumps over the lazy dog")
+        assert "quick" in keywords
+        assert "brown" in keywords
+        assert "fox" in keywords
+        assert "the" not in keywords
+        assert "dog" in keywords
+
+    def test_connect_related_no_keywords(self, db_session):
+        auto = AutoConnectionService(db_session)
+        edges = auto.connect_related(
+            user_id=1,
+            memory_type="episodic",
+            memory_id=1,
+            content="a an the is",  # All stop words
+        )
+        assert edges == []
+
+    def test_connect_related_max_connections(self, db_session):
+        from backend.app.schemas.memory.episodic import EpisodicMemoryCreate
+        from backend.app.services.memory.episodic import EpisodicMemoryService
+
+        episodic = EpisodicMemoryService(db_session)
+        for i in range(10):
+            episodic.create(user_id=1, data=EpisodicMemoryCreate(content=f"Python coding session number {i}"))
+
+        auto = AutoConnectionService(db_session)
+        edges = auto.connect_related(
+            user_id=1,
+            memory_type="episodic",
+            memory_id=1,
+            content="Python optimization",
+            max_connections=3,
+        )
+        assert len(edges) <= 3
+
+
+# ── Factory ───────────────────────────────────────────────────
+
+
 class TestServiceFactory:
     """MemoryServiceFactory tests."""
 
-    def test_creates_services(self, db_session):
+    def test_creates_all_services(self, db_session):
         factory = MemoryServiceFactory(db_session)
         assert factory.episodic is not None
         assert factory.semantic is not None
+        assert factory.working is not None
+        assert factory.graph is not None
+        assert factory.auto_connect is not None
 
     def test_reuses_instances(self, db_session):
         factory = MemoryServiceFactory(db_session)
         assert factory.episodic is factory.episodic
         assert factory.semantic is factory.semantic
+        assert factory.working is factory.working
+        assert factory.graph is factory.graph
+        assert factory.auto_connect is factory.auto_connect
