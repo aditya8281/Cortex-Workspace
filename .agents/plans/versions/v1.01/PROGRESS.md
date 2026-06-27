@@ -12,7 +12,7 @@
 | P03 | Import Migration | ✅ Completed | 2026-06-27 | 2026-06-27 | 230+ imports updated across 120 files (done as P01 auto-resolve) |
 | P04 | Frontend Reorganization | Not started | - | - | Move components to feature modules |
 | P05 | Documentation Reorganization | ✅ Completed | 2026-06-27 | 2026-06-27 | 4 files moved, 10 domain stubs, index files, CLAUDE.md updated |
-| P06 | Planning Reorganization | Not started | - | - | Organize planning by version |
+| P06 | Planning Reorganization | ✅ Completed | 2026-06-27 | 2026-06-27 | 3 templates, 3 examples, CLAUDE.md updated |
 | P07 | Frontend Feature Module Scaffolding | Not started | - | - | Feature module conventions, templates, shared utilities |
 | P08 | Testing Infrastructure | Not started | - | - | Fixture factories, integration harnesses, CI pipeline |
 
