@@ -4,21 +4,58 @@ Executes a complete implementation iteration. For concrete, well-defined tasks w
 
 **When to run:** You have a concrete task. For ambiguous requests, use `/project:update` or `/project:develop` first.
 
+## Absolute Rules
+
+### Skill-First — ALWAYS
+
+Before ANY action in this workflow, check for applicable skills. No exceptions.
+
+### Frontend = Design Excellence
+
+If ANY work touches `frontend/`:
+- **Before implementation:** Invoke `superpowers:brainstorming` for design decisions
+- **Before coding:** Invoke `superpowers:writing-plans` for structured implementation plan
+- **After implementation:** UI Review hook auto-validates design tokens, glassmorphism, accessibility
+- **Before merge:** Playwright hook validates build + visual regression
+- **Always:** Use context7 for latest React/Next.js/Tailwind docs
+
+### Brainstorm Before Planning
+
+When a phase plan involves significant design decisions (new UI, new API surface, architectural change):
+1. Invoke `superpowers:brainstorming` to explore approaches
+2. Present 2-3 options with trade-offs
+3. Get user approval on design
+4. THEN invoke `superpowers:writing-plans` to create implementation plan
+5. Execute plan via TDD
+
+### Create Skills for Repeated Patterns
+
+If you execute the same workflow 2+ times:
+1. Complete current execution
+2. Invoke `superpowers:writing-skills` to create a persistent skill
+3. Save to `.claude/skills/<skill-name>/SKILL.md`
+4. Log: "Created skill: <name> for <pattern>"
+
+---
+
 ## Phases
 
-### P0: Repository Intelligence
+### P0: Repository Intelligence + Ecosystem Integration
 
-Invoke `cortex-repo-discovery` then `cortex-repository-intelligence`.
+Invoke `cortex-repo-discovery` then `cortex-repository-intelligence` then `cortex-ecosystem-integration`.
 
 Then read `.agents/plans/GUIDE.md`, `.agents/plans/IMPLEMENTATION_STEPS.md`, active phase plan, and active progress. Identify existing related implementations — prefer extending over creating new.
 
-**Outcome:** Repo state, version, phase, related implementations understood.
+**Outcome:** Repo state, version, phase, related implementations understood. All ecosystem capabilities mapped.
 
 ---
 
 ### P1: Strategic Planning
 
 Determine approach. If a plan exists: read, challenge, verify, adapt. If not: create one. Determine objectives, affected modules, dependencies, risks, validation strategy. Select applicable skills. Only ask the user when multiple valid directions with no better choice.
+
+**If the phase involves significant design decisions:**
+Invoke `superpowers:brainstorming` to explore approaches before planning.
 
 **Outcome:** Clear plan.
 
@@ -72,8 +109,6 @@ For any P0/P1 findings: auto-fix immediately (fix the code, not the finding). If
 
 **Outcome:** Quality confirmed, architecture aligned, risks identified.
 
-**Outcome:** Quality confirmed, architecture aligned, risks identified.
-
 ---
 
 ### P6: Progress Update & Reflection
@@ -81,6 +116,8 @@ For any P0/P1 findings: auto-fix immediately (fix the code, not the finding). If
 Invoke `cortex-progress-tracker` to update progress.md with completion status and timestamp.
 
 Invoke `cortex-post-reflection` for systematic analysis. Apply action-items. Update architecture docs, ADRs, plans as needed.
+
+**If repeated patterns found:** Invoke `superpowers:writing-skills` to create new skill.
 
 ---
 
@@ -133,6 +170,7 @@ Pause for user only when: architecture change, product/roadmap change, conflicti
 ### Engineering Review
 ### Reflection
 ### Ecosystem Updates
+### Skills Created
 ### Technical Debt
 ### Commits
 

@@ -2,12 +2,72 @@
 
 Supreme session initializer. Runs every health system in the ecosystem, auto-resolves all issues, and drops into development with zero friction. Never stops, never asks — detects, fixes, continues.
 
+## Absolute Rules
+
+### Rule 1: Skill-First — ALWAYS
+
+Before ANY action, check for applicable skills. This is non-negotiable.
+
+```
+User request received
+    ↓
+Check: does a skill exist for this?
+    YES → Invoke skill. Follow it exactly.
+    NO  → Check: is this repeatable or could a skill be created?
+        YES → Execute once, then create skill via superpowers:writing-skills
+        NO  → Execute directly
+```
+
+**Applies to:** Every response, every action, every task. No exceptions.
+
+**Available skill families:**
+- **Cortex skills** (`.claude/skills/cortex-*`) — 18 skills for repo management
+- **Superpowers skills** (via Skill tool) — brainstorming, TDD, writing-plans, writing-skills, systematic-debugging, code-review, verification-before-completion, subagent-driven-development
+- **MCP tools** — context7 (library docs), sequential-thinking (reasoning), playwright (browser automation), context-mode (knowledge base)
+
+### Rule 2: Frontend = Design Excellence
+
+Any work touching `frontend/` MUST invoke these skills:
+- `superpowers:brainstorming` — before any UI design decision
+- `superpowers:writing-plans` — before any frontend implementation
+- UI Review hook (`.claude/hooks/ui-review/`) — auto-triggers on `.tsx/.ts/.css` changes
+- Playwright hook — validates build + visual regression
+- Context7 — for latest React/Next.js/Tailwind docs before any frontend code
+
+### Rule 3: Create Skills for Repeated Patterns
+
+If you execute a workflow 2+ times that could be automated:
+1. Complete the current execution
+2. Invoke `superpowers:writing-skills` to create a persistent skill
+3. Save to `.claude/skills/<skill-name>/SKILL.md`
+4. Log: "Created skill: <name> for <pattern>"
+
+### Rule 4: Use MCP Servers
+
+- **context7** — Always fetch latest docs for React, Next.js, Tailwind, FastAPI, SQLAlchemy before coding
+- **sequential-thinking** — Use for complex reasoning before architectural decisions
+- **playwright** — Browser automation for visual testing
+- **context-mode** — Knowledge base for session memory, batch analysis, code derivation
+
+### Rule 5: Hooks Enforce Quality
+
+Every code change triggers relevant hooks automatically:
+- **UI Review** → frontend file changes
+- **Architecture** → structural changes
+- **Code Quality** → all code changes
+- **Skill Discovery** → checks for skill gaps
+- **Contract** → API contract validation
+- **Completion Gate** → pre-merge validation
+
+---
+
 ## Instructions
 
-### 1. Repository Intelligence
+### 1. Repository Intelligence + Ecosystem Integration
 
 Invoke `cortex-repo-discovery`.
 Invoke `cortex-repository-intelligence`.
+Invoke `cortex-ecosystem-integration`.
 
 **Collect:**
 - Git branch, status, recent commits, stash
@@ -59,12 +119,12 @@ This scans:
 - MEDIUM: Log and continue
 - LOW: Log only
 
-**If quick scan clean and time permits:** Run `full` integrity scan for deeper coverage.
+**If quick scan clean:** Run `full` integrity scan for deeper coverage.
 
 ### 5. Pre-Flight: Hook Health
 
 ```bash
-python .claude/hooks/run_hooks.py --help 2>/dev/null && python .claude/hooks/run_hooks.py 2>/dev/null || echo "Hook system not available"
+python .claude/hooks/run_hooks.py 2>/dev/null || echo "Hook system not available"
 ```
 
 - Report pass/fail per hook
@@ -88,7 +148,6 @@ cd frontend && npm ls --depth=0 2>&1 | head -20
 ### 7. Pre-Flight: Migration Status
 
 ```bash
-# Check if migrations are pending
 .venv/bin/alembic history --indicate-head 2>/dev/null | tail -5
 ```
 
@@ -103,7 +162,6 @@ grep -rn "TODO\|FIXME\|HACK\|XXX" backend/ frontend/src/ --include="*.py" --incl
 
 - Count total debt markers
 - If >50: Log warning with top 5 files by count
-- Log total for the status report
 
 ### 9. Pre-Flight: Architecture Drift Check
 
@@ -115,10 +173,6 @@ Check:
 - Service constructor injection patterns
 - Frontend feature module structure matches CONVENTIONS.md
 
-**If drift found:**
-- P0/P1: Auto-fix immediately
-- P2/P3: Log for phase execution
-
 ### 10. Pre-Flight: Documentation Consistency
 
 Invoke `cortex-documentation-consistency`.
@@ -128,23 +182,40 @@ Quick check:
 - Phase plans reference existing files
 - ADR count matches docs/decisions/ count
 
-**If inconsistencies found:** Log them. Fix if mechanical (path updates), escalate if semantic.
+### 11. Pre-Flight: Skill Gap Detection
 
-### 11. Phase Drift Detection
+Invoke `cortex-repo-health-scan`.
+
+Check:
+- All skills in `.claude/skills/` have definition files
+- No stale skills (>30 days without update)
+- No unused skills (no references in docs/commands/workflows)
+- Skill coverage for common workflows
+
+### 12. Pre-Flight: MCP Server Availability
+
+Verify connected MCP servers:
+- **context7** — Library documentation fetching
+- **sequential-thinking** — Complex reasoning support
+- **playwright** — Browser automation for visual testing
+- **context-mode** — Knowledge base and code derivation
+
+If any MCP server is unavailable, log warning but continue.
+
+### 13. Phase Drift Detection
 
 Compare progress.md claims against git reality:
 
 ```bash
-# For each phase marked Completed, verify commits exist
 grep "Completed" .agents/plans/versions/vX.XX/progress.md
 ```
 
 - For each "Completed" phase: Check git log for matching commits
 - **Phase marked complete but no commits:** Reset to "Not started" in progress.md
-- **Phase marked "In Progress":** Count completed tasks vs total from phase plan
-- Report: "Resuming P0X: N/M tasks done" or "⚠️ Phase P0X reset — no commits found"
+- **Phase marked "In Progress":** Count completed tasks vs total
+- Report: "Resuming P0X: N/M tasks done" or "⚠️ Phase P0X reset"
 
-### 12. Find Active Version & Next Phase
+### 14. Find Active Version & Next Phase
 
 Read `.agents/plans/IMPLEMENTATION_STEPS.md`.
 
@@ -152,7 +223,7 @@ Find the first version where progress.md shows incomplete phases. If none active
 
 Read active version's progress.md. Find first phase with status "Not started".
 
-### 13. Consolidated Status Report
+### 15. Consolidated Status Report
 
 Display the full session status:
 
@@ -178,6 +249,8 @@ Display the full session status:
 | Migrations           | ✅/⚠️  | Up to date / N pending |
 | Architecture Drift   | ✅/❌  | Clean / N issues |
 | Docs Consistency     | ✅/⚠️  | Clean / N inconsistencies |
+| Skill Health         | ✅/⚠️  | N skills, M stale |
+| MCP Servers          | ✅/⚠️  | N/M available |
 | Tech Debt            | ℹ️     | N markers across M files |
 
 ### Auto-Resolve Report
@@ -189,16 +262,17 @@ Display the full session status:
 - Dependencies: <installed N missing / all satisfied>
 - Drift: <reset N phases / none detected>
 
-### Git State
-- Recent commits:
-  <last 5 commits>
+### Skill Coverage
+- Available: N cortex + M superpowers skills
+- Gaps: <list any missing skill for common workflows>
+- Recommendation: <create skill X for repeated pattern Y>
 
 Ready to execute. Auto-invoking /project:cortex...
 ```
 
-### 14. Auto-Execute
+### 16. Auto-Execute
 
-Always auto-invoke `/project:cortex` with the active version and phase. No confirmation needed — all health issues were resolved in steps 2-11.
+Always auto-invoke `/project:cortex` with the active version and phase. No confirmation needed — all health issues were resolved in steps 2-14.
 
 ---
 
@@ -206,8 +280,9 @@ Always auto-invoke `/project:cortex` with the active version and phase. No confi
 
 ```
 Discovery → Git Hygiene → System Validation → Integrity Scan → Hook Health
-    → Dependency Health → Migration Status → Tech Debt Scan → Architecture Drift
-        → Documentation Consistency → Phase Drift → Find Next → Status Report → Execute
+    → Dependency Health → Migration Status → Tech Debt → Architecture Drift
+        → Docs Consistency → Skill Gaps → MCP Check → Phase Drift
+            → Find Next → Status Report → Execute
 ```
 
 **Principles:**
@@ -217,3 +292,8 @@ Discovery → Git Hygiene → System Validation → Integrity Scan → Hook Heal
 - Max 3 fix attempts per issue, then escalate
 - All fixes committed with descriptive messages
 - Status report is the single source of truth for session state
+- **Skill-first ALWAYS** — check before every action
+- **Frontend = design excellence** — invoke design skills proactively
+- **Create skills for repeated patterns** — evolve the ecosystem
+- **Use MCP servers** — leverage external knowledge and automation
+- **Hooks enforce quality** — let governance work automatically

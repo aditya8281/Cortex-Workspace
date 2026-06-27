@@ -97,19 +97,24 @@ Six versions, each a complete milestone:
 
 ### Before ANY Work
 
-1. **Read the active phase plan** — know what components are in scope
-2. **Read the constraints** — .agents/plans/GUIDE.md architecture principles apply always
-3. **Verify entry state** — run the entry protocol above
-4. **Skill discovery** — check `.claude/skills/` for applicable skills
-5. **Branch** — create `feat/<topic>` from `main`
+1. **Ecosystem integration** — invoke `cortex-ecosystem-integration` to map all available capabilities
+2. **Read the active phase plan** — know what components are in scope
+3. **Read the constraints** — .agents/plans/GUIDE.md architecture principles apply always
+4. **Verify entry state** — run the entry protocol above
+5. **Skill discovery** — check `.claude/skills/` for applicable skills. **Skill-first ALWAYS**
+6. **Branch** — create `feat/<topic>` from `main`
 
 ### During Work
 
 1. **TDD when applicable** — write test, verify fail, implement, verify pass
-2. **Commit frequently** — after each logical unit
-3. **Run hooks on change** — `make hooks-onchange`
-4. **Follow architecture** — file placement rules, ownership checks, API conventions
-5. **Update progress** — mark components as you complete them in `progress.md`
+2. **Skill-first** — check for applicable skills before every significant action
+3. **Frontend = design excellence** — invoke brainstorming + writing-plans + UI review for any frontend work
+4. **Use MCP servers** — context7 for docs, sequential-thinking for reasoning, playwright for visual testing
+5. **Create skills for repeated patterns** — invoke `superpowers:writing-skills` when workflow repeats 2+ times
+6. **Commit frequently** — after each logical unit
+7. **Run hooks on change** — `make hooks-onchange`
+8. **Follow architecture** — file placement rules, ownership checks, API conventions
+9. **Update progress** — mark components as you complete them in `progress.md`
 
 ### After Work
 
