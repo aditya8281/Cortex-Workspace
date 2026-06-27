@@ -8,7 +8,7 @@
 | Phase | Name | Status | Started | Completed | Notes |
 |-------|------|--------|---------|-----------|-------|
 | P01 | API Domain Reorganization | Completed | 2026-06-27 | 2026-06-27 | 22 files moved, 9 domain routers, route order fixed, 791 tests pass |
-| P02 | Service Boundaries + Event Bus | Not started | - | - | Domain services + typed event system |
+| P02 | Service Boundaries + Event Bus | Completed | 2026-06-27 | 2026-06-27 | 11 schemas moved to 9 domain dirs, EventBus + 30 EventTypes + 8 handlers, 1121 tests pass |
 | P03 | Agent System Hardening | Not started | - | - | Streaming loop, compaction, tool schemas, security |
 | P04 | MCP Integration | Not started | - | - | Server discovery, tool wrapping, transports |
 | P05 | Tool Infrastructure | Not started | - | - | Registration, RAG selection, prompt security |
