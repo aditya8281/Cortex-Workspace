@@ -1,18 +1,18 @@
-"""Models API — main router that includes sub-routers."""
+"""Models API — coordinator router for model-related endpoints.
+
+Note: After v1.02 domain reorganization, the sub-routers (catalog, downloads,
+llm_health, settings) are included via their respective domain routers in the
+master api/router.py. This file exists for backward compatibility and
+documentation of the models endpoint grouping.
+"""
 
 from fastapi import APIRouter
 
-from backend.app.api.v1.catalog import router as catalog_router
-from backend.app.api.v1.downloads import router as downloads_router
-from backend.app.api.v1.llm_health import router as llm_health_router
-from backend.app.api.v1.settings import router as settings_router
-
 router = APIRouter()
 
-# Order matters: include routers with only specific routes first,
-# then catalog_router last (it has /models/{model_id} which would
-# swallow /models/health, /models/installed, etc. if registered first).
-router.include_router(llm_health_router)
-router.include_router(settings_router)
-router.include_router(downloads_router)
-router.include_router(catalog_router)
+# NOTE: These sub-routers are NOT included here to avoid duplicate routes.
+# They are included via their domain routers in api/router.py:
+#   - catalog_router → developer_router
+#   - downloads_router → integration_router
+#   - llm_health_router → system_router
+#   - settings_router → privacy_router
