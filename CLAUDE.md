@@ -330,7 +330,9 @@ Required: `SECRET_KEY`, `DATABASE_URL` (port 5435), `APP_NAME`, `API_V1_PREFIX`.
 | API Reference | `docs/reference/api.md` |
 | Database Schema | `docs/reference/database.md` |
 | Design System | `DESIGN.md` |
-| Phase Plans | `.agents/plans/versions/vX/Phase-N.md` |
-| Progress Tracking | `.agents/plans/versions/vX/progress.md` |
+| Phase Plans | `.agents/plans/versions/vX/P0N.md` |
+| Progress Tracking | `.agents/plans/versions/vX/PROGRESS.md` |
 | ADRs | `docs/decisions/` |
 | Domain Docs | `docs/domains/` |
+| Planning Templates | `.agents/plans/templates/` |
+| Version Overview | `.agents/plans/versions/vX/OVERVIEW.md` |
