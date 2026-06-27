@@ -337,7 +337,7 @@ See [DATABASE.md](./DATABASE.md) for full schema reference.
 - **CSRF**: Double-submit cookie pattern (`cortex_csrf` cookie + `X-CSRF-Token` header)
 - **Flow**: Register/Login → set cookies → requests forward cookies via proxy → auto-refresh on 401
 
-See [SECURITY.md](./SECURITY.md) for detailed patterns.
+See [GOVERNANCE.md](./GOVERNANCE.md) (Security section) for detailed patterns.
 
 ---
 
@@ -367,3 +367,82 @@ services:
 | **Local-first (no cloud)** | Privacy principle. All inference and search happens on user's machine. |
 | **Shared memory vs private vault** | Memory is indexed and participates in RAG. Vault is pure encrypted file storage, never indexed. |
 | **Graceful degradation** | Redis, Ollama, ONNX, Qdrant all optional. Core features work without them. |
+
+---
+
+## Agent System
+
+### Domain Documentation
+
+When exploring the codebase, agents should consume domain documentation before working:
+
+- **`CONTEXT.md`** at the repo root, or
+- **`CONTEXT-MAP.md`** at the repo root if it exists — it points at one `CONTEXT.md` per context. Read each one relevant to the topic.
+- **`docs/decisions/`** — read ADRs that touch the area you're about to work in.
+
+If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront.
+
+**Single-context repo (most repos):**
+
+```
+/
+├── CONTEXT.md
+├── docs/decisions/
+│   ├── 001-agentic-ecosystem.md
+│   └── 002-postgresql-primary-database.md
+└── src/
+```
+
+**Multi-context repo (presence of `CONTEXT-MAP.md` at the root):**
+
+```
+/
+├── CONTEXT-MAP.md
+├── docs/decisions/              ← system-wide decisions
+└── src/
+    ├── ordering/
+    │   ├── CONTEXT.md
+    │   └── docs/decisions/      ← context-specific decisions
+    └── billing/
+        ├── CONTEXT.md
+        └── docs/decisions/
+```
+
+**Glossary usage:** When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `CONTEXT.md`. Don't drift to synonyms the glossary explicitly avoids.
+
+**Flag ADR conflicts:** If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
+
+> _Contradicts ADR-0007 (event-sourced orders) — but worth reopening because…_
+
+### Issue Tracker
+
+Issues and PRDs live as GitHub issues. Use the `gh` CLI for all operations.
+
+**Conventions:**
+- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
+- **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
+- **List issues**: `gh issue list --state open --json number,title,body,labels,comments` with appropriate `--label` and `--state` filters.
+- **Comment on an issue**: `gh issue comment <number> --body "..."`
+- **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
+- **Close**: `gh issue close <number> --comment "..."`
+
+Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
+
+**Pull requests as a triage surface:**
+- **Read a PR**: `gh pr view <number> --comments` and `gh pr diff <number>` for the diff.
+- **List external PRs for triage**: `gh pr list --state open --json number,title,body,labels,author,authorAssociation,comments` then keep only `authorAssociation` of `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR`, or `NONE`.
+- **Comment / label / close**: `gh pr comment`, `gh pr edit --add-label`/`--remove-label`, `gh pr close`.
+
+GitHub shares one number space across issues and PRs, so a bare `#42` may be either — resolve with `gh pr view 42` and fall back to `gh issue view 42`.
+
+### Triage Labels
+
+The skills speak in terms of five canonical triage roles:
+
+| Label in skills   | Label in our tracker | Meaning                                  |
+| ----------------- | -------------------- | ---------------------------------------- |
+| `needs-triage`    | `needs-triage`       | Maintainer needs to evaluate this issue  |
+| `needs-info`      | `needs-info`         | Waiting on reporter for more information |
+| `ready-for-agent` | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
+| `ready-for-human` | `ready-for-human`    | Requires human implementation            |
+| `wontfix`         | `wontfix`            | Will not be actioned                     |

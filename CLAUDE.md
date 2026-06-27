@@ -14,7 +14,7 @@ When entering this repository, Claude MUST do these in order:
 
 ```bash
 # Read the constitution to understand the full system
-cat .agents/plans/guide.md
+cat .agents/plans/GUIDE.md
 
 # Find which version is currently being developed
 grep -r "in_progress\|active\|current" .agents/plans/versions/*/progress.md
@@ -23,16 +23,16 @@ grep -r "in_progress\|active\|current" .agents/plans/versions/*/progress.md
 cat .agents/plans/versions/vX/Phase-1.md  # (replace X with active version)
 ```
 
-If no version is active (all components show "Not started"), start with **V1: The Brain Works** per `.agents/plans/implementation_steps.md`.
+If no version is active (all components show "Not started"), start with **V1: The Brain Works** per `.agents/plans/IMPLEMENTATION_STEPS.md`.
 
 ### 2. Load the Execution Plan
 
 ```bash
 # Contributor guide with execution order and constraints
-cat .agents/plans/implementation_steps.md
+cat .agents/plans/IMPLEMENTATION_STEPS.md
 
 # Architecture constitution (10 principles, what to keep/reject)
-cat .agents/plans/guide.md
+cat .agents/plans/GUIDE.md
 
 # Cross-reference matrix (which items go in which version)
 cat .agents/plans/FinalCompatibilities.md
@@ -71,9 +71,9 @@ When documents conflict, this order governs:
 | Priority | Document | Purpose |
 |----------|----------|---------|
 | 1 | **CLAUDE.md** (this file) | Execution contract — what Claude does |
-| 2 | **.agents/plans/guide.md** | Constitution — architecture principles, what to build |
+| 2 | **.agents/plans/GUIDE.md** | Constitution — architecture principles, what to build |
 | 3 | **AGENTS.md** | Agent behavior rules — security, API patterns |
-| 4 | **.agents/plans/implementation_steps.md** | Implementation guide — execution order |
+| 4 | **.agents/plans/IMPLEMENTATION_STEPS.md** | Implementation guide — execution order |
 | 5 | **.agents/plans/versions/vX/Phase-N.md** | Active phase plan — current work |
 | 6 | **docs/** | Reference — detailed docs for specific domains |
 
@@ -101,7 +101,7 @@ Six versions, each a complete milestone:
 ### Before ANY Work
 
 1. **Read the active phase plan** — know what components are in scope
-2. **Read the constraints** — .agents/plans/guide.md architecture principles apply always
+2. **Read the constraints** — .agents/plans/GUIDE.md architecture principles apply always
 3. **Verify entry state** — run the entry protocol above
 4. **Skill discovery** — check `.claude/skills/` for applicable skills
 5. **Branch** — create `feat/<topic>` from `main`
@@ -135,7 +135,7 @@ Six versions, each a complete milestone:
 
 ## Architecture Constraints
 
-These rules are immutable. See `.agents/plans/guide.md` for full rationale.
+These rules are immutable. See `.agents/plans/GUIDE.md` for full rationale.
 
 ### Backend (`backend/app/`)
 
@@ -213,7 +213,7 @@ make auto-skills    # Skill health check
 Branch → Skill Discovery → Brainstorm → Plan → Implement → Test → Validate → Review → Reflect → Merge
 ```
 
-Every significant task follows this. No shortcuts. See `docs/WORKFLOWS.md` for details.
+Every significant task follows this. No shortcuts. See `.agents/plans/IMPLEMENTATION_STEPS.md` for details.
 
 ### Skill-First Architecture
 
@@ -310,13 +310,12 @@ Required: `SECRET_KEY`, `DATABASE_URL` (port 5435), `APP_NAME`, `API_V1_PREFIX`.
 | Topic | Location |
 |-------|----------|
 | Architecture | `docs/ARCHITECTURE.md` |
-| Constitution | `.agents/plans/guide.md` |
+| Constitution | `.agents/plans/GUIDE.md` |
 | Governance | `docs/GOVERNANCE.md` |
-| Workflows | `docs/WORKFLOWS.md` |
-| Developer Guide | `docs/DEVELOPER_GUIDE.md` |
+| Implementation Guide | `.agents/plans/IMPLEMENTATION_STEPS.md` |
 | API Reference | `docs/API.md` |
 | Database Schema | `docs/DATABASE.md` |
 | Design System | `DESIGN.md` |
-| Implementation Guide | `.agents/plans/implementation_steps.md` |
+| Implementation Guide | `.agents/plans/IMPLEMENTATION_STEPS.md` |
 | Phase Plans | `.agents/plans/versions/vX/Phase-N.md` |
 | Progress Tracking | `.agents/plans/versions/vX/progress.md` |

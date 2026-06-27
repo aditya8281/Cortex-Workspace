@@ -37,7 +37,7 @@ Classify the user's goal:
 | **Frontend** | UI/UX | DESIGN.md, CLAUDE.md frontend |
 | **Backend** | API/service | Backend architecture, auth model |
 | **DevOps** | Infrastructure | Makefile, docker-compose, CI |
-| **Security** | Security review | AGENTS.md, SECURITY.md |
+| **Security** | Security review | AGENTS.md, docs/GOVERNANCE.md |
 | **Testing** | Test improvement | tests/ structure, conftest.py |
 | **Release** | Release prep | /release, version system |
 | **Ecosystem** | Skills/hooks/workflows | /improve, governance |

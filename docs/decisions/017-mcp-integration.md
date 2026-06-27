@@ -7,7 +7,7 @@
 
 ## Context
 
-Cortex has zero MCP (Model Context Protocol) support. All reference repos (Continue, Odysseus, Strands) have MCP — it's table stakes for AI tool interoperability. MCP enables connecting to external tool servers and exposing Cortex tools to other agents.
+Cortex has zero MCP (Model Context Protocol) support. All reference repos (Continue, reference architecture, Strands) have MCP — it's table stakes for AI tool interoperability. MCP enables connecting to external tool servers and exposing Cortex tools to other agents.
 
 ## Decision
 

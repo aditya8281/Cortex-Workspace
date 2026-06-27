@@ -42,7 +42,7 @@ The goal is to transform a computer from a tool you operate into a companion tha
 | Model Catalog | Full catalogue with providers, variants, benchmarks |
 | Agentic Ecosystem | Governance, workflows, hooks, automation — complete |
 
-**Phases 1–3 complete. Phases 4–6 partially complete. See [Roadmap](docs/ROADMAP.md) for details.**
+**Phases 1–3 complete. Phases 4–6 partially complete. See [Implementation Guide](.agents/plans/implementation_steps.md) for details.**
 
 ---
 
@@ -161,14 +161,10 @@ make check         # lint + test
 | [CLAUDE.md](./CLAUDE.md) | AI Agents | Development guidance, commands, patterns |
 | [AGENTS.md](./AGENTS.md) | AI Agents | Behavior rules, security, API patterns |
 | [DESIGN.md](./DESIGN.md) | Designers | Design system, tokens, components |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Engineers | System architecture, tech decisions |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Everyone | Development roadmap, phases, status |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Engineers | System architecture, tech decisions, agent system |
 | [docs/API.md](docs/API.md) | Engineers | API reference, endpoints, auth |
 | [docs/DATABASE.md](docs/DATABASE.md) | Engineers | DB schema, migrations, conventions |
-| [docs/SECURITY.md](docs/SECURITY.md) | Engineers | Security patterns, auth flow |
-| [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | Everyone | Ecosystem, workflows, hooks |
-| [docs/GOVERNANCE.md](docs/GOVERNANCE.md) | Everyone | Rules of engagement |
-| [docs/agents/](docs/agents/) | AI Agents | Domain context, triage, issue tracking |
+| [docs/GOVERNANCE.md](docs/GOVERNANCE.md) | Everyone | Rules of engagement, security patterns |
 
 ---
 

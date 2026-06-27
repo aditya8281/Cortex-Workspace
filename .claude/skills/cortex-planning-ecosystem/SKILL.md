@@ -16,10 +16,10 @@ Run `cortex-repository-intelligence` first if not already done.
 
 Read:
 
-- `.agents/plans/guide.md` — The constitution: architecture principles, what to build/reject
-- `.agents/plans/implementation_steps.md` — Execution order: version phases, deliverables
-- `.agents/plans/FinalCompatibilities.md` — ODYSSEUS cross-reference matrix
-- `docs/ROADMAP.md` — Public roadmap: version timeline, current status
+- `.agents/plans/GUIDE.md` — The constitution: architecture principles, what to build/reject
+- `.agents/plans/IMPLEMENTATION_STEPS.md` — Execution order: version phases, deliverables
+- `.agents/plans/FinalCompatibilities.md` — reference architecture cross-reference matrix
+- `.agents/plans/IMPLEMENTATION_STEPS.md` — Version timeline, execution order
 - Active phase plan: `.agents/plans/versions/v{ACTIVE}/Phase-{N}.md`
 - Active progress: `.agents/plans/versions/v{ACTIVE}/progress.md`
 

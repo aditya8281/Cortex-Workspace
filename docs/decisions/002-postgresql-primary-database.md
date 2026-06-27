@@ -8,7 +8,7 @@
 
 Cortex needs a primary database for all platform data: user accounts, memory items, vaults, knowledge graph edges, background tasks, and configuration. The system requires JSONB support, FK constraints, GIN indexes, and concurrent access for multi-agent scenarios.
 
-Reference repos use: PostgreSQL 16 (Odysseus, Open WebUI), SQLite (Mem0, AnythingLLM — single-user, scale-limited), Prisma (AnythingLLM — less control).
+Reference repos use: PostgreSQL 16 (reference architecture, Open WebUI), SQLite (Mem0, AnythingLLM — single-user, scale-limited), Prisma (AnythingLLM — less control).
 
 ## Decision
 

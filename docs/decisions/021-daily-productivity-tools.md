@@ -7,7 +7,7 @@
 
 ## Context
 
-Odysseus has 10 productivity subsystems (~15,000 lines): task scheduler, skills, webhooks, email, calendar, notes, documents, contacts. The user wants all of them. Need to decide how they integrate with the agent system.
+reference architecture has 10 productivity subsystems (~15,000 lines): task scheduler, skills, webhooks, email, calendar, notes, documents, contacts. The user wants all of them. Need to decide how they integrate with the agent system.
 
 ## Decision
 
@@ -29,5 +29,5 @@ Odysseus has 10 productivity subsystems (~15,000 lines): task scheduler, skills,
 
 ## Related
 
-- Odysseus reference repo (10 subsystems)
+- reference architecture reference repo (10 subsystems)
 - V4-V5 phase plans

@@ -568,15 +568,15 @@ Check each layer for required updates:
 
 | Layer | Action | What to Look For |
 |-------|--------|------------------|
-| **Roadmap** | `docs/ROADMAP.md` | Does the roadmap need a new version/phase? Do existing phases need reordering? |
+| **Roadmap** | `.agents/plans/IMPLEMENTATION_STEPS.md` | Does the roadmap need a new version/phase? Do existing phases need reordering? |
 | **Version plans** | `.agents/plans/versions/v*/Phase-*.md` | Do any existing phase plans need updating? Is this a new phase? |
 | **Progress** | `.agents/plans/versions/v*/progress.md` | Will progress tracking need new component rows? |
-| **Implementation steps** | `.agents/plans/implementation_steps.md` | Does the execution order change? |
-| **Cross-reference** | `.agents/plans/FinalCompatibilities.md` | Does the ODYSSEUS mapping change? |
-| **Architecture** | `.agents/plans/guide.md` | Do architecture principles or decisions change? |
+| **Implementation steps** | `.agents/plans/IMPLEMENTATION_STEPS.md` | Does the execution order change? |
+| **Cross-reference** | `.agents/plans/FinalCompatibilities.md` | Does the reference architecture mapping change? |
+| **Architecture** | `.agents/plans/GUIDE.md` | Do architecture principles or decisions change? |
 | **Commands** | `.claude/commands/project/*.md` | Do any commands need updating? New command needed? |
 | **Hooks** | `.claude/hooks/` | Does validation need new hooks? |
-| **Workflows** | `docs/WORKFLOWS.md` | Do development workflows change? |
+| **Governance** | `docs/GOVERNANCE.md` | Do governance rules or security patterns change? |
 | **Skills** | `.claude/skills/` | Is a new skill needed? Does an existing skill need updating? |
 | **CLAUDE.md** | `CLAUDE.md` | Do architecture constraints change? New patterns? |
 | **ADRs** | `docs/decisions/` | Is a new ADR needed? Do existing ADRs get superseded? |
@@ -591,10 +591,9 @@ Check each layer for required updates:
 ### Plans
 | Document | Action Required | Notes |
 |----------|----------------|-------|
-| `docs/ROADMAP.md` | [Update / No change] | ... |
+| `implementation_steps.md` | [Update / No change] | ... |
 | `ACTIVE_VERSION.md` | [Update / No change] | ... |
 | `versions/v{N}/Phase-{M}.md` | [Update / New phase / No change] | ... |
-| `implementation_steps.md` | [Update / No change] | ... |
 
 ### Ecosystem
 | System | Action Required | Notes |
@@ -613,7 +612,7 @@ Check each layer for required updates:
 | `docs/ARCHITECTURE.md` | [Update / No change] | ... |
 | `docs/API.md` | [Update / No change] | ... |
 | `docs/DATABASE.md` | [Update / No change] | ... |
-| `docs/SECURITY.md` | [Update / No change] | ... |
+| `docs/GOVERNANCE.md` (Security) | [Update / No change] | ... |
 
 ### Implementation
 | Area | Files Changed | Notes |
@@ -678,7 +677,7 @@ Update planning artifacts to integrate the update:
 - Update `ACTIVE_VERSION.md` to point to the new version
 - Update `implementation_steps.md` to include the new version
 - Update `ROADMAP.md` version timeline
-- Check FinalCompatibilities.md for any new ODYSSEUS mappings
+- Check FinalCompatibilities.md for any new reference architecture mappings
 
 **For architecture changes that affect existing plans:**
 - Update `guide.md` architecture section if principles change

@@ -25,7 +25,7 @@ Four dimensions:
 
 Invoke `cortex-repo-discovery`. Invoke `cortex-planning-ecosystem`.
 
-Also review: `.claude/commands/project/`, `.claude/skills/INDEX.md`, `docs/WORKFLOWS.md`, `docs/GOVERNANCE.md`, relevant ADRs.
+Also review: `.claude/commands/project/`, `.claude/skills/INDEX.md`, `docs/GOVERNANCE.md`, relevant ADRs.
 
 **Outcome:** Complete understanding of planned state vs actual state.
 
@@ -52,7 +52,7 @@ Also check reverse drift: **code exists but plan says not started**. Grep progre
 
 Compare plans against each other:
 
-1. **ROADMAP.md vs phase plans** — Phase names, statuses, version descriptions match?
+1. **implementation_steps.md vs phase plans** — Phase names, statuses, version descriptions match?
 2. **ACTIVE_VERSION.md vs progress.md** — Active version/phase matches?
 3. **implementation_steps.md vs phase plans** — Deliverables match?
 4. **FinalCompatibilities.md vs phase plans** — Cross-reference still accurate?
@@ -110,7 +110,7 @@ Rules:
 - Never change product vision
 - Update plans to match code, not reverse
 - Keep progress.md accurate
-- Keep ROADMAP.md accurate
+- Keep implementation_steps.md accurate
 - Update test counts everywhere
 - Update ACTIVE_VERSION.md if phase changed
 - Create ADRs for undocumented decisions

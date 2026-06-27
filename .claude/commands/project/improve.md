@@ -23,7 +23,7 @@ Invoke `cortex-repo-discovery`. Invoke `cortex-repository-intelligence`. Invoke 
 
 ### 3. Review Workflow Gaps
 
-- Read `docs/WORKFLOWS.md`
+- Read `.agents/plans/IMPLEMENTATION_STEPS.md`
 - Manual steps that could be automated?
 - Unclear or incomplete workflows?
 - Missing workflows for common tasks?

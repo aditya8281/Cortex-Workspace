@@ -10,7 +10,7 @@ Before release, after architecture changes, during health check.
 
 ### 1. Check Architecture Principles
 
-For each architecture section in `guide.md` §4 (Daemon, Desktop, Memory, Graph, Retrieval, Agent, Workflow, Plugin, CLI, Ecosystem):
+For each architecture section in `GUIDE.md` §4 (Daemon, Desktop, Memory, Graph, Retrieval, Agent, Workflow, Plugin, CLI, Ecosystem):
 
 - Is the "current approach" description accurate?
 - Is the "final decision" still the intended direction?

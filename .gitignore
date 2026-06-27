@@ -37,6 +37,7 @@ wheels/
 *.tmp
 tmp/
 .tmp/
+_archive/
 
 # OS files
 .DS_Store

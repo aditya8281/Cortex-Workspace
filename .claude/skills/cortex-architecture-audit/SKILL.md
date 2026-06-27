@@ -1,6 +1,6 @@
 # CORTEX Architecture Audit
 
-Validate the Cortex codebase against its 10 architecture principles from guide.md.
+Validate the Cortex codebase against its 10 architecture principles from GUIDE.md.
 
 ## When to Use
 
@@ -24,7 +24,7 @@ Validate the Cortex codebase against its 10 architecture principles from guide.m
 
 ## Steps
 
-1. Read `guide.md` for full principle definitions
+1. Read `GUIDE.md` for full principle definitions
 2. Read `docs/ARCHITECTURE.md` for current state
 3. For each principle, check:
    - Is the principle implemented?

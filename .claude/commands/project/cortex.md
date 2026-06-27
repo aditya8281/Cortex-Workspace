@@ -10,7 +10,7 @@ Executes a complete implementation iteration. For concrete, well-defined tasks w
 
 Invoke `cortex-repo-discovery` then `cortex-repository-intelligence`.
 
-Then read `.agents/plans/guide.md`, `.agents/plans/implementation_steps.md`, active phase plan, active progress, and `docs/ROADMAP.md`. Identify existing related implementations — prefer extending over creating new.
+Then read `.agents/plans/GUIDE.md`, `.agents/plans/IMPLEMENTATION_STEPS.md`, active phase plan, and active progress. Identify existing related implementations — prefer extending over creating new.
 
 **Outcome:** Repo state, version, phase, related implementations understood.
 

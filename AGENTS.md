@@ -47,7 +47,7 @@ This repository uses a multi-agent development ecosystem. All agents must follow
 - Updating existing tests or documentation
 
 See [docs/GOVERNANCE.md](docs/GOVERNANCE.md) for full governance rules.
-See [docs/WORKFLOWS.md](docs/WORKFLOWS.md) for complete workflow definitions.
+See [`.agents/plans/implementation_steps.md`](.agents/plans/implementation_steps.md) for workflow details.
 
 ## PLANNING MODE
 

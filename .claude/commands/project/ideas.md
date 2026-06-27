@@ -18,7 +18,7 @@ What was built? What patterns emerge? What's accelerating?
 
 ### 2. Read the Roadmap
 
-Read `docs/ROADMAP.md`. What's next? What's partially complete? What's blocked?
+Read `.agents/plans/IMPLEMENTATION_STEPS.md`. What's next? What's partially complete? What's blocked?
 
 ### 3. Check Feature Gaps
 
