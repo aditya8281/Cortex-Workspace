@@ -16,6 +16,15 @@ from backend.app.mcp.wrapper import MCPToolWrapper
 logger = logging.getLogger(__name__)
 
 
+def _make_mcp_handler(w: MCPToolWrapper, t: Any) -> Any:
+    """Create an async handler that calls MCP tool via transport."""
+
+    async def handler(**kwargs: Any) -> Any:
+        return await w.execute(kwargs, t)
+
+    return handler
+
+
 def register_mcp_tools(
     registry: ToolRegistry,
     mcp_tools: list[dict],
@@ -39,12 +48,7 @@ def register_mcp_tools(
             wrapper = MCPToolWrapper(server_name, mcp_tool)
             cortex_tool = wrapper.to_cortex_schema()
 
-            def _make_handler(w: MCPToolWrapper, t: Any) -> Any:
-                async def handler(**kwargs: Any) -> Any:
-                    return await w.execute(kwargs, t)
-                return handler
-
-            handler = _make_handler(wrapper, transport)
+            handler = _make_mcp_handler(wrapper, transport)
 
             tool = Tool(
                 name=wrapper.tool_name,
