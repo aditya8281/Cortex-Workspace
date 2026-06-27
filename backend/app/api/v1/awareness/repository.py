@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -236,6 +236,35 @@ def index_status(
         "pending": sum(1 for f in files if f.status == "pending"),
         "errors": sum(1 for f in files if f.status == "error"),
         "last_indexed_at": repo.last_indexed_at.isoformat() if repo.last_indexed_at else None,
+    }
+
+
+# ── Repository Scanner (P02 awareness) ─────────────────────────
+
+
+@router.post("/repos/scan")
+def scan_repository_structure(
+    repo_path: str = Query(..., min_length=1, max_length=1000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Scan a repository and detect languages, framework, dependencies."""
+    from backend.app.services.awareness.repo_scanner import RepositoryScannerService
+
+    service = RepositoryScannerService(db)
+    repo = service.scan_repository(current_user.id, repo_path)
+    return {
+        "id": repo.id,
+        "repo_path": repo.repo_path,
+        "repo_name": repo.repo_name,
+        "languages": repo.languages,
+        "total_files": repo.total_files,
+        "total_lines": repo.total_lines,
+        "framework": repo.framework,
+        "dependencies": repo.dependencies,
+        "git_branch": repo.git_branch,
+        "last_commit_hash": repo.last_commit_hash,
+        "last_indexed": repo.last_indexed.isoformat() if repo.last_indexed else None,
     }
 
 
