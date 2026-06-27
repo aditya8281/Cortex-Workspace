@@ -13,7 +13,7 @@
 | Phase | Name | Status | Started | Completed | Notes |
 |-------|------|--------|---------|-----------|-------|
 | P01 | Awareness Models & Schema | ✅ Completed | 2026-06-27 | 2026-06-27 | 5 models, 5 schemas, Alembic migration applied |
-| P02 | Filesystem & Repository | Not Started | — | — | Core awareness services, change detection |
+| P02 | Filesystem & Repository | ✅ Completed | 2026-06-27 | 2026-06-27 | FilesystemIndexerService + RepositoryScannerService |
 | P03 | Project & Device | Not Started | — | — | Project detection, device info, environment, health |
 | P04 | API & Integration | Not Started | — | — | REST endpoints, frontend hooks, dashboard, E2E |
 
@@ -47,7 +47,7 @@
 ## Summary
 
 - Total Phases: 4
-- Completed: 1
+- Completed: 2
 - In Progress: 0
 - Remaining: 3
 - Estimated Duration: 4-5 days (2 developers) or 6-8 days (1 developer)
