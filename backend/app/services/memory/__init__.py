@@ -1,8 +1,10 @@
 """CORTEX memory domain services."""
 
 from backend.app.services.memory.auto_connect import AutoConnectionService
+from backend.app.services.memory.decay import ForgettingService
 from backend.app.services.memory.episodic import EpisodicMemoryService
 from backend.app.services.memory.memory_graph_service import MemoryGraphService
+from backend.app.services.memory.memory_search import MemorySearchService
 from backend.app.services.memory.semantic import SemanticMemoryService
 from backend.app.services.memory.working import WorkingMemoryService
 
@@ -17,6 +19,8 @@ class MemoryServiceFactory:
         working_memory = factory.working.add(user_id, session_id, content)
         graph_node = factory.graph.add_node(user_id, "episodic", mem_id, label)
         auto_edges = factory.auto_connect.connect_related(user_id, "episodic", mem_id, content)
+        search_results = factory.search.search(user_id, query)
+        forgetting_stats = factory.forgetting.get_forgetting_stats(user_id)
     """
 
     def __init__(self, db: object) -> None:
@@ -26,6 +30,8 @@ class MemoryServiceFactory:
         self._working: WorkingMemoryService | None = None
         self._graph: MemoryGraphService | None = None
         self._auto_connect: AutoConnectionService | None = None
+        self._search: MemorySearchService | None = None
+        self._forgetting: ForgettingService | None = None
 
     @property
     def episodic(self) -> EpisodicMemoryService:
@@ -56,3 +62,15 @@ class MemoryServiceFactory:
         if self._auto_connect is None:
             self._auto_connect = AutoConnectionService(self._db)
         return self._auto_connect
+
+    @property
+    def search(self) -> MemorySearchService:
+        if self._search is None:
+            self._search = MemorySearchService(self._db)
+        return self._search
+
+    @property
+    def forgetting(self) -> ForgettingService:
+        if self._forgetting is None:
+            self._forgetting = ForgettingService(self._db)
+        return self._forgetting
