@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
-
 import pytest
+from unittest.mock import AsyncMock
 
 from backend.app.agents.tools.selector import ToolSelector
 
@@ -61,7 +60,6 @@ class TestToolSelectorSelection:
     @pytest.mark.asyncio
     async def test_select_tools_with_embeddings(self):
         mock_embedder = AsyncMock()
-        # First call: index tools; subsequent calls: search queries
         call_count = 0
 
         async def embed_fn(text):
@@ -72,7 +70,7 @@ class TestToolSelectorSelection:
             elif "write" in text.lower():
                 return [0.0, 1.0, 0.0]
             elif "file" in text.lower():
-                return [0.8, 0.2, 0.0]  # closer to read
+                return [0.8, 0.2, 0.0]
             return [0.0, 0.0, 1.0]
 
         mock_embedder.embed = AsyncMock(side_effect=embed_fn)
@@ -98,7 +96,7 @@ class TestToolSelectorSelection:
             {"function": {"name": "c", "description": "Gamma", "parameters": {}}},
         ]
         results = await selector.select_tools("anything", tools)
-        assert len(results) == 2  # top_k limit
+        assert len(results) == 2
 
     @pytest.mark.asyncio
     async def test_select_tools_empty_index_fallback(self):
@@ -114,8 +112,6 @@ class TestToolSelectorSelection:
         mock_embedder = AsyncMock()
 
         async def embed_fn(text):
-            if "memory" in text.lower():
-                return [0.0, 0.0, 1.0]
             return [0.0, 0.0, 1.0]
 
         mock_embedder.embed = AsyncMock(side_effect=embed_fn)
