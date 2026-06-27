@@ -11,10 +11,10 @@ from __future__ import annotations
 import pytest
 
 from backend.app.agents.verifier import (
-    VerificationResult,
     CompletionVerifier,
-    verify_completion,
+    VerificationResult,
     _heuristic_verdict,
+    verify_completion,
 )
 
 

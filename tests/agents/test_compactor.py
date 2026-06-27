@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from backend.app.agents.compactor import (
-    ContextCompactor,
     CompactionResult,
+    ContextCompactor,
     _fallback_compact,
     compact_context,
     estimate_token_count,

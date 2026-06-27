@@ -8,7 +8,7 @@ Enhancements over v1.01:
 
 from __future__ import annotations
 
-from backend.app.agents.tools.policy import ToolPolicy, ToolRule, default_policy
+from backend.app.agents.tools.policy import default_policy
 
 
 class TestPlanMode:
