@@ -61,7 +61,7 @@ def test_update_profile_empty(client, mock_auth_real_user):
     assert resp.status_code == 400
 
 
-@patch("backend.app.api.v1.profile._avatar_path")
+@patch("backend.app.api.v1.interaction.profile._avatar_path")
 def test_get_profile_photo_not_found(mock_avatar, client, mock_auth_real_user):
     from pathlib import Path
 
@@ -75,8 +75,8 @@ def test_get_my_profile_photo_not_set(client, mock_auth_real_user):
     assert resp.status_code == 404
 
 
-@patch("backend.app.api.v1.profile._avatar_path")
-@patch("backend.app.api.v1.profile._thumb_path")
+@patch("backend.app.api.v1.interaction.profile._avatar_path")
+@patch("backend.app.api.v1.interaction.profile._thumb_path")
 def test_remove_profile_photo(mock_thumb, mock_avatar, client, mock_auth_real_user):
     from pathlib import Path
 

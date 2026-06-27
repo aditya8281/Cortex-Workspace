@@ -14,7 +14,7 @@ def test_sync_defaults(client, mock_auth):
     assert data["embedding_models"][0]["value"] == "nomic-embed-text"
 
 
-@patch("backend.app.api.v1.sync.get_file_watcher_v2")
+@patch("backend.app.api.v1.integration.sync.get_file_watcher_v2")
 def test_sync_status(mock_get_watcher, client, mock_auth):
     mock_watcher = mock_get_watcher.return_value
     mock_watcher.watched_count = 2

@@ -25,7 +25,7 @@ def _make_retrieval_result(
 
 def test_search_get(client, mock_auth):
     result = _make_retrieval_result()
-    with patch("backend.app.api.v1.search.HybridRetrievalV2") as mock_retrieval:
+    with patch("backend.app.api.v1.memory.search.HybridRetrievalV2") as mock_retrieval:
         mock_retrieval.return_value.retrieve.return_value = [result]
         resp = client.get("/api/v1/search?query=test+query", headers=HEADERS)
         assert resp.status_code == 200
@@ -39,7 +39,7 @@ def test_search_get(client, mock_auth):
 
 def test_search_post(client, mock_auth):
     result = _make_retrieval_result()
-    with patch("backend.app.api.v1.search.HybridRetrievalV2") as mock_retrieval:
+    with patch("backend.app.api.v1.memory.search.HybridRetrievalV2") as mock_retrieval:
         mock_retrieval.return_value.retrieve.return_value = [result]
         resp = client.post(
             "/api/v1/search",
@@ -56,7 +56,7 @@ def test_search_answer(client, mock_auth):
     result = _make_retrieval_result(content="relevant code snippet")
 
     with (
-        patch("backend.app.api.v1.search.HybridRetrievalV2") as mock_retrieval,
+        patch("backend.app.api.v1.memory.search.HybridRetrievalV2") as mock_retrieval,
         patch("backend.app.services.intelligence.llm.manager.llm_manager") as mock_llm,
     ):
         mock_retrieval.return_value.retrieve.return_value = [result]
@@ -75,7 +75,7 @@ def test_search_answer(client, mock_auth):
 
 
 def test_search_empty_query(client, mock_auth):
-    with patch("backend.app.api.v1.search.HybridRetrievalV2") as mock_retrieval:
+    with patch("backend.app.api.v1.memory.search.HybridRetrievalV2") as mock_retrieval:
         mock_retrieval.return_value.retrieve.return_value = []
         resp = client.post(
             "/api/v1/search",
