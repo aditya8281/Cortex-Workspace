@@ -75,6 +75,13 @@ async def lifespan(app: FastAPI):
 
     await redis_cache.ping()
 
+    # Start event bus for cross-domain communication
+    from backend.app.core.event_bus import event_bus
+    from backend.app.core.event_handlers import on_download_completed  # noqa: F401
+
+    await event_bus.start()
+    logger.info("Event bus started")
+
     # Initialize LLM manager
     from backend.app.services.intelligence.llm.manager import llm_manager
 
@@ -203,6 +210,15 @@ async def lifespan(app: FastAPI):
         logger.info("Periodic Ollama model sync started (60s interval)")
 
     yield
+
+    # Stop event bus
+    try:
+        from backend.app.core.event_bus import event_bus
+
+        await event_bus.stop()
+        logger.info("Event bus stopped")
+    except Exception:
+        logger.debug("Event bus stop skipped (test mode)")
 
     # Stop download manager
     try:
