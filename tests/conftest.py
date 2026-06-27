@@ -25,7 +25,13 @@ from backend.app.models.memory.memory_graph import MemoryEdge, MemoryNode  # noq
 from backend.app.models.memory.semantic import SemanticMemory  # noqa: F401
 from backend.app.models.memory.storage_registry import StorageRegistry  # noqa: F401
 from backend.app.models.memory.working import WorkingMemory  # noqa: F401
+from backend.app.models.privacy.access_policy import AccessPolicy  # noqa: F401
+from backend.app.models.privacy.audit_log import AuditLog  # noqa: F401
 from backend.app.models.privacy.auth_event import AuthEvent  # noqa: F401
+from backend.app.models.privacy.consent import ConsentRecord  # noqa: F401
+from backend.app.models.privacy.data_deletion import DataDeletionRequest  # noqa: F401
+from backend.app.models.privacy.data_export import DataExport  # noqa: F401
+from backend.app.models.privacy.role import Permission, Role  # noqa: F401
 from backend.app.models.privacy.user_settings import UserModelSettings  # noqa: F401
 
 
