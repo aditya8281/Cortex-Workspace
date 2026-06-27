@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from backend.app.agents.compactor import _fallback_compact, compact_context, estimate_token_count
+from backend.app.agents.compactor import (
+    ContextCompactor,
+    CompactionResult,
+    _fallback_compact,
+    compact_context,
+    estimate_token_count,
+)
 
 
 class TestEstimateTokenCount:
@@ -86,3 +92,66 @@ class TestCompactContext:
         result = await compact_context(history, llm_chat=broken_chat)
         assert "GOAL:" in result
         assert "Test message" in result
+
+
+class TestContextCompactor:
+    """ContextCompactor class — stateful compaction with stats."""
+
+    def test_should_compact_below_threshold(self):
+        compactor = ContextCompactor(threshold=0.85, max_tokens=1000)
+        history = [{"role": "user", "content": "short"}]
+        assert compactor.should_compact(history) is False
+
+    def test_should_compact_above_threshold(self):
+        compactor = ContextCompactor(threshold=0.85, max_tokens=10)
+        history = [{"role": "user", "content": "x " * 200}]
+        assert compactor.should_compact(history) is True
+
+    def test_compact_fallback_no_llm(self):
+        compactor = ContextCompactor(max_tokens=1000)
+        history = [
+            {"role": "user", "content": "Find the bug"},
+            {"role": "assistant", "content": "Looking..."},
+        ]
+        result = compactor.compact_sync(history)
+        assert isinstance(result, CompactionResult)
+        assert "GOAL:" in result.summary
+        assert result.tokens_before > 0
+        assert result.tokens_after > 0
+        # For short conversations, fallback summary may be longer than input (negative ratio)
+        assert isinstance(result.reduction_ratio, float)
+
+    def test_parse_sections(self):
+        compactor = ContextCompactor(max_tokens=1000)
+        summary = (
+            "GOAL: Fix the authentication bug\n"
+            "DONE: Found the root cause\n"
+            "STATE: About to apply the fix\n"
+            "PENDING: Write tests and commit"
+        )
+        sections = compactor._parse_sections(summary)
+        assert sections["goal"] == "Fix the authentication bug"
+        assert sections["done"] == "Found the root cause"
+        assert sections["state"] == "About to apply the fix"
+        assert sections["pending"] == "Write tests and commit"
+
+    def test_stats_tracking(self):
+        compactor = ContextCompactor(max_tokens=1000)
+        history = [{"role": "user", "content": "Test " * 100}]
+        compactor.compact_sync(history)
+        compactor.compact_sync(history)
+        stats = compactor.get_stats()
+        assert stats["compaction_count"] == 2
+        assert stats["total_tokens_saved"] >= 0
+        assert stats["threshold"] == 0.85
+
+    def test_format_history(self):
+        compactor = ContextCompactor(max_tokens=1000)
+        history = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there"},
+        ]
+        text = compactor._format_history(history)
+        assert "[USER]" in text
+        assert "Hello" in text
+        assert "[ASSISTANT]" in text

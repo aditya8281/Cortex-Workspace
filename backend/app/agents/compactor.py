@@ -3,14 +3,31 @@
 Triggered when token count exceeds 85% of the model's context window.
 Uses an LLM call (ideally a cheaper/faster model) to produce a structured
 summary: Goal, Done, State, Pending.
+
+Enhancements (P03):
+- ContextCompactor class with stats tracking
+- CompactionResult dataclass with structured output
+- should_compact() check based on token count vs max_tokens
 """
 
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CompactionResult:
+    """Structured result of a compaction operation."""
+
+    summary: str
+    tokens_before: int
+    tokens_after: int
+    reduction_ratio: float  # (before - after) / before
+    sections: dict[str, str]  # Parsed GOAL/DONE/STATE/PENDING
 
 # Default compaction prompt — instructs the LLM to produce a structured summary
 _COMPACTION_PROMPT = (
@@ -131,3 +148,86 @@ def estimate_token_count(
     from backend.app.agents.token_counter import count_message_tokens
 
     return count_message_tokens(messages, approx_chars_per_token=approx_chars_per_token)
+
+
+class ContextCompactor:
+    """Stateful context compactor with stats tracking.
+
+    Wraps the module-level functions with state: threshold, max_tokens,
+    and compaction metrics.
+    """
+
+    def __init__(
+        self,
+        max_tokens: int = 4096,
+        threshold: float = 0.85,
+    ):
+        self.max_tokens = max_tokens
+        self.threshold = threshold
+        self._compaction_count = 0
+        self._total_tokens_saved = 0
+
+    def should_compact(self, messages: list[dict[str, str]]) -> bool:
+        """Check if compaction is needed based on token count vs threshold."""
+        token_count = estimate_token_count(messages)
+        return (token_count / self.max_tokens) >= self.threshold
+
+    def compact_sync(self, messages: list[dict[str, str]]) -> CompactionResult:
+        """Synchronous compaction using fallback (no LLM).
+
+        Returns CompactionResult with structured output.
+        """
+        tokens_before = estimate_token_count(messages)
+        summary = _fallback_compact(messages)
+        tokens_after = estimate_token_count([{"role": "system", "content": summary}])
+
+        reduction = 0.0
+        if tokens_before > 0:
+            reduction = (tokens_before - tokens_after) / tokens_before
+
+        self._compaction_count += 1
+        self._total_tokens_saved += max(0, tokens_before - tokens_after)
+
+        return CompactionResult(
+            summary=summary,
+            tokens_before=tokens_before,
+            tokens_after=tokens_after,
+            reduction_ratio=reduction,
+            sections=self._parse_sections(summary),
+        )
+
+    def _parse_sections(self, summary: str) -> dict[str, str]:
+        """Parse Goal/Done/State/Pending sections from summary."""
+        sections: dict[str, str] = {"goal": "", "done": "", "state": "", "pending": ""}
+        current_section: str | None = None
+
+        for line in summary.split("\n"):
+            line_upper = line.upper().strip()
+            if line_upper.startswith("GOAL:"):
+                current_section = "goal"
+                sections["goal"] = line.split(":", 1)[1].strip()
+            elif line_upper.startswith("DONE:"):
+                current_section = "done"
+                sections["done"] = line.split(":", 1)[1].strip()
+            elif line_upper.startswith("STATE:"):
+                current_section = "state"
+                sections["state"] = line.split(":", 1)[1].strip()
+            elif line_upper.startswith("PENDING:"):
+                current_section = "pending"
+                sections["pending"] = line.split(":", 1)[1].strip()
+            elif current_section and line.strip():
+                sections[current_section] += " " + line.strip()
+
+        return sections
+
+    def get_stats(self) -> dict:
+        """Return compaction statistics."""
+        return {
+            "compaction_count": self._compaction_count,
+            "total_tokens_saved": self._total_tokens_saved,
+            "threshold": self.threshold,
+        }
+
+    def _format_history(self, messages: list[dict[str, str]]) -> str:
+        """Format message history as text."""
+        return _format_history(messages)
