@@ -7,12 +7,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from backend.app.models.model_catalog import ModelCatalog, ModelStatistics, ModelVariant
+from backend.app.services.awareness.hardware import HardwareProfile
 from backend.app.services.intelligence.model_catalog import (
     estimate_tps_gpu,
     estimate_vram_gb,
     get_quantization_quality,
 )
-from backend.app.services.awareness.hardware import HardwareProfile
 
 logger = logging.getLogger(__name__)
 

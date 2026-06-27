@@ -24,11 +24,11 @@ from backend.app.schemas.conversation import (
     CreateConversationRequest,
     SendMessageRequest,
 )
+from backend.app.services.intelligence.rag_pipeline import get_rag_pipeline
 from backend.app.services.interaction.conversation import (
     ConversationService,
     estimate_tokens,
 )
-from backend.app.services.intelligence.rag_pipeline import get_rag_pipeline
 
 router = APIRouter()
 

@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from backend.app.services.interaction.conversation import ConversationService, estimate_tokens
 from backend.app.services.intelligence.hybrid_retrieval import HybridRetrievalV2, RetrievalResult
+from backend.app.services.interaction.conversation import ConversationService, estimate_tokens
 
 logger = logging.getLogger(__name__)
 

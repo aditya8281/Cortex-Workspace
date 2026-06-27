@@ -6,10 +6,10 @@ import logging
 from typing import Any
 
 from backend.app.db.session import SessionLocal
+from backend.app.services.awareness.repository import RepoScanner
 from backend.app.services.memory.graph import GraphBuilder
 from backend.app.services.memory.incremental_indexer import IncrementalIndexer
 from backend.app.services.memory.manager import MemoryManager
-from backend.app.services.awareness.repository import RepoScanner
 
 logger = logging.getLogger(__name__)
 

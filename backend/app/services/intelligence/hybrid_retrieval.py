@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from backend.app.core.vector_db import VectorDB, get_vector_db
 from backend.app.core.circuit_breaker import qdrant_circuit_breaker
+from backend.app.core.vector_db import VectorDB, get_vector_db
 from backend.app.services.intelligence.embedding_service import EmbeddingService, get_embedding_service
 from backend.app.services.intelligence.fulltext import FullTextSearch, get_fulltext_search
 

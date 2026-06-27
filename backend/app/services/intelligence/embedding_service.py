@@ -5,8 +5,8 @@ import threading
 import warnings
 from typing import Any
 
-from backend.app.core.config import settings
 from backend.app.core.circuit_breaker import ollama_circuit_breaker
+from backend.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 

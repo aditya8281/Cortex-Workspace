@@ -7,8 +7,8 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from backend.app.services.memory.document_indexer import DocumentIndexer
 from backend.app.services.awareness.file_watcher import FileChange, FileWatcherV2, get_file_watcher_v2
+from backend.app.services.memory.document_indexer import DocumentIndexer
 
 logger = logging.getLogger(__name__)
 

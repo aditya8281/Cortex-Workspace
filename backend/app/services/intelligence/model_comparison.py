@@ -6,8 +6,8 @@ import logging
 from dataclasses import dataclass, field
 
 from backend.app.models.model_catalog import ModelCatalog
-from backend.app.services.intelligence.model_catalog import estimate_vram_gb, get_quantization_quality
 from backend.app.services.awareness.hardware import HardwareProfile
+from backend.app.services.intelligence.model_catalog import estimate_vram_gb, get_quantization_quality
 
 logger = logging.getLogger(__name__)
 
