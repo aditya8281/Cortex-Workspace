@@ -1,6 +1,6 @@
 # /project:next — Continue Development
 
-Auto-detect and execute the next phase. Chains phases together for continuous development.
+Auto-detect next phase, auto-resolve any issues, and execute. Never stops — chains phases continuously.
 
 ## Instructions
 
@@ -8,17 +8,33 @@ Auto-detect and execute the next phase. Chains phases together for continuous de
 
 Invoke `cortex-repo-discovery`.
 
-### 2. Pre-Flight Check
+### 2. Pre-Flight Auto-Resolve
 
-Quick health gate before chaining:
+Run quick fixes before chaining. Development must never stop.
+
+#### 2a. Uncommitted Work
+
 ```bash
 git status --porcelain
-make test 2>&1 | tail -3
 ```
 
-- If uncommitted work exists: "⚠️ Uncommitted changes. Commit or stash before chaining."
-- If tests failing: "⚠️ Tests failing from previous phase. Fix before proceeding."
-- Block auto-execute if critical issues found.
+- If dirty: commit with `WIP: auto-save before phase chain` on current branch
+- If on main: create feature branch first, then commit
+
+#### 2b. Tests Failing
+
+```bash
+make test 2>&1 | tail -10
+```
+
+- If tests fail: read failures, fix code, re-run, commit fix
+- Log: "Auto-resolved N test failures from previous phase"
+
+#### 2c. Previous Phase Drift
+
+- Check git log for commits matching the last completed phase's topic
+- If marked complete but no commits: reset that phase to "Not started" in progress.md
+- Log: "⚠️ Phase P0X had no commits — will re-execute"
 
 ### 3. Find Current State
 
@@ -28,10 +44,9 @@ Find the first phase with status "Not started".
 
 ### 4. If Phase Exists
 
-Verify the previous phase (if any) was genuinely completed:
-- Check git log for commits matching the previous phase's task descriptions
-- If marked complete but no commits found: "⚠️ Phase drift detected. Run `/project:verify` first."
-- If OK: Show "Next: P0X — <name>. Executing..." and auto-invoke `/project:cortex`.
+Show: "Next: P0X — <name>. Executing..."
+
+Auto-invoke `/project:cortex` with the phase.
 
 ### 5. If Version Complete
 

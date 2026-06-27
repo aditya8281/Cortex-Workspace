@@ -50,15 +50,27 @@ After all tasks: run validation (`make test`, `make lint`, `make format`).
 
 ---
 
-### P4: System Validation
+### P4: System Validation + Auto-Resolve
 
-Invoke `cortex-system-validation`. Fix any failure before proceeding.
+Invoke `cortex-system-validation`. For any failure:
+- Read the error output
+- Identify root cause
+- Fix the code (not the test — unless test is wrong)
+- Re-run to confirm pass
+- Commit fix: `fix: auto-resolve validation failure in <component>`
+- Max 3 fix attempts per issue, then escalate
+
+Never stop for failures — auto-fix and continue.
 
 ---
 
-### P5: Engineering Review
+### P5: Engineering Review + Auto-Resolve
 
-Invoke `cortex-engineering-review`, `cortex-architecture-drift`, `cortex-adversarial-challenge`. Resolve P0/P1 before continuing. If significant issues, return to P3.
+Invoke `cortex-engineering-review`, `cortex-architecture-drift`, `cortex-adversarial-challenge`.
+
+For any P0/P1 findings: auto-fix immediately (fix the code, not the finding). If fix requires significant refactor, return to P3 for that specific item. Advisory findings (P2/P3) are logged but don't block.
+
+**Outcome:** Quality confirmed, architecture aligned, risks identified.
 
 **Outcome:** Quality confirmed, architecture aligned, risks identified.
 
