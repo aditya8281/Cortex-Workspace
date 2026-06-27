@@ -1,13 +1,13 @@
 # v1.02 Progress — CORTEX
 
-**Status:** Not Started
+**Status:** In Progress
 **Last Updated:** 2026-06-27
 
 ## Phase Progress
 
 | Phase | Name | Status | Started | Completed | Notes |
 |-------|------|--------|---------|-----------|-------|
-| P01 | API Domain Reorganization | Not started | - | - | Move endpoints to domain routers |
+| P01 | API Domain Reorganization | Completed | 2026-06-27 | 2026-06-27 | 22 files moved, 9 domain routers, route order fixed, 791 tests pass |
 | P02 | Service Boundaries + Event Bus | Not started | - | - | Domain services + typed event system |
 | P03 | Agent System Hardening | Not started | - | - | Streaming loop, compaction, tool schemas, security |
 | P04 | MCP Integration | Not started | - | - | Server discovery, tool wrapping, transports |
@@ -19,9 +19,9 @@
 ## Summary
 
 - Total Phases: 8
-- Completed: 0
+- Completed: 1
 - In Progress: 0
-- Remaining: 8
+- Remaining: 7
 - Estimated Duration: 25-35 days
 
 ## Blockers
