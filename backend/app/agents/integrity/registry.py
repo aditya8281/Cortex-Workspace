@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from backend.app.agents.integrity.engines._base import Capability
+if TYPE_CHECKING:
+    from backend.app.agents.integrity.engines._base import Capability
+
 from backend.app.agents.integrity.model.context import ExecutionProfile, IntegrityDomain
 
 
@@ -12,10 +14,12 @@ class EngineRegistry:
     """Singleton registry for integrity engine implementations.
 
     Engines register themselves via the @register decorator at import time.
+    Engine subpackages are auto-loaded on first ``get_instance()`` call.
     """
 
     _instance: EngineRegistry | None = None
     _engines: dict[str, dict[str, Any]] = {}
+    _engines_loaded: bool = False
 
     def __new__(cls) -> EngineRegistry:
         if cls._instance is None:
@@ -24,7 +28,21 @@ class EngineRegistry:
 
     @classmethod
     def get_instance(cls) -> EngineRegistry:
-        return cls()
+        instance = cls()
+        if not cls._engines_loaded:
+            cls._engines_loaded = True
+            # Lazy-load each engine subpackage so @register decorators fire.
+            # importlib avoids circular import (engine modules import
+            # ``register`` from this same module).
+            import importlib
+
+            for mod in (
+                "backend.app.agents.integrity.engines.structural",
+                "backend.app.agents.integrity.engines.semantic",
+                "backend.app.agents.integrity.engines.evolution",
+            ):
+                importlib.import_module(mod)
+        return instance
 
     def register(
         self,
