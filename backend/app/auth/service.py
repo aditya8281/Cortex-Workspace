@@ -17,7 +17,7 @@ from backend.app.core.security import (
     verify_refresh_token,
 )
 from backend.app.core.storage_abstraction import validate_storage_path
-from backend.app.schemas.user import UserRegisterPayload
+from backend.app.schemas.interaction.user import UserRegisterPayload
 from backend.app.services.interaction.user import _normalize_username, authenticate_user, create_user, serialize_user
 from backend.app.services.memory.storage_registry import get_registry_for_user, register_user_storage
 

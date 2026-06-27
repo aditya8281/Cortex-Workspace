@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
-from utils import ROOT, HookResult, read_file, print_result
+from utils import ROOT, HookResult, print_result
 
 
 def check_skill_inventory() -> list:

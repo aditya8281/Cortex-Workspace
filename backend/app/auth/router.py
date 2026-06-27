@@ -13,7 +13,7 @@ from backend.app.core.config import settings
 from backend.app.core.db import get_db
 from backend.app.core.security import revoke_access_token, verify_access_token
 from backend.app.models.interaction.user import User
-from backend.app.schemas.user import (
+from backend.app.schemas.interaction.user import (
     MeUpdate,
     TokenResponse,
     UserLogin,

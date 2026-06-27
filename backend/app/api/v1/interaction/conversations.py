@@ -16,7 +16,7 @@ from backend.app.models.interaction.conversation import Conversation
 from backend.app.models.interaction.user import User
 
 logger = logging.getLogger(__name__)
-from backend.app.schemas.conversation import (
+from backend.app.schemas.interaction.conversation import (
     ConversationDetailResponse,
     ConversationListResponse,
     ConversationMessageResponse,

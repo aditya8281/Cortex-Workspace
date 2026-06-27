@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def git_recent_commits(n=20):
     """Get recent git commits."""
     result = subprocess.run(
-        ["git", "log", f"--oneline", f"-{n}"],
+        ["git", "log", "--oneline", f"-{n}"],
         capture_output=True, text=True, cwd=str(ROOT),
     )
     if result.returncode != 0:

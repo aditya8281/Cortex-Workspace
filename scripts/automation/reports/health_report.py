@@ -75,7 +75,7 @@ def generate_report():
         report_file = report_path / f"{date.today().isoformat()}-health-report.md"
         with open(report_file, "w") as f:
             f.write(f"# Repository Health Report: {date.today().isoformat()}\n\n")
-            f.write(f"| Check | Status |\n|-------|--------|\n")
+            f.write("| Check | Status |\n|-------|--------|\n")
             for label, status, _ in results:
                 icon = "✓" if status == "pass" else "✗" if status == "fail" else "○"
                 f.write(f"| {label} | {icon} {status} |\n")

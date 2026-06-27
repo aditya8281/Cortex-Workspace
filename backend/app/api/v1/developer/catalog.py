@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.intelligence.model_catalog import ModelCatalog, ModelVariant
 from backend.app.models.interaction.user import User
-from backend.app.schemas.model import (
+from backend.app.schemas.intelligence.model import (
     AutocompleteResponse,
     CatalogSourceStatusResponse,
     HardwareInfoResponse,

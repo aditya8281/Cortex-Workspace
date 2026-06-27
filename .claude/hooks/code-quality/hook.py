@@ -18,8 +18,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
 from utils import (
-    ROOT, HookResult, run_make, run_command, run_python,
-    get_changed_files, is_backend_file, read_file, print_result,
+    ROOT,
+    HookResult,
+    get_changed_files,
+    is_backend_file,
+    print_result,
+    read_file,
+    run_make,
 )
 
 # ── Constants ─────────────────────────────────────────────────────

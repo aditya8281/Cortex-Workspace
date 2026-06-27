@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
-from utils import ROOT, HookResult, get_changed_files, is_frontend_file, read_file, print_result
+from utils import ROOT, HookResult, get_changed_files, is_frontend_file, print_result, read_file
 
 # Hardcoded color patterns that should use design tokens
 HARDCODED_COLORS = [

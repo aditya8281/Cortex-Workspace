@@ -9,7 +9,11 @@ from sqlalchemy.orm import Session
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.awareness.indexing_config import IndexingConfig
 from backend.app.models.interaction.user import User
-from backend.app.schemas.indexing import IndexingConfigResponse, IndexingConfigSaveResponse, IndexingPreviewResponse
+from backend.app.schemas.awareness.indexing import (
+    IndexingConfigResponse,
+    IndexingConfigSaveResponse,
+    IndexingPreviewResponse,
+)
 from backend.app.services.memory.indexing_rules import IndexingRules
 
 router = APIRouter()

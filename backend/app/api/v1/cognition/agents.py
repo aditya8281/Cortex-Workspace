@@ -15,7 +15,7 @@ from backend.app.agents.run_manager import AgentRunManager
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.cognition.agent import AgentFeedback, AgentRun, AgentStep
 from backend.app.models.interaction.user import User
-from backend.app.schemas.agent import (
+from backend.app.schemas.cognition.agent import (
     AgentCreateResponse,
     AgentFeedbackCreateResponse,
     AgentFeedbackListResponse,

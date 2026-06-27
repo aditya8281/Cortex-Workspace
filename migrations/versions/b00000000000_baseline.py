@@ -8,8 +8,8 @@ This migration replaces all 27 prior migrations (a00000000001 … z00000000025)
 and creates the entire schema in one shot.
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.

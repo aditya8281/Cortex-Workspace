@@ -21,7 +21,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
-from utils import ROOT, HookResult, run_command, read_file, print_result
+from utils import ROOT, HookResult, print_result, read_file, run_command
 
 # ── Constants ──────────────────────────────────────────────────────
 

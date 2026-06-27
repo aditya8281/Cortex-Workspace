@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from backend.app.api.deps import get_db
 from backend.app.auth.dependencies import require_admin
 from backend.app.models.interaction.user import User
-from backend.app.schemas.user import UserResponse, UserUpdate
+from backend.app.schemas.interaction.user import UserResponse, UserUpdate
 from backend.app.services.interaction.user import (
     delete_user,
     demote_user,

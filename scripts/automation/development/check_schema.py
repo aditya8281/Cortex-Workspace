@@ -7,7 +7,6 @@ Verifies:
 - Schema changes are properly versioned
 """
 
-import re
 import sys
 from pathlib import Path
 

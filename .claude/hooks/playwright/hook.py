@@ -11,12 +11,11 @@ a framework for when it is added.
 Currently runs: frontend build check + vitest instead.
 """
 
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "shared"))
-from utils import ROOT, HookResult, run_command, print_result
+from utils import ROOT, HookResult, print_result, run_command
 
 
 def check_playwright_config() -> bool:

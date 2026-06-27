@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.awareness.repo_index import RepoIndex
 from backend.app.models.interaction.user import User
-from backend.app.schemas.repository import (
+from backend.app.schemas.developer.repository import (
     GraphBuildResponse,
     RepoCreateResponse,
     RepoDeleteResponse,

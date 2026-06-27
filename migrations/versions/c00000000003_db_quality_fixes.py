@@ -11,7 +11,6 @@ Adds:
 """
 
 from alembic import op
-import sqlalchemy as sa
 
 revision = "c00000000003"
 down_revision = "c00000000002"
