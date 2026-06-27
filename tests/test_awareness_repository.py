@@ -6,7 +6,6 @@ import json
 
 from sqlalchemy.orm import Session
 
-from backend.app.models.awareness.repo_analyzer import RepositoryIndex
 from backend.app.services.awareness.repo_scanner import RepositoryScannerService
 
 
