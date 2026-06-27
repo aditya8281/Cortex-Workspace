@@ -16,7 +16,7 @@ from backend.app.core.db import get_current_user_optional
 from backend.app.db.session import SessionLocal
 from backend.app.models.interaction.user import User
 from backend.app.models.memory.storage_registry import StorageRegistry
-from backend.app.schemas.user import UserResponse
+from backend.app.schemas.interaction.user import UserResponse
 from backend.app.services.interaction.user import to_user_response
 
 router = APIRouter()

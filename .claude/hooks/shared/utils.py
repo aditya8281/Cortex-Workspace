@@ -4,12 +4,10 @@
 Common functions used across all hook implementations.
 """
 
-import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -33,7 +31,7 @@ class HookResult:
         }
 
 
-def run_command(cmd: list, cwd: Optional[Path] = None, timeout: int = 120) -> tuple:
+def run_command(cmd: list, cwd: Path | None = None, timeout: int = 120) -> tuple:
     """Run a command and return (returncode, stdout, stderr)."""
     try:
         result = subprocess.run(

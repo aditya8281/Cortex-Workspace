@@ -15,7 +15,7 @@ from backend.app.core.db import get_current_user, get_db
 from backend.app.models.intelligence.model_catalog import ModelCatalog
 from backend.app.models.interaction.user import User
 from backend.app.models.privacy.user_settings import UserModelSettings
-from backend.app.schemas.model import (
+from backend.app.schemas.intelligence.model import (
     CatalogueRefreshResponse,
     ModelSettingsResponse,
     ModelSettingsUpdate,

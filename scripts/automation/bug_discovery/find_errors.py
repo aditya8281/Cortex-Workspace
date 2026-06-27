@@ -8,7 +8,6 @@ Checks:
 - print() used instead of logging
 """
 
-import re
 import sys
 from pathlib import Path
 

@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
 from backend.app.models.interaction.user import User
-from backend.app.schemas.vault import (
+from backend.app.schemas.privacy.vault import (
     VaultChangePasswordResponse,
     VaultDeleteResponse,
     VaultExportResponse,

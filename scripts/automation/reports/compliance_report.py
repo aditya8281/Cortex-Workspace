@@ -54,7 +54,7 @@ def generate_report():
     print(f"  Compliance: {passed}/{total} checks passed")
 
     if passed < total:
-        print(f"\n  Non-compliant checks:")
+        print("\n  Non-compliant checks:")
         for label, status in results:
             if status == "fail":
                 print(f"    ✗ {label}")

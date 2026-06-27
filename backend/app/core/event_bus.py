@@ -17,7 +17,8 @@ import asyncio
 import logging
 import uuid
 from collections import defaultdict
-from typing import Any, Awaitable, Callable, overload
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from backend.app.core.events import Event, EventType
 

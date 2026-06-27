@@ -18,8 +18,8 @@ These duplicate columns still exist on model_variants for application compatibil
 This migration adds the FK reference so future work can cleanly migrate to quantizations.
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision = "c00000000005"
 down_revision = "c00000000004"
