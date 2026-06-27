@@ -68,9 +68,7 @@ class SemanticMemoryService:
             self.db.commit()
         return memory
 
-    def list_by_category(
-        self, user_id: int, category: str, limit: int = 50
-    ) -> list[SemanticMemory]:
+    def list_by_category(self, user_id: int, category: str, limit: int = 50) -> list[SemanticMemory]:
         """List semantic memories by category."""
         return (
             self.db.query(SemanticMemory)
@@ -83,25 +81,14 @@ class SemanticMemoryService:
             .all()
         )
 
-    def list_all(
-        self, user_id: int, limit: int = 50, offset: int = 0
-    ) -> tuple[list[SemanticMemory], int]:
+    def list_all(self, user_id: int, limit: int = 50, offset: int = 0) -> tuple[list[SemanticMemory], int]:
         """List all semantic memories with pagination."""
-        query = self.db.query(SemanticMemory).filter(
-            SemanticMemory.user_id == user_id
-        )
+        query = self.db.query(SemanticMemory).filter(SemanticMemory.user_id == user_id)
         total = query.count()
-        memories = (
-            query.order_by(desc(SemanticMemory.confidence))
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        memories = query.order_by(desc(SemanticMemory.confidence)).offset(offset).limit(limit).all()
         return memories, total
 
-    def search_content(
-        self, user_id: int, query: str, limit: int = 10
-    ) -> list[SemanticMemory]:
+    def search_content(self, user_id: int, query: str, limit: int = 10) -> list[SemanticMemory]:
         """Fulltext search across semantic memory content (ILIKE)."""
         return (
             self.db.query(SemanticMemory)
@@ -117,9 +104,7 @@ class SemanticMemoryService:
             .all()
         )
 
-    def update(
-        self, user_id: int, memory_id: int, data: SemanticMemoryUpdate
-    ) -> SemanticMemory | None:
+    def update(self, user_id: int, memory_id: int, data: SemanticMemoryUpdate) -> SemanticMemory | None:
         """Update a semantic memory with partial data."""
         memory = (
             self.db.query(SemanticMemory)

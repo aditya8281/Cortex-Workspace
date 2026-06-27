@@ -52,25 +52,14 @@ class EpisodicMemoryService:
             self.db.commit()
         return memory
 
-    def list_recent(
-        self, user_id: int, limit: int = 10, offset: int = 0
-    ) -> tuple[list[EpisodicMemory], int]:
+    def list_recent(self, user_id: int, limit: int = 10, offset: int = 0) -> tuple[list[EpisodicMemory], int]:
         """List recent episodic memories with pagination."""
-        query = self.db.query(EpisodicMemory).filter(
-            EpisodicMemory.user_id == user_id
-        )
+        query = self.db.query(EpisodicMemory).filter(EpisodicMemory.user_id == user_id)
         total = query.count()
-        memories = (
-            query.order_by(desc(EpisodicMemory.created_at))
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        memories = query.order_by(desc(EpisodicMemory.created_at)).offset(offset).limit(limit).all()
         return memories, total
 
-    def list_by_importance(
-        self, user_id: int, min_importance: float = 0.5, limit: int = 10
-    ) -> list[EpisodicMemory]:
+    def list_by_importance(self, user_id: int, min_importance: float = 0.5, limit: int = 10) -> list[EpisodicMemory]:
         """List episodic memories above an importance threshold."""
         return (
             self.db.query(EpisodicMemory)
@@ -83,9 +72,7 @@ class EpisodicMemoryService:
             .all()
         )
 
-    def update(
-        self, user_id: int, memory_id: int, data: EpisodicMemoryUpdate
-    ) -> EpisodicMemory | None:
+    def update(self, user_id: int, memory_id: int, data: EpisodicMemoryUpdate) -> EpisodicMemory | None:
         """Update an episodic memory with partial data."""
         memory = (
             self.db.query(EpisodicMemory)
@@ -141,9 +128,7 @@ class EpisodicMemoryService:
         self.db.commit()
         return True
 
-    def search_content(
-        self, user_id: int, query: str, limit: int = 10
-    ) -> list[EpisodicMemory]:
+    def search_content(self, user_id: int, query: str, limit: int = 10) -> list[EpisodicMemory]:
         """Fulltext search across episodic memory content (ILIKE)."""
         return (
             self.db.query(EpisodicMemory)
