@@ -168,11 +168,15 @@ class MCPServerDiscovery:
             + "\n"
         )
 
-        state.process.stdin.write(init_request.encode())
-        await state.process.stdin.drain()
+        assert state.process is not None
+        proc = state.process
+        assert proc.stdin is not None
+        proc.stdin.write(init_request.encode())
+        await proc.stdin.drain()
 
+        assert proc.stdout is not None
         response_line = await asyncio.wait_for(
-            state.process.stdout.readline(),
+            proc.stdout.readline(),
             timeout=state.config.timeout,
         )
         response = json.loads(response_line.decode())
@@ -194,11 +198,14 @@ class MCPServerDiscovery:
         )
 
         if state.config.transport == "stdio" and state.process:
-            state.process.stdin.write(tools_request.encode())
-            await state.process.stdin.drain()
+            proc = state.process
+            assert proc.stdin is not None
+            proc.stdin.write(tools_request.encode())
+            await proc.stdin.drain()
 
+            assert proc.stdout is not None
             response_line = await asyncio.wait_for(
-                state.process.stdout.readline(),
+                proc.stdout.readline(),
                 timeout=5,
             )
             response = json.loads(response_line.decode())
@@ -208,7 +215,7 @@ class MCPServerDiscovery:
 
     async def health_check(self) -> dict[str, MCPServerStatus]:
         """Check health of all servers. Returns {name: status}."""
-        results = {}
+        results: dict[str, MCPServerStatus] = {}
         for name, state in self._servers.items():
             if state.status in (MCPServerStatus.STOPPED, MCPServerStatus.FAILED):
                 results[name] = state.status

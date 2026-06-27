@@ -112,7 +112,7 @@ class FilesystemIndexerService:
         self,
         user_id: int,
         directory: str,
-    ) -> dict[str, list[object]]:
+    ) -> dict[str, list[FileIndex] | list[str]]:
         """Compare indexed state with current filesystem state.
 
         Returns dict with keys ``created``, ``modified``, ``deleted``.
@@ -160,11 +160,12 @@ class FilesystemIndexerService:
 
         self.db.commit()
 
-        return {
+        summary: dict[str, list[FileIndex] | list[str]] = {
             "created": created,
             "modified": modified,
             "deleted": deleted,
         }
+        return summary
 
     def get_directory_summary(
         self,

@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 class ToolSelector:
     """Selects tools via embedding similarity or keyword fallback."""
 
-    embedding_service: object | None = None
+    embedding_service: object | None = None  # Protocol: embed(str) -> list[float]
     top_k: int = 8
     min_similarity: float = 0.3
     _tool_embeddings: dict[str, list[float]] = field(default_factory=dict)
@@ -30,7 +30,7 @@ class ToolSelector:
             if not name or not desc:
                 continue
 
-            embedding = await self.embedding_service.embed(desc)
+            embedding = await self.embedding_service.embed(desc)  # type: ignore[attr-defined]
             self._tool_embeddings[name] = embedding
 
     async def select_tools(
@@ -49,7 +49,7 @@ class ToolSelector:
         if context:
             search_text = f"{context} {query}"
 
-        query_embedding = await self.embedding_service.embed(search_text)
+        query_embedding = await self.embedding_service.embed(search_text)  # type: ignore[attr-defined]
 
         # Score each tool by cosine similarity
         scored: list[tuple[float, dict]] = []

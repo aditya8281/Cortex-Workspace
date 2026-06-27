@@ -81,6 +81,7 @@ class StdioTransport(MCPTransport):
         self._pending[self._request_id] = future
 
         data = json.dumps(request) + "\n"
+        assert self.process.stdin is not None
         self.process.stdin.write(data.encode())
         await self.process.stdin.drain()
 
@@ -91,9 +92,10 @@ class StdioTransport(MCPTransport):
             self._pending.pop(self._request_id, None)
             raise RuntimeError(f"MCP request timed out: {request.get('method')}")
 
-    async def receive_events(self) -> AsyncGenerator[dict, None]:
+    async def receive_events(self) -> AsyncGenerator[dict, None]:  # type: ignore[override]
         """Receive server-initiated notifications."""
         while True:
+            assert self.process.stdout is not None
             line = await self.process.stdout.readline()
             if not line:
                 break
@@ -148,7 +150,7 @@ class SSETransport(MCPTransport):
                 raise RuntimeError(f"MCP SSE request failed: {resp.status}")
             return await resp.json()
 
-    async def receive_events(self) -> AsyncGenerator[dict, None]:
+    async def receive_events(self) -> AsyncGenerator[dict, None]:  # type: ignore[override]
         """Receive SSE events from server."""
         if not self._session:
             await self.connect()

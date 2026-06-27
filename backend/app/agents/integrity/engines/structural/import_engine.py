@@ -90,7 +90,7 @@ class ImportGraphEngine(IntegrityEngine):
                         priority=Priority.P3,
                         urgency=3,
                         classification=Classification.INCONSISTENT,
-                        location={"module": module, "source_count": len(sources)},
+                        location=module,
                     )
                 )
 
