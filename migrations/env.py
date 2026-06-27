@@ -64,6 +64,13 @@ from backend.app.models.memory.path_index import PathIndex  # noqa: F401, E402
 from backend.app.models.memory.storage_registry import StorageRegistry  # noqa: F401, E402
 from backend.app.models.privacy.auth_event import AuthEvent  # noqa: F401, E402
 from backend.app.models.privacy.user_settings import UserModelSettings  # noqa: F401, E402
+from backend.app.models.system.agent_run_event import AgentRunEvent, AgentRunToolCall  # noqa: F401, E402
+from backend.app.models.system.mcp_server import MCPServer, MCPServerTool  # noqa: F401, E402
+from backend.app.models.system.observability import (  # noqa: F401, E402
+    PerformanceBaseline,
+    TokenUsage,
+    ToolExecutionMetrics,
+)
 
 target_metadata = Base.metadata
 
