@@ -4,6 +4,8 @@ export interface UserProfile {
   id: number;
   username: string;
   email: string;
+  nickname: string | null;
+  bio: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -17,7 +19,7 @@ export interface ConsentItem {
 
 export const settingsApi = {
   getProfile: () => apiFetch<UserProfile>("/auth/me"),
-  updateProfile: (data: Partial<{ username: string; email: string }>) =>
+  updateProfile: (data: Partial<{ username: string; nickname: string; bio: string }>) =>
     apiFetch<UserProfile>("/auth/me", {
       method: "PUT",
       body: data,

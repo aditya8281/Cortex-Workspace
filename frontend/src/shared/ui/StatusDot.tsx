@@ -3,9 +3,11 @@
 import { cn } from "@/shared/lib/utils";
 
 type StatusColor = "accent" | "success" | "warning" | "danger";
+type StatusSize = "xs" | "sm" | "md";
 
 interface StatusDotProps {
   color?: StatusColor;
+  size?: StatusSize;
   pulse?: boolean;
   className?: string;
 }
@@ -17,13 +19,21 @@ const colorStyles: Record<StatusColor, string> = {
   danger: "bg-danger",
 };
 
+const sizeStyles: Record<StatusSize, { dot: string; pulse: string; wrapper: string }> = {
+  xs: { dot: "h-1.5 w-1.5", pulse: "h-1.5 w-1.5", wrapper: "h-1.5 w-1.5" },
+  sm: { dot: "h-2 w-2", pulse: "h-2 w-2", wrapper: "h-2 w-2" },
+  md: { dot: "h-2.5 w-2.5", pulse: "h-2.5 w-2.5", wrapper: "h-2.5 w-2.5" },
+};
+
 export function StatusDot({
   color = "success",
+  size = "sm",
   pulse = false,
   className,
 }: StatusDotProps) {
+  const s = sizeStyles[size];
   return (
-    <span className={cn("relative flex h-2 w-2", className)}>
+    <span className={cn("relative flex", s.wrapper, className)}>
       {pulse && (
         <span
           className={cn(
@@ -34,7 +44,8 @@ export function StatusDot({
       )}
       <span
         className={cn(
-          "relative inline-flex h-2 w-2 rounded-full",
+          "relative inline-flex rounded-full",
+          s.dot,
           colorStyles[color],
         )}
       />
