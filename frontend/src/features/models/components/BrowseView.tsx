@@ -137,6 +137,24 @@ export function BrowseView({
 
   const capabilities = ["chat", "code", "vision"];
 
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setRefreshMessage(null);
+    try {
+      const res = await catalog.refresh();
+      setRefreshMessage(res.message ?? "Catalog refresh started");
+      // Re-load models after a short delay to let background refresh start
+      setTimeout(() => loadModels(), 2000);
+    } catch (e: any) {
+      setRefreshMessage(e.message ?? "Refresh failed");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Recommended */}
@@ -168,6 +186,21 @@ export function BrowseView({
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
+        {/* Refresh catalog */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="text-xs"
+          >
+            {refreshing ? "Refreshing..." : "Refresh Catalog"}
+          </Button>
+          {refreshMessage && !refreshing && (
+            <span className="text-[0.625rem] text-text-muted">{refreshMessage}</span>
+          )}
+        </div>
         <div className="flex-1 min-w-[200px]">
           <Input
             label="Search models"

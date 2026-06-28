@@ -154,4 +154,10 @@ export const catalog = {
     apiFetch<{ model_id: string; context_length?: number; temperature: number; top_p: number; top_k: number; repeat_penalty: number; seed: number; num_predict: number; num_ctx?: number; image_resolution?: number }>(
       `/models/${modelId}/inference-config`
     ),
+
+  refresh: () =>
+    apiFetch<{ status: string; message: string; total_models: number | null }>(
+      "/models/refresh",
+      { method: "POST" }
+    ),
 };

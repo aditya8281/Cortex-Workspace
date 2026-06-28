@@ -46,7 +46,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // 401/403 = not logged in — not an error
         return null;
       })
-      .then((data) => setUser(data))
+      .then((data) => {
+        setUser(data);
+        // Fire background catalog refresh on login (fire-and-forget)
+        if (data) {
+          fetch("/api/v1/models/refresh", {
+            method: "POST",
+            credentials: "include",
+          }).catch(() => {});
+        }
+      })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);

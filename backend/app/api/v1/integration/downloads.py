@@ -10,13 +10,18 @@ from backend.app.core.config import settings
 from backend.app.core.db import get_current_user
 from backend.app.models.interaction.user import User
 from backend.app.schemas.intelligence.model import (
+    BulkCancelResponse,
     CancelDownloadResponse,
+    ClearCompletedResponse,
     DeleteModelResponse,
     DownloadHistoryResponse,
     DownloadModelResponse,
     DownloadProgressResponse,
     DownloadQueueResponse,
     InstalledModelsResponse,
+    PauseDownloadResponse,
+    ReorderQueueResponse,
+    ResumeDownloadResponse,
     SyncInstalledResponse,
 )
 from backend.app.services.download.downloader import model_downloader
@@ -89,6 +94,81 @@ async def sync_installed_models(
         return result
     finally:
         db.close()
+
+
+@router.post("/models/downloads/{job_id}/pause", response_model=PauseDownloadResponse)
+async def pause_download(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Pause an active download by job ID."""
+    from backend.app.services.download.downloader import download_manager
+
+    try:
+        record = await download_manager.pause(job_id)
+        return {"paused": True, "model": record.model_name}
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Download {job_id} not found")
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.post("/models/downloads/{job_id}/resume", response_model=ResumeDownloadResponse)
+async def resume_download(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Resume a paused download by job ID."""
+    from backend.app.services.download.downloader import download_manager
+
+    try:
+        record = await download_manager.resume(job_id)
+        return {"resumed": True, "model": record.model_name}
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"Download {job_id} not found")
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.post("/models/downloads/reorder", response_model=ReorderQueueResponse)
+async def reorder_downloads(
+    new_order: list[str],
+    current_user: User = Depends(get_current_user),
+):
+    """Reorder the download queue by download_id list."""
+    from backend.app.services.download.downloader import download_manager
+
+    result = download_manager.reorder(new_order)
+    return {"reordered": True, "new_order": result}
+
+
+@router.post("/models/downloads/bulk-cancel", response_model=BulkCancelResponse)
+async def bulk_cancel_downloads(
+    job_ids: list[str],
+    current_user: User = Depends(get_current_user),
+):
+    """Cancel multiple downloads by job ID. Silently skips invalid IDs."""
+    from backend.app.services.download.downloader import download_manager
+
+    cancelled_ids: list[str] = []
+    for job_id in job_ids:
+        try:
+            await download_manager.cancel(job_id)
+            cancelled_ids.append(job_id)
+        except (KeyError, ValueError):
+            pass
+    return {"cancelled": len(cancelled_ids), "job_ids": cancelled_ids}
+
+
+@router.post("/models/downloads/clear-completed", response_model=ClearCompletedResponse)
+async def clear_completed_downloads(
+    current_user: User = Depends(get_current_user),
+):
+    """Clear completed/failed/cancelled downloads from the download manager state."""
+    from backend.app.services.download.downloader import download_manager
+
+    cleared = download_manager.clear_terminal()
+    return {"cleared": cleared}
 
 
 def _guess_quant_from_tag(tag: str) -> str:

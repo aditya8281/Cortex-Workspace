@@ -23,6 +23,7 @@ from backend.app.schemas.intelligence.model import (
     ModelSearchResponse,
     RecommendedModelsAllResponse,
     RecommendedModelsSingleResponse,
+    RefreshCatalogResponse,
     WorkloadRecommendations,
 )
 from backend.app.services.awareness.hardware import detect_hardware as _detect_hardware_full
@@ -110,6 +111,46 @@ async def list_models(
         "type_counts": _compute_type_counts(catalog),
         "size_counts": _compute_size_counts(catalog),
         "catalog_status": CatalogSourceStatusResponse(**source_status.to_dict()),
+    }
+
+
+@router.post("/models/refresh", response_model=RefreshCatalogResponse)
+async def refresh_catalog(
+    current_user: User = Depends(get_current_user),
+):
+    """Force-refresh the Ollama model catalog from live sources.
+
+    Scrapes ollama.com/library for latest model families/tags,
+    then probes cloud + local + registry APIs for full metadata.
+    Runs in background — returns immediately with status.
+    """
+    from backend.app.services.intelligence.ollama_catalog import get_catalog_service
+
+    async def _do_refresh() -> None:
+        try:
+            # Step 1: Re-scrape library.json (latest model families + tags)
+            from backend.app.services.intelligence.library_scraper import scrape_library_background
+            await scrape_library_background()
+            logger.info("Library scrape complete")
+        except Exception as e:
+            logger.warning("Library scrape failed: %s", e)
+
+        try:
+            # Step 2: Force-refresh full catalog (cloud + local + registry)
+            service = get_catalog_service()
+            models, status = await service.fetch_catalog(force_refresh=True)
+            logger.info("Catalog refresh complete: %d models", len(models))
+        except Exception as e:
+            logger.error("Catalog refresh failed: %s", e)
+
+    import asyncio
+    asyncio.create_task(_do_refresh())
+
+    return {
+        "status": "refreshing",
+        "message": "Catalog refresh started in background. Models will update within a few minutes.",
+        "total_models": None,
+        "source_status": None,
     }
 
 
