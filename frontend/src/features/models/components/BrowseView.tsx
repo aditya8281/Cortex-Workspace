@@ -19,8 +19,6 @@ interface BrowseViewProps {
   compareSelectedIds: string[];
   onToggleCompare: (modelId: string) => void;
   compareDisabled: boolean;
-  downloadingModels: Map<string, number>;
-  onCancelDownload: (modelId: string) => void;
 }
 
 type SizeFilter = "small" | "medium" | "large" | null;
@@ -32,8 +30,6 @@ export function BrowseView({
   compareSelectedIds,
   onToggleCompare,
   compareDisabled,
-  downloadingModels,
-  onCancelDownload,
 }: BrowseViewProps) {
   const [models, setModels] = useState<ModelWithFit[]>([]);
   const [recommended, setRecommended] = useState<RecommendedModel[]>([]);
@@ -299,9 +295,6 @@ export function BrowseView({
               compareSelected={compareSelectedIds.includes(model.model_id)}
               onToggleCompare={onToggleCompare}
               compareDisabled={compareDisabled}
-              downloading={downloadingModels.has(model.model_id)}
-              downloadProgress={downloadingModels.get(model.model_id)}
-              onCancelDownload={onCancelDownload}
             />
           ))}
         </div>

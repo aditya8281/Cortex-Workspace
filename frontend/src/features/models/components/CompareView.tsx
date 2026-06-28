@@ -6,18 +6,18 @@ import { catalog } from "../api";
 import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { useDownloadContext } from "@/shared/downloads/DownloadProvider";
 
 interface CompareViewProps {
   selectedIds: string[];
   onClearSelection: () => void;
-  onDownloadModel: (modelId: string) => void;
 }
 
 export function CompareView({
   selectedIds,
   onClearSelection,
-  onDownloadModel,
 }: CompareViewProps) {
+  const { actions } = useDownloadContext();
   const [comparison, setComparison] = useState<ModelComparison | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +146,7 @@ export function CompareView({
           <div className="flex items-center gap-2">
             <Button
               size="sm"
-              onClick={() => onDownloadModel(comparison!.winner_model)}
+              onClick={() => actions.download(comparison!.winner_model)}
             >
               Download Winner
             </Button>

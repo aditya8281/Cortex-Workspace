@@ -10,8 +10,9 @@ import { CompareView } from "./components/CompareView";
 import { DownloadsView } from "./components/DownloadsView";
 import { InstalledView } from "./components/InstalledView";
 import { ModelDetailModal } from "./components/ModelDetailModal";
-import { catalog, downloads } from "./api";
-import { useWebSocket } from "@/shared/ws/useWebSocket";
+import { catalog } from "./api";
+import { DownloadProvider } from "@/shared/downloads/DownloadProvider";
+import { DockedDownloadPanel } from "./components/DockedDownloadPanel";
 import type { HardwareInfo, TabKey } from "./api";
 
 // ── Tab definitions ──────────────────────────────────────────────────────────
@@ -39,9 +40,6 @@ export default function ModelsPage() {
   // Compare selection
   const [compareSelectedIds, setCompareSelectedIds] = useState<string[]>([]);
 
-  // Download management
-  const [downloadingModels, setDownloadingModels] = useState<Map<string, number>>(new Map());
-
   // Detail modal
   const [detailModalModelId, setDetailModalModelId] = useState<string | null>(null);
 
@@ -66,64 +64,7 @@ export default function ModelsPage() {
       .finally(() => setHardwareLoading(false));
   }, []);
 
-  // ── Download progress via WebSocket ──────────────────────────────────
-
-  const handleDownloadProgress = useCallback((data: Record<string, unknown>) => {
-    if (data.type === "model_progress" && Array.isArray(data.models)) {
-      setDownloadingModels((prev) => {
-        const next = new Map(prev);
-        for (const m of data.models as Array<{ name: string; progress: number }>) {
-          if (m.progress >= 1) {
-            next.delete(m.name);
-          } else {
-            next.set(m.name, m.progress);
-          }
-        }
-        return next;
-      });
-    }
-  }, []);
-
-  // Always connected when user logged in — backend only pushes when downloads active
-  useWebSocket({
-    path: "/api/v1/ws/models",
-    enabled: !!user,
-    onMessage: handleDownloadProgress,
-  });
-
   // ── Handlers ─────────────────────────────────────────────────────────────
-
-  const handleDownload = useCallback(async (modelId: string) => {
-    setDownloadingModels((prev) => {
-      const next = new Map(prev);
-      next.set(modelId, 0);
-      return next;
-    });
-
-    try {
-      await downloads.download(modelId);
-    } catch {
-      // If download fails, remove tracking
-      setDownloadingModels((prev) => {
-        const next = new Map(prev);
-        next.delete(modelId);
-        return next;
-      });
-    }
-  }, []);
-
-  const handleCancelDownload = useCallback(async (modelId: string) => {
-    try {
-      await downloads.cancel(modelId);
-    } catch {
-      // ignore
-    }
-    setDownloadingModels((prev) => {
-      const next = new Map(prev);
-      next.delete(modelId);
-      return next;
-    });
-  }, []);
 
   const handleToggleCompare = useCallback((modelId: string) => {
     setCompareSelectedIds((prev) => {
@@ -153,13 +94,6 @@ export default function ModelsPage() {
       setDetailModalModelId(modelId);
     },
     [],
-  );
-
-  const handleDownloadFromCompare = useCallback(
-    (modelId: string) => {
-      handleDownload(modelId);
-    },
-    [handleDownload],
   );
 
   const handleDownloadFromModal = useCallback(
@@ -195,7 +129,8 @@ export default function ModelsPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto max-w-6xl space-y-6">
+      <DownloadProvider>
+        <div className="mx-auto max-w-6xl space-y-6">
         {/* Page header */}
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Models</h1>
@@ -246,8 +181,6 @@ export default function ModelsPage() {
               compareSelectedIds={compareSelectedIds}
               onToggleCompare={handleToggleCompare}
               compareDisabled={compareDisabled}
-              downloadingModels={downloadingModels}
-              onCancelDownload={handleCancelDownload}
             />
           )}
 
@@ -255,7 +188,6 @@ export default function ModelsPage() {
             <CompareView
               selectedIds={compareSelectedIds}
               onClearSelection={handleClearCompare}
-              onDownloadModel={handleDownloadFromCompare}
             />
           )}
 
@@ -289,6 +221,8 @@ export default function ModelsPage() {
         modelId={detailModalModelId ?? ""}
         onDownload={handleDownloadFromModal}
       />
+        <DockedDownloadPanel />
+      </DownloadProvider>
     </AppShell>
   );
 }
