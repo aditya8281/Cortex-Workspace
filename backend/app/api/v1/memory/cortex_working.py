@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -53,7 +55,7 @@ def get_working_memory(
     )
 
 
-@router.post("/{memory_id}/promote")
+@router.post("/{memory_id}/promote", response_model=dict[str, Any])
 def promote_working_memory(
     memory_id: int,
     db: Session = Depends(get_db),
@@ -67,7 +69,7 @@ def promote_working_memory(
     return {"promoted": True}
 
 
-@router.post("/{memory_id}/archive")
+@router.post("/{memory_id}/archive", response_model=dict[str, Any])
 def archive_working_memory(
     memory_id: int,
     db: Session = Depends(get_db),
@@ -81,7 +83,7 @@ def archive_working_memory(
     return {"archived": True}
 
 
-@router.post("/{memory_id}/demote")
+@router.post("/{memory_id}/demote", response_model=dict[str, Any])
 def demote_working_memory(
     memory_id: int,
     db: Session = Depends(get_db),
@@ -95,7 +97,7 @@ def demote_working_memory(
     return {"demoted": True}
 
 
-@router.delete("/{memory_id}", status_code=204)
+@router.delete("/{memory_id}", status_code=204, response_model=None)
 def remove_working_memory(
     memory_id: int,
     db: Session = Depends(get_db),
@@ -108,7 +110,7 @@ def remove_working_memory(
         raise HTTPException(status_code=404, detail="Memory not found")
 
 
-@router.delete("/session/{session_id}")
+@router.delete("/session/{session_id}", response_model=dict[str, Any])
 def clear_session(
     session_id: str,
     db: Session = Depends(get_db),
@@ -120,7 +122,7 @@ def clear_session(
     return {"cleared": count}
 
 
-@router.get("/session/{session_id}/summary")
+@router.get("/session/{session_id}/summary", response_model=dict[str, Any])
 def session_summary(
     session_id: str,
     db: Session = Depends(get_db),

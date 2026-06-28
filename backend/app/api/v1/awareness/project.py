@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -14,7 +15,7 @@ from backend.app.services.awareness.project_scanner import ProjectScannerService
 router = APIRouter(prefix="/project", tags=["awareness-project"])
 
 
-@router.get("/scan")
+@router.get("/scan", response_model=dict[str, Any])
 def scan_project(
     project_path: str = Query(..., min_length=1, max_length=1000),
     db: Session = Depends(get_db),

@@ -23,7 +23,7 @@
 | Test files (total) | 201 (169 root + 32 backend) |
 | Test LoC | 18,041 |
 | Tests passing | 1,743 |
-| Test warnings | 409 (datetime.utcnow deprecation) |
+| Test warnings | 5 (third-party deps, not ours) |
 | Database migrations | 37 |
 | Documentation files | 57 |
 | ADRs | 22 |
@@ -188,6 +188,10 @@
 ## Git History (Last 15 Commits)
 
 ```
+1277da8 fix: resolve Pyright warnings and line-length violations
+86bd92b fix: resolve type errors and remaining datetime deprecation warnings
+55866a4 fix: replace datetime.utcnow() with datetime.now(timezone.utc) to resolve deprecation warnings
+704f0c5 docs: update README, CLAUDE.md, STATUS.md with verified metrics (1743 tests, 186 endpoints, 24 pages)
 41e4e78 refactor: migrate inline animate-pulse to shared Skeleton component
 05a82e1 feat(chat): wire ConversationItem, MessageBubble, SourcesPanel into chat page
 b4d896d feat(privacy): add overview dashboard, audit log viewer, and consent management pages
@@ -199,10 +203,6 @@ d6e7f3a feat(awareness): add overview dashboard, repos page, and API client
 c4a2b1d feat(models): add ModelCard, BrowseView, InstalledView, DownloadsView
 e5f9a3b feat(dashboard): replace hardcoded SystemOverview with real metrics
 f3c2b1d feat(chat): add CodeBlock and MessageBubble components
-d8e2f1a feat(dashboard): fix api.ts types and update MetricsRow with real data
-a7c3b2d feat(models): add CompareView and ModelDetailModal
-b1e4f3c feat(settings): add user settings page with profile and preferences
-c9d2a1b feat(system): add system health monitoring page
 ```
 
 ---
@@ -211,7 +211,14 @@ c9d2a1b feat(system): add system health monitoring page
 
 | Plan | Files Created | Files Modified | Status |
 |------|--------------|----------------|--------|
+| Docs + Metrics | 2 (.env.example, STATUS.md) | 3 (README, CLAUDE.md, architecture/overview.md) | COMPLETE |
+| Skeleton Migration | 7 files updated | — | COMPLETE |
+| Datetime Deprecation Fix | — | 10 files | COMPLETE |
+| Type Errors + Lint Fix | — | 4 files | COMPLETE |
 | Awareness Dashboard | 15 | 1 (Sidebar) | COMPLETE |
+| Dashboard Integration | 0 | 3 (api.ts, SystemOverview, MetricsRow) | COMPLETE |
+| Privacy & Trust | 12 | 1 (Sidebar) | COMPLETE |
+| Chat Improvements | 4 | 1 (chat/page.tsx) | COMPLETE |
 | Dashboard Integration | 0 | 3 (api.ts, SystemOverview, MetricsRow) | COMPLETE |
 | Privacy & Trust | 12 | 1 (Sidebar) | COMPLETE |
 | Chat Improvements | 4 | 1 (chat/page.tsx) | COMPLETE |
@@ -226,7 +233,7 @@ c9d2a1b feat(system): add system health monitoring page
 |-------|----------|------|--------|
 | .cortex_bootstrap/ existed in working tree | CRITICAL | root | Security — now removed |
 | SecurePasswordCache stores passwords in memory | CRITICAL | vault.py | Accepted risk for single-server; needs HSM for multi-server |
-| 409 test warnings (datetime.utcnow deprecation) | MODERATE | tests/ | Future Python versions will break |
+| 5 test warnings (passlib/starlette, not ours) | MINOR | deps | Third-party; no action |
 | No .env.example in repo | MODERATE | root | Onboarding friction |
 | backend/tests/ and tests/ both exist | MODERATE | both | Confusing test organization |
 | 810-line vault.py (god module) | MODERATE | vault.py | Maintainability |

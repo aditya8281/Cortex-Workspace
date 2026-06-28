@@ -11,7 +11,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-void">
+    <div className="flex h-dvh overflow-hidden bg-void">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:fixed lg:inset-y-0">
         <Sidebar />

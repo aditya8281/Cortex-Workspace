@@ -11,7 +11,7 @@ const geist = Geist({
 
 const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-jetbrains",
+  variable: "--font-jetbrains-mono",
 });
 
 export const metadata: Metadata = {

@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch<User>("/users/me")
+    apiFetch<User>("/auth/me")
       .then(setUser)
       .catch(() => setUser(null))
       .finally(() => setLoading(false));

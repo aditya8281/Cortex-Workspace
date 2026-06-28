@@ -28,7 +28,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           className={cn(
             "h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary",
             "placeholder:text-text-muted",
-            "transition-all duration-200 ease-out",
+            "transition-colors duration-150 ease-out",
             "focus:border-border-accent focus:shadow-[0_0_0_2px_rgba(14,165,201,0.12)] focus:outline-none",
             "disabled:pointer-events-none disabled:opacity-40",
             error && "border-danger focus:border-danger focus:shadow-[0_0_0_2px_rgba(239,68,68,0.12)]",

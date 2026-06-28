@@ -207,7 +207,7 @@ async def _stream_chat_response(
     yield f"data: {json.dumps({'type': 'done', 'total_tokens': response_tokens, 'sources': sources})}\n\n"
 
 
-@router.post("/conversations/{conversation_id}/messages")
+@router.post("/conversations/{conversation_id}/messages", response_model=None)
 async def send_message(
     conversation_id: int,
     payload: SendMessageRequest,

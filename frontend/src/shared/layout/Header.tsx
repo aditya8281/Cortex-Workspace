@@ -8,7 +8,7 @@ export function Header() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="sticky top-0 z-sticky flex h-14 items-center justify-between border-b border-border-subtle bg-void/80 px-6 backdrop-blur-sm">
+    <header className="sticky top-0 z-sticky flex h-14 items-center justify-between border-b border-border-subtle bg-void px-6">
       {/* Left: page title area — empty by default, pages override */}
       <div />
 

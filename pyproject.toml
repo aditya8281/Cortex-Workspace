@@ -30,6 +30,7 @@ dependencies = [
     "tiktoken>=0.8.0",
     "watchdog>=4.0.0",
     "pdfplumber>=0.11.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -52,6 +53,7 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+testpaths = ["tests", "backend/tests"]
 filterwarnings = []
 asyncio_mode = "auto"
 # Enforce deterministic test ordering within modules

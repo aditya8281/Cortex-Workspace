@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -61,7 +63,7 @@ def get_my_permissions(
 # ── Admin Role Management ──────────────────────────────────────────────
 
 
-@router.post("/roles/assign")
+@router.post("/roles/assign", response_model=dict[str, Any])
 def assign_role(
     body: RoleCreate,
     target_user_id: int = Query(..., description="User ID to assign role to"),
@@ -77,7 +79,7 @@ def assign_role(
     return {"user_id": target_user_id, "role": body.name, "assigned": True}
 
 
-@router.post("/roles/remove")
+@router.post("/roles/remove", response_model=dict[str, Any])
 def remove_role(
     role_name: str = Query(..., description="Role name to remove"),
     target_user_id: int = Query(..., description="User ID to remove role from"),

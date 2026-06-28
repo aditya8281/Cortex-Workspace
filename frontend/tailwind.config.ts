@@ -5,6 +5,12 @@ const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      fontSize: {
+        headline: ["1.25rem", { lineHeight: "1.75rem", fontWeight: "600" }],
+        title: ["0.9375rem", { lineHeight: "1.25rem", fontWeight: "600" }],
+        body: ["0.875rem", { lineHeight: "1.25rem" }],
+        label: ["0.75rem", { lineHeight: "1rem" }],
+      },
       colors: {
         // Primary accent
         accent: {
@@ -25,8 +31,8 @@ const config: Config = {
         "border-accent": "rgba(14,165,201,0.3)",
         // Text
         "text-primary": "#e8e8ed",
-        "text-secondary": "#7a7a8a",
-        "text-muted": "#555566",
+        "text-secondary": "#9a9aaa",
+        "text-muted": "#7a7a8a",
         // Semantic
         danger: "#ef4444",
         success: "#22c55e",
@@ -49,8 +55,8 @@ const config: Config = {
           "0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)",
         modal:
           "0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
-        glow: "0 0 20px rgba(6,182,212,0.12)",
-        "glow-strong": "0 0 40px rgba(6,182,212,0.2)",
+        glow: "0 0 20px rgba(14,165,201,0.12)",
+        "glow-strong": "0 0 40px rgba(14,165,201,0.2)",
       },
       keyframes: {
         "fade-in": {
@@ -71,8 +77,8 @@ const config: Config = {
         },
       },
       animation: {
-        "fade-in": "fade-in 0.3s ease-out",
-        "fade-in-scale": "fade-in-scale 0.3s ease-out",
+        "fade-in": "fade-in 0.25s ease-out",
+        "fade-in-scale": "fade-in-scale 0.25s ease-out",
         shimmer: "shimmer 2s linear infinite",
         "pulse-dot": "pulse-dot 1.5s ease-in-out infinite",
       },

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -37,7 +39,7 @@ def get_graph_stats(
     )
 
 
-@router.get("/strongest")
+@router.get("/strongest", response_model=list[dict[str, Any]])
 def get_strongest_connections(
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
@@ -65,7 +67,7 @@ def create_node(
     ))
 
 
-@router.get("/node/{node_id}/connections")
+@router.get("/node/{node_id}/connections", response_model=dict[str, Any])
 def get_connections(
     node_id: int,
     depth: int = Query(1, ge=1, le=5),
@@ -78,7 +80,7 @@ def get_connections(
     return {"node_id": node_id, "depth": depth, "connections": connections}
 
 
-@router.get("/path/{source_id}/{target_id}")
+@router.get("/path/{source_id}/{target_id}", response_model=dict[str, Any])
 def find_path(
     source_id: int,
     target_id: int,
@@ -113,7 +115,7 @@ def create_edge(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/edge/{edge_id}/strengthen")
+@router.post("/edge/{edge_id}/strengthen", response_model=MemoryEdgeResponse)
 def strengthen_edge(
     edge_id: int,
     amount: float = Query(0.1, ge=0.01, le=0.5),
@@ -128,7 +130,7 @@ def strengthen_edge(
     return MemoryEdgeResponse.model_validate(edge)
 
 
-@router.delete("/edge/{edge_id}", status_code=204)
+@router.delete("/edge/{edge_id}", status_code=204, response_model=None)
 def delete_edge(
     edge_id: int,
     db: Session = Depends(get_db),

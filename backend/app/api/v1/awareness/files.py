@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -12,7 +14,7 @@ from backend.app.services.awareness.file_indexer import FilesystemIndexerService
 router = APIRouter(prefix="/files", tags=["awareness-files"])
 
 
-@router.post("/scan")
+@router.post("/scan", response_model=dict[str, Any])
 def scan_directory(
     directory: str = Query(..., min_length=1, max_length=1000),
     db: Session = Depends(get_db),
@@ -28,7 +30,7 @@ def scan_directory(
     }
 
 
-@router.get("/changes")
+@router.get("/changes", response_model=dict[str, Any])
 def detect_changes(
     directory: str = Query(..., min_length=1, max_length=1000),
     db: Session = Depends(get_db),
@@ -44,7 +46,7 @@ def detect_changes(
     }
 
 
-@router.get("/summary")
+@router.get("/summary", response_model=dict[str, Any])
 def get_directory_summary(
     directory: str = Query(..., min_length=1, max_length=1000),
     db: Session = Depends(get_db),

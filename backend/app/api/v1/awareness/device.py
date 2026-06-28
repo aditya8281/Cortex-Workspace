@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -12,7 +14,7 @@ from backend.app.services.awareness.device_service import DeviceInfoService
 router = APIRouter(prefix="/device", tags=["awareness-device"])
 
 
-@router.get("/info")
+@router.get("/info", response_model=dict[str, Any])
 def get_device_info(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

@@ -210,7 +210,7 @@ async def upload_profile_photo(
     return {"profile_photo": current_user.profile_photo}
 
 
-@router.get("/photo/{user_id}")
+@router.get("/photo/{user_id}", response_model=None)
 async def get_profile_photo(
     user_id: int,
     current_user: User | None = Depends(get_current_user_optional),
@@ -227,7 +227,7 @@ async def get_profile_photo(
     return FileResponse(str(avatar), media_type="image/webp", filename=avatar.name)
 
 
-@router.get("/photo")
+@router.get("/photo", response_model=None)
 async def get_my_profile_photo(
     current_user: User = Depends(get_current_user),
 ):
