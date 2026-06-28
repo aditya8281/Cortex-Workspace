@@ -27,7 +27,7 @@ def test_search_get(client, mock_auth):
     result = _make_retrieval_result()
     with patch("backend.app.api.v1.memory.search.HybridRetrievalV2") as mock_retrieval:
         mock_retrieval.return_value.retrieve.return_value = [result]
-        resp = client.get("/api/v1/search?query=test+query", headers=HEADERS)
+        resp = client.get("/api/v1/memory/search?query=test+query", headers=HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 1
@@ -42,7 +42,7 @@ def test_search_post(client, mock_auth):
     with patch("backend.app.api.v1.memory.search.HybridRetrievalV2") as mock_retrieval:
         mock_retrieval.return_value.retrieve.return_value = [result]
         resp = client.post(
-            "/api/v1/search",
+            "/api/v1/memory/search",
             json={"query": "test query", "max_results": 5},
             headers=HEADERS,
         )
@@ -63,7 +63,7 @@ def test_search_answer(client, mock_auth):
         mock_llm.chat = AsyncMock(return_value=MagicMock(content="This is the AI answer."))
 
         resp = client.post(
-            "/api/v1/search/answer",
+            "/api/v1/memory/search/answer",
             json={"query": "what does this code do?", "max_results": 5},
             headers=HEADERS,
         )
@@ -78,7 +78,7 @@ def test_search_empty_query(client, mock_auth):
     with patch("backend.app.api.v1.memory.search.HybridRetrievalV2") as mock_retrieval:
         mock_retrieval.return_value.retrieve.return_value = []
         resp = client.post(
-            "/api/v1/search",
+            "/api/v1/memory/search",
             json={"query": "x", "max_results": 10},
             headers=HEADERS,
         )

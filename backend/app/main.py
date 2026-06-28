@@ -45,7 +45,7 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 
     # 10MB default, 2MB for upload endpoints
     DEFAULT_LIMIT = 10 * 1024 * 1024  # 10MB
-    UPLOAD_PATHS = {"/api/v1/me/profile/photo", "/api/v1/me/vault/files"}
+    UPLOAD_PATHS = {"/api/v1/me/profile/photo", "/api/v1/privacy/vault/files/upload"}
 
     async def dispatch(self, request: Request, call_next):
         if request.method in ("POST", "PUT", "PATCH"):

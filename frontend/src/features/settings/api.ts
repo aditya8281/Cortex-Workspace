@@ -16,25 +16,25 @@ export interface ConsentItem {
 }
 
 export const settingsApi = {
-  getProfile: () => apiFetch<UserProfile>("/me"),
+  getProfile: () => apiFetch<UserProfile>("/auth/me"),
   updateProfile: (data: Partial<{ username: string; email: string }>) =>
-    apiFetch<UserProfile>("/me", {
+    apiFetch<UserProfile>("/auth/me", {
       method: "PUT",
       body: data,
     }),
 
-  getConsents: () => apiFetch<ConsentItem[]>("/consent"),
+  getConsents: () => apiFetch<ConsentItem[]>("/privacy/consent"),
   grantConsent: (consentId: string) =>
-    apiFetch<{ status: string }>("/consent/grant", {
+    apiFetch<{ status: string }>("/privacy/consent/grant", {
       method: "POST",
       body: { consent_id: consentId },
     }),
   revokeConsent: (consentId: string) =>
-    apiFetch<{ status: string }>("/consent/revoke", {
+    apiFetch<{ status: string }>("/privacy/consent/revoke", {
       method: "POST",
       body: { consent_id: consentId },
     }),
 
   getVaultStatus: () =>
-    apiFetch<{ locked: boolean; file_count: number }>("/vault/status"),
+    apiFetch<{ locked: boolean; file_count: number }>("/privacy/vault/status"),
 };

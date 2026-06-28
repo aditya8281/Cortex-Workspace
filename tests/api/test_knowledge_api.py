@@ -1,5 +1,5 @@
 def test_knowledge_health(client, mock_auth):
-    resp = client.get("/api/v1/knowledge/health")
+    resp = client.get("/api/v1/memory/knowledge/health")
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "healthy"
@@ -12,7 +12,7 @@ def test_knowledge_health(client, mock_auth):
 
 
 def test_knowledge_stats(client, mock_auth):
-    resp = client.get("/api/v1/knowledge/stats")
+    resp = client.get("/api/v1/memory/knowledge/stats")
     assert resp.status_code == 200
     data = resp.json()
     assert isinstance(data["documents_by_type"], dict)

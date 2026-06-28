@@ -14,11 +14,11 @@ router = APIRouter()
 
 # ── Legacy (pre-v1.05) ────────────────────────────────────────────────
 router.include_router(settings_router)
-router.include_router(vault_router, prefix="/me/vault")
+router.include_router(vault_router, prefix="/vault")
 
 # ── v1.05 Privacy & Trust ─────────────────────────────────────────────
 router.include_router(audit_router, prefix="/audit", tags=["Privacy - Audit Logging"])
 router.include_router(consent_router, prefix="/consent", tags=["Privacy - Consent"])
 router.include_router(export_router, prefix="/export", tags=["Privacy - Data Export"])
 router.include_router(transparency_router, prefix="/transparency", tags=["Privacy - Transparency"])
-router.include_router(access_control_router, prefix="/access", tags=["Privacy - Access Control"])
+router.include_router(access_control_router, prefix="/access-control", tags=["Privacy - Access Control"])

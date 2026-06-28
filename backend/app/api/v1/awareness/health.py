@@ -11,7 +11,7 @@ from backend.app.core.db import get_current_user, get_db
 from backend.app.models.interaction.user import User
 from backend.app.services.awareness.health_monitor import SystemHealthService
 
-router = APIRouter(prefix="/system-health", tags=["awareness-health"])
+router = APIRouter(prefix="/health", tags=["awareness-health"])
 
 
 @router.get("", response_model=dict[str, Any])

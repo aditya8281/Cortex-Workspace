@@ -416,7 +416,7 @@ async def search_knowledge(query: str, limit: int = 10) -> str:
     limit = min(limit, 50)
     try:
         # MemoryManager requires a db session. We create one lazily.
-        from backend.app.core.database import SessionLocal
+        from backend.app.core.db import SessionLocal
         from backend.app.services.memory.manager import MemoryManager
 
         db = SessionLocal()

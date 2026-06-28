@@ -38,7 +38,7 @@ def mock_unlocked_auth():
 
 
 def test_list_memories_empty(client, mock_unlocked_auth):
-    resp = client.get("/api/v1/long-term-memory", headers=HEADERS)
+    resp = client.get("/api/v1/memory/long-term-memory", headers=HEADERS)
     assert resp.status_code == 200
     data = resp.json()
     assert "grouped" in data
@@ -60,7 +60,7 @@ def test_list_memories_with_category(client, mock_unlocked_auth, db_session):
     db_session.add(mem)
     db_session.commit()
 
-    resp = client.get("/api/v1/long-term-memory?category=preference", headers=HEADERS)
+    resp = client.get("/api/v1/memory/long-term-memory?category=preference", headers=HEADERS)
     assert resp.status_code == 200
     data = resp.json()
     assert "memories" in data
@@ -82,7 +82,7 @@ def test_memory_stats(client, mock_unlocked_auth, db_session):
     db_session.add(mem)
     db_session.commit()
 
-    resp = client.get("/api/v1/long-term-memory/stats", headers=HEADERS)
+    resp = client.get("/api/v1/memory/long-term-memory/stats", headers=HEADERS)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 1
@@ -94,7 +94,7 @@ def test_memory_stats(client, mock_unlocked_auth, db_session):
 
 def test_create_memory(client, mock_unlocked_auth):
     resp = client.post(
-        "/api/v1/long-term-memory",
+        "/api/v1/memory/long-term-memory",
         json={
             "category": "pattern",
             "title": "Code style",
@@ -112,7 +112,7 @@ def test_create_memory(client, mock_unlocked_auth):
 
 def test_create_memory_minimal(client, mock_unlocked_auth):
     resp = client.post(
-        "/api/v1/long-term-memory",
+        "/api/v1/memory/long-term-memory",
         json={
             "category": "correction",
             "title": "Fix",
@@ -128,7 +128,7 @@ def test_create_memory_minimal(client, mock_unlocked_auth):
 def test_create_memory_invalid_category(client, mock_unlocked_auth):
     try:
         resp = client.post(
-            "/api/v1/long-term-memory",
+            "/api/v1/memory/long-term-memory",
             json={
                 "category": "invalid_cat",
                 "title": "Test",
@@ -157,7 +157,7 @@ def test_reinforce_memory(client, mock_unlocked_auth, db_session):
     mem_id = mem.id
 
     resp = client.post(
-        f"/api/v1/long-term-memory/{mem_id}/reinforce",
+        f"/api/v1/memory/long-term-memory/{mem_id}/reinforce",
         headers=HEADERS,
     )
     assert resp.status_code == 200
@@ -167,7 +167,7 @@ def test_reinforce_memory(client, mock_unlocked_auth, db_session):
 
 def test_reinforce_memory_not_found(client, mock_unlocked_auth):
     resp = client.post(
-        "/api/v1/long-term-memory/999999/reinforce",
+        "/api/v1/memory/long-term-memory/999999/reinforce",
         headers=HEADERS,
     )
     assert resp.status_code == 404
@@ -189,7 +189,7 @@ def test_delete_memory(client, mock_unlocked_auth, db_session):
     mem_id = mem.id
 
     resp = client.delete(
-        f"/api/v1/long-term-memory/{mem_id}",
+        f"/api/v1/memory/long-term-memory/{mem_id}",
         headers=HEADERS,
     )
     assert resp.status_code == 200
@@ -204,7 +204,7 @@ def test_delete_memory(client, mock_unlocked_auth, db_session):
 
 def test_delete_memory_nonexistent(client, mock_unlocked_auth):
     resp = client.delete(
-        "/api/v1/long-term-memory/999999",
+        "/api/v1/memory/long-term-memory/999999",
         headers=HEADERS,
     )
     assert resp.status_code == 404

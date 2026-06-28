@@ -51,7 +51,7 @@ def test_upload_file(mock_svc, client, unlocked_user):
         "size": 7,
     }
     resp = client.post(
-        "/api/v1/me/vault/files/upload",
+        "/api/v1/privacy/vault/files/upload",
         files={"file": ("test.txt", b"content", "text/plain")},
         headers=HEADERS,
     )
@@ -65,7 +65,7 @@ def test_upload_file(mock_svc, client, unlocked_user):
 def test_upload_file_locked(mock_svc, client, mock_auth):
     mock_svc._require_unlocked.side_effect = HTTPException(status_code=403, detail="Vault is locked")
     resp = client.post(
-        "/api/v1/me/vault/files/upload",
+        "/api/v1/privacy/vault/files/upload",
         files={"file": ("test.txt", b"content", "text/plain")},
         headers=HEADERS,
     )
@@ -79,7 +79,7 @@ def test_upload_file_locked(mock_svc, client, mock_auth):
 def test_download_file(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.download_vault_file.return_value = b"file content"
-    resp = client.get("/api/v1/me/vault/files/download/test.txt", headers=HEADERS)
+    resp = client.get("/api/v1/privacy/vault/files/download/test.txt", headers=HEADERS)
     assert resp.status_code == 200
     assert resp.content == b"file content"
     assert "attachment" in resp.headers.get("content-disposition", "")
@@ -89,7 +89,7 @@ def test_download_file(mock_svc, client, unlocked_user):
 def test_download_file_not_found(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.download_vault_file.side_effect = HTTPException(status_code=404, detail="File not found")
-    resp = client.get("/api/v1/me/vault/files/download/missing.txt", headers=HEADERS)
+    resp = client.get("/api/v1/privacy/vault/files/download/missing.txt", headers=HEADERS)
     assert resp.status_code == 404
 
 
@@ -100,7 +100,7 @@ def test_download_file_not_found(mock_svc, client, unlocked_user):
 def test_delete_file(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.delete_vault_file.return_value = True
-    resp = client.delete("/api/v1/me/vault/files/test.txt", headers=HEADERS)
+    resp = client.delete("/api/v1/privacy/vault/files/test.txt", headers=HEADERS)
     assert resp.status_code == 200
     assert resp.json()["deleted"] is True
 
@@ -109,14 +109,14 @@ def test_delete_file(mock_svc, client, unlocked_user):
 def test_delete_file_not_found(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.delete_vault_file.return_value = False
-    resp = client.delete("/api/v1/me/vault/files/missing.txt", headers=HEADERS)
+    resp = client.delete("/api/v1/privacy/vault/files/missing.txt", headers=HEADERS)
     assert resp.status_code == 404
 
 
 @patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_delete_file_locked(mock_svc, client, mock_auth):
     mock_svc._require_unlocked.side_effect = HTTPException(status_code=403, detail="Vault is locked")
-    resp = client.delete("/api/v1/me/vault/files/test.txt", headers=HEADERS)
+    resp = client.delete("/api/v1/privacy/vault/files/test.txt", headers=HEADERS)
     assert resp.status_code == 403
 
 
@@ -128,7 +128,7 @@ def test_rename_file(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.rename_vault_item.return_value = {"path": "new.txt", "name": "new.txt"}
     resp = client.put(
-        "/api/v1/me/vault/files/old.txt/rename",
+        "/api/v1/privacy/vault/files/old.txt/rename",
         json={"new_name": "new.txt"},
         headers=HEADERS,
     )
@@ -140,7 +140,7 @@ def test_rename_file(mock_svc, client, unlocked_user):
 def test_rename_file_locked(mock_svc, client, mock_auth):
     mock_svc._require_unlocked.side_effect = HTTPException(status_code=403, detail="Vault is locked")
     resp = client.put(
-        "/api/v1/me/vault/files/old.txt/rename",
+        "/api/v1/privacy/vault/files/old.txt/rename",
         json={"new_name": "new.txt"},
         headers=HEADERS,
     )
@@ -155,7 +155,7 @@ def test_move_file(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.move_vault_item.return_value = {"name": "file.txt", "path": "sub/file.txt"}
     resp = client.post(
-        "/api/v1/me/vault/files/move",
+        "/api/v1/privacy/vault/files/move",
         json={"source_path": "file.txt", "destination_folder": "sub"},
         headers=HEADERS,
     )
@@ -171,7 +171,7 @@ def test_create_folder(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.create_vault_folder.return_value = {"path": "new_folder", "name": "new_folder"}
     resp = client.post(
-        "/api/v1/me/vault/folders",
+        "/api/v1/privacy/vault/folders",
         json={"folder_path": "new_folder"},
         headers=HEADERS,
     )
@@ -183,7 +183,7 @@ def test_create_folder(mock_svc, client, unlocked_user):
 def test_create_folder_locked(mock_svc, client, mock_auth):
     mock_svc._require_unlocked.side_effect = HTTPException(status_code=403, detail="Vault is locked")
     resp = client.post(
-        "/api/v1/me/vault/folders",
+        "/api/v1/privacy/vault/folders",
         json={"folder_path": "new_folder"},
         headers=HEADERS,
     )
@@ -200,7 +200,7 @@ def test_search_files(mock_svc, client, unlocked_user):
         "results": [{"name": "doc.txt", "path": "doc.txt", "is_dir": False, "score": 0.95}]
     }
     resp = client.post(
-        "/api/v1/me/vault/search",
+        "/api/v1/privacy/vault/search",
         json={"query": "doc"},
         headers=HEADERS,
     )
@@ -213,7 +213,7 @@ def test_search_files_empty(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.search_vault_files.return_value = {"results": []}
     resp = client.post(
-        "/api/v1/me/vault/search",
+        "/api/v1/privacy/vault/search",
         json={"query": "nonexistent"},
         headers=HEADERS,
     )
@@ -229,7 +229,7 @@ def test_update_metadata(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.update_vault_metadata.return_value = {"path": "doc.txt", "favorite": True, "tags": ["important"]}
     resp = client.put(
-        "/api/v1/me/vault/files/doc.txt/metadata",
+        "/api/v1/privacy/vault/files/doc.txt/metadata",
         json={"favorite": True, "tags": ["important"]},
         headers=HEADERS,
     )
@@ -245,7 +245,7 @@ def test_change_password(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.change_vault_password.return_value = True
     resp = client.post(
-        "/api/v1/me/vault/change-password",
+        "/api/v1/privacy/vault/change-password",
         json={"old_password": "old1234!", "new_password": "new1234!"},
         headers=HEADERS,
     )
@@ -258,7 +258,7 @@ def test_change_password_wrong_old(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.change_vault_password.return_value = False
     resp = client.post(
-        "/api/v1/me/vault/change-password",
+        "/api/v1/privacy/vault/change-password",
         json={"old_password": "wrong", "new_password": "new1234!"},
         headers=HEADERS,
     )
@@ -273,7 +273,7 @@ def test_export_files(mock_svc, client, unlocked_user):
     mock_svc._require_unlocked.return_value = None
     mock_svc.export_vault_items.return_value = {"exported": True, "count": 3}
     resp = client.post(
-        "/api/v1/me/vault/files/export",
+        "/api/v1/privacy/vault/files/export",
         json={"paths": ["doc.txt", "images/"], "destination_dir": "/tmp/export"},
         headers=HEADERS,
     )

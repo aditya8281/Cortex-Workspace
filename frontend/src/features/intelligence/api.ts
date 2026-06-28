@@ -1,7 +1,8 @@
 /**
  * Intelligence API Client — Models & Model Management
  *
- * Backend routes: /api/v1/intelligence/models
+ * Backend routes: /api/v1/models/*
+ * Catalog: developer/catalog.py, Downloads: integration/downloads.py
  */
 import { apiFetch } from "@/shared/api/client";
 
@@ -47,29 +48,29 @@ export interface DownloadHistoryItem {
 
 export const models = {
   list: () =>
-    apiFetch<{ items: Model[] }>("/intelligence/models"),
+    apiFetch<{ items: Model[] }>("/models"),
 
   installed: () =>
-    apiFetch<{ items: InstalledModel[] }>("/intelligence/models/installed"),
+    apiFetch<{ items: InstalledModel[] }>("/models/installed"),
 
   syncInstalled: () =>
-    apiFetch<{ synced: boolean }>("/intelligence/models/installed/sync", { method: "POST" }),
+    apiFetch<{ synced: boolean }>("/models/installed/sync", { method: "POST" }),
 
   downloadQueue: () =>
-    apiFetch<{ items: DownloadQueueItem[] }>("/intelligence/models/downloads/queue"),
+    apiFetch<{ items: DownloadQueueItem[] }>("/models/downloads/queue"),
 
   downloadHistory: () =>
-    apiFetch<{ items: DownloadHistoryItem[] }>("/intelligence/models/downloads/history"),
+    apiFetch<{ items: DownloadHistoryItem[] }>("/models/downloads/history"),
 
   download: (modelName: string) =>
-    apiFetch<{ status: string }>(`/intelligence/models/${modelName}/download`, { method: "POST" }),
+    apiFetch<{ status: string }>(`/models/${modelName}/download`, { method: "POST" }),
 
   progress: (modelName: string) =>
-    apiFetch<DownloadQueueItem>(`/intelligence/models/${modelName}/progress`),
+    apiFetch<DownloadQueueItem>(`/models/${modelName}/progress`),
 
   cancel: (modelName: string) =>
-    apiFetch<{ cancelled: boolean }>(`/intelligence/models/${modelName}/cancel`, { method: "POST" }),
+    apiFetch<{ cancelled: boolean }>(`/models/${modelName}/cancel`, { method: "POST" }),
 
   remove: (modelName: string) =>
-    apiFetch<{ deleted: boolean }>(`/intelligence/models/${modelName}`, { method: "DELETE" }),
+    apiFetch<{ deleted: boolean }>(`/models/${modelName}`, { method: "DELETE" }),
 };

@@ -40,7 +40,7 @@ def mock_unlocked_auth():
 @patch("backend.app.services.memory.vault.is_vault_unlocked")
 def test_vault_status_locked(mock_is_unlocked, client, mock_auth):
     mock_is_unlocked.return_value = False
-    resp = client.get("/api/v1/me/vault/status")
+    resp = client.get("/api/v1/privacy/vault/status")
     assert resp.status_code == 200
     data = resp.json()
     assert data["locked"] is True
@@ -49,7 +49,7 @@ def test_vault_status_locked(mock_is_unlocked, client, mock_auth):
 @patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_vault_unlock(mock_svc, client, mock_auth):
     mock_svc.unlock_vault.return_value = True
-    resp = client.post("/api/v1/me/vault/unlock", json={"vault_password": "test1234!"}, headers=HEADERS)
+    resp = client.post("/api/v1/privacy/vault/unlock", json={"vault_password": "test1234!"}, headers=HEADERS)
     assert resp.status_code == 200
     data = resp.json()
     assert data["unlocked"] is True
@@ -58,13 +58,13 @@ def test_vault_unlock(mock_svc, client, mock_auth):
 @patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_vault_unlock_invalid(mock_svc, client, mock_auth):
     mock_svc.unlock_vault.return_value = False
-    resp = client.post("/api/v1/me/vault/unlock", json={"vault_password": "wrong"}, headers=HEADERS)
+    resp = client.post("/api/v1/privacy/vault/unlock", json={"vault_password": "wrong"}, headers=HEADERS)
     assert resp.status_code == 401
 
 
 @patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_vault_lock(mock_svc, client, mock_auth):
-    resp = client.post("/api/v1/me/vault/lock", headers=HEADERS)
+    resp = client.post("/api/v1/privacy/vault/lock", headers=HEADERS)
     assert resp.status_code == 200
     data = resp.json()
     assert data["locked"] is True
@@ -75,7 +75,7 @@ def test_vault_lock(mock_svc, client, mock_auth):
 def test_vault_list_files(mock_svc, client, mock_unlocked_auth):
     mock_svc._require_unlocked.return_value = None
     mock_svc.list_vault_files.return_value = [{"name": "doc.txt", "path": "doc.txt", "is_dir": False, "size": 100}]
-    resp = client.get("/api/v1/me/vault/files")
+    resp = client.get("/api/v1/privacy/vault/files")
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 1
@@ -85,5 +85,5 @@ def test_vault_list_files(mock_svc, client, mock_unlocked_auth):
 @patch("backend.app.api.v1.privacy.vault.vault_service")
 def test_vault_list_files_locked(mock_svc, client, mock_auth):
     mock_svc._require_unlocked.side_effect = HTTPException(status_code=403, detail="Vault is locked")
-    resp = client.get("/api/v1/me/vault/files")
+    resp = client.get("/api/v1/privacy/vault/files")
     assert resp.status_code == 403

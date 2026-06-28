@@ -4,7 +4,7 @@ HEADERS = {"Authorization": "Bearer fake-token"}
 
 
 def test_get_indexing_config(client, mock_auth):
-    resp = client.get("/api/v1/indexing/config")
+    resp = client.get("/api/v1/awareness/indexing/config")
     assert resp.status_code == 200
     data = resp.json()
     assert data["config"] is None
@@ -24,11 +24,11 @@ def test_save_indexing_config(client, mock_auth):
         "sync_interval_seconds": 600,
         "priority": 1,
     }
-    resp = client.put("/api/v1/indexing/config", json=payload, headers=HEADERS)
+    resp = client.put("/api/v1/awareness/indexing/config", json=payload, headers=HEADERS)
     assert resp.status_code == 200
     assert resp.json()["status"] == "saved"
 
-    resp2 = client.get("/api/v1/indexing/config")
+    resp2 = client.get("/api/v1/awareness/indexing/config")
     assert resp2.status_code == 200
     data = resp2.json()
     assert data["config"] is not None
@@ -49,7 +49,7 @@ def test_indexing_preview(mock_rules_cls, client, mock_auth):
     }
     mock_rules_cls.return_value = mock_rules
 
-    resp = client.post("/api/v1/indexing/preview?repo_path=/test/repo", headers=HEADERS)
+    resp = client.post("/api/v1/awareness/indexing/preview?repo_path=/test/repo", headers=HEADERS)
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_files"] == 100

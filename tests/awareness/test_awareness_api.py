@@ -21,7 +21,7 @@ class TestAwarenessAPI:
 
     def test_get_device_info(self, auth_client: TestClient) -> None:
         """GET /device/info returns device data."""
-        resp = auth_client.get("/api/v1/device/info", headers=AUTH_HEADERS)
+        resp = auth_client.get("/api/v1/awareness/device/info", headers=AUTH_HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert "hostname" in data
@@ -30,7 +30,7 @@ class TestAwarenessAPI:
 
     def test_get_health(self, auth_client: TestClient) -> None:
         """GET /system-health returns health data."""
-        resp = auth_client.get("/api/v1/system-health", headers=AUTH_HEADERS)
+        resp = auth_client.get("/api/v1/awareness/health", headers=AUTH_HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert "services" in data
@@ -38,7 +38,7 @@ class TestAwarenessAPI:
 
     def test_get_health_status(self, auth_client: TestClient) -> None:
         """GET /system-health/status returns summary."""
-        resp = auth_client.get("/api/v1/system-health/status", headers=AUTH_HEADERS)
+        resp = auth_client.get("/api/v1/awareness/health/status", headers=AUTH_HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert "overall_status" in data
@@ -46,7 +46,7 @@ class TestAwarenessAPI:
 
     def test_get_environment(self, auth_client: TestClient) -> None:
         """GET /environment returns only safe variables."""
-        resp = auth_client.get("/api/v1/environment", headers=AUTH_HEADERS)
+        resp = auth_client.get("/api/v1/awareness/environment", headers=AUTH_HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         for key in data:
@@ -56,7 +56,7 @@ class TestAwarenessAPI:
 
     def test_get_system_paths(self, auth_client: TestClient) -> None:
         """GET /environment/paths returns paths."""
-        resp = auth_client.get("/api/v1/environment/paths", headers=AUTH_HEADERS)
+        resp = auth_client.get("/api/v1/awareness/environment/paths", headers=AUTH_HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert "home" in data
@@ -68,7 +68,7 @@ class TestAwarenessAPI:
         (p / "test.py").write_text("print('hello')")
 
         resp = auth_client.post(
-            f"/api/v1/files/scan?directory={p}",
+            f"/api/v1/awareness/files/scan?directory={p}",
             headers=AUTH_HEADERS,
         )
         assert resp.status_code == 200
@@ -82,11 +82,11 @@ class TestAwarenessAPI:
         (p / "a.py").write_text("original")
 
         # First scan
-        auth_client.post(f"/api/v1/files/scan?directory={p}", headers=AUTH_HEADERS)
+        auth_client.post(f"/api/v1/awareness/files/scan?directory={p}", headers=AUTH_HEADERS)
 
         # Create new file
         (p / "b.py").write_text("new file")
-        resp = auth_client.get(f"/api/v1/files/changes?directory={p}", headers=AUTH_HEADERS)
+        resp = auth_client.get(f"/api/v1/awareness/files/changes?directory={p}", headers=AUTH_HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert data["created"] >= 1
@@ -98,8 +98,8 @@ class TestAwarenessAPI:
         (p / "a.py").write_text("print('a')")
         (p / "b.js").write_text("console.log('b')")
 
-        auth_client.post(f"/api/v1/files/scan?directory={p}", headers=AUTH_HEADERS)
-        resp = auth_client.get(f"/api/v1/files/summary?directory={p}", headers=AUTH_HEADERS)
+        auth_client.post(f"/api/v1/awareness/files/scan?directory={p}", headers=AUTH_HEADERS)
+        resp = auth_client.get(f"/api/v1/awareness/files/summary?directory={p}", headers=AUTH_HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert data["total_files"] == 2
@@ -112,7 +112,7 @@ class TestAwarenessAPI:
         (p / "main.py").write_text("from fastapi import FastAPI")
 
         resp = auth_client.post(
-            f"/api/v1/repos/scan?repo_path={p}",
+            f"/api/v1/awareness/repos/scan?repo_path={p}",
             headers=AUTH_HEADERS,
         )
         assert resp.status_code == 200
@@ -128,7 +128,7 @@ class TestAwarenessAPI:
         (p / "tests").mkdir()
 
         resp = auth_client.get(
-            f"/api/v1/project/scan?project_path={p}",
+            f"/api/v1/awareness/project/scan?project_path={p}",
             headers=AUTH_HEADERS,
         )
         assert resp.status_code == 200
@@ -137,7 +137,7 @@ class TestAwarenessAPI:
 
     def test_unauthenticated_returns_error(self, client: TestClient) -> None:
         """Unauthenticated requests fail (no dependency override)."""
-        resp = client.get("/api/v1/device/info")
+        resp = client.get("/api/v1/awareness/device/info")
         assert resp.status_code in (401, 422, 500)
 
     def test_awareness_e2e(self, auth_client: TestClient, tmp_path: object) -> None:
@@ -148,22 +148,22 @@ class TestAwarenessAPI:
 
         # 1. Scan directory
         scan_resp = auth_client.post(
-            f"/api/v1/files/scan?directory={p}",
+            f"/api/v1/awareness/files/scan?directory={p}",
             headers=AUTH_HEADERS,
         )
         assert scan_resp.status_code == 200
 
         # 2. Get device info
-        device_resp = auth_client.get("/api/v1/device/info", headers=AUTH_HEADERS)
+        device_resp = auth_client.get("/api/v1/awareness/device/info", headers=AUTH_HEADERS)
         assert device_resp.status_code == 200
         assert device_resp.json()["os_type"] is not None
 
         # 3. Get health
-        health_resp = auth_client.get("/api/v1/system-health", headers=AUTH_HEADERS)
+        health_resp = auth_client.get("/api/v1/awareness/health", headers=AUTH_HEADERS)
         assert health_resp.status_code == 200
 
         # 4. Get environment (safe)
-        env_resp = auth_client.get("/api/v1/environment", headers=AUTH_HEADERS)
+        env_resp = auth_client.get("/api/v1/awareness/environment", headers=AUTH_HEADERS)
         assert env_resp.status_code == 200
         for key in env_resp.json():
             assert "SECRET" not in key.upper()
