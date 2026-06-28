@@ -22,7 +22,7 @@ export default function LoginPage() {
     try {
       await apiFetch("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ username, password }),
+        body: { username, password },
       });
       router.push("/");
       router.refresh();

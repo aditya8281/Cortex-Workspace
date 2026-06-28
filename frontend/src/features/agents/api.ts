@@ -46,13 +46,13 @@ export const agentsApi = {
   create: (data: { name: string; description?: string; system_prompt: string; model_id?: string; tools?: string[] }) =>
     apiFetch<Agent>("/agents", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: data,
     }),
 
   update: (id: number, data: Partial<{ name: string; description: string; system_prompt: string; model_id: string; is_active: boolean; tools: string[] }>) =>
     apiFetch<Agent>(`/agents/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(data),
+      body: data,
     }),
 
   delete: (id: number) =>
@@ -72,6 +72,6 @@ export const agentsApi = {
   startRun: (agentId: number, input: string) =>
     apiFetch<{ status: string; run_id: number }>("/agents/runs", {
       method: "POST",
-      body: JSON.stringify({ agent_id: agentId, input }),
+      body: { agent_id: agentId, input },
     }),
 };

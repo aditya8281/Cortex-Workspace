@@ -41,13 +41,13 @@ export const chatApi = {
   create: (title: string, repo_id?: number) =>
     apiFetch<Conversation>("/conversations", {
       method: "POST",
-      body: JSON.stringify({ title, repo_id }),
+      body: { title, repo_id },
     }),
 
   rename: (id: number, title: string) =>
     apiFetch<{ status: string; title: string }>(`/conversations/${id}/title`, {
       method: "PATCH",
-      body: JSON.stringify({ title }),
+      body: { title },
     }),
 
   delete: (id: number) =>
@@ -61,7 +61,7 @@ export async function* streamChat(
   content: string,
   model?: string,
 ): AsyncGenerator<{ type: string; content?: string; tokens?: number; sources?: Source[] }> {
-  const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+  const res = await fetch(`/api/v1/conversations/${conversationId}/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",

@@ -23,12 +23,12 @@ export default function RegisterPage() {
     try {
       await apiFetch("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ username, email, password }),
+        body: { username, email, password },
       });
       // Auto-login after registration
       await apiFetch("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ username, password }),
+        body: { username, password },
       });
       router.push("/");
       router.refresh();

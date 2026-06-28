@@ -20,19 +20,19 @@ export const settingsApi = {
   updateProfile: (data: Partial<{ username: string; email: string }>) =>
     apiFetch<UserProfile>("/me", {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: data,
     }),
 
   getConsents: () => apiFetch<ConsentItem[]>("/consent"),
   grantConsent: (consentId: string) =>
     apiFetch<{ status: string }>("/consent/grant", {
       method: "POST",
-      body: JSON.stringify({ consent_id: consentId }),
+      body: { consent_id: consentId },
     }),
   revokeConsent: (consentId: string) =>
     apiFetch<{ status: string }>("/consent/revoke", {
       method: "POST",
-      body: JSON.stringify({ consent_id: consentId }),
+      body: { consent_id: consentId },
     }),
 
   getVaultStatus: () =>

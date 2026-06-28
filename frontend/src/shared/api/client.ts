@@ -11,9 +11,13 @@ function getCsrfToken(): string {
   return csrfToken;
 }
 
+export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
+  body?: Record<string, unknown> | unknown[] | null;
+}
+
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit = {},
+  options: ApiFetchOptions = {},
 ): Promise<T> {
   const { method = "GET", headers: customHeaders, body, ...rest } = options;
 
