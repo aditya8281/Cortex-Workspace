@@ -339,7 +339,7 @@ PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations. 37 migrations across 10 
 4. **Foreign keys with ON DELETE**: Explicit cascade rules
 5. **Indexes**: Composite indexes for common query patterns
 
-See [DATABASE.md](./DATABASE.md) for full schema reference.
+See [database.md](../reference/database.md) for full schema reference.
 
 ---
 
@@ -359,7 +359,7 @@ See [DATABASE.md](./DATABASE.md) for full schema reference.
 - **CSRF**: Double-submit cookie pattern (`cortex_csrf` cookie + `X-CSRF-Token` header)
 - **Flow**: Register/Login → set cookies → requests forward cookies via proxy → auto-refresh on 401
 
-See [GOVERNANCE.md](./GOVERNANCE.md) (Security section) for detailed patterns.
+See [governance.md](../guides/governance.md) (Security section) for detailed patterns.
 
 ---
 

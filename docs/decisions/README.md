@@ -33,7 +33,7 @@ Cortex tracks architectural decisions in this directory. Each ADR follows the st
 | # | Decision | Status | Replaces | Phase |
 |---|----------|--------|----------|-------|
 | 015 | [Pluggable Embedding Provider](015-pluggable-embedding-provider.md) | Proposed | 007 | V2 |
-| 016 | [Event-Driven Runner](016-event-driven-runner.md) | Proposed | 008 | V3 |
+| 022 | [Event-Driven Runner](022-event-driven-runner.md) | Proposed | 008 | V3 |
 
 ### New (Proposed)
 

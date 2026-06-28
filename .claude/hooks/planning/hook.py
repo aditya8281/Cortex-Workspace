@@ -20,15 +20,15 @@ from utils import ROOT, HookResult, print_result, read_file
 # ── Compiled regex (once) ─────────────────────────────────────────
 
 _RE_PHASE = re.compile(r'### Phase (\d+[A-B]?):\s+(.+?)\s*([✅🟡⬜])')
-_RE_PLACEHOLDER = re.compile(r'(TBD|PLACEHOLDER|XXX)', re.IGNORECASE)
+_RE_PLACEHOLDER = re.compile(r'\b(TBD|XXX)\b', re.IGNORECASE)
 
 
 def check_roadmap_phases() -> list[str]:
     """Check roadmap phase status consistency."""
     findings: list[str] = []
-    roadmap = ROOT / "docs" / "ROADMAP.md"
+    roadmap = ROOT / "STATUS.md"
     if not roadmap.exists():
-        return ["docs/ROADMAP.md not found"]
+        return ["STATUS.md not found (roadmap)"]
 
     content = read_file(roadmap)
 
