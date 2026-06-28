@@ -15,6 +15,16 @@ from backend.app.core.system_info import get_disk_info, get_gpu_info, get_ram_in
 router = APIRouter()
 
 
+def _extract_ws_token(ws: WebSocket, token: str | None = None) -> str | None:
+    """Extract JWT from query param, sec-websocket-protocol header, or cookie."""
+    if token:
+        return token
+    protocols = ws.headers.get("sec-websocket-protocol", "")
+    if protocols:
+        return protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
+    return ws.cookies.get("cortex_access")
+
+
 # ── Metrics ──────────────────────────────────────────────────────────
 
 
@@ -82,11 +92,7 @@ def collect_logs(n: int = 15) -> dict:
 @router.websocket("/ws/system")
 async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
     """Push real-time metrics (every 500ms) and activity logs (every 3s)."""
-    # Accept token from sec-websocket-protocol header (preferred) or query param (legacy)
-    if not token:
-        protocols = ws.headers.get("sec-websocket-protocol", "")
-        if protocols:
-            token = protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
+    token = _extract_ws_token(ws, token)
     if not token:
         await ws.close(code=4001, reason="Authentication required")
         return

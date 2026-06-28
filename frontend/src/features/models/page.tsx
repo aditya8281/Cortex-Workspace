@@ -11,6 +11,7 @@ import { DownloadsView } from "./components/DownloadsView";
 import { InstalledView } from "./components/InstalledView";
 import { ModelDetailModal } from "./components/ModelDetailModal";
 import { catalog, downloads } from "./api";
+import { useWebSocket } from "@/shared/ws/useWebSocket";
 import type { HardwareInfo, TabKey } from "./api";
 
 // ── Tab definitions ──────────────────────────────────────────────────────────
@@ -40,7 +41,8 @@ export default function ModelsPage() {
 
   // Download management
   const [downloadingModels, setDownloadingModels] = useState<Map<string, number>>(new Map());
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const downloadingRef = useRef(downloadingModels);
+  downloadingRef.current = downloadingModels;
 
   // Detail modal
   const [detailModalModelId, setDetailModalModelId] = useState<string | null>(null);
@@ -66,51 +68,29 @@ export default function ModelsPage() {
       .finally(() => setHardwareLoading(false));
   }, []);
 
-  // ── Download progress polling ───────────────────────────────────────────
+  // ── Download progress via WebSocket ──────────────────────────────────
 
-  useEffect(() => {
-    if (downloadingModels.size === 0) {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-      return;
-    }
-
-    pollingRef.current = setInterval(async () => {
-      const modelIds = Array.from(downloadingModels.keys());
-      const updates: [string, number][] = [];
-
-      for (const modelId of modelIds) {
-        try {
-          const res = await downloads.progress(modelId);
-          updates.push([modelId, res.progress]);
-        } catch {
-          // Model finished or not found — remove from tracking
-          updates.push([modelId, 1]);
-        }
-      }
-
+  const handleDownloadProgress = useCallback((data: Record<string, unknown>) => {
+    if (data.type === "model_progress" && Array.isArray(data.models)) {
       setDownloadingModels((prev) => {
         const next = new Map(prev);
-        for (const [id, progress] of updates) {
-          if (progress >= 1) {
-            next.delete(id);
+        for (const m of data.models as Array<{ name: string; progress: number }>) {
+          if (m.progress >= 1) {
+            next.delete(m.name);
           } else {
-            next.set(id, progress);
+            next.set(m.name, m.progress);
           }
         }
         return next;
       });
-    }, 2000);
+    }
+  }, []);
 
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    };
-  }, [downloadingModels.size]);
+  useWebSocket({
+    path: "/api/v1/ws/models",
+    enabled: !!user && downloadingRef.current.size > 0,
+    onMessage: handleDownloadProgress,
+  });
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 

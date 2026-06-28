@@ -158,6 +158,21 @@ async def logout(body: RefreshRequest, request: Request, response: Response, db:
     return {"message": "Logged out"}
 
 
+@router.get("/api/v1/auth/ws-token")
+async def get_ws_token(request: Request):
+    """Return the access token for WebSocket connections.
+    Frontend cannot read httpOnly cookies, so this endpoint
+    extracts the token and returns it for use in WS query params."""
+    token = _get_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        verify_access_token(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return {"token": token}
+
+
 @router.get("/api/v1/auth/me", response_model=UserResponse)
 async def get_me(request: Request, db: Session = Depends(get_db)):
     token = _get_token(request)

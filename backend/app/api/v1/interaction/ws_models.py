@@ -13,9 +13,20 @@ from backend.app.services.download.downloader import model_downloader
 router = APIRouter()
 
 
+def _extract_ws_token(ws: WebSocket, token: str | None = None) -> str | None:
+    """Extract JWT from query param, sec-websocket-protocol header, or cookie."""
+    if token:
+        return token
+    protocols = ws.headers.get("sec-websocket-protocol", "")
+    if protocols:
+        return protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
+    return ws.cookies.get("cortex_access")
+
+
 @router.websocket("/ws/models")
 async def model_download_progress_ws(ws: WebSocket, token: str = Query(None)):
     """Push download progress for all active model downloads every second."""
+    token = _extract_ws_token(ws, token)
     if not token:
         await ws.close(code=4001, reason="Authentication required")
         return
