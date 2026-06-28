@@ -23,6 +23,16 @@ export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
  */
 const MAX_RETRIES = 1;
 
+/** Auth endpoints where 401 = bad credentials, not expired session */
+function isAuthPath(path: string): boolean {
+  return (
+    path.startsWith("/auth/login") ||
+    path.startsWith("/auth/register") ||
+    path.startsWith("/auth/check-username") ||
+    path.startsWith("/auth/logout")
+  );
+}
+
 export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {},
@@ -53,9 +63,9 @@ export async function apiFetch<T>(
     ...rest,
   });
 
-  if (res.status === 401) {
+  // On auth endpoints, 401 means wrong credentials — don't intercept
+  if (res.status === 401 && !isAuthPath(path)) {
     if (retryDepth >= MAX_RETRIES) {
-      // Already retried once — don't loop, redirect to login
       window.location.href = "/auth";
       throw new Error("Session expired");
     }
@@ -67,7 +77,6 @@ export async function apiFetch<T>(
       });
 
       if (refreshRes.ok) {
-        // Retry original request exactly once
         return apiFetch<T>(path, {
           ...options,
           _retryDepth: retryDepth + 1,
@@ -127,7 +136,7 @@ export async function apiFetchStream(
     ...rest,
   });
 
-  if (res.status === 401) {
+  if (res.status === 401 && !isAuthPath(path)) {
     if (retryDepth >= MAX_RETRIES) {
       window.location.href = "/auth";
       throw new Error("Session expired");
