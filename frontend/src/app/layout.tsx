@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/shared/auth/AuthProvider";
+import { MetricsProvider } from "@/shared/ws/MetricsProvider";
 import { ToastProvider } from "@/shared/ui/Toast";
 
 const geist = Geist({
@@ -28,9 +29,11 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable} ${jetbrains.variable}`}>
       <body className="font-sans antialiased bg-void text-text-primary">
         <AuthProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <MetricsProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </MetricsProvider>
         </AuthProvider>
       </body>
     </html>

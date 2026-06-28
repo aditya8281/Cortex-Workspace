@@ -30,7 +30,10 @@ router = APIRouter()
 async def list_installed_models(
     current_user: User = Depends(get_current_user),
 ):
-    """List installed/downloaded model variants."""
+    """List installed/downloaded models from Ollama local API.
+
+    Reads directly from localhost:11434/api/tags — no DB required.
+    """
     try:
         import httpx
 
@@ -42,47 +45,31 @@ async def list_installed_models(
         logger.warning("Failed to fetch installed models from Ollama: %s", e)
         installed = []
 
-    installed_names = {m["name"] for m in installed}
-
-    from backend.app.core.db import get_db
-    from backend.app.services.intelligence.model_catalog import CatalogueManager
-
-    db = next(get_db())
-    try:
-        catalogue_mgr = CatalogueManager(db)
-        all_models = catalogue_mgr.get_all_catalogue()
-    finally:
-        db.close()
-
     result = []
-    for model in all_models:
-        variants = []
-        for tag in installed_names:
-            base = tag.split(":")[0]
-            if base in model.model_id or model.model_id.startswith(base):
-                size_bytes = next((m.get("size", 0) for m in installed if m["name"] == tag), 0)
-                variants.append(
+    for m in installed:
+        name = m.get("name", "")
+        details = m.get("details", {})
+        size_bytes = m.get("size", 0)
+        result.append(
+            {
+                "model_id": name,
+                "display_name": name.replace("-", " ").title(),
+                "family": details.get("family", ""),
+                "parameter_count": _parse_param_count(details.get("parameter_size", "")),
+                "capabilities": [],
+                "variants": [
                     {
-                        "variant_id": tag,
-                        "quantization": _guess_quant_from_tag(tag),
+                        "variant_id": name,
+                        "quantization": details.get("quantization_level", "unknown"),
                         "size_bytes": size_bytes,
-                        "size_gb": round(size_bytes / (1024**3), 1),
+                        "size_gb": round(size_bytes / (1024**3), 1) if size_bytes else 0,
                         "downloaded": True,
-                        "parameter_count": model.parameter_count,
+                        "parameter_count": _parse_param_count(details.get("parameter_size", "")),
                         "quality_score": 90.0,
                     }
-                )
-        if variants:
-            result.append(
-                {
-                    "model_id": model.model_id,
-                    "display_name": model.display_name,
-                    "family": model.family,
-                    "parameter_count": model.parameter_count,
-                    "capabilities": model.capabilities or [],
-                    "variants": variants,
-                }
-            )
+                ],
+            }
+        )
 
     return {"models": result, "installed_count": len(result)}
 
@@ -111,6 +98,21 @@ def _guess_quant_from_tag(tag: str) -> str:
         if q in tag_lower:
             return q.upper()
     return "UNKNOWN"
+
+
+def _parse_param_count(raw: str) -> float | None:
+    """Parse '3.2B', '1B', '70B', '480M' etc. from Ollama details."""
+    if not raw:
+        return None
+    raw = raw.strip().upper()
+    try:
+        if raw.endswith("B"):
+            return float(raw[:-1])
+        if raw.endswith("M"):
+            return float(raw[:-1]) / 1000.0
+        return float(raw)
+    except (ValueError, IndexError):
+        return None
 
 
 @router.get("/models/downloads/queue", response_model=DownloadQueueResponse)

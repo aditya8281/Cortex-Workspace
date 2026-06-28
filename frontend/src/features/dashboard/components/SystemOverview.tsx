@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Card } from "@/shared/ui/Card";
 import { Skeleton } from "@/shared/ui/Skeleton";
-import { dashboardApi, type SystemMetrics } from "../api";
+import { useMetrics } from "@/shared/ws/MetricsProvider";
 
 function barColor(percent: number): string {
   if (percent < 70) return "bg-success";
@@ -45,36 +44,9 @@ function MetricProgressCard({
 }
 
 export function SystemOverview() {
-  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { metrics, connected } = useMetrics();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchMetrics = () => {
-      dashboardApi
-        .getMetrics()
-        .then((data) => {
-          if (!cancelled) setMetrics(data);
-        })
-        .catch(() => {
-          if (!cancelled) setMetrics(null);
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-    };
-
-    fetchMetrics();
-    const interval = setInterval(fetchMetrics, 10000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
-
-  if (loading) {
+  if (!connected || !metrics) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -104,14 +76,6 @@ export function SystemOverview() {
     );
   }
 
-  if (!metrics) {
-    return (
-      <Card className="p-4">
-        <p className="text-sm text-text-muted">Unable to load system metrics.</p>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -128,12 +92,12 @@ export function SystemOverview() {
         <MetricProgressCard
           label="GPU"
           value={
-            metrics.gpu_name
+            metrics.gpu_name && metrics.gpu_name !== "No GPU detected"
               ? `${metrics.gpu_percent?.toFixed(1) ?? "0.0"}%`
               : "Not available"
           }
           percent={metrics.gpu_percent ?? 0}
-          sublabel={metrics.gpu_name ?? undefined}
+          sublabel={metrics.gpu_name !== "No GPU detected" ? metrics.gpu_name : undefined}
         />
         <MetricProgressCard
           label="Disk"
@@ -141,27 +105,6 @@ export function SystemOverview() {
           percent={metrics.disk_percent}
         />
       </div>
-
-      {(metrics.processes ?? []).length > 0 && (
-        <Card className="p-4">
-          <p className="text-xs text-text-muted font-medium mb-3">Top Processes</p>
-          <div className="space-y-1.5">
-            {metrics.processes.slice(0, 5).map((proc) => (
-              <div
-                key={proc.pid}
-                className="flex items-center justify-between text-xs"
-              >
-                <span className="text-text-primary font-mono truncate max-w-[180px]">
-                  {proc.name}
-                </span>
-                <span className="text-text-muted tabular-nums whitespace-nowrap">
-                  CPU {proc.cpu.toFixed(1)}% &middot; MEM {proc.memory.toFixed(1)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
     </div>
   );
 }

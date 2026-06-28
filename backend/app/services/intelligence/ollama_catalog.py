@@ -51,6 +51,7 @@ THINKING_MARKERS = [
 ]
 
 _LIBRARY_JSON = Path(__file__).resolve().parent.parent / "data" / "library.json"
+_SEED_CATALOG_JSON = Path(__file__).resolve().parent.parent / "data" / "catalog_seed.json"
 
 
 def _load_library_json() -> list[dict[str, Any]]:
@@ -74,6 +75,26 @@ def _load_library_json() -> list[dict[str, Any]]:
         return models
     except (json.JSONDecodeError, OSError) as e:
         logger.warning("Failed to load library.json: %s", e)
+        return []
+
+
+def _load_seed_catalog() -> list[dict[str, Any]]:
+    """Load the pre-built catalog from catalog_seed.json.
+
+    This is a snapshot from the reference ollama-catalog project
+    (773 models from registry.ollama.ai). Used as the instant
+    baseline so the catalog isn't empty while live probes run.
+    """
+    if not _SEED_CATALOG_JSON.exists():
+        logger.debug("No seed catalog found at %s", _SEED_CATALOG_JSON)
+        return []
+    try:
+        data = json.loads(_SEED_CATALOG_JSON.read_text())
+        models = data.get("models", [])
+        logger.info("Loaded %d models from seed catalog", len(models))
+        return models
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning("Failed to load seed catalog: %s", e)
         return []
 
 
@@ -132,11 +153,17 @@ class OllamaCatalogService:
     ) -> tuple[list[dict[str, Any]], CatalogSourceStatus]:
         """Fetch the unified model catalog from all enabled sources.
 
+        Pipeline:
+          1. Load seed catalog (773 models from registry snapshot) — instant
+          2. Probe live cloud + local APIs — overlay richer metadata
+          3. If registry enabled, fill any remaining gaps via OCI probe
+
         Returns:
             Tuple of (models list, source status).
         """
         status = CatalogSourceStatus()
 
+        # Check cache first (unless force refresh)
         if not force_refresh:
             cached = self._load_cache()
             if cached is not None and self._is_cache_valid(cached):
@@ -146,68 +173,66 @@ class OllamaCatalogService:
                 status.last_updated = cached.get("fetched_at", "")
                 return models, status
 
-        tasks: list[asyncio.Task] = []
-        source_priority: dict[str, int] = {}
-
-        if include_cloud:
-            tasks.append(asyncio.create_task(self.fetch_cloud_models()))
-            source_priority["cloud"] = 3
-        if include_local:
-            tasks.append(asyncio.create_task(self.fetch_local_models()))
-            source_priority["local"] = 2
-        if include_registry:
-            tasks.append(asyncio.create_task(self.fetch_registry_models()))
-            source_priority["registry"] = 1
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
+        # --- Step 1: Seed catalog (instant baseline) ---
         merged: dict[str, dict[str, Any]] = {}
-        source_names = []
+        seed_models = _load_seed_catalog()
+        for model in seed_models:
+            key = model.get("name", "")
+            if key:
+                merged[key] = model
+        logger.info("Seed baseline: %d models loaded", len(merged))
+
+        # --- Step 2: Live cloud + local probes ---
+        live_tasks: list[asyncio.Task] = []
+        live_sources: list[str] = []
+
         if include_cloud:
-            source_names.append("cloud")
+            live_tasks.append(asyncio.create_task(self.fetch_cloud_models()))
+            live_sources.append("cloud")
         if include_local:
-            source_names.append("local")
-        if include_registry:
-            source_names.append("registry")
+            live_tasks.append(asyncio.create_task(self.fetch_local_models()))
+            live_sources.append("local")
 
-        for result, source_name in zip(results, source_names, strict=False):
-            if isinstance(result, Exception):
-                if source_name == "cloud":
-                    status.cloud = "error"
-                elif source_name == "local":
-                    status.local = "error"
-                elif source_name == "registry":
-                    status.registry = "error"
-                status.errors[source_name] = str(result)
-                logger.warning("Source %s failed: %s", source_name, result)
-                continue
+        if live_tasks:
+            live_results = await asyncio.gather(*live_tasks, return_exceptions=True)
 
-            if not result:
-                if source_name == "cloud":
-                    status.cloud = "unavailable"
-                elif source_name == "local":
-                    status.local = "unavailable"
-                elif source_name == "registry":
-                    status.registry = "unavailable"
-                continue
+            for result, source_name in zip(live_results, live_sources, strict=False):
+                if isinstance(result, Exception):
+                    status.errors[source_name] = str(result)
+                    logger.warning("Live source %s failed: %s", source_name, result)
+                    continue
 
-            if source_name == "cloud":
-                status.cloud = "ok"
-            elif source_name == "local":
-                status.local = "ok"
-            elif source_name == "registry":
-                status.registry = "ok"
+                if not result:
+                    status.errors[source_name] = "no models returned"
+                    continue
 
-            for model in result:  # type: ignore[union-attr]
-                key = model.get("name", "")
-                existing = merged.get(key)
-                if existing is None:
-                    merged[key] = model
-                else:
-                    existing_priority = source_priority.get(existing.get("source", ""), 0)
-                    new_priority = source_priority.get(model.get("source", ""), 0)
-                    if new_priority > existing_priority:
+                status.cloud = "ok" if source_name == "cloud" else status.cloud
+                status.local = "ok" if source_name == "local" else status.local
+
+                for model in result:  # type: ignore[union-attr]
+                    key = model.get("name", "")
+                    if not key:
+                        continue
+                    existing = merged.get(key)
+                    if existing is None:
                         merged[key] = model
+                    else:
+                        # Live data always wins over seed data
+                        merged[key] = model
+
+        # --- Step 3: Registry fill (if enabled and we have seed, skip heavy probe) ---
+        if include_registry and not merged:
+            try:
+                registry_models = await self.fetch_registry_models()
+                for model in registry_models:
+                    key = model.get("name", "")
+                    if key:
+                        merged[key] = model
+                status.registry = "ok"
+            except Exception as exc:
+                status.registry = "error"
+                status.errors["registry"] = str(exc)
+                logger.warning("Registry probe failed: %s", exc)
 
         models = list(merged.values())
         models.sort(key=lambda m: m.get("name", ""))
@@ -226,8 +251,9 @@ class OllamaCatalogService:
             status.last_updated = datetime.now(timezone.utc).isoformat()
 
         logger.info(
-            "Fetched %d unique models (cloud=%s, local=%s, registry=%s, fallback=%s)",
+            "Catalog ready: %d models (seed=%d, cloud=%s, local=%s, registry=%s, fallback=%s)",
             len(models),
+            len(seed_models),
             status.cloud,
             status.local,
             status.registry,

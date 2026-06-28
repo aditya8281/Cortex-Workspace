@@ -1,52 +1,28 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/shared/layout/AppShell";
 import { StatusDot } from "@/shared/ui/StatusDot";
 import { Card } from "@/shared/ui/Card";
 import { Badge } from "@/shared/ui/Badge";
-import { MetricsGrid } from "./components/MetricsGrid";
 import { LogViewer } from "./components/LogViewer";
-import { systemApi, type LLMHealth, type SystemLog } from "./api";
-import { useWebSocket, type WSStatus } from "@/shared/ws/useWebSocket";
-
-interface SystemMetrics {
-  cpu_percent: number;
-  ram_percent: number;
-  ram_used_gb: number;
-  ram_total_gb: number;
-  gpu_name: string;
-  gpu_type: string;
-  gpu_percent: number | null;
-  disk_total_gb: number;
-  disk_used_gb: number;
-  disk_percent: number;
-}
-
-interface ProcessInfo {
-  pid: number;
-  name: string;
-  cpu_percent: number;
-  memory_percent: number;
-}
+import { systemApi, type LLMHealth } from "./api";
+import { useMetrics } from "@/shared/ws/MetricsProvider";
 
 export default function SystemPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { metrics, processes, logs, connected } = useMetrics();
 
   const [llm, setLlm] = useState<LLMHealth | null>(null);
-  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
-  const [logs, setLogs] = useState<SystemLog[]>([]);
-  const [processes, setProcesses] = useState<ProcessInfo[]>([]);
-  const logsRef = useRef<SystemLog[]>([]);
 
   useEffect(() => {
     if (!loading && !user) router.push("/auth");
   }, [user, loading, router]);
 
-  // Load LLM health via REST (not real-time enough for WS)
+  // Load LLM health via REST (low frequency, not worth WS)
   const loadLLM = useCallback(async () => {
     try {
       const data = await systemApi.getLLMHealth();
@@ -62,43 +38,6 @@ export default function SystemPage() {
     return () => clearInterval(interval);
   }, [loadLLM]);
 
-  // WebSocket for real-time metrics and logs
-  const handleWSMessage = useCallback((data: Record<string, unknown>) => {
-    const type = data.type as string;
-
-    if (type === "metrics") {
-      setMetrics(data as unknown as SystemMetrics);
-    } else if (type === "logs") {
-      const incoming = data.logs as SystemLog[];
-      if (Array.isArray(incoming)) {
-        logsRef.current = incoming;
-        setLogs([...incoming]);
-      }
-    } else if (type === "processes") {
-      setProcesses(data.processes as ProcessInfo[]);
-    }
-  }, []);
-
-  const { status: wsStatus } = useWebSocket({
-    path: "/api/v1/ws/system",
-    enabled: !!user,
-    onMessage: handleWSMessage,
-  });
-
-  const wsStatusText: Record<WSStatus, string> = {
-    connecting: "Connecting…",
-    connected: "Live",
-    disconnected: "Offline",
-    error: "Error",
-  };
-
-  const wsStatusColor: Record<WSStatus, "success" | "warning" | "danger"> = {
-    connecting: "warning",
-    connected: "success",
-    disconnected: "danger",
-    error: "danger",
-  };
-
   if (loading || !user) return null;
 
   return (
@@ -112,8 +51,8 @@ export default function SystemPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <StatusDot color={wsStatusColor[wsStatus]} pulse={wsStatus === "connected"} />
-            <span className="text-xs text-text-muted">{wsStatusText[wsStatus]}</span>
+            <StatusDot color={connected ? "success" : "danger"} pulse={connected} />
+            <span className="text-xs text-text-muted">{connected ? "Live" : "Offline"}</span>
           </div>
         </div>
 
@@ -142,20 +81,33 @@ export default function SystemPage() {
           </div>
         </Card>
 
-        {/* Metrics — live from WebSocket */}
+        {/* Metrics — live from shared MetricsProvider (2/sec) */}
         <div>
           <h2 className="text-title font-semibold text-text-primary mb-3">System Metrics</h2>
-          <MetricsGrid
-            metrics={{
-              cpu_percent: metrics?.cpu_percent ?? 0,
-              memory_percent: metrics?.ram_percent ?? 0,
-              gpu_percent: metrics?.gpu_percent ?? 0,
-              disk_percent: metrics?.disk_percent ?? 0,
-              ram_used_gb: metrics?.ram_used_gb ?? 0,
-              ram_total_gb: metrics?.ram_total_gb ?? 0,
-              gpu_name: metrics?.gpu_name ?? "",
-            }}
-          />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: "CPU", value: `${(metrics?.cpu_percent ?? 0).toFixed(1)}%`, percent: metrics?.cpu_percent ?? 0 },
+              { label: "RAM", value: `${(metrics?.ram_used_gb ?? 0).toFixed(1)} / ${(metrics?.ram_total_gb ?? 0).toFixed(0)} GB`, percent: metrics?.ram_percent ?? 0 },
+              { label: "GPU", value: metrics?.gpu_name && metrics.gpu_name !== "No GPU detected" ? `${(metrics?.gpu_percent ?? 0).toFixed(1)}%` : "N/A", percent: metrics?.gpu_percent ?? 0 },
+              { label: "Disk", value: `${(metrics?.disk_used_gb ?? 0).toFixed(0)} / ${(metrics?.disk_total_gb ?? 0).toFixed(0)} GB`, percent: metrics?.disk_percent ?? 0 },
+            ].map(({ label, value, percent }) => (
+              <Card key={label} className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-text-muted font-medium">{label}</p>
+                  <p className="text-xs text-text-muted">{percent.toFixed(1)}%</p>
+                </div>
+                <p className="text-lg font-semibold text-text-primary tabular-nums mb-3">{value}</p>
+                <div className="h-1.5 rounded-full bg-bg-surface overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-[width] duration-300 ease-out ${
+                      percent < 70 ? "bg-success" : percent < 85 ? "bg-warning" : "bg-danger"
+                    }`}
+                    style={{ width: `${Math.min(percent, 100)}%` }}
+                  />
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
 
         {/* GPU Info — shown when GPU detected */}
@@ -178,7 +130,7 @@ export default function SystemPage() {
           </Card>
         )}
 
-        {/* Top Processes */}
+        {/* Top Processes — live from shared MetricsProvider */}
         {processes.length > 0 && (
           <Card className="overflow-hidden">
             <div className="px-4 py-3 border-b border-border-subtle">
@@ -200,7 +152,7 @@ export default function SystemPage() {
           </Card>
         )}
 
-        {/* Logs — live from WebSocket */}
+        {/* Logs — live from shared MetricsProvider */}
         <LogViewer logs={logs} />
       </div>
     </AppShell>

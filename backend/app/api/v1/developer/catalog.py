@@ -51,35 +51,46 @@ async def list_models(
     available_names = {m.name for m in available_models}
 
     catalog: list[dict[str, Any]] = []
-    seen_bases: set[str] = set()
     for model in catalog_models:
         name = model.get("name", "")
         base = name.split(":")[0]
-
-        if base in seen_bases:
-            continue
-        seen_bases.add(base)
 
         inferred_type = _infer_model_type(model)
         if model_type and inferred_type != model_type:
             continue
 
-        downloaded = any(n.split(":")[0] == base for n in available_names)
+        downloaded = name in available_names or base in available_names
+
+        # Pull family, parameter_size, quantization from seed/live data
+        family = model.get("family", "")
+        param_size = model.get("parameter_size", "")
+        quantization = model.get("quantization", model.get("quantization_level", ""))
+        cap = model.get("capabilities", [])
+        if not cap:
+            cap = ["chat"]
+        # Normalize seed catalog capabilities (["completion"] → ["chat"])
+        if cap == ["completion"]:
+            cap = ["chat"]
+
+        # Prefer parameter_size from model data, fallback to name heuristic
+        param_count = _guess_param_count(param_size or base)
 
         catalog.append(
             {
-                "name": base,
-                "display_name": base.replace("-", " ").title(),
+                "name": name,
+                "display_name": name.replace("-", " ").title(),
                 "provider": "ollama",
                 "model_type": inferred_type,
-                "parameter_count": _guess_param_count(base),
-                "size_bytes": model.get("size", 0),
-                "context_length": 4096,
-                "capabilities": model.get("capabilities", ["chat"]),
-                "description": model.get("description", f"Ollama model: {base}"),
+                "family": family,
+                "parameter_count": param_count,
+                "parameter_size": param_size,
+                "quantization": quantization,
+                "size_bytes": model.get("size", model.get("size_bytes", 0)),
+                "context_length": model.get("context_length", 4096),
+                "capabilities": cap,
+                "description": model.get("description", f"Ollama model: {name}"),
                 "downloaded": downloaded,
-                "variants": _extract_variants(base, catalog),
-                "hardware_requirements": _estimate_hardware(model.get("size", 0)),
+                "hardware_requirements": _estimate_hardware(model.get("size", model.get("size_bytes", 0))),
             }
         )
 
