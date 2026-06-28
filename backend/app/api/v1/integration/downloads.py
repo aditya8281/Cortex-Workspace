@@ -175,7 +175,8 @@ async def delete_model_local(
     current_user: User = Depends(get_current_user),
 ):
     """Cancel download if active, then remove model from Ollama."""
-    from backend.app.services.download.downloader import download_manager as dm, DownloadStatus
+    from backend.app.services.download.downloader import DownloadStatus
+    from backend.app.services.download.downloader import download_manager as dm
 
     # Cancel if currently downloading/queued
     for rec in dm._records.values():

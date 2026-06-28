@@ -1,12 +1,11 @@
 """Tests for DownloadManager reorder and clear_terminal methods."""
-import asyncio
-from pathlib import Path
 
 import pytest
+
 from backend.app.services.download.downloader import (
+    STATE_FILE,
     DownloadManager,
     DownloadStatus,
-    STATE_FILE,
 )
 
 

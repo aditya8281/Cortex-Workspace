@@ -8,7 +8,7 @@ import json
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from backend.app.core.security import verify_access_token
-from backend.app.services.download.downloader import download_manager, DownloadStatus
+from backend.app.services.download.downloader import DownloadStatus, download_manager
 
 router = APIRouter()
 
