@@ -5,6 +5,15 @@ everything at the old import path so existing code continues to work.
 """
 
 # Cognition domain
+from backend.app.schemas.cognition.confidence import *  # noqa: F401, F403
+from backend.app.schemas.cognition.error_analysis import *  # noqa: F401, F403
+from backend.app.schemas.cognition.hypothesis import *  # noqa: F401, F403
+from backend.app.schemas.cognition.task_plan import *  # noqa: F401, F403
+
+# Execution domain
+from backend.app.schemas.execution.tool_execution import *  # noqa: F401, F403
+from backend.app.schemas.execution.workflow import *  # noqa: F401, F403
+
 # Awareness domain
 from backend.app.schemas.awareness.indexing import *  # noqa: F401, F403
 from backend.app.schemas.cognition.agent import *  # noqa: F401, F403

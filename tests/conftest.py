@@ -33,6 +33,12 @@ from backend.app.models.privacy.data_deletion import DataDeletionRequest  # noqa
 from backend.app.models.privacy.data_export import DataExport  # noqa: F401
 from backend.app.models.privacy.role import Permission, Role  # noqa: F401
 from backend.app.models.privacy.user_settings import UserModelSettings  # noqa: F401
+from backend.app.models.cognition.task_plan import TaskPlan  # noqa: F401
+from backend.app.models.cognition.error_analysis import ErrorAnalysis  # noqa: F401
+from backend.app.models.cognition.hypothesis import Hypothesis  # noqa: F401
+from backend.app.models.cognition.confidence_score import ConfidenceScore  # noqa: F401
+from backend.app.models.execution.tool_execution import ToolExecution  # noqa: F401
+from backend.app.models.execution.workflow import Workflow  # noqa: F401
 
 
 @compiles(JSONB, "sqlite")

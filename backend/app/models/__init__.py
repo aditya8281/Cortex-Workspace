@@ -8,6 +8,12 @@ from backend.app.models.awareness.repo_index import CodeChunk, RepoIndex
 
 # Cognition domain
 from backend.app.models.cognition.agent import Agent, AgentFeedback, AgentRun, AgentStep
+from backend.app.models.cognition.confidence_score import ConfidenceScore
+from backend.app.models.cognition.error_analysis import ErrorAnalysis
+from backend.app.models.cognition.hypothesis import Hypothesis
+from backend.app.models.cognition.task_plan import TaskPlan
+from backend.app.models.execution.tool_execution import ToolExecution
+from backend.app.models.execution.workflow import Workflow
 
 # Integration domain
 from backend.app.models.integration.sync_state import SyncState
@@ -98,6 +104,13 @@ __all__ = [
     "AgentFeedback",
     "AgentRun",
     "AgentStep",
+    "ConfidenceScore",
+    "ErrorAnalysis",
+    "Hypothesis",
+    "TaskPlan",
+    # Execution
+    "ToolExecution",
+    "Workflow",
     # Privacy
     "AuthEvent",
     "UserModelSettings",
