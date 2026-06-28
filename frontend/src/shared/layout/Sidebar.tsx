@@ -13,6 +13,7 @@ const navigation = [
   { name: "Awareness", href: "/awareness", icon: "eye" },
   { name: "System", href: "/system", icon: "activity" },
   { name: "Settings", href: "/settings", icon: "settings" },
+  { name: "Privacy", href: "/privacy", icon: "shield" },
 ] as const;
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -43,6 +44,11 @@ const iconMap: Record<string, React.ReactNode> = {
   activity: (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M1 9h3l2-5 3 10 2-5h6" />
+    </svg>
+  ),
+  shield: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 1.5L2.5 4.5v4c0 4.5 3.5 7.5 6.5 8.5 3-1 6.5-4 6.5-8.5v-4L9 1.5z" />
     </svg>
   ),
   settings: (
