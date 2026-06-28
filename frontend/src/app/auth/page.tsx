@@ -36,15 +36,15 @@ export default function LoginPage() {
   return (
     <Card className="p-6">
       <div className="mb-6 text-center">
-        <div className="mb-3 flex justify-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/12 text-accent">
-            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+        <div className="mb-4 flex justify-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/12 text-accent">
+            <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 0L16 8L8 16L0 8L8 0Z" />
             </svg>
           </div>
         </div>
-        <h1 className="text-title font-semibold text-text-primary">Welcome back</h1>
-        <p className="mt-1 text-sm text-text-secondary">Sign in to CORTEX</p>
+        <h1 className="text-headline font-semibold text-text-primary">Welcome back</h1>
+        <p className="mt-1.5 text-sm text-text-secondary">Sign in to CORTEX</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -54,6 +54,7 @@ export default function LoginPage() {
           onChange={(e) => setUsername(e.target.value)}
           required
           autoComplete="username"
+          placeholder="your-name"
         />
         <Input
           label="Password"
@@ -62,10 +63,13 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
           autoComplete="current-password"
+          placeholder="Enter your password"
         />
 
         {error && (
-          <p className="text-sm text-danger">{error}</p>
+          <div className="rounded-lg bg-danger/8 border border-danger/20 px-3 py-2">
+            <p className="text-xs text-danger">{error}</p>
+          </div>
         )}
 
         <Button
@@ -78,12 +82,14 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-4 text-center text-sm text-text-muted">
-        No account?{" "}
-        <Link href="/auth/register" className="text-accent hover:text-accent/80 transition-colors duration-150">
-          Create one
-        </Link>
-      </p>
+      <div className="mt-5 pt-4 border-t border-border-subtle">
+        <p className="text-center text-sm text-text-muted">
+          No account?{" "}
+          <Link href="/auth/register" className="text-accent hover:text-accent/80 font-medium transition-colors duration-150">
+            Create one
+          </Link>
+        </p>
+      </div>
     </Card>
   );
 }
