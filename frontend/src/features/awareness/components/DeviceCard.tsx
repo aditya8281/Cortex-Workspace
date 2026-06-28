@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card } from "@/shared/ui/Card";
+import { Skeleton } from "@/shared/ui/Skeleton";
 import { device, type DeviceInfo } from "@/features/awareness/api";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -30,22 +31,22 @@ function formatBytes(bytes: number): string {
 
 // ── Skeleton ────────────────────────────────────────────────────────────────
 
-function Skeleton() {
+function SkeletonCard() {
   return (
     <Card role="article" aria-label="Device info loading">
-      <div className="animate-pulse space-y-3">
-        <div className="h-4 w-32 rounded bg-bg-surface" />
-        <div className="h-3 w-48 rounded bg-bg-surface" />
-        <div className="h-3 w-40 rounded bg-bg-surface" />
-        <div className="h-3 w-36 rounded bg-bg-surface" />
-        <div className="h-3 w-44 rounded bg-bg-surface" />
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-48" />
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-3 w-36" />
+        <Skeleton className="h-3 w-44" />
         <div className="space-y-1.5 pt-2">
-          <div className="h-3 w-20 rounded bg-bg-surface" />
-          <div className="h-2 w-full rounded bg-bg-surface" />
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-2 w-full" />
         </div>
         <div className="space-y-1.5">
-          <div className="h-3 w-20 rounded bg-bg-surface" />
-          <div className="h-2 w-full rounded bg-bg-surface" />
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-2 w-full" />
         </div>
       </div>
     </Card>
@@ -96,7 +97,7 @@ export function DeviceCard() {
     );
   }
 
-  if (!data) return <Skeleton />;
+  if (!data) return <SkeletonCard />;
 
   const ramPct = percentUsed(data.memory_used, data.memory_total);
   const diskPct = percentUsed(data.disk_used, data.disk_total);

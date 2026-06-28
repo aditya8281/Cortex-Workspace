@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/shared/ui/Card";
 import { StatusDot } from "@/shared/ui/StatusDot";
+import { Skeleton } from "@/shared/ui/Skeleton";
 import { awarenessHealth, type AwarenessHealth } from "@/features/awareness/api";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -42,18 +43,18 @@ function formatTime(iso: string): string {
 
 // ── Skeleton ────────────────────────────────────────────────────────────────
 
-function Skeleton() {
+function SkeletonCard() {
   return (
     <Card role="article" aria-label="Health info loading">
-      <div className="animate-pulse space-y-3">
-        <div className="h-4 w-28 rounded bg-bg-surface" />
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-28" />
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-bg-surface" />
-          <div className="h-3 w-20 rounded bg-bg-surface" />
+          <Skeleton className="h-2 w-2 rounded-full" />
+          <Skeleton className="h-3 w-20" />
         </div>
-        <div className="h-3 w-36 rounded bg-bg-surface" />
-        <div className="h-3 w-24 rounded bg-bg-surface" />
-        <div className="h-3 w-44 rounded bg-bg-surface" />
+        <Skeleton className="h-3 w-36" />
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-3 w-44" />
       </div>
     </Card>
   );
@@ -89,7 +90,7 @@ export function HealthCard() {
     );
   }
 
-  if (!data) return <Skeleton />;
+  if (!data) return <SkeletonCard />;
 
   const color = statusColor(data.status);
 

@@ -5,24 +5,25 @@ import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { Badge } from "@/shared/ui/Badge";
+import { Skeleton } from "@/shared/ui/Skeleton";
 import { project, type ProjectInfo } from "@/features/awareness/api";
 
 // ── Skeleton ────────────────────────────────────────────────────────────────
 
-function Skeleton() {
+function SkeletonCard() {
   return (
     <Card role="article" aria-label="Project info loading">
-      <div className="animate-pulse space-y-3">
-        <div className="h-4 w-32 rounded bg-bg-surface" />
-        <div className="h-3 w-44 rounded bg-bg-surface" />
-        <div className="h-3 w-36 rounded bg-bg-surface" />
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-44" />
+        <Skeleton className="h-3 w-36" />
         <div className="flex gap-1.5">
-          <div className="h-4 w-14 rounded-full bg-bg-surface" />
-          <div className="h-4 w-10 rounded-full bg-bg-surface" />
-          <div className="h-4 w-12 rounded-full bg-bg-surface" />
+          <Skeleton className="h-4 w-14 rounded-full" />
+          <Skeleton className="h-4 w-10 rounded-full" />
+          <Skeleton className="h-4 w-12 rounded-full" />
         </div>
-        <div className="h-11 w-full rounded-md bg-bg-surface" />
-        <div className="h-11 w-32 rounded-md bg-bg-surface" />
+        <Skeleton className="h-11 w-full rounded-md" />
+        <Skeleton className="h-11 w-32 rounded-md" />
       </div>
     </Card>
   );
@@ -88,7 +89,7 @@ export function ProjectCard() {
     );
   }
 
-  if (!data && !error) return <Skeleton />;
+  if (!data && !error) return <SkeletonCard />;
 
   const frameworks = data?.frameworks ?? [];
   const config = data?.config ?? {};

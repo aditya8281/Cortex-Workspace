@@ -1,5 +1,6 @@
 "use client";
 
+import { Skeleton } from "@/shared/ui/Skeleton";
 import type { HardwareInfo } from "../api";
 
 interface HardwareBarProps {
@@ -10,11 +11,11 @@ interface HardwareBarProps {
 export function HardwareBar({ hardware, loading }: HardwareBarProps) {
   if (loading) {
     return (
-      <div className="flex items-center gap-4 rounded-lg bg-bg-surface px-4 py-2.5 animate-pulse">
-        <div className="h-4 w-20 rounded bg-bg-elevated" />
-        <div className="h-4 w-24 rounded bg-bg-elevated" />
-        <div className="h-4 w-16 rounded bg-bg-elevated" />
-        <div className="h-4 w-24 rounded bg-bg-elevated" />
+      <div className="flex items-center gap-4 rounded-lg bg-bg-surface px-4 py-2.5">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-4 w-24" />
       </div>
     );
   }
