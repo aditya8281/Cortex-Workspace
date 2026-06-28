@@ -9,6 +9,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: "grid" },
   { name: "Chat", href: "/chat", icon: "message" },
   { name: "Agents", href: "/agents", icon: "cpu" },
+  { name: "Models", href: "/models", icon: "download" },
   { name: "System", href: "/system", icon: "activity" },
   { name: "Settings", href: "/settings", icon: "settings" },
 ] as const;
@@ -31,6 +32,11 @@ const iconMap: Record<string, React.ReactNode> = {
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="4" y="4" width="10" height="10" rx="2" />
       <path d="M7 1v3M11 1v3M7 14v3M11 14v3M1 7h3M14 7h3M1 11h3M14 11h3" />
+    </svg>
+  ),
+  download: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 2v10M5 8l4 4 4-4M3 14h12" />
     </svg>
   ),
   activity: (
