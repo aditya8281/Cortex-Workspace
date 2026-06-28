@@ -2,24 +2,39 @@
 
 const API_BASE = "/api/v1";
 
-let csrfToken: string | null = null;
-
+/**
+ * Read CSRF token fresh from cookie on every request.
+ * Backend rotates the cortex_csrf cookie on every GET response,
+ * so caching the value causes stale tokens → 403.
+ */
 function getCsrfToken(): string {
-  if (csrfToken) return csrfToken;
   const match = document.cookie.match(/cortex_csrf=([^;]+)/);
-  csrfToken = match?.[1] ?? "";
-  return csrfToken;
+  return match?.[1] ?? "";
 }
 
 export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
   body?: Record<string, unknown> | unknown[] | null;
 }
 
+/**
+ * Shared fetch wrapper with CSRF and 401 refresh.
+ * _retryDepth prevents infinite recursion when the refresh
+ * itself returns a 401 or the new cookie isn't available yet.
+ */
+const MAX_RETRIES = 1;
+
 export async function apiFetch<T>(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<T> {
-  const { method = "GET", headers: customHeaders, body, ...rest } = options;
+  const {
+    method = "GET",
+    headers: customHeaders,
+    body,
+    ...rest
+  } = options as ApiFetchOptions & { _retryDepth?: number };
+
+  const retryDepth = (options as any)._retryDepth ?? 0;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -39,18 +54,29 @@ export async function apiFetch<T>(
   });
 
   if (res.status === 401) {
-    // Try refresh
-    const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (refreshRes.ok) {
-      // Retry original request
-      return apiFetch<T>(path, options);
+    if (retryDepth >= MAX_RETRIES) {
+      // Already retried once — don't loop, redirect to login
+      window.location.href = "/auth";
+      throw new Error("Session expired");
     }
 
-    // Redirect to login
+    try {
+      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (refreshRes.ok) {
+        // Retry original request exactly once
+        return apiFetch<T>(path, {
+          ...options,
+          _retryDepth: retryDepth + 1,
+        } as any);
+      }
+    } catch {
+      // refresh itself failed — fall through to redirect
+    }
+
     window.location.href = "/auth";
     throw new Error("Session expired");
   }
@@ -65,4 +91,67 @@ export async function apiFetch<T>(
   }
 
   return res.json();
+}
+
+/**
+ * Low-level streaming fetch that handles CSRF + 401 refresh.
+ * Returns the raw Response so the caller can read the SSE stream.
+ */
+export async function apiFetchStream(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<Response> {
+  const {
+    method = "GET",
+    headers: customHeaders,
+    body,
+    ...rest
+  } = options as ApiFetchOptions & { _retryDepth?: number };
+
+  const retryDepth = (options as any)._retryDepth ?? 0;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(customHeaders as Record<string, string>),
+  };
+
+  if (method !== "GET") {
+    headers["X-CSRF-Token"] = getCsrfToken();
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+    credentials: "include",
+    ...rest,
+  });
+
+  if (res.status === 401) {
+    if (retryDepth >= MAX_RETRIES) {
+      window.location.href = "/auth";
+      throw new Error("Session expired");
+    }
+
+    try {
+      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (refreshRes.ok) {
+        return apiFetchStream(path, {
+          ...options,
+          _retryDepth: retryDepth + 1,
+        } as any);
+      }
+    } catch {
+      // fall through
+    }
+
+    window.location.href = "/auth";
+    throw new Error("Session expired");
+  }
+
+  return res;
 }

@@ -1,4 +1,4 @@
-import { apiFetch } from "@/shared/api/client";
+import { apiFetch, apiFetchStream } from "@/shared/api/client";
 
 export interface Conversation {
   id: number;
@@ -61,12 +61,13 @@ export async function* streamChat(
   content: string,
   model?: string,
 ): AsyncGenerator<{ type: string; content?: string; tokens?: number; sources?: Source[] }> {
-  const res = await fetch(`/api/v1/conversations/${conversationId}/messages`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ content, model }),
-  });
+  const res = await apiFetchStream(
+    `/conversations/${conversationId}/messages`,
+    {
+      method: "POST",
+      body: { content, model },
+    },
+  );
 
   if (!res.ok) {
     throw new Error(`Chat request failed: ${res.status}`);
