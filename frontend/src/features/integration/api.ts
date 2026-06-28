@@ -126,4 +126,40 @@ export const downloads = {
 
   remove: (modelName: string) =>
     apiFetch<{ status: string; model: string }>(`/models/${modelName}`, { method: "DELETE" }),
+
+  pause: (jobId: string) =>
+    apiFetch<{ paused: boolean; model: string }>(
+      `/models/downloads/${jobId}/pause`,
+      { method: "POST" }
+    ),
+
+  resume: (jobId: string) =>
+    apiFetch<{ resumed: boolean; model: string }>(
+      `/models/downloads/${jobId}/resume`,
+      { method: "POST" }
+    ),
+
+  deleteLocal: (modelName: string) =>
+    apiFetch<{ status: string; model: string }>(
+      `/models/${modelName}/local`,
+      { method: "DELETE" }
+    ),
+
+  reorder: (jobIds: string[]) =>
+    apiFetch<{ reordered: boolean; new_order: string[] }>(
+      "/models/downloads/reorder",
+      { method: "POST", body: { job_ids: jobIds } }
+    ),
+
+  bulkCancel: (jobIds: string[]) =>
+    apiFetch<{ cancelled: number; job_ids: string[] }>(
+      "/models/downloads/bulk-cancel",
+      { method: "POST", body: { job_ids: jobIds } }
+    ),
+
+  clearCompleted: () =>
+    apiFetch<{ cleared: number }>(
+      "/models/downloads/clear-completed",
+      { method: "POST" }
+    ),
 };
