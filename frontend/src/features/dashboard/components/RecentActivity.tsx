@@ -20,7 +20,7 @@ interface ActivityItem {
 }
 
 export function RecentActivity({ items }: { items: ActivityItem[] }) {
-  if (!items.length) {
+  if (!items || items.length === 0) {
     return (
       <Card className="p-6">
         <EmptyState
