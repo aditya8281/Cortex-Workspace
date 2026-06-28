@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from backend.app.core.config import settings
 from backend.app.core.db import get_current_user
@@ -25,6 +26,14 @@ from backend.app.schemas.intelligence.model import (
     SyncInstalledResponse,
 )
 from backend.app.services.download.downloader import model_downloader
+
+
+class _ReorderRequest(BaseModel):
+    job_ids: list[str]
+
+
+class _BulkCancelRequest(BaseModel):
+    job_ids: list[str]
 
 logger = logging.getLogger(__name__)
 
@@ -132,32 +141,55 @@ async def resume_download(
 
 @router.post("/models/downloads/reorder", response_model=ReorderQueueResponse)
 async def reorder_downloads(
-    new_order: list[str],
+    request: _ReorderRequest,
     current_user: User = Depends(get_current_user),
 ):
     """Reorder the download queue by download_id list."""
     from backend.app.services.download.downloader import download_manager
 
-    result = download_manager.reorder(new_order)
+    result = download_manager.reorder(request.job_ids)
     return {"reordered": True, "new_order": result}
 
 
 @router.post("/models/downloads/bulk-cancel", response_model=BulkCancelResponse)
 async def bulk_cancel_downloads(
-    job_ids: list[str],
+    request: _BulkCancelRequest,
     current_user: User = Depends(get_current_user),
 ):
     """Cancel multiple downloads by job ID. Silently skips invalid IDs."""
     from backend.app.services.download.downloader import download_manager
 
     cancelled_ids: list[str] = []
-    for job_id in job_ids:
+    for job_id in request.job_ids:
         try:
             await download_manager.cancel(job_id)
             cancelled_ids.append(job_id)
         except (KeyError, ValueError):
             pass
     return {"cancelled": len(cancelled_ids), "job_ids": cancelled_ids}
+
+
+@router.delete("/models/{model_name}/local", response_model=DeleteModelResponse)
+async def delete_model_local(
+    model_name: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Cancel download if active, then remove model from Ollama."""
+    from backend.app.services.download.downloader import download_manager as dm, DownloadStatus
+
+    # Cancel if currently downloading/queued
+    for rec in dm._records.values():
+        if rec.model_name == model_name and rec.status in (
+            DownloadStatus.QUEUED, DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED
+        ):
+            await dm.cancel(rec.download_id)
+
+    # Delete from Ollama
+    import httpx
+    async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=30.0) as client:
+        resp = await client.request("DELETE", "/api/delete", json={"name": model_name})
+        resp.raise_for_status()
+    return {"status": "deleted", "model": model_name}
 
 
 @router.post("/models/downloads/clear-completed", response_model=ClearCompletedResponse)
