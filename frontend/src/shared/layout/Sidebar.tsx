@@ -10,6 +10,7 @@ const navigation = [
   { name: "Chat", href: "/chat", icon: "message" },
   { name: "Agents", href: "/agents", icon: "cpu" },
   { name: "Models", href: "/models", icon: "download" },
+  { name: "Awareness", href: "/awareness", icon: "eye" },
   { name: "System", href: "/system", icon: "activity" },
   { name: "Settings", href: "/settings", icon: "settings" },
 ] as const;
@@ -48,6 +49,12 @@ const iconMap: Record<string, React.ReactNode> = {
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="9" cy="9" r="2.5" />
       <path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.05 3.05l1.41 1.41M13.54 13.54l1.41 1.41M3.05 14.95l1.41-1.41M13.54 4.46l1.41-1.41" />
+    </svg>
+  ),
+  eye: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M1 9s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" />
+      <circle cx="9" cy="9" r="2.5" />
     </svg>
   ),
 };
