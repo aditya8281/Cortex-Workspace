@@ -2,59 +2,68 @@
 
 import { useEffect, useState } from "react";
 import { Card } from "@/shared/ui/Card";
-import { dashboardApi, type SystemMetrics } from "../api";
+import { Skeleton } from "@/shared/ui/Skeleton";
+import { StatusDot } from "@/shared/ui/StatusDot";
+import { dashboardApi, type LLMMetricsResponse, type LLMHealthResponse } from "../api";
 
-function MetricCard({
-  label,
-  value,
-  unit,
-}: {
-  label: string;
-  value: number;
-  unit: string;
-}) {
-  return (
-    <Card className="p-4">
-      <p className="text-xs text-text-muted mb-1">{label}</p>
-      <div className="flex items-baseline gap-1">
-        <span className="text-headline font-semibold text-text-primary tabular-nums">
-          {unit === "%" ? Math.round(value) : value.toLocaleString()}
-        </span>
-        <span className="text-xs text-text-muted">{unit}</span>
-      </div>
-    </Card>
-  );
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString();
+}
+
+function statusColor(status: string): "success" | "warning" | "danger" {
+  if (status === "healthy") return "success";
+  if (status === "degraded") return "warning";
+  return "danger";
 }
 
 export function MetricsRow() {
-  const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
+  const [llmMetrics, setLlmMetrics] = useState<LLMMetricsResponse | null>(null);
+  const [llmHealth, setLlmHealth] = useState<LLMHealthResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    dashboardApi
-      .getMetrics()
-      .then((data) => {
-        if (!cancelled) setMetrics(data);
-      })
-      .catch(() => {
-        if (!cancelled) setMetrics(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+
+    const fetchData = () => {
+      void Promise.all([
+        dashboardApi.getLLMMetrics(),
+        dashboardApi.getLLMHealth(),
+      ])
+        .then(([metrics, health]) => {
+          if (!cancelled) {
+            setLlmMetrics(metrics);
+            setLlmHealth(health);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setLlmMetrics(null);
+            setLlmHealth(null);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {[...Array(6)].map((_, i) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {[...Array(5)].map((_, i) => (
           <Card key={i} className="p-4">
-            <div className="h-3 w-16 shimmer-bg rounded" />
-            <div className="mt-2 h-6 w-10 shimmer-bg rounded" />
+            <Skeleton className="h-3 w-16 mb-2" />
+            <Skeleton className="h-6 w-14" />
           </Card>
         ))}
       </div>
@@ -62,13 +71,43 @@ export function MetricsRow() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-      <MetricCard label="CPU" value={metrics?.cpu_percent ?? 0} unit="%" />
-      <MetricCard label="Memory" value={metrics?.memory_percent ?? 0} unit="%" />
-      <MetricCard label="Disk" value={metrics?.disk_percent ?? 0} unit="%" />
-      <MetricCard label="Connections" value={metrics?.active_connections ?? 0} unit="active" />
-      <MetricCard label="Requests" value={metrics?.requests_today ?? 0} unit="today" />
-      <MetricCard label="Avg Latency" value={metrics?.avg_response_ms ?? 0} unit="ms" />
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <Card className="p-4">
+        <p className="text-xs text-text-muted mb-1">Total Requests</p>
+        <p className="text-headline font-semibold text-text-primary tabular-nums">
+          {llmMetrics ? formatCount(llmMetrics.total_requests) : "---"}
+        </p>
+      </Card>
+      <Card className="p-4">
+        <p className="text-xs text-text-muted mb-1">Total Tokens</p>
+        <p className="text-headline font-semibold text-text-primary tabular-nums">
+          {llmMetrics ? formatCount(llmMetrics.total_tokens) : "---"}
+        </p>
+      </Card>
+      <Card className="p-4">
+        <p className="text-xs text-text-muted mb-1">Avg Latency</p>
+        <p className="text-headline font-semibold text-text-primary tabular-nums">
+          {llmMetrics ? `${llmMetrics.avg_latency} ms` : "---"}
+        </p>
+      </Card>
+      <Card className="p-4">
+        <p className="text-xs text-text-muted mb-1">LLM Status</p>
+        <div className="flex items-center gap-2">
+          <StatusDot
+            color={statusColor(llmHealth?.status ?? "danger")}
+            pulse={llmHealth?.status === "healthy"}
+          />
+          <span className="text-sm font-medium text-text-primary capitalize">
+            {llmHealth?.status ?? "unknown"}
+          </span>
+        </div>
+      </Card>
+      <Card className="p-4">
+        <p className="text-xs text-text-muted mb-1">LLM Latency</p>
+        <p className="text-headline font-semibold text-text-primary tabular-nums">
+          {llmHealth ? `${llmHealth.latency_ms} ms` : "---"}
+        </p>
+      </Card>
     </div>
   );
 }

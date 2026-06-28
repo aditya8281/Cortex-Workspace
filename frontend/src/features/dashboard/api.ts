@@ -1,26 +1,39 @@
-import { apiFetch } from "@/shared/api/client";
+"use client";
 
-export interface HealthStatus {
-  status: "healthy" | "degraded" | "down";
-  database: "connected" | "disconnected";
-  redis: "connected" | "disconnected";
-  uptime_seconds: number;
-}
+import { apiFetch } from "@/shared/api/client";
 
 export interface SystemMetrics {
   cpu_percent: number;
-  memory_percent: number;
+  ram_total_gb: number;
+  ram_used_gb: number;
+  ram_percent: number;
+  gpu_name: string | null;
+  gpu_type: string | null;
+  gpu_percent: number | null;
+  disk_total_gb: number;
+  disk_used_gb: number;
   disk_percent: number;
-  active_connections: number;
-  requests_today: number;
-  avg_response_ms: number;
+  processes: ProcessInfo[];
 }
 
-export interface LLMHealth {
-  ollama: "healthy" | "degraded" | "down";
-  active_model: string | null;
-  requests_per_minute: number;
-  avg_latency_ms: number;
+export interface ProcessInfo {
+  pid: number;
+  name: string;
+  cpu: number;
+  memory: number;
+  status: string;
+}
+
+export interface LLMHealthResponse {
+  status: string;
+  latency_ms: number;
+  error: string | null;
+}
+
+export interface LLMMetricsResponse {
+  total_requests: number;
+  total_tokens: number;
+  avg_latency: number;
 }
 
 export interface ActivityItem {
@@ -32,10 +45,9 @@ export interface ActivityItem {
 }
 
 export const dashboardApi = {
-  getHealth: () => apiFetch<HealthStatus>("/system/health/live"),
-  getDeepHealth: () => apiFetch<HealthStatus>("/system/health/deep"),
   getMetrics: () => apiFetch<SystemMetrics>("/system/metrics"),
-  getLLMHealth: () => apiFetch<LLMHealth>("/models/health"),
+  getLLMHealth: () => apiFetch<LLMHealthResponse>("/models/health"),
+  getLLMMetrics: () => apiFetch<LLMMetricsResponse>("/models/metrics"),
   getRecentActivity: () =>
     apiFetch<{ items: ActivityItem[] }>("/conversations?limit=5").catch(() => ({
       items: [] as ActivityItem[],
