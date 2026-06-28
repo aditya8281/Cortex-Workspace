@@ -55,13 +55,14 @@ Load these skills IN ORDER before any implementation:
 
 1. **`cortex-repo-discovery`** — find root, set CWD
 2. **Read `DESIGN.md`** — load all tokens, typography, elevation, components
-3. **Read `.claude/skills/design/SKILL.md`** — load full phase plan
+3. **Read `.claude/skills/design/SKILL.md`** — load full phase plan with animation budgets and anti-slop rules
 4. **`brainstorming`** — if significant design decisions needed for current phase
 5. **`writing-plans`** — create implementation plan for current phase
-6. **`impeccable`** — enforce design quality during implementation
-7. **`emil-design-eng`** — animation decisions for interactive elements
-8. **`design-taste-frontend`** — anti-slop guard
-9. **`frontend-design`** — grounding in subject matter
+6. **`ui-ux-pro-max`** — design intelligence, style selection, palette, font pairings, layout systems, UX guidelines
+7. **`impeccable`** — enforce design quality during implementation — contrast, typography, layout, craft
+8. **`ui-styling`** — Tailwind CSS + shadcn/ui component creation, accessible components, responsive layouts
+9. **`emil-design-eng`** — **primary animation authority** — every animation decision goes through Emil's philosophy and budgets
+10. **`design-taste-frontend`** — anti-slop guard — catches gradient text, glassmorphism, identical cards, eyebrows, numbered sections
 
 ### Step 2: Dependency Check
 
@@ -88,12 +89,14 @@ If dependencies missing: install them. If backend not running: note it (frontend
 ```
 FOR each phase from START_PHASE to 12:
   1. Read phase definition from .claude/skills/design/SKILL.md
-  2. Create all files for this phase
-  3. Run: cd frontend && npm run build
-  4. If build fails: fix errors, re-run build
-  5. Commit: "feat(frontend): Phase N — [phase name]"
-  6. Report: files created, build status
-  7. Continue to next phase
+  2. Invoke skill chain for this phase (see skill matrix in SKILL.md)
+  3. Create all files for this phase
+  4. Run: cd frontend && npm run build
+  5. If build fails: fix errors, re-run build
+  6. Run review-animations if phase has motion (Phase 1, 2, 3, 4, 12)
+  7. Commit: "feat(frontend): Phase N — [phase name]"
+  8. Report: files created, build status
+  9. Continue to next phase
 END FOR
 ```
 
@@ -109,17 +112,20 @@ cd frontend && npm run build
 npx tsc --noEmit 2>/dev/null
 
 # Check for forbidden patterns (use the actual token names from DESIGN.md)
-# The grep below uses generic patterns — adjust for your project's tokens
-grep -rn 'font-inter\|text-primary\|text-secondary\|text-muted\|bg-surface\|bg-elevated\|rounded-xl\|100vh' frontend/src/ --include='*.tsx' --include='*.ts' 2>/dev/null | grep -v node_modules | grep -v '.next'
+grep -rn 'font-inter\|text-primary\|text-secondary\|text-muted\|bg-surface\|bg-elevated\|rounded-xl\|100vh\|transition: all\|scale(0)\|ease-in' frontend/src/ --include='*.tsx' --include='*.ts' 2>/dev/null | grep -v node_modules | grep -v '.next'
+
+# Check for missing prefers-reduced-motion on animated elements
+grep -rn 'transition-\|animate-' frontend/src/ --include='*.tsx' 2>/dev/null | grep -v 'reduced-motion' | grep -v node_modules
 ```
 
 ### Step 5: Polish Pass
 
-Run `/impeccable polish` for final quality:
-- Contrast verification
-- Motion decisions
-- Responsive check
-- Anti-slop checklist
+Run ALL of these in sequence:
+
+1. **`/impeccable polish`** — contrast verification, motion decisions, responsive check, anti-slop checklist
+2. **`review-animations`** — brutal review against Emil's 10 non-negotiable standards. Flags `transition: all`, `scale(0)`, `ease-in`, non-GPU properties, missing reduced-motion, wrong transform-origin, symmetric timing. Default is flagging — approval is earned.
+3. Fix any findings from either review
+4. Re-run build to confirm clean
 
 ### Step 6: Report
 
@@ -135,6 +141,12 @@ Output final status:
 
 ### Pages Built:
 [List all pages from phase plan, mark implemented vs Coming Soon]
+
+### Animation Review: PASS/FAIL
+[Number of findings from review-animations, fixed/blocked]
+
+### Taste Review: PASS/FAIL
+[Number of anti-slop findings, fixed/blocked]
 
 ### Next Steps:
 1. cd frontend && npm run dev
@@ -154,16 +166,16 @@ If any phase fails:
 
 ## Phase Quick Reference
 
-| Phase | Name | What It Builds |
-|-------|------|----------------|
-| 0 | Foundation | Scaffold, design system, shared UI |
-| 1 | Auth + Layout | Login, register, app shell, sidebar |
-| 2 | Main Dashboard | System overview, quick actions, metrics |
-| 3 | Chat | Conversations, streaming, model selection |
-| 4 | Agents | Agent management, chat, run history |
-| 5 | System + Settings | Health monitoring, user settings |
-| 6–11 | Future Features | Coming Soon placeholders |
-| 12 | Polish | Animations, a11y, responsive, final validation |
+| Phase | Name | What It Builds | Key Skills |
+|-------|------|----------------|------------|
+| 0 | Foundation | Scaffold, design system, shared UI | brainstorming, ui-ux-pro-max, impeccable, ui-styling |
+| 1 | Auth + Layout | Login, register, app shell, sidebar | brainstorming, emil-design-eng, design-taste-frontend |
+| 2 | Main Dashboard | System overview, quick actions, metrics | brainstorming, emil-design-eng, design-taste-frontend |
+| 3 | Chat | Conversations, streaming, model selection | brainstorming, emil-design-eng, design-taste-frontend |
+| 4 | Agents | Agent management, chat, run history | emil-design-eng, design-taste-frontend |
+| 5 | System + Settings | Health monitoring, user settings | impeccable, ui-styling, design-taste-frontend |
+| 6–11 | Future Features | Coming Soon placeholders | impeccable, ui-styling |
+| 12 | Polish | Animations, a11y, responsive, final validation | ALL skills |
 
 ## Arguments Handling
 
@@ -174,14 +186,58 @@ If any phase fails:
 - **`validate`**: Skip implementation, just run build + lint + checks
 - **`polish`**: Run only Phase 12 (polish pass)
 
-## Skills Used
+## Skills Used (Complete List)
 
-| Skill | When | Purpose |
-|-------|------|---------|
-| `cortex-repo-discovery` | Every run | Find repo root |
-| `brainstorming` | Phase 0, 3 | Design decisions for layout, chat UX |
-| `writing-plans` | Each phase | Create implementation plan |
-| `impeccable` | During implementation | Design quality enforcement |
-| `emil-design-eng` | Phase 3, 4 | Animation decisions for chat, agents |
-| `design-taste-frontend` | All phases | Anti-slop guard |
-| `frontend-design` | Phase 0, 1 | Ground design in subject |
+| Skill | Category | When | Purpose |
+|-------|----------|------|---------|
+| `cortex-repo-discovery` | Setup | Every run | Find repo root, set CWD |
+| `brainstorming` | Planning | Phase 0, 1, 2, 3, 12 | Explore approaches, ask clarifying questions, present 2-3 options, get user approval before coding |
+| `writing-plans` | Planning | Each phase | Bite-sized implementation plan with exact file paths, code, test commands, TDD when applicable |
+| `ui-ux-pro-max` | Design | Phase 0, 1, 2, 5, 12 | Design intelligence — 67 styles, 161 palettes, 57 font pairings, UX guidelines, component patterns |
+| `impeccable` | Craft | All phases | Design quality enforcement — contrast, typography, layout, anti-slop, production-grade code |
+| `ui-styling` | Implementation | All phases | Tailwind CSS + shadcn/ui — accessible components, responsive layouts, dark mode, design system tokens |
+| `emil-design-eng` | Animation | Phase 1, 2, 3, 4, 12 | **Primary animation authority** — Emil Kowalski's philosophy. Every animation must justify itself. 10 non-negotiable standards. Duration budgets. Anti-patterns. |
+| `design-taste-frontend` | Taste | All phases | Anti-slop guard — catches gradient text, glassmorphism, identical cards, eyebrows, numbered sections, side-stripe borders |
+| `review-animations` | Review | After any phase with motion | Brutal animation review against Emil's standards. Default to flagging. Approval is earned, not assumed. |
+| `impeccable polish` | Polish | Phase 12 | Final quality pass — contrast, motion, responsive, anti-slop checklist |
+
+## Animation Decision Flow
+
+When building any interactive element, follow this flow:
+
+```
+Element needs animation?
+    ↓
+YES → What is the purpose? (spatial, state, feedback, explanation)
+    ↓
+Purpose justified? → NO → Don't animate. Done.
+    ↓
+YES → How often is this element seen?
+    ↓
+100+/day → No animation or minimal (opacity only)
+Tens/day → Reduced motion (shorter, smaller)
+Occasional → Standard (per Emil budgets)
+Rare/first-time → Can have delight
+    ↓
+What properties to animate?
+    ↓
+ONLY transform + opacity. Never width/height/margin/padding.
+    ↓
+What easing?
+    ↓
+Enter: ease-out or custom curve. NEVER ease-in.
+Exit: ease-in (faster out than in for deliberate actions)
+    ↓
+What duration?
+    ↓
+UI elements: <300ms. Per-element budgets in SKILL.md.
+    ↓
+Transform-origin correct?
+    ↓
+Dropdowns/popovers/tooltips: from trigger, NOT center.
+Modals: center is OK.
+    ↓
+prefers-reduced-motion handled?
+    ↓
+YES → Ship it. Run review-animations after.
+```
