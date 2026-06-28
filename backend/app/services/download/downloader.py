@@ -434,6 +434,49 @@ class DownloadManager:
             for r in records[:limit]
         ]
 
+    def reorder(self, new_order: list[str]) -> list[str]:
+        """Reorder the internal queue by download_id order.
+
+        Only existing QUEUED/PAUSED IDs are considered. IDs not in _records
+        are silently ignored. Returns the new order of all remaining IDs.
+        """
+        # Collect IDs that are still in the queue (QUEUED or PAUSED)
+        queued_ids = [
+            r.download_id for r in self._records.values()
+            if r.status in (DownloadStatus.QUEUED, DownloadStatus.PAUSED)
+        ]
+        queued_set = set(queued_ids)
+
+        # Filter new_order to only valid queued IDs, preserving order
+        reordered = [did for did in new_order if did in queued_set]
+
+        # Append any queued IDs not in new_order (in original order)
+        for did in queued_ids:
+            if did not in reordered:
+                reordered.append(did)
+
+        return reordered
+
+    def clear_terminal(self) -> int:
+        """Remove all COMPLETED, FAILED, and CANCELLED records from state.
+
+        Returns the number of records removed.
+        """
+        terminal_statuses = {
+            DownloadStatus.COMPLETED,
+            DownloadStatus.FAILED,
+            DownloadStatus.CANCELLED,
+        }
+        to_remove = [
+            did for did, rec in self._records.items()
+            if rec.status in terminal_statuses
+        ]
+        for did in to_remove:
+            del self._records[did]
+        if to_remove:
+            self._save_state()
+        return len(to_remove)
+
     def clear_queue(self) -> int:
         count = 0
         for record in self._records.values():
