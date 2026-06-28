@@ -30,7 +30,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="space-y-6 stagger-children">
         <div>
           <h1 className="text-headline font-semibold text-text-primary">
             Dashboard

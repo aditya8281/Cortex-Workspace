@@ -60,12 +60,32 @@ const config: Config = {
       },
       keyframes: {
         "fade-in": {
-          from: { opacity: "0", transform: "translateY(8px)" },
+          from: { opacity: "0", transform: "translateY(6px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "fade-in-scale": {
-          from: { opacity: "0", transform: "scale(0.95)" },
+          from: { opacity: "0", transform: "scale(0.96)" },
           to: { opacity: "1", transform: "scale(1)" },
+        },
+        "slide-in-right": {
+          from: { opacity: "0", transform: "translateX(12px)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "slide-in-up": {
+          from: { opacity: "0", transform: "translateY(16px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "slide-out-down": {
+          from: { opacity: "1", transform: "translateY(0)" },
+          to: { opacity: "0", transform: "translateY(8px)" },
+        },
+        "scale-in": {
+          from: { opacity: "0", transform: "scale(0.92)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+        "scale-out": {
+          from: { opacity: "1", transform: "scale(1)" },
+          to: { opacity: "0", transform: "scale(0.95)" },
         },
         shimmer: {
           from: { backgroundPosition: "-200% 0" },
@@ -75,12 +95,23 @@ const config: Config = {
           "0%, 100%": { opacity: "0.4" },
           "50%": { opacity: "1" },
         },
+        "spin-slow": {
+          from: { transform: "rotate(0deg)" },
+          to: { transform: "rotate(360deg)" },
+        },
       },
       animation: {
-        "fade-in": "fade-in 0.25s ease-out",
-        "fade-in-scale": "fade-in-scale 0.25s ease-out",
+        "fade-in": "fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+        "fade-in-slow": "fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
+        "fade-in-scale": "fade-in-scale 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-in-right": "slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-in-up": "slide-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-out-down": "slide-out-down 0.15s cubic-bezier(0.4, 0, 1, 1)",
+        "scale-in": "scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+        "scale-out": "scale-out 0.12s cubic-bezier(0.4, 0, 1, 1)",
         shimmer: "shimmer 2s linear infinite",
         "pulse-dot": "pulse-dot 1.5s ease-in-out infinite",
+        "spin-slow": "spin-slow 3s linear infinite",
       },
     },
   },

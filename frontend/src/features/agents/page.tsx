@@ -163,7 +163,7 @@ export default function AgentsPage() {
             action={<Button onClick={() => setShowCreate(true)}>Create Agent</Button>}
           />
         ) : (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 stagger-children">
             {agents.map((agent) => (
               <AgentCard
                 key={agent.id}

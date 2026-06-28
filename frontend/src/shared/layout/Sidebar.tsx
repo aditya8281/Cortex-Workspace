@@ -81,7 +81,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-3 space-y-0.5">
+      <nav className="flex-1 px-3 py-3 space-y-0.5 stagger-children">
         {navigation.map((item) => {
           const isActive =
             item.href === "/"
@@ -93,13 +93,17 @@ export function Sidebar() {
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200",
+                "group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium",
+                "transition-all duration-150 ease-out",
                 isActive
                   ? "bg-accent/10 text-accent"
                   : "text-text-secondary hover:text-text-primary hover:bg-bg-hover",
               )}
             >
-              <span className="flex-shrink-0">{iconMap[item.icon]}</span>
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent" />
+              )}
+              <span className="flex-shrink-0 transition-transform duration-150 group-hover:scale-105">{iconMap[item.icon]}</span>
               {item.name}
             </Link>
           );

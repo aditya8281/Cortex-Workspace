@@ -64,6 +64,45 @@
   .focus-ring {
     box-shadow: 0 0 0 2px rgba(14, 165, 201, 0.3);
   }
+
+  /* Interactive surface — hover lift + press sink */
+  .surface-interactive {
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.15s ease;
+  }
+  .surface-interactive:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  .surface-interactive:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Button press feedback */
+  .btn-press {
+    transition: transform 0.1s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.1s ease;
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+
+  /* Stagger children entrance */
+  .stagger-children > * {
+    opacity: 0;
+    animation: fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 40ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 80ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 120ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 160ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 200ms; }
+  .stagger-children > *:nth-child(7) { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(8) { animation-delay: 280ms; }
 }
 
 @layer utilities {

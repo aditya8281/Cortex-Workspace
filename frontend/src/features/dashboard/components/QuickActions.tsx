@@ -42,13 +42,13 @@ export function QuickActions() {
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {actions.map((action) => (
         <Link key={action.name} href={action.href} className="group">
-          <Card className="p-4 transition-colors duration-200 group-hover:border-accent/30">
+          <Card className="p-4 group-hover:border-accent/30">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-bg-surface text-text-muted group-hover:text-accent transition-colors duration-200">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-bg-surface text-text-muted group-hover:text-accent group-hover:bg-accent/8 transition-all duration-200">
                 {action.icon}
               </div>
               <div>
-                <p className="text-sm font-medium text-text-primary">{action.name}</p>
+                <p className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors duration-150">{action.name}</p>
                 <p className="text-xs text-text-muted">{action.description}</p>
               </div>
             </div>
