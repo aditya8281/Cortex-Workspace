@@ -1,7 +1,7 @@
 # v1.05 Progress — CORTEX
 
-**Status:** In Progress
-**Last Updated:** 2026-06-27
+**Status:** ✅ Completed
+**Last Updated:** 2026-06-28
 
 ## Phase Progress
 
@@ -15,10 +15,17 @@
 ## Summary
 
 - Total Phases: 4
-- Completed: 4
+- Completed: 4 (P01–P04) ✅
 - In Progress: 0
 - Remaining: 0
-- Estimated Duration: 3-4 days
+- **Version: COMPLETE**
+
+## Commits
+
+- feat(privacy): v1.05 P01 — Privacy models, schemas, and migration
+- feat(privacy): v1.05 P02 — Encryption, access control, data masking services
+- feat(privacy): v1.05 P03 — Audit, transparency, export, deletion services
+- feat(privacy): v1.05 P04 — Privacy API routers and integration tests
 
 ## Blockers
 

@@ -15,6 +15,8 @@ This document is the navigation layer for the entire Cortex implementation roadm
 
 ## Current Repository State
 
+**Last updated:** 2026-06-28
+
 The current repository contains:
 
 - **Backend:** FastAPI + SQLAlchemy 2.0 + Alembic + PostgreSQL 16
@@ -26,32 +28,45 @@ The current repository contains:
 - **Developer Ecosystem:** 142 skills, 18 commands, 16 hooks
 - **Storage:** PostgreSQL 16 + Redis 7 + Qdrant (embedded)
 - **Embeddings:** ONNX Runtime BGE-M3 (768-dim)
+- **Tests:** 1429 passing, 17 frontend pages, 24 backend API endpoint files
 
-### What Works
+### Versions Complete (v1.01–v1.05)
 
-- Agent loop with tool execution
-- Basic memory (conversations, documents, knowledge graph)
-- Basic awareness (filesystem, repository, document indexing)
-- Basic search (vector + fulltext + graph via RRF + MMR)
-- Authentication (JWT + CSRF)
-- Encryption (Fernet vault)
-- Streaming (SSE)
-- Desktop daemon
-- Code intelligence (Rust crate)
-- 142 skills, 18 commands, 16 hooks
+| Version | Name | Phases | Key Deliverables |
+|---------|------|--------|------------------|
+| v1.01 | Repository Restructure | 8/8 ✅ | Domain-driven reorganization, 11 service domains, 9 schema domains, 12 frontend feature modules |
+| v1.02 | Backend Architecture | 8/8 ✅ | API domain reorganization, EventBus (30 EventTypes, 8 handlers), Agent hardening, MCP integration, Tool infrastructure, Observability, 1451 tests |
+| v1.03 | Memory Foundation | 5/5 ✅ | Episodic/semantic/working memory, graph services, memory search, forgetting, 35 memory API endpoints |
+| v1.04 | Awareness Foundation | 4/4 ✅ | Filesystem indexing, repository scanning, project detection, device info, health monitoring, 58 awareness tests |
+| v1.05 | Privacy & Trust | 4/4 ✅ | 6 privacy models, encryption (Fernet), access control, audit logging, consent, data export, transparency, vault management, 79 privacy tests |
 
-### What's Missing
+### What Works (After v1.01–v1.05)
 
-- 97 of 120 capabilities have zero implementation
-- 28 capabilities are incomplete
-- No event-driven architecture
-- No domain-driven service organization
-- No frontend feature modules
-- No learning system
-- No planning system
-- No workflow orchestration
-- No voice interaction
-- No utility platform (calendar, email, tasks, notes)
+- **Memory domain:** Episodic, semantic, working memory, memory graph, auto-connections, long-term memory, search (vector + fulltext + graph via RRF + MMR), forgetting/temporal decay
+- **Awareness domain:** Filesystem indexing, repository scanning, project detection, device info, environment scanning, health monitoring, indexing config
+- **Privacy domain:** Fernet encryption, access control (RBAC + ABAC), audit logging, consent management, data export, data deletion, transparency reports, vault (lock/unlock/upload/download/move/rename)
+- **Agent system:** Tool execution loop, stall detection, context compaction, tool policy/MCP gating
+- **Event bus:** 30 event types, 8 handlers, cross-domain communication
+- **MCP integration:** Discovery, wrapper, transport, config, search, bridge
+- **Observability:** Token counting, TPS, context window tracking, timing, logging, baseline metrics
+- **Frontend:** 17 pages (auth, dashboard, chat, agents, models, memory, search, awareness/*, privacy/*, settings, system) + 4 Coming Soon (marketplace, notes, scheduler, tasks)
+- **Auth:** JWT access + refresh tokens, CSRF double-submit
+- **Integration:** Model downloads, sync, Ollama catalog
+- **1429 tests passing**
+
+### What's Not Yet Built (v1.06–v1.14)
+
+| Version | Name | Phases | Status |
+|---------|------|--------|--------|
+| v1.06 | Cognition & Execution Core | 5 | Not started |
+| v1.07 | Memory Evolution | 4 | Not started |
+| v1.08 | Awareness Expansion | 5 | Not started |
+| v1.09 | Learning Foundation | 5 | Not started |
+| v1.10 | Planning & Orchestration | 5 | Not started |
+| v1.11 | Interaction & Voice | 5 | Not started |
+| v1.12 | Developer Craft | 6 | Not started |
+| v1.13 | Daily Life Tools | 6 | Not started |
+| v1.14 | Advanced Intelligence | 4 | Not started |
 
 ---
 

@@ -10,197 +10,280 @@ Interactive docs: `http://localhost:8000/docs`
 
 ## Authentication
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/auth/register` | Create account | None |
-| `/api/auth/login` | Login, set httpOnly cookies | None |
-| `/api/auth/logout` | Revoke refresh token, lock vault | Required |
-| `/api/auth/refresh` | Rotate access + refresh tokens | Cookie |
-| `/api/auth/check-username` | Check username availability | None |
+Registered at `/api/v1/auth/*` (no domain prefix).
 
-## Users (Admin)
+| Route | Method | Purpose | Auth |
+|-------|--------|---------|------|
+| `/api/v1/auth/register` | POST | Create account | None |
+| `/api/v1/auth/login` | POST | Login, set httpOnly cookies | None |
+| `/api/v1/auth/logout` | POST | Revoke refresh token, lock vault | Required |
+| `/api/v1/auth/refresh` | POST | Rotate access + refresh tokens | Cookie |
+| `/api/v1/auth/check-username` | POST | Check username availability | None |
+| `/api/v1/auth/me` | GET/PUT/DELETE | Get/update/delete profile | Required |
+| `/api/v1/auth/restore` | POST | Restore vault from backup | Required |
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/users/` | List users | Admin |
-| `/api/v1/users/{user_id}` | Get/update/delete user | Admin |
-| `/api/v1/users/{user_id}/promote` | Promote to admin | Admin |
-| `/api/v1/users/{user_id}/demote` | Demote from admin | Admin |
+## Memory Domain
 
-## Profile
+All routes under `/api/v1/memory/*`.
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/me/profile` | GET/PUT profile | Required |
-| `/api/v1/me/profile/photo` | Upload/delete avatar | Required |
-| `/api/v1/me/github` | GET/POST/DELETE GitHub connection | Required |
+### Knowledge
 
-## Vault
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/memory/knowledge/health` | GET | Knowledge system health |
+| `/api/v1/memory/knowledge/stats` | GET | Knowledge statistics |
+| `/api/v1/memory/knowledge/retrieval-metrics` | GET | Retrieval performance metrics |
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/me/vault/lock` | Lock vault | Required |
-| `/api/v1/me/vault/unlock` | Unlock vault (vault password) | Required |
-| `/api/v1/me/vault/files` | List/create/upload files | Required |
-| `/api/v1/me/vault/files/{path}` | Get/update/delete file | Required |
-| `/api/v1/me/vault/search` | Search vault files | Required |
+### Search
 
-## Memory
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/memory/search` | GET/POST | Unified search |
+| `/api/v1/memory/search/answer` | POST | AI-powered answer generation |
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/memory` | List/create knowledge entries | Required |
-| `/api/memory/search` | Semantic search | Required |
-| `/api/memory/scan-repo` | Trigger repository scanning | Required |
-| `/api/memory/bulk-embed` | Bulk embedding generation | Required |
+### Long-Term Memory
 
-## Search
-
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/search` | Unified search across all data types | Required |
-
-## Repositories
-
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/repos` | Repository CRUD + indexing triggers | Required |
-
-## Agents
-
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/agents` | Agent CRUD | Required |
-| `/api/v1/agents/{id}/runs` | Agent run management | Required |
-| `/api/v1/agents/{id}/runs/{id}/steps` | Agent step tracking | Required |
-| `/api/v1/agents/{id}/runs/{id}/feedback` | User feedback on runs | Required |
-
-## Conversations
-
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/conversations` | Conversation CRUD + SSE streaming | Required |
-
-## Models
-
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/models` | Model catalog listing | Required |
-| `/api/v1/models/installed` | Installed models | Required |
-| `/api/v1/models/{model_id}` | Model details | Required |
-| `/api/v1/models/{model_id}/download` | Download model | Required |
-| `/api/v1/models/{model_id}/compare` | Compare models | Required |
-| `/api/v1/models/settings` | Per-user model settings | Required |
-
-## Long-Term Memory
-
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/long-term-memory` | CRUD + decay management | Required |
-
-## Cortex Memory (v1.03)
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/memory/long-term-memory` | GET/POST | List/create memories |
+| `/api/v1/memory/long-term-memory/stats` | GET | Statistics |
+| `/api/v1/memory/long-term-memory/{id}/reinforce` | POST | Reinforce memory |
+| `/api/v1/memory/long-term-memory/{id}` | DELETE | Delete memory |
 
 ### Episodic Memory
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/v1/episodic` | POST | Create episodic memory |
-| `/api/v1/episodic` | GET | List recent (paginated) |
-| `/api/v1/episodic/search` | GET | Search by content |
-| `/api/v1/episodic/{id}` | GET | Get by ID |
-| `/api/v1/episodic/{id}` | PATCH | Partial update |
-| `/api/v1/episodic/{id}` | DELETE | Delete |
+| `/api/v1/memory/episodic` | GET/POST | List/create episodic memories |
+| `/api/v1/memory/episodic/{id}` | GET/PUT/DELETE | Get/update/delete |
 
 ### Semantic Memory
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/v1/semantic` | POST | Create (dedup on exact content match) |
-| `/api/v1/semantic` | GET | List (filter by category) |
-| `/api/v1/semantic/categories` | GET | Get all categories with counts |
-| `/api/v1/semantic/search` | GET | Search by content |
-| `/api/v1/semantic/{id}` | GET | Get by ID |
-| `/api/v1/semantic/{id}` | PATCH | Partial update |
-| `/api/v1/semantic/{id}` | DELETE | Delete |
+| `/api/v1/memory/semantic` | GET/POST | List/create semantic memories |
 
 ### Working Memory
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/v1/working` | POST | Add item (session-scoped) |
-| `/api/v1/working` | GET | Get active items (query: session_id, slot) |
-| `/api/v1/working/{id}/promote` | POST | Promote to active slot |
-| `/api/v1/working/{id}/archive` | POST | Archive item |
-| `/api/v1/working/{id}/demote` | POST | Demote to buffer |
-| `/api/v1/working/{id}` | DELETE | Remove item |
-| `/api/v1/working/session/{session_id}` | DELETE | Clear entire session |
-| `/api/v1/working/session/{session_id}/summary` | GET | Session stats (active/buffer/archive/expired counts) |
+| `/api/v1/memory/working` | GET/POST | List/create working memory items |
+| `/api/v1/memory/working/{id}` | GET/PUT/DELETE | Get/update/delete |
 
 ### Memory Graph
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/v1/graph/node` | POST | Create node (links to episodic or semantic memory) |
-| `/api/v1/graph/edge` | POST | Create edge (self-loops rejected, duplicates strengthen) |
-| `/api/v1/graph/stats` | GET | Graph statistics (node/edge counts, avg weight, strongest) |
-| `/api/v1/graph/strongest` | GET | Strongest edges (query: limit) |
-| `/api/v1/graph/node/{id}/connections` | GET | BFS neighbors (query: depth 1-5) |
-| `/api/v1/graph/path/{src}/{dst}` | GET | Shortest path BFS (query: max_depth 1-10) |
-| `/api/v1/graph/edge/{id}/strengthen` | POST | Strengthen edge weight |
-| `/api/v1/graph/edge/{id}` | DELETE | Delete edge |
+| `/api/v1/memory/graph` | GET | List graph nodes/edges |
+| `/api/v1/memory/graph/{id}` | GET | Get node with connections |
 
-### Cross-Type Search & Forgetting
+### Cortex Search & Forgetting
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/v1/cortex-search` | GET | Multi-signal search across all memory types |
-| `/api/v1/cortex-search/related` | GET | Graph-connected related memories |
-| `/api/v1/cortex-search/importance` | GET | Search by importance threshold |
-| `/api/v1/cortex-search/recency` | GET | Search by most recent |
-| `/api/v1/forget` | POST | Apply Ebbinghaus-style forgetting decay |
-| `/api/v1/forget/stats` | GET | Forgetting statistics (counts, avg confidence) |
+| `/api/v1/memory/cortex-search` | POST | Multi-signal search |
+| `/api/v1/memory/forget` | POST | Apply forgetting decay |
 
-## Knowledge
+## Awareness Domain
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/knowledge` | Knowledge system health + stats | Required |
+All routes under `/api/v1/awareness/*`.
 
-## Indexing
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/awareness/device/info` | GET | Hardware and OS info |
+| `/api/v1/awareness/environment` | GET | Safe environment variables |
+| `/api/v1/awareness/environment/paths` | GET | System PATH entries |
+| `/api/v1/awareness/files/scan` | POST | Scan directory |
+| `/api/v1/awareness/files/changes` | GET | Recent file changes |
+| `/api/v1/awareness/files/summary` | GET | File statistics |
+| `/api/v1/awareness/health` | GET | System health status |
+| `/api/v1/awareness/health/status` | GET | Health summary |
+| `/api/v1/awareness/indexing/config` | GET/PUT | Indexing configuration |
+| `/api/v1/awareness/indexing/preview` | POST | Preview indexing scope |
+| `/api/v1/awareness/project/scan` | GET | Detect project type/frameworks |
+| `/api/v1/awareness/repos` | GET/POST | List/create repositories |
+| `/api/v1/awareness/repos/{id}` | GET/PUT/DELETE | Repository CRUD |
+| `/api/v1/awareness/repos/{id}/index` | POST | Trigger repository indexing |
+| `/api/v1/awareness/repos/{id}/graph` | GET | Repository code graph |
+| `/api/v1/awareness/repos/{id}/graph/node/{nodeId}` | GET | Graph node details |
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/indexing` | Indexing config CRUD + preview | Required |
+## Privacy Domain
 
-## Sync
+All routes under `/api/v1/privacy/*`.
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/sync` | File watcher start/stop + validation | Required |
+### Audit
 
-## Notifications
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/privacy/audit/logs` | GET | Audit log entries |
+| `/api/v1/privacy/audit/stats` | GET | Audit statistics |
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/notifications` | List/read notifications | Required |
+### Consent
 
-## System
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/privacy/consent` | GET | List consent items |
+| `/api/v1/privacy/consent/grant` | POST | Grant consent |
+| `/api/v1/privacy/consent/revoke` | POST | Revoke consent |
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/api/v1/health/live` | Liveness probe | None |
-| `/api/v1/health/ready` | Readiness probe | None |
-| `/api/v1/health/deep` | Deep health check | None |
-| `/api/v1/system/status` | System status | Varies |
-| `/api/v1/system/metrics` | System metrics | Varies |
+### Export
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/privacy/export/create` | POST | Create data export |
+| `/api/v1/privacy/export/status/{id}` | GET | Export status |
+| `/api/v1/privacy/export/list` | GET | List exports |
+
+### Transparency
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/privacy/transparency/summary` | GET | Data usage summary |
+| `/api/v1/privacy/transparency/templates` | GET | Transparency report templates |
+
+### Access Control
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/privacy/access-control/roles` | GET | List roles/permissions |
+
+### Vault
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/privacy/vault/status` | GET | Vault lock status |
+| `/api/v1/privacy/vault/files` | GET | List vault files |
+| `/api/v1/privacy/vault/files/upload` | POST | Upload file |
+| `/api/v1/privacy/vault/files/preview/{path}` | GET | Preview file content |
+| `/api/v1/privacy/vault/files/download/{path}` | GET | Download file |
+| `/api/v1/privacy/vault/files/{path}` | DELETE | Delete file |
+| `/api/v1/privacy/vault/files/{path}/rename` | PUT | Rename file |
+| `/api/v1/privacy/vault/files/{path}/metadata` | PUT | Update metadata |
+| `/api/v1/privacy/vault/files/move` | POST | Move file |
+| `/api/v1/privacy/vault/folders` | POST | Create folder |
+| `/api/v1/privacy/vault/search` | POST | Search vault files |
+| `/api/v1/privacy/vault/lock` | POST | Lock vault |
+| `/api/v1/privacy/vault/unlock` | POST | Unlock vault |
+| `/api/v1/privacy/vault/change-password` | POST | Change vault password |
+
+### Model Settings (via privacy router)
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/privacy/models/usage/stats` | GET | Model usage statistics |
+| `/api/v1/privacy/models/sync` | POST | Sync model catalog |
+| `/api/v1/privacy/models/storage` | GET | Storage usage breakdown |
+| `/api/v1/privacy/models/updates` | GET | Available model updates |
+| `/api/v1/privacy/models/settings` | GET/PUT | Per-user model settings |
+| `/api/v1/privacy/models/catalogue/refresh` | POST | Refresh model catalog |
+
+## Cognition Domain
+
+All routes under `/api/v1/` (cognition router has no prefix).
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/agents` | GET/POST | List/create agents |
+| `/api/v1/agents/{id}` | GET/PUT/DELETE | Agent CRUD |
+| `/api/v1/agents/runs` | GET/POST | List/create agent runs |
+| `/api/v1/agents/runs/{runId}` | GET | Get run details |
+| `/api/v1/agents/runs/{runId}/status` | GET | Run status |
+| `/api/v1/agents/runs/{runId}/stream` | POST | Stream run execution |
+| `/api/v1/agents/runs/{runId}/steps` | GET | Run steps |
+| `/api/v1/agents/runs/{runId}/feedback` | GET/POST | Feedback on runs |
+| `/api/v1/agents/metrics` | GET | Agent metrics |
+
+## Interaction Domain
+
+All routes under `/api/v1/` (interaction router has no prefix).
+
+### Conversations
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/conversations` | GET/POST | List/create conversations |
+| `/api/v1/conversations/{id}` | GET/DELETE | Get/delete conversation |
+| `/api/v1/conversations/{id}/title` | PATCH | Update title |
+| `/api/v1/conversations/{id}/messages` | POST | Send message (SSE) |
+
+### Notifications
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/notifications` | GET | List notifications |
+| `/api/v1/notifications/{id}/read` | POST | Mark read |
+| `/api/v1/notifications/read-all` | POST | Mark all read |
+| `/api/v1/notifications/{id}` | DELETE | Dismiss notification |
+
+### Profile
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/me/profile` | GET/PUT | Get/update profile |
+| `/api/v1/me/profile/photo` | POST/GET/DELETE | Upload/get/delete avatar |
+
+## System Domain
+
+All routes under `/api/v1/` (system router has no prefix).
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/system/metrics` | GET | CPU, RAM, disk, GPU metrics |
+| `/api/v1/system/logs` | GET | Recent log entries |
+| `/api/v1/health/live` | GET | Liveness probe |
+| `/api/v1/health/ready` | GET | Readiness probe |
+| `/api/v1/models/health` | GET | LLM provider health |
+| `/api/v1/models/metrics` | GET | LLM request/token metrics |
+
+## Developer Domain
+
+All routes under `/api/v1/` (developer router has no prefix).
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/models` | GET | Model catalog listing |
+| `/api/v1/models/catalog` | GET | Full catalog with variants |
+| `/api/v1/models/{modelId}/details` | GET | Model details |
+| `/api/v1/models/compare` | GET | Compare models side-by-side |
+| `/api/v1/models/recommended` | GET | Recommended models for hardware |
+| `/api/v1/models/search` | GET | Search models |
+| `/api/v1/me/github` | GET | GitHub connection info |
+
+## Integration Domain
+
+All routes under `/api/v1/` (integration router has no prefix).
+
+### Downloads
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/models/installed` | GET | Installed models |
+| `/api/v1/models/installed/sync` | POST | Sync installed models |
+| `/api/v1/models/downloads/queue` | GET | Download queue |
+| `/api/v1/models/downloads/history` | GET | Download history |
+| `/api/v1/models/{name}/download` | POST | Start download |
+| `/api/v1/models/{name}/progress` | GET | Download progress |
+| `/api/v1/models/{name}/cancel` | POST | Cancel download |
+| `/api/v1/models/{name}` | DELETE | Remove model |
+
+### Sync
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/v1/sync/defaults` | GET | Sync defaults |
+| `/api/v1/sync/start` | POST | Start sync job |
+| `/api/v1/sync/validate-path` | POST | Validate sync path |
+| `/api/v1/sync/stop` | POST | Stop sync job |
+| `/api/v1/sync/status` | GET | Sync status |
+| `/api/v1/sync/jobs` | GET | List sync jobs |
 
 ## WebSocket
 
-| Route | Purpose | Auth |
-|-------|---------|------|
-| `/ws` | Echo + demo + system metrics | None |
-| `/ws/models` | Model download progress | None |
-| `/ws/system` | System metrics stream | None |
+| Route | Purpose |
+|-------|---------|
+| `/ws` | Echo + demo + system metrics |
+| `/ws/models` | Model download progress |
+| `/ws/system` | System metrics stream |
 
 ---
 
@@ -208,7 +291,7 @@ Interactive docs: `http://localhost:8000/docs`
 
 1. **Register/Login** → backend sets httpOnly cookies (`cortex_access` + `cortex_refresh`)
 2. **Requests** → frontend sends to `/api/*` → proxied to FastAPI by Next.js. Cookies forwarded.
-3. **Refresh** → access token expires (30min) → frontend calls `POST /api/auth/refresh` → rotates tokens → retries original request. Transparent to user.
+3. **Refresh** → access token expires (30min) → frontend calls `POST /api/v1/auth/refresh` → rotates tokens → retries original request. Transparent to user.
 4. **Logout** → revoke refresh token, lock vault, clear cookies
 
 **Token lifetimes:**

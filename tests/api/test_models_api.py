@@ -131,7 +131,7 @@ def test_model_storage(client, mock_auth):
         patch("backend.app.api.v1.privacy.settings.Path", return_value=mock_path),
     ):
         mock_psutil.disk_usage.return_value = mock_disk
-        resp = client.get("/api/v1/models/storage", headers=HEADERS)
+        resp = client.get("/api/v1/privacy/models/storage", headers=HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert "total_disk_gb" in data

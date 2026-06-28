@@ -300,19 +300,19 @@ Frontend: Vitest + jsdom + React Testing Library (once scaffolded via `/project:
 
 | Metric | Value |
 |--------|-------|
-| Backend Python files | 379 |
-| Backend LoC | 40,947 |
+| Backend Python files | 415 |
+| Backend LoC | 45,180 |
 | Frontend TSX/TS files | 107 |
-| Frontend LoC | 9,933 |
+| Frontend LoC | 9,934 |
 | Test files | 169 |
 | Test LoC | 18,041 |
-| Backend tests | 1,743 passing |
-| API endpoints | 186 (domain) + 9 (auth) |
+| Backend tests | 1,429 passing |
+| API endpoint files | 47 (10 domains) |
 | Frontend pages | 17 real + 4 Coming Soon |
-| Frontend components | 38 feature + 10 shared UI |
+| Frontend components | 50 feature + 17 shared UI |
 | Database migrations | 37 |
-| Documentation files | 57 |
-| Git commits | 636 |
+| Documentation files | 58 |
+| Git commits | 650 |
 
 ## Environment
 
