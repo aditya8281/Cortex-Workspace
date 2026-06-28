@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { AppShell } from "@/shared/layout/AppShell";
@@ -41,8 +41,6 @@ export default function ModelsPage() {
 
   // Download management
   const [downloadingModels, setDownloadingModels] = useState<Map<string, number>>(new Map());
-  const downloadingRef = useRef(downloadingModels);
-  downloadingRef.current = downloadingModels;
 
   // Detail modal
   const [detailModalModelId, setDetailModalModelId] = useState<string | null>(null);
@@ -86,9 +84,10 @@ export default function ModelsPage() {
     }
   }, []);
 
+  // Always connected when user logged in — backend only pushes when downloads active
   useWebSocket({
     path: "/api/v1/ws/models",
-    enabled: !!user && downloadingRef.current.size > 0,
+    enabled: !!user,
     onMessage: handleDownloadProgress,
   });
 
