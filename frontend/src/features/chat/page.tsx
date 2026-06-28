@@ -20,6 +20,12 @@ import {
   type ChatMessage,
   type Source,
 } from "./api";
+import {
+  downloads as modelsDownloads,
+  getDefaultModel,
+  setDefaultModel,
+  type InstalledModel,
+} from "@/features/models/api";
 
 export default function ChatPage() {
   const { user, loading } = useAuth();
@@ -31,6 +37,8 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [sources, setSources] = useState<Source[]>([]);
+  const [installedModels, setInstalledModels] = useState<InstalledModel[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   const [showNew, setShowNew] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -38,6 +46,15 @@ export default function ChatPage() {
   useEffect(() => {
     if (!loading && !user) router.push("/auth");
   }, [user, loading, router]);
+
+  useEffect(() => {
+    setSelectedModel(getDefaultModel());
+    modelsDownloads.installed().then((res) => {
+      setInstalledModels(res.models);
+    }).catch(() => {
+      // ignore
+    });
+  }, []);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -109,7 +126,7 @@ export default function ChatPage() {
     let assistantContent = "";
 
     try {
-      for await (const event of streamChat(convId, content)) {
+      for await (const event of streamChat(convId, content, selectedModel ?? undefined)) {
         if (event.type === "chunk" && event.content) {
           assistantContent += event.content;
           setMessages((prev) => {
@@ -195,6 +212,27 @@ export default function ChatPage() {
             </div>
           ) : (
             <>
+              {/* Model selector */}
+              <div className="flex items-center gap-2 px-6 py-2 border-b border-border-subtle bg-bg-elevated/50">
+                <label className="text-xs text-text-muted font-medium whitespace-nowrap">Model</label>
+                <select
+                  value={selectedModel ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value || null;
+                    setSelectedModel(val);
+                    if (val) setDefaultModel(val);
+                  }}
+                  className="flex-1 rounded-md border border-border-subtle bg-bg-surface px-2 py-1 text-xs text-text-secondary font-mono outline-none focus:border-accent transition-colors"
+                >
+                  <option value="">Default</option>
+                  {installedModels.map((m) => (
+                    <option key={m.model_id} value={m.model_id}>
+                      {m.display_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                 {messages.map((msg, i) => (
