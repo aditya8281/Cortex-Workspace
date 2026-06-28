@@ -31,18 +31,17 @@ The goal is to transform a computer from a tool you operate into a companion tha
 
 | Area | State |
 |------|-------|
-| Tests | 486+ passing (backend pytest + frontend vitest) |
-| Frontend build | Passes |
-| Linting | ruff + ESLint + mypy — all clean |
-| Auth + vault backend | Production-quality foundation |
-| Vault UI | Full file browser with table/list/grid views |
-| Neural Dark redesign | Complete (warm dark, Neural Network background) |
-| CLI | Scaffolded (command stubs) |
+| Backend API | 10 domain routers — awareness, cognition, developer, integration, intelligence, interaction, memory, privacy, system, utility |
+| Auth + Vault | Production-quality foundation — JWT + Argon2, Fernet encryption, secure password cache |
+| Agent System | Agent loop, run manager, stall detection, verifier, compactor, policy engine |
+| Memory System | Episodic, semantic, working memory with graph relationships and search |
+| Intelligence | Model catalog, providers, variants, benchmarks, recommendation engine |
 | LLM Integration | llama.cpp + Ollama with provider abstraction |
-| Model Catalog | Full catalogue with providers, variants, benchmarks |
-| Agentic Ecosystem | Governance, workflows, hooks, automation — complete |
-
-**Phases 1–3 complete. Phases 4–6 partially complete. See [Implementation Guide](.agents/plans/implementation_steps.md) for details.**
+| Awareness | Device detection, file tracking, project detection, repo analysis, health monitoring |
+| Privacy | Consent management, audit logging, access control, RBAC/ABAC |
+| Tests | 486+ passing (backend pytest) |
+| Linting | ruff + mypy — clean |
+| Frontend | **Fresh start — building from scratch with `/project:design`** |
 
 ---
 
@@ -102,7 +101,7 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
   └──────────┘  └──────────┘  └──────────┘
 ```
 
-**For detailed architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).**
+**For detailed architecture, see [docs/architecture/overview.md](docs/architecture/overview.md).**
 
 ---
 
@@ -111,7 +110,6 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS |
-| Frontend UI | framer-motion, Radix UI, cmdk, sonner, Three.js |
 | Backend | FastAPI, Python 3.12+ |
 | Database | PostgreSQL 16 (SQLite in tests only) |
 | ORM | SQLAlchemy 2.0 + Alembic |
@@ -122,7 +120,6 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 | Embeddings | ONNX Runtime (BGE-M3) |
 | LLM | llama.cpp, Ollama (provider abstraction) |
 | Task Queue | arq (Redis-based) |
-| CLI | TypeScript, Commander.js |
 
 ---
 
@@ -131,10 +128,11 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 ```bash
 make install       # uv sync + npm install
 make migrate       # alembic upgrade head
-make test          # 486+ tests (backend pytest + frontend vitest)
+make test          # 486+ tests (backend pytest)
 make lint          # ruff + mypy
 make format        # ruff format
 make check         # lint + test
+make design        # Rebuild frontend from scratch
 ```
 
 ### Make Targets
@@ -144,6 +142,7 @@ make check         # lint + test
 | `make dev` | Backend hot reload |
 | `make dev-frontend` | Frontend dev server |
 | `make dev-full` | Both |
+| `make design` | Rebuild frontend via `/project:design` |
 | `make db-shell` | psql |
 | `make db-reset` | Drop schema + remigrate |
 | `make db-backup` | pg_dump |
@@ -161,10 +160,12 @@ make check         # lint + test
 | [CLAUDE.md](./CLAUDE.md) | AI Agents | Development guidance, commands, patterns |
 | [AGENTS.md](./AGENTS.md) | AI Agents | Behavior rules, security, API patterns |
 | [DESIGN.md](./DESIGN.md) | Designers | Design system, tokens, components |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Engineers | System architecture, tech decisions, agent system |
-| [docs/API.md](docs/API.md) | Engineers | API reference, endpoints, auth |
-| [docs/DATABASE.md](docs/DATABASE.md) | Engineers | DB schema, migrations, conventions |
-| [docs/GOVERNANCE.md](docs/GOVERNANCE.md) | Everyone | Rules of engagement, security patterns |
+| [PRODUCT.md](./PRODUCT.md) | Designers | Product definition, brand, principles |
+| [docs/architecture/overview.md](docs/architecture/overview.md) | Engineers | System architecture, tech decisions |
+| [docs/reference/api.md](docs/reference/api.md) | Engineers | API reference, endpoints, auth |
+| [docs/reference/database.md](docs/reference/database.md) | Engineers | DB schema, migrations, conventions |
+| [docs/guides/governance.md](docs/guides/governance.md) | Everyone | Rules of engagement, security patterns |
+| [docs/domains/](docs/domains/) | Engineers | Domain-specific documentation |
 
 ---
 

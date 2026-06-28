@@ -240,22 +240,42 @@ Feature flag: `CORTEX_NEW_AGENT_LOOP` (default: False) in Settings. When True, d
 
 ### Next.js 15 App Router
 
+The frontend is built from scratch via `/project:design` — a 13-phase iterative build that produces a working, buildable state at every phase.
+
 ```
 frontend/
-├── app/                        # Pages (all "use client")
-│   ├── layout.tsx              # Root layout (providers, fonts)
-│   ├── api/[...path]/          # Catch-all proxy → FastAPI backend
-│   └── [route]/page.tsx        # Page components
 ├── src/
+│   ├── app/
+│   │   ├── layout.tsx              # Root layout (Geist font, dark bg)
+│   │   ├── globals.css             # Tailwind directives + design tokens
+│   │   ├── api/[...path]/          # Catch-all proxy → FastAPI backend
+│   │   └── auth/page.tsx           # Login/register
 │   ├── shared/
-│   │   ├── api/                # Modular API clients (barrel-exported)
-│   │   ├── auth/               # AuthProvider, cortexApi, session helpers
-│   │   ├── design/             # Design tokens (tokens.ts)
-│   │   ├── hooks/              # useLiveMetrics, useSystemWebSocket, useFolderPicker
-│   │   ├── layout/             # DashboardShell (sidebar, header, mobile tabs)
-│   │   └── ui/                 # 20 custom components
-│   └── lib/utils.ts            # cn() helper (clsx + tailwind-merge)
-└── vitest.config.ts
+│   │   ├── design/tokens.ts        # DESIGN.md tokens as TS constants
+│   │   ├── ui/                     # Shared components (Button, Card, Input, etc.)
+│   │   ├── layout/                 # DashboardShell (sidebar, header, mobile tabs)
+│   │   ├── auth/AuthProvider.tsx    # JWT context, auto-refresh
+│   │   └── api/client.ts           # fetch wrapper with CSRF, auth
+│   └── features/
+│       ├── dashboard/              # V1 — system overview, quick actions
+│       ├── chat/                   # V1 — conversations, streaming, model selection
+│       ├── agents/                 # V1 — agent management, chat, run history
+│       ├── system/                 # V1 — health monitoring, hardware info
+│       ├── settings/               # V1 — user settings, profile
+│       ├── memory/                 # V2 — Coming Soon
+│       ├── knowledge/              # V2 — Coming Soon
+│       ├── providers/              # V2 — Coming Soon
+│       ├── performance/            # V3 — Coming Soon
+│       ├── scheduler/              # V4 — Coming Soon
+│       ├── research/               # V4 — Coming Soon
+│       ├── email/                  # V5 — Coming Soon
+│       ├── calendar/               # V5 — Coming Soon
+│       ├── tasks/                  # V5 — Coming Soon
+│       ├── notes/                  # V5 — Coming Soon
+│       ├── documents/              # V5 — Coming Soon
+│       ├── contacts/               # V5 — Coming Soon
+│       ├── marketplace/            # V6 — Coming Soon
+│       └── graph/                  # V6 — Coming Soon
 ```
 
 ### Key Patterns
@@ -263,9 +283,10 @@ frontend/
 - **Auth**: `AuthProvider` bootstraps via `GET /me`. Login sets httpOnly cookies. Auto token refresh on 401.
 - **API proxy**: Client-side fetch → Next.js API route → FastAPI. Same-origin, no CORS.
 - **State**: React Context for auth. Component-local state everywhere else. No external store.
-- **Design**: Dark-only glassmorphism. Custom tokens in `tokens.ts`. NeuralNetwork Canvas 2D animated background.
+- **Design**: DESIGN.md tokens. Dark-only. Geist font. Tonal elevation (Void → Elevated → Surface → Hover).
 - **SSE streaming**: Chat and agent responses stream via `ReadableStream` line-by-line parsing.
 - **Responsive**: Desktop (fixed 240px sidebar), tablet (overlay sidebar), mobile (bottom tab bar).
+- **Token mapping**: `text-text-primary`, `text-text-secondary`, `text-text-muted`, `bg-bg-surface`, `bg-bg-elevated` — NOT `text-primary`, `text-secondary`, `text-muted`, `bg-surface`.
 
 ---
 
