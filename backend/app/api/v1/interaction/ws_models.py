@@ -8,7 +8,7 @@ import json
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from backend.app.core.security import verify_access_token
-from backend.app.services.download.downloader import model_downloader
+from backend.app.services.download.downloader import download_manager, DownloadStatus
 
 router = APIRouter()
 
@@ -21,6 +21,50 @@ def _extract_ws_token(ws: WebSocket, token: str | None = None) -> str | None:
     if protocols:
         return protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
     return ws.cookies.get("cortex_access")
+
+
+def _build_download_payload() -> dict:
+    """Build the full model_progress payload from DownloadManager records."""
+    models = []
+    queued_positions: dict[str, int] = {}
+    position_counter = 1
+    for rec in download_manager._records.values():
+        if rec.status == DownloadStatus.QUEUED:
+            queued_positions[rec.download_id] = position_counter
+            position_counter += 1
+
+    for rec in download_manager._records.values():
+        if rec.status in (
+            DownloadStatus.DOWNLOADING,
+            DownloadStatus.QUEUED,
+            DownloadStatus.PAUSED,
+        ):
+            models.append({
+                "name": rec.model_name,
+                "progress": rec.progress,
+                "status": rec.status.value,
+                "speed_bytes_sec": rec.speed_bytes_sec,
+                "eta_seconds": rec.eta_seconds,
+                "bytes_downloaded": rec.bytes_downloaded,
+                "total_bytes": rec.total_bytes,
+                "queue_position": queued_positions.get(rec.download_id),
+                "download_id": rec.download_id,
+            })
+        elif rec.status in (DownloadStatus.COMPLETED, DownloadStatus.FAILED, DownloadStatus.CANCELLED):
+            models.append({
+                "name": rec.model_name,
+                "progress": rec.progress,
+                "status": rec.status.value,
+                "speed_bytes_sec": 0,
+                "eta_seconds": None,
+                "bytes_downloaded": rec.bytes_downloaded,
+                "total_bytes": rec.total_bytes,
+                "queue_position": None,
+                "download_id": rec.download_id,
+                "error": rec.error_message,
+            })
+
+    return {"type": "model_progress", "models": models}
 
 
 @router.websocket("/ws/models")
@@ -38,13 +82,9 @@ async def model_download_progress_ws(ws: WebSocket, token: str = Query(None)):
     await ws.accept()
     try:
         while True:
-            active = model_downloader.get_active_progress()
+            payload = _build_download_payload()
 
-            if active:
-                payload = {
-                    "type": "model_progress",
-                    "models": [{"name": name, "progress": prog} for name, prog in active.items()],
-                }
+            if payload["models"]:
                 await ws.send_text(json.dumps(payload))
 
             await asyncio.sleep(1)
