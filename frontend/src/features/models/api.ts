@@ -11,6 +11,8 @@ export type {
   HardwareInfo,
   ModelComparison,
   RecommendedModel,
+} from "@/features/developer/api";
+export type {
   InstalledModel,
   DownloadJob,
   DownloadHistoryItem,
