@@ -111,7 +111,7 @@ export function StorageCard() {
           </div>
 
           {/* By-type breakdown */}
-          {Object.keys(data.by_type).length > 0 && (
+          {Object.keys(data.by_type ?? {}).length > 0 && (
             <div className="mt-3 border-t border-border-subtle pt-3">
               <p className="mb-1 block text-xs text-text-muted">
                 Breakdown by type
