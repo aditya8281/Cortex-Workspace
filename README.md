@@ -31,17 +31,31 @@ The goal is to transform a computer from a tool you operate into a companion tha
 
 | Area | State |
 |------|-------|
-| Backend API | 10 domain routers — awareness, cognition, developer, integration, intelligence, interaction, memory, privacy, system, utility |
-| Auth + Vault | Production-quality foundation — JWT + Argon2, Fernet encryption, secure password cache |
+| Backend API | 186 endpoints (177 domain + 9 auth) across 10 domain routers |
+| Auth + Vault | Production-quality — JWT + Argon2, Fernet encryption, secure password cache, CSRF double-submit |
 | Agent System | Agent loop, run manager, stall detection, verifier, compactor, policy engine |
 | Memory System | Episodic, semantic, working memory with graph relationships and search |
 | Intelligence | Model catalog, providers, variants, benchmarks, recommendation engine |
 | LLM Integration | llama.cpp + Ollama with provider abstraction |
 | Awareness | Device detection, file tracking, project detection, repo analysis, health monitoring |
 | Privacy | Consent management, audit logging, access control, RBAC/ABAC |
-| Tests | 486+ passing (backend pytest) |
+| Frontend | 17 real pages + 4 Coming Soon, 38 components, 10 shared UI components |
+| Tests | 1,743 passing (backend pytest) |
 | Linting | ruff + mypy — clean |
-| Frontend | **Fresh start — building from scratch with `/project:design`** |
+| Database | 37 Alembic migrations |
+
+### Codebase Metrics
+
+| Metric | Value |
+|--------|-------|
+| Backend Python files | 379 |
+| Backend LoC | 40,947 |
+| Frontend TSX/TS files | 107 |
+| Frontend LoC | 9,933 |
+| Test files | 169 |
+| Test LoC | 18,041 |
+| Documentation files | 57 |
+| Git commits | 636 |
 
 ---
 
@@ -105,6 +119,34 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 
 ---
 
+## Frontend Pages
+
+| Page | Status | Description |
+|------|--------|-------------|
+| `/` | Real | System overview — CPU, RAM, GPU, disk metrics |
+| `/chat` | Real | Conversations, streaming, model selection, code blocks |
+| `/agents` | Real | Agent management, chat, run history |
+| `/models` | Real | Browse, download, compare, installed models |
+| `/awareness` | Real | Device, environment, health, project cards |
+| `/awareness/repos` | Real | Repository management, add/list/remove |
+| `/awareness/indexing` | Real | Indexing configuration, graph view |
+| `/memory` | Real | Knowledge graph, search, memory management |
+| `/search` | Real | Unified search across all domains |
+| `/vault` | Real | Encrypted document locker |
+| `/privacy` | Real | Overview dashboard with consent, audit, storage |
+| `/privacy/audit` | Real | Audit log viewer with filters, pagination |
+| `/privacy/consent` | Real | Consent management with toggles |
+| `/system` | Real | System health monitoring |
+| `/settings` | Real | User settings, profile, preferences |
+| `/auth` | Real | Login |
+| `/auth/register` | Real | Registration |
+| `/marketplace` | Coming Soon | Model marketplace |
+| `/notes` | Coming Soon | Notes system |
+| `/scheduler` | Coming Soon | Task scheduling |
+| `/tasks` | Coming Soon | Task management |
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -128,11 +170,11 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 ```bash
 make install       # uv sync + npm install
 make migrate       # alembic upgrade head
-make test          # 486+ tests (backend pytest)
+make test          # 1,743 tests (backend pytest)
 make lint          # ruff + mypy
 make format        # ruff format
 make check         # lint + test
-make design        # Rebuild frontend from scratch
+make design        # Rebuild frontend via /project:design
 ```
 
 ### Make Targets

@@ -64,13 +64,13 @@ backend/app/
 │   ├── deps.py          # Dependency injection (get_db, get_current_user)
 │   ├── metrics.py       # /metrics Prometheus endpoint
 │   ├── ws.py            # WebSocket upgrade endpoint
-│   └── v1/              # 18 domain routers
+│   └── v1/              # 10 domain routers
 ├── auth/                # Auth domain (service, dependencies, audit)
 ├── core/                # Cross-cutting concerns (config, security, redis, vector_db)
 ├── db/                  # Database layer (bootstrap, session factory)
 ├── models/              # SQLAlchemy ORM models (19 files)
 ├── schemas/             # Pydantic request/response schemas
-├── services/            # Business logic (48 files)
+├── services/            # Business logic (106 files)
 │   ├── llm/             # LLM provider abstraction
 │   └── ...              # embedding, retrieval, vault, indexing, etc.
 ├── agents/              # Agent system (tools, integrity, run_manager, run_store)
@@ -94,21 +94,8 @@ def get_hybrid_retrieval(db: Session) -> HybridRetrievalV2:
 
 ### Agent System
 
-The agent system is being rebuilt during V1 Phase 2. Current architecture (legacy) and target architecture coexist behind a feature flag.
+The agent system is implemented and operational with intent classification, streaming loops, tool policies, and completion verification.
 
-**Current (Legacy):**
-```
-User Request → PlannerAgent → ExecutorAgent → RunManager
-                 │                │                │
-                 Decompose        Execute tools    Track lifecycle
-                 into subtasks    (search, read,   (running → completed/failed)
-                 (JSON array)     write, exec,     Persist to AgentRun
-                                  git_*)           Cleanup orphaned runs
-                                  Approval gates
-                                  for dangerous ops
-```
-
-**Target (V1 Phase 2+):**
 ```
 User Request → Intent Classifier → [casual: fast path | agent: streaming loop]
 Agent loop:  single async generator, max 25 iter, stall detection
@@ -117,6 +104,8 @@ Agent loop:  single async generator, max 25 iter, stall detection
              auto-compaction at 85% (tiktoken)
              completion verifier (fresh-context LLM subagent)
 ```
+
+Feature flag: `CORTEX_NEW_AGENT_LOOP` (default: False) in Settings. When True, dispatch to the new streaming loop instead of the legacy Planner→Executor path.
 
 **Tool System (`backend/app/agents/tools/`):**
 
@@ -240,7 +229,7 @@ Feature flag: `CORTEX_NEW_AGENT_LOOP` (default: False) in Settings. When True, d
 
 ### Next.js 15 App Router
 
-The frontend is built from scratch via `/project:design` — a 13-phase iterative build that produces a working, buildable state at every phase.
+17 real pages + 4 Coming Soon placeholders. Dark-only design system. 10 shared UI components. 38 feature components.
 
 ```
 frontend/
@@ -249,33 +238,44 @@ frontend/
 │   │   ├── layout.tsx              # Root layout (Geist font, dark bg)
 │   │   ├── globals.css             # Tailwind directives + design tokens
 │   │   ├── api/[...path]/          # Catch-all proxy → FastAPI backend
-│   │   └── auth/page.tsx           # Login/register
+│   │   ├── auth/page.tsx           # Login page
+│   │   ├── auth/register/          # Registration page
+│   │   ├── chat/                   # Conversations, streaming, code blocks
+│   │   ├── agents/                 # Agent management, chat, run history
+│   │   ├── models/                 # Browse, download, compare, installed
+│   │   ├── awareness/              # System overview (device, env, health, project)
+│   │   ├── awareness/repos/        # Repository management
+│   │   ├── awareness/indexing/     # Indexing config, graph view
+│   │   ├── memory/                 # Knowledge graph, search, memory CRUD
+│   │   ├── search/                 # Unified search
+│   │   ├── vault/                  # Encrypted document locker
+│   │   ├── privacy/                # Privacy overview dashboard
+│   │   ├── privacy/audit/          # Audit log viewer
+│   │   ├── privacy/consent/        # Consent management
+│   │   ├── system/                 # System health monitoring
+│   │   ├── settings/               # User settings, profile
+│   │   ├── marketplace/            # Coming Soon
+│   │   ├── notes/                  # Coming Soon
+│   │   ├── scheduler/              # Coming Soon
+│   │   └── tasks/                  # Coming Soon
 │   ├── shared/
-│   │   ├── design/tokens.ts        # DESIGN.md tokens as TS constants
-│   │   ├── ui/                     # Shared components (Button, Card, Input, etc.)
-│   │   ├── layout/                 # DashboardShell (sidebar, header, mobile tabs)
-│   │   ├── auth/AuthProvider.tsx    # JWT context, auto-refresh
-│   │   └── api/client.ts           # fetch wrapper with CSRF, auth
+│   │   ├── ui/                     # Badge, Button, Card, Modal, Skeleton, Toast, etc.
+│   │   ├── layout/                 # AppShell, Header, Sidebar
+│   │   ├── auth/                   # AuthProvider, ProtectedRoute
+│   │   └── lib/                    # cn(), apiFetch()
 │   └── features/
-│       ├── dashboard/              # V1 — system overview, quick actions
-│       ├── chat/                   # V1 — conversations, streaming, model selection
-│       ├── agents/                 # V1 — agent management, chat, run history
-│       ├── system/                 # V1 — health monitoring, hardware info
-│       ├── settings/               # V1 — user settings, profile
-│       ├── memory/                 # V2 — Coming Soon
-│       ├── knowledge/              # V2 — Coming Soon
-│       ├── providers/              # V2 — Coming Soon
-│       ├── performance/            # V3 — Coming Soon
-│       ├── scheduler/              # V4 — Coming Soon
-│       ├── research/               # V4 — Coming Soon
-│       ├── email/                  # V5 — Coming Soon
-│       ├── calendar/               # V5 — Coming Soon
-│       ├── tasks/                  # V5 — Coming Soon
-│       ├── notes/                  # V5 — Coming Soon
-│       ├── documents/              # V5 — Coming Soon
-│       ├── contacts/               # V5 — Coming Soon
-│       ├── marketplace/            # V6 — Coming Soon
-│       └── graph/                  # V6 — Coming Soon
+│       ├── dashboard/              # SystemOverview, MetricsRow
+│       ├── chat/                   # MessageBubble, CodeBlock, ConversationItem, SourcesPanel
+│       ├── agents/                 # Agent cards, chat, RunHistory
+│       ├── models/                 # ModelCard, BrowseView, InstalledView, DownloadsView, CompareView
+│       ├── awareness/              # DeviceCard, HealthCard, EnvironmentCard, ProjectCard, etc.
+│       ├── memory/                 # API client (memory/graph/search)
+│       ├── search/                 # API client (unified search)
+│       ├── vault/                  # API client (encrypted files)
+│       ├── privacy/                # ConsentToggle, AccessControlCard, StorageCard
+│       ├── developer/              # API client (developer tools)
+│       ├── settings/               # Settings page component
+│       └── system/                 # System health page component
 ```
 
 ### Key Patterns
@@ -323,9 +323,10 @@ Storage paths resolved via `storage_registries` table → `storage_root` pointer
 
 ## Database
 
-PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations. 34+ tables across 25 migrations.
+PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations. 37 migrations across 10 domain routers.
 
 - **ORM**: `Mapped[T]`, `mapped_column` syntax
+- **Models**: 44 model files
 - **Migrations**: Sequential prefix naming (`a00000000001_...`)
 - **Session**: Dynamic `SessionLocal` proxy; `get_engine()` creates engine lazily
 - **Bootstrap**: `bootstrap_database()` runs `alembic upgrade head` on startup

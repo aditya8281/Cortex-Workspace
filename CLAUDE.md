@@ -278,6 +278,24 @@ Tests at project root in `tests/`. SQLite in-memory, mocked external services. N
 
 Frontend: Vitest + jsdom + React Testing Library (once scaffolded via `/project:design`).
 
+## Codebase Metrics
+
+| Metric | Value |
+|--------|-------|
+| Backend Python files | 379 |
+| Backend LoC | 40,947 |
+| Frontend TSX/TS files | 107 |
+| Frontend LoC | 9,933 |
+| Test files | 169 |
+| Test LoC | 18,041 |
+| Backend tests | 1,743 passing |
+| API endpoints | 186 (domain) + 9 (auth) |
+| Frontend pages | 17 real + 4 Coming Soon |
+| Frontend components | 38 feature + 10 shared UI |
+| Database migrations | 37 |
+| Documentation files | 57 |
+| Git commits | 636 |
+
 ## Environment
 
 Required: `SECRET_KEY`, `DATABASE_URL` (port 5435), `APP_NAME`, `API_V1_PREFIX`. Optional: `REDIS_URL`, `CORTEX_ROOT`, `MEMORY_PATH`, `VAULT_PATH`.
