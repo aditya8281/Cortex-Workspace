@@ -170,9 +170,10 @@ export default function ModelsPage() {
 
   const handleDownloadFromBrowse = useCallback(
     (modelId: string) => {
-      handleDownload(modelId);
+      // Show model detail so user can pick variant before downloading
+      setDetailModalModelId(modelId);
     },
-    [handleDownload],
+    [],
   );
 
   const handleDownloadFromCompare = useCallback(

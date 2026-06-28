@@ -231,6 +231,7 @@ export default function ChatPage() {
                     </option>
                   ))}
                 </select>
+                <a href="/models" className="text-xs text-accent hover:text-accent-hover transition-colors whitespace-nowrap">Browse →</a>
               </div>
 
               {/* Messages */}
