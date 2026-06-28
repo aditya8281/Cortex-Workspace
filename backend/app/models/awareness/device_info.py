@@ -27,10 +27,6 @@ class DeviceInfo(Base):
     disk_total_gb: Mapped[int | None] = mapped_column(Integer, nullable=True)
     disk_used_gb: Mapped[int | None] = mapped_column(Integer, nullable=True)
     python_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    last_checked: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    last_checked: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
-    __table_args__ = (
-        Index("ix_device_user", "user_id", unique=True),
-    )
+    __table_args__ = (Index("ix_device_user", "user_id", unique=True),)

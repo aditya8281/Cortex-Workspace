@@ -18,9 +18,7 @@ class SystemHealth(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     service_name: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
-    last_check: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    last_check: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     response_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
     check_details: Mapped[str | None] = mapped_column(String(500), nullable=True)

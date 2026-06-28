@@ -162,9 +162,7 @@ async def _stream_chat_response(
     system_parts = ["You are Cortex, a helpful AI assistant with access to the user's codebase and knowledge."]
     if rag_context.formatted_context:
         context_block = rag_context.formatted_context
-        system_parts.append(
-            f"Relevant context from the codebase:\n\n{context_block}"
-        )
+        system_parts.append(f"Relevant context from the codebase:\n\n{context_block}")
         system_parts.append(
             "\nUse this context to answer the user's question. "
             "Cite sources using [1], [2], etc. when referencing specific files."

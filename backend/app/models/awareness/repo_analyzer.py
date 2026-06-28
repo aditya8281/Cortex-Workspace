@@ -22,9 +22,7 @@ class RepositoryIndex(Base):
     languages: Mapped[str | None] = mapped_column(String(500), nullable=True)
     total_files: Mapped[int] = mapped_column(Integer, default=0)
     total_lines: Mapped[int] = mapped_column(Integer, default=0)
-    last_indexed: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    last_indexed: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     framework: Mapped[str | None] = mapped_column(String(100), nullable=True)
     dependencies: Mapped[str | None] = mapped_column(String(500), nullable=True)
     git_branch: Mapped[str | None] = mapped_column(String(200), nullable=True)

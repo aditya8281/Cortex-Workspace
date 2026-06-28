@@ -23,9 +23,7 @@ class FileIndex(Base):
     file_size: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_modified: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    indexed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    indexed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     parent_directory: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 

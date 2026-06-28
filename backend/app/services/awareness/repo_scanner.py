@@ -194,9 +194,7 @@ class RepositoryScannerService:
                     for line in fh:
                         line = line.strip()
                         if line and not line.startswith("#") and not line.startswith("-"):
-                            deps.append(
-                                line.split("==")[0].split(">=")[0].split("<=")[0].strip()
-                            )
+                            deps.append(line.split("==")[0].split(">=")[0].split("<=")[0].strip())
             except OSError:
                 pass
 

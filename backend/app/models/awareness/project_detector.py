@@ -22,9 +22,7 @@ class ProjectIndex(Base):
     project_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     frameworks: Mapped[str | None] = mapped_column(String(500), nullable=True)
     configuration: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    last_scanned: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
+    last_scanned: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     has_tests: Mapped[int] = mapped_column(Integer, default=0)
     has_ci: Mapped[int] = mapped_column(Integer, default=0)
     has_docker: Mapped[int] = mapped_column(Integer, default=0)

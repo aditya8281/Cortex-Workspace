@@ -40,11 +40,7 @@ class DeviceInfoService:
         disk_total_gb = self._get_disk_total()
         disk_used_gb = self._get_disk_used()
 
-        existing = (
-            self.db.query(DeviceInfo)
-            .filter(DeviceInfo.user_id == user_id)
-            .first()
-        )
+        existing = self.db.query(DeviceInfo).filter(DeviceInfo.user_id == user_id).first()
 
         if existing is not None:
             existing.hostname = hostname

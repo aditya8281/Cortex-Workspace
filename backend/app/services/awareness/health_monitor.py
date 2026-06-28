@@ -51,11 +51,7 @@ class SystemHealthService:
         if status == "healthy" and response_time > DEGRADED_THRESHOLD_MS:
             status = "degraded"
 
-        existing = (
-            self.db.query(SystemHealth)
-            .filter(SystemHealth.service_name == service_name)
-            .first()
-        )
+        existing = self.db.query(SystemHealth).filter(SystemHealth.service_name == service_name).first()
 
         if existing is not None:
             existing.status = status
@@ -94,11 +90,7 @@ class SystemHealthService:
 
     def get_service_health(self, service_name: str) -> SystemHealth | None:
         """Get health status of a specific service."""
-        return (
-            self.db.query(SystemHealth)
-            .filter(SystemHealth.service_name == service_name)
-            .first()
-        )
+        return self.db.query(SystemHealth).filter(SystemHealth.service_name == service_name).first()
 
     def get_overall_status(self) -> dict[str, object]:
         """Get overall system health summary."""

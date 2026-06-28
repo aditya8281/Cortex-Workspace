@@ -27,13 +27,15 @@ def add_working_memory(
 ) -> WorkingMemoryResponse:
     """Add an item to working memory."""
     service = WorkingMemoryService(db)
-    return WorkingMemoryResponse.model_validate(service.add(
-        user_id=current_user.id,
-        session_id=data.session_id,
-        content=data.content,
-        slot=data.slot,
-        priority=data.priority,
-    ))
+    return WorkingMemoryResponse.model_validate(
+        service.add(
+            user_id=current_user.id,
+            session_id=data.session_id,
+            content=data.content,
+            slot=data.slot,
+            priority=data.priority,
+        )
+    )
 
 
 @router.get("", response_model=WorkingMemoryList)

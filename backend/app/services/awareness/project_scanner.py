@@ -57,16 +57,27 @@ FRAMEWORK_INDICATORS: dict[str, list[str]] = {
 # Feature detection indicators
 FEATURE_INDICATORS: dict[str, list[str]] = {
     "has_tests": [
-        "tests/", "test/", "__tests__/", "spec/",
-        "pytest.ini", "jest.config.js", "jest.config.ts",
-        "vitest.config.ts", "vitest.config.js",
+        "tests/",
+        "test/",
+        "__tests__/",
+        "spec/",
+        "pytest.ini",
+        "jest.config.js",
+        "jest.config.ts",
+        "vitest.config.ts",
+        "vitest.config.js",
     ],
     "has_ci": [
-        ".github/workflows/", ".gitlab-ci.yml",
-        ".circleci/", "Jenkinsfile", ".travis.yml",
+        ".github/workflows/",
+        ".gitlab-ci.yml",
+        ".circleci/",
+        "Jenkinsfile",
+        ".travis.yml",
     ],
     "has_docker": [
-        "Dockerfile", "docker-compose.yml", "docker-compose.yaml",
+        "Dockerfile",
+        "docker-compose.yml",
+        "docker-compose.yaml",
         ".dockerignore",
     ],
 }
@@ -150,10 +161,7 @@ class ProjectScannerService:
         """Detect project features (tests, CI, Docker)."""
         features: dict[str, int] = {}
         for feature, indicators in FEATURE_INDICATORS.items():
-            features[feature] = 1 if any(
-                os.path.exists(os.path.join(project_path, ind))
-                for ind in indicators
-            ) else 0
+            features[feature] = 1 if any(os.path.exists(os.path.join(project_path, ind)) for ind in indicators) else 0
         return features
 
     def _load_configuration(
@@ -192,11 +200,7 @@ class ProjectScannerService:
         if os.path.exists(req_file):
             try:
                 with open(req_file) as fh:
-                    deps = [
-                        line.strip().split("==")[0]
-                        for line in fh
-                        if line.strip() and not line.startswith("#")
-                    ]
+                    deps = [line.strip().split("==")[0] for line in fh if line.strip() and not line.startswith("#")]
                     config["dependency_count"] = len(deps)
             except OSError:
                 pass

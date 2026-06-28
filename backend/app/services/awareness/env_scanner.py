@@ -6,16 +6,34 @@ import os
 
 # Strict allowlist of safe environment variables
 SAFE_ENV_VARS: list[str] = [
-    "HOME", "SHELL", "LANG", "PATH", "USER", "LOGNAME",
-    "HOSTNAME", "TERM", "EDITOR", "VISUAL",
-    "CORTEX_ROOT", "APP_NAME", "API_V1_PREFIX",
-    "PYTHON_VERSION", "NODE_VERSION",
+    "HOME",
+    "SHELL",
+    "LANG",
+    "PATH",
+    "USER",
+    "LOGNAME",
+    "HOSTNAME",
+    "TERM",
+    "EDITOR",
+    "VISUAL",
+    "CORTEX_ROOT",
+    "APP_NAME",
+    "API_V1_PREFIX",
+    "PYTHON_VERSION",
+    "NODE_VERSION",
 ]
 
 # Patterns that indicate secrets — never returned even if accidentally added to allowlist
 SECRET_PATTERNS: list[str] = [
-    "SECRET", "PASSWORD", "TOKEN", "API_KEY", "PRIVATE",
-    "CREDENTIALS", "AUTH", "DATABASE_URL", "REDIS_URL",
+    "SECRET",
+    "PASSWORD",
+    "TOKEN",
+    "API_KEY",
+    "PRIVATE",
+    "CREDENTIALS",
+    "AUTH",
+    "DATABASE_URL",
+    "REDIS_URL",
 ]
 
 
@@ -52,10 +70,7 @@ class EnvironmentScannerService:
 
         Returns list of {name, is_set} for all safe variables.
         """
-        return [
-            {"name": var, "is_set": os.environ.get(var) is not None}
-            for var in SAFE_ENV_VARS
-        ]
+        return [{"name": var, "is_set": os.environ.get(var) is not None} for var in SAFE_ENV_VARS]
 
 
 def _is_secret(name: str) -> bool:
