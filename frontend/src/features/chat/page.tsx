@@ -9,8 +9,9 @@ import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Modal } from "@/shared/ui/Modal";
-import { ConversationList } from "./components/ConversationList";
+import { ConversationItem } from "./components/ConversationItem";
 import { MessageBubble } from "./components/MessageBubble";
+import { SourcesPanel } from "./components/SourcesPanel";
 import { ChatInput } from "./components/ChatInput";
 import { StreamingIndicator } from "./components/StreamingIndicator";
 import {
@@ -80,6 +81,14 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowNew(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleCreate = async () => {
     if (!newTitle.trim()) return;
@@ -187,14 +196,31 @@ export default function ChatPage() {
             </Button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <ConversationList
-              conversations={conversations}
-              activeId={activeId}
-              onSelect={(id) => {
-                setActiveId(id);
-                setSources([]);
-              }}
-            />
+            {conversations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <p className="text-sm text-text-muted mb-3">Start a conversation</p>
+                <Button size="sm" onClick={() => setShowNew(true)}>New Chat</Button>
+              </div>
+            ) : (
+              conversations.map((conv) => (
+                <ConversationItem
+                  key={conv.id}
+                  id={String(conv.id)}
+                  title={conv.title}
+                  isActive={activeId === conv.id}
+                  onSelect={(id) => { setActiveId(Number(id)); setSources([]); }}
+                  onRename={(id, title) => {
+                    chatApi.rename(Number(id), title).catch(() => {});
+                    setConversations((prev) => prev.map((c) => c.id === Number(id) ? { ...c, title } : c));
+                  }}
+                  onDelete={(id) => {
+                    chatApi.delete(Number(id)).catch(() => {});
+                    setConversations((prev) => prev.filter((c) => c.id !== Number(id)));
+                    if (activeId === Number(id)) { setActiveId(null); setMessages([]); }
+                  }}
+                />
+              ))
+            )}
           </div>
         </div>
 
@@ -236,6 +262,11 @@ export default function ChatPage() {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                {messages.length === 0 && !streaming && (
+                  <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                    <p className="text-sm text-text-muted">Send a message to get started</p>
+                  </div>
+                )}
                 {messages.map((msg, i) => (
                   <MessageBubble key={msg.id || i} role={msg.role === "system" ? "assistant" : msg.role} content={msg.content} timestamp={msg.created_at} />
                 ))}
@@ -246,20 +277,14 @@ export default function ChatPage() {
               {/* Sources */}
               {sources.length > 0 && (
                 <div className="border-t border-border-subtle px-6 py-3">
-                  <p className="text-xs text-text-muted mb-2 font-medium">Sources</p>
-                  <div className="flex flex-wrap gap-2">
-                    {sources.map((src, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center rounded-md bg-bg-surface px-2 py-1 text-xs text-text-secondary font-mono"
-                      >
-                        {src.file_path}
-                        <span className="ml-1 text-text-muted">
-                          ({Math.round(src.score * 100)}%)
-                        </span>
-                      </span>
-                    ))}
-                  </div>
+                  <SourcesPanel
+                    sources={sources.map((s) => ({
+                      title: s.file_path.split("/").pop() ?? s.file_path,
+                      path: s.file_path,
+                      score: s.score,
+                      snippet: "",
+                    }))}
+                  />
                 </div>
               )}
 
