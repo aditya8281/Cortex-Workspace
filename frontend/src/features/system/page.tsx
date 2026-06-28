@@ -133,7 +133,7 @@ export default function SystemPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              {llm?.installed_models.map((m) => (
+              {llm?.installed_models?.map((m) => (
                 <Badge key={m} variant={m === llm.active_model ? "success" : "default"}>
                   {m}
                 </Badge>
