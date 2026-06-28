@@ -113,7 +113,7 @@ class GraphBuilder:
 
     def build_document_graph(self, document_id: int) -> dict:
         """Build graph nodes and edges from a Document's chunks."""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         from backend.app.models.memory.document import Document, DocumentChunk
         from backend.app.services.intelligence.entity_extraction import EntityExtractor
@@ -165,7 +165,7 @@ class GraphBuilder:
                     )
                     if existing:
                         existing.weight += rel.weight
-                        existing.last_seen = datetime.utcnow()
+                        existing.last_seen = datetime.now(timezone.utc).replace(tzinfo=None)
                     else:
                         edge = GraphEdge(
                             source_id=source_node.id,

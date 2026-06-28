@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -43,8 +43,8 @@ class WorkingMemoryService:
             content=content,
             slot=slot,
             priority=priority,
-            created_at=datetime.utcnow(),
-            expires_at=datetime.utcnow() + timedelta(hours=ttl_hours),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=ttl_hours),
         )
         self.db.add(memory)
         self.db.commit()
@@ -59,7 +59,7 @@ class WorkingMemoryService:
                 WorkingMemory.user_id == user_id,
                 WorkingMemory.session_id == session_id,
                 WorkingMemory.slot == "active",
-                WorkingMemory.expires_at > datetime.utcnow(),
+                WorkingMemory.expires_at > datetime.now(timezone.utc).replace(tzinfo=None),
             )
             .order_by(desc(WorkingMemory.priority))
             .all()
@@ -73,7 +73,7 @@ class WorkingMemoryService:
                 WorkingMemory.user_id == user_id,
                 WorkingMemory.session_id == session_id,
                 WorkingMemory.slot == slot,
-                WorkingMemory.expires_at > datetime.utcnow(),
+                WorkingMemory.expires_at > datetime.now(timezone.utc).replace(tzinfo=None),
             )
             .order_by(desc(WorkingMemory.priority))
             .all()
@@ -181,7 +181,7 @@ class WorkingMemoryService:
             .filter(
                 WorkingMemory.user_id == user_id,
                 WorkingMemory.session_id == session_id,
-                WorkingMemory.expires_at < datetime.utcnow(),
+                WorkingMemory.expires_at < datetime.now(timezone.utc).replace(tzinfo=None),
             )
             .all()
         )
@@ -229,5 +229,5 @@ class WorkingMemoryService:
             "active": len([i for i in items if i.slot == "active"]),
             "buffer": len([i for i in items if i.slot == "buffer"]),
             "archive": len([i for i in items if i.slot == "archive"]),
-            "expired": len([i for i in items if i.expires_at < datetime.utcnow()]),
+            "expired": len([i for i in items if i.expires_at < datetime.now(timezone.utc).replace(tzinfo=None)]),
         }

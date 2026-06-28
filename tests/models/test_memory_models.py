@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -107,7 +107,7 @@ class TestWorkingMemoryModel:
             content="Current task",
             slot="active",
             priority=5,
-            expires_at=datetime.utcnow() + timedelta(hours=1),
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1),
         )
         db_session.add(memory)
         db_session.commit()
@@ -117,7 +117,7 @@ class TestWorkingMemoryModel:
         assert memory.expires_at is not None
 
     def test_session_isolation(self, db_session):
-        now = datetime.utcnow() + timedelta(hours=1)
+        now = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
         m1 = WorkingMemory(user_id=1, session_id="session-a", content="A", expires_at=now)
         m2 = WorkingMemory(user_id=1, session_id="session-b", content="B", expires_at=now)
         db_session.add_all([m1, m2])
@@ -130,7 +130,7 @@ class TestWorkingMemoryModel:
         assert len(results) == 1
 
     def test_slot_values(self, db_session):
-        now = datetime.utcnow() + timedelta(hours=1)
+        now = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
         for slot in ("active", "buffer", "archive"):
             memory = WorkingMemory(
                 user_id=1, session_id=f"sess-{slot}", content=f"Item {slot}", slot=slot, expires_at=now
@@ -216,7 +216,7 @@ class TestEpisodicSchemaValidation:
             "confidence": 0.5,
             "access_count": 0,
             "last_accessed": None,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc).replace(tzinfo=None),
             "updated_at": None,
             "recency_score": 1.0,
         }

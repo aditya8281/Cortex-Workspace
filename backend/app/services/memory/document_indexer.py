@@ -11,6 +11,7 @@ import hashlib
 import logging
 import mimetypes
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -331,7 +332,7 @@ class DocumentIndexer:
         self._store_chunks(doc, chunks)
         self._embed_and_upsert(doc, chunks)
 
-        doc.last_indexed_at = __import__("datetime").datetime.utcnow()
+        doc.last_indexed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self._db.commit()
         logger.info("Indexed %s (%d chunks, version=%d)", file_path, len(chunks), doc.version)
         return True
