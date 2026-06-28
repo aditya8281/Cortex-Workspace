@@ -46,6 +46,13 @@ class ModelListResponse(BaseModel):
     catalog_status: CatalogSourceStatusResponse | None = None
 
 
+class RefreshCatalogResponse(BaseModel):
+    status: str = "refreshing"
+    message: str = ""
+    total_models: int | None = None
+    source_status: CatalogSourceStatusResponse | None = None
+
+
 class RecommendationVariant(BaseModel):
     quantization: str | None = None
     size_gb: float | None = None
@@ -354,3 +361,27 @@ class InferenceConfigResponse(BaseModel):
     num_predict: int = 2048
     num_ctx: int | None = None
     image_resolution: int | None = None
+
+
+class PauseDownloadResponse(BaseModel):
+    paused: bool
+    model: str
+
+
+class ResumeDownloadResponse(BaseModel):
+    resumed: bool
+    model: str
+
+
+class ReorderQueueResponse(BaseModel):
+    reordered: bool
+    new_order: list[str]
+
+
+class BulkCancelResponse(BaseModel):
+    cancelled: int
+    job_ids: list[str]
+
+
+class ClearCompletedResponse(BaseModel):
+    cleared: int
