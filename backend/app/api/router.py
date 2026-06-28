@@ -14,6 +14,7 @@ from backend.app.api.metrics import router as metrics_router
 from backend.app.api.v1.awareness.router import router as awareness_router
 from backend.app.api.v1.cognition.router import router as cognition_router
 from backend.app.api.v1.developer.router import router as developer_router
+from backend.app.api.v1.execution import router as execution_router
 from backend.app.api.v1.integration.router import router as integration_router
 from backend.app.api.v1.intelligence.router import router as intelligence_router
 from backend.app.api.v1.interaction.router import router as interaction_router
@@ -34,7 +35,8 @@ api_router.include_router(metrics_router, tags=["Metrics"])
 # and integration_router parameterized routes (has /models/{model_name}/download).
 api_router.include_router(v1_memory_router, prefix="/memory", tags=["Knowledge", "Long-Term Memory", "Search"])
 api_router.include_router(awareness_router, prefix="/awareness", tags=["Indexing", "Repository"])
-api_router.include_router(cognition_router, tags=["Agents"])
+api_router.include_router(cognition_router, tags=["Agents", "Cognition"])
+api_router.include_router(execution_router, tags=["Execution"])
 api_router.include_router(interaction_router, tags=["Conversations", "Notifications", "Profile", "Users", "WebSocket"])
 api_router.include_router(system_router, tags=["Health", "System", "LLM Health", "WebSocket"])
 api_router.include_router(intelligence_router, tags=["Models Intelligence"])
