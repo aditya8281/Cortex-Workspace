@@ -42,7 +42,20 @@ export function Dropdown({ trigger, items, align = "left" }: DropdownProps) {
 
   return (
     <div ref={ref} className="relative inline-flex">
-      <div onClick={() => setOpen((o) => !o)} className="cursor-pointer">
+      <div
+        onClick={() => setOpen((o) => !o)}
+        className="cursor-pointer"
+        role="button"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((o) => !o);
+          }
+        }}
+      >
         {trigger}
       </div>
       {open && (
@@ -73,6 +86,7 @@ export function Dropdown({ trigger, items, align = "left" }: DropdownProps) {
                     : "text-text-primary hover:bg-bg-hover",
               )}
               role="menuitem"
+              aria-disabled={item.disabled}
             >
               {item.label}
             </button>

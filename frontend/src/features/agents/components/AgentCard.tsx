@@ -17,7 +17,15 @@ export function AgentCard({ agent, onRun, onClick }: AgentCardProps) {
     <Card
       className="p-4 cursor-pointer"
       hover
+      role="button"
+      tabIndex={0}
       onClick={() => onClick(agent.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick(agent.id);
+        }
+      }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
