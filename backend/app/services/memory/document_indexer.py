@@ -401,7 +401,7 @@ class DocumentIndexer:
             self._db.add(db_chunk)
         self._db.flush()
 
-    def _embed_and_upsert(self, doc: Document, chunks: list) -> None:
+    def _embed_and_upsert(self, doc: Document, _chunks: list) -> None:
         db_chunks = (
             self._db.query(DocumentChunk)
             .filter(DocumentChunk.document_id == doc.id)

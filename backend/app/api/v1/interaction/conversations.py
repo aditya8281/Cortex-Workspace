@@ -161,9 +161,13 @@ async def _stream_chat_response(
     history = svc.get_context_messages(conversation_id, max_tokens=28000)
     system_parts = ["You are Cortex, a helpful AI assistant with access to the user's codebase and knowledge."]
     if rag_context.formatted_context:
-        system_parts.append(f"Relevant context from the codebase:\n\n{rag_context.formatted_context}")
+        context_block = rag_context.formatted_context
         system_parts.append(
-            "\nUse this context to answer the user's question. Cite sources using [1], [2], etc. when referencing specific files."
+            f"Relevant context from the codebase:\n\n{context_block}"
+        )
+        system_parts.append(
+            "\nUse this context to answer the user's question. "
+            "Cite sources using [1], [2], etc. when referencing specific files."
         )
     raw_messages = [{"role": "system", "content": "\n\n".join(system_parts)}]
     for msg in history:  # type: ignore[attr-defined]

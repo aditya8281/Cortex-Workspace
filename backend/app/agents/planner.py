@@ -26,9 +26,14 @@ For each subtask, specify:
 
 Output your plan as a JSON array. Example:
 [
-  {"goal": "Search for all authentication-related code", "agent": "executor", "dependencies": [], "expected_output": "List of auth files and functions"},
-  {"goal": "Analyze the auth flow and identify vulnerabilities", "agent": "researcher", "dependencies": [0], "expected_output": "Security analysis report"},
-  {"goal": "Write a summary of findings", "agent": "executor", "dependencies": [1], "expected_output": "Markdown summary"}
+  {"goal": "Search for all auth-related code", "agent": "executor",
+   "dependencies": [], "expected_output": "List of auth files"},
+  {"goal": "Analyze auth flow for vulnerabilities",
+   "agent": "researcher", "dependencies": [0],
+   "expected_output": "Security analysis report"},
+  {"goal": "Write a summary of findings",
+   "agent": "executor", "dependencies": [1],
+   "expected_output": "Markdown summary"}
 ]
 
 If the task is simple enough to not need planning, return a single-step plan.
@@ -45,7 +50,7 @@ class PlannerAgent(BaseAgent):
     def _default_prompt(self) -> str:
         return PLANNER_SYSTEM_PROMPT
 
-    async def run(self, input_text: str, context: dict | None = None) -> str:
+    async def run(self, input_text: str, _context: dict | None = None) -> str:
         """Plan a task — returns JSON plan string."""
         plan = await self.plan(input_text)
         return json.dumps(plan, indent=2)
