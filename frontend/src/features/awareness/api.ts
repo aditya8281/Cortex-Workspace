@@ -95,16 +95,20 @@ export const environment = {
 // ── Files ──────────────────────────────────────────────────────────────────
 
 export const files = {
-  scan: (data?: { directory?: string }) =>
-    apiFetch<{ scanned: number }>("/awareness/files/scan", { method: "POST", body: data ?? {} }),
-
-  changes: (params?: { since?: string }) => {
-    const qs = params?.since ? `?since=${encodeURIComponent(params.since)}` : "";
-    return apiFetch<{ items: FileChange[] }>(`/awareness/files/changes${qs}`);
+  scan: (directory: string) => {
+    const qs = `?directory=${encodeURIComponent(directory)}`;
+    return apiFetch<{ files_indexed: number; stats: Record<string, any>; directory: string }>(`/awareness/files/scan${qs}`, { method: "POST" });
   },
 
-  summary: () =>
-    apiFetch<FileSummary>("/awareness/files/summary"),
+  changes: (directory: string) => {
+    const qs = `?directory=${encodeURIComponent(directory)}`;
+    return apiFetch<{ created: number; modified: number; deleted: number }>(`/awareness/files/changes${qs}`);
+  },
+
+  summary: (directory: string) => {
+    const qs = `?directory=${encodeURIComponent(directory)}`;
+    return apiFetch<FileSummary>(`/awareness/files/summary${qs}`);
+  },
 };
 
 // ── Health ─────────────────────────────────────────────────────────────────

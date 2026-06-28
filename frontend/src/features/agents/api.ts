@@ -51,7 +51,7 @@ export const agentsApi = {
 
   update: (id: number, data: Partial<{ name: string; description: string; system_prompt: string; model_id: string; is_active: boolean; tools: string[] }>) =>
     apiFetch<Agent>(`/agents/${id}`, {
-      method: "PATCH",
+      method: "PUT",
       body: data,
     }),
 
