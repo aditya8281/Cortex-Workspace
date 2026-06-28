@@ -18,7 +18,7 @@ export function RunHistory({
   runs: AgentRun[];
   onSelect: (run: AgentRun) => void;
 }) {
-  if (!runs.length) {
+  if (!runs || !runs.length) {
     return (
       <Card className="p-6 text-center">
         <p className="text-sm text-text-muted">No runs yet</p>

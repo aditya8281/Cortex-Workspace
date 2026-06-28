@@ -92,7 +92,7 @@ export function HealthCard() {
 
   if (!data) return <SkeletonCard />;
 
-  const color = statusColor(data.status);
+  const color = statusColor(data.status ?? "error");
 
   return (
     <Card role="article" aria-label="Health info">

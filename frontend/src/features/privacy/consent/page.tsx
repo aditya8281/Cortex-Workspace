@@ -35,7 +35,7 @@ export default function ConsentPage() {
     const load = async () => {
       try {
         const res = await consent.list();
-        if (!cancelled) setEntries(res.items);
+        if (!cancelled) setEntries(Array.isArray(res) ? res : res.items ?? []);
       } catch {
         // silently fail — component shows empty state
       } finally {

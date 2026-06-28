@@ -11,7 +11,7 @@ const levelColors: Record<string, string> = {
 };
 
 export function LogViewer({ logs }: { logs: SystemLog[] }) {
-  if (!logs.length) {
+  if (!logs || !logs.length) {
     return (
       <Card className="p-6 text-center">
         <p className="text-sm text-text-muted">No logs available</p>

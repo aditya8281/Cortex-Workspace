@@ -18,7 +18,7 @@ export function ConsentCard() {
     const load = async () => {
       try {
         const res = await consent.list();
-        if (!cancelled) setEntries(res.items);
+        if (!cancelled) setEntries(Array.isArray(res) ? res : res.items ?? []);
       } catch {
         // silently fail — component shows empty state
       } finally {
@@ -49,7 +49,7 @@ export function ConsentCard() {
     } catch {
       // Revert on failure by refetching
       const res = await consent.list();
-      setEntries(res.items);
+      setEntries(Array.isArray(res) ? res : res.items ?? []);
     } finally {
       setSavingAll(false);
     }
@@ -70,7 +70,7 @@ export function ConsentCard() {
     } catch {
       // Revert on failure by refetching
       const res = await consent.list();
-      setEntries(res.items);
+      setEntries(Array.isArray(res) ? res : res.items ?? []);
     } finally {
       setSavingAll(false);
     }

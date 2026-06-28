@@ -68,7 +68,7 @@ export function CompareView({
   const modelNames: Record<string, string> = {};
   if (comparison.dimensions.length > 0) {
     const firstDim = comparison.dimensions[0];
-    for (const modelId of Object.keys(firstDim.values)) {
+    for (const modelId of Object.keys(firstDim.values ?? {})) {
       // Extract name from model_id (e.g., "llama3.1:8b-q4_km" → "Llama3.1 8b")
       modelNames[modelId] = modelId.split(":")[0].replace(/[-_]/g, " ");
     }

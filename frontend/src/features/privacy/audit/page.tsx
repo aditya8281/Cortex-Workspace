@@ -101,8 +101,9 @@ export default function AuditPage() {
       }
 
       const res = await audit.logs(params);
-      setLogs(res.items);
-      setHasMore(res.items.length >= effectiveLimit);
+      const items = Array.isArray(res) ? res : res.items ?? [];
+      setLogs(items);
+      setHasMore(items.length >= effectiveLimit);
     } catch {
       // silently fail — keep current data
     } finally {

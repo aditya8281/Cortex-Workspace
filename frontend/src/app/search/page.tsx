@@ -25,10 +25,10 @@ export default function SearchPage() {
       if (mode === "ask") {
         const res = await memorySearch.answer({ query });
         setAnswer(res.answer);
-        setResults(res.sources);
+        setResults(Array.isArray(res.sources) ? res.sources : []);
       } else {
         const res = await memorySearch.search({ query, limit: 20 });
-        setResults(res.items);
+        setResults(Array.isArray(res) ? res : res.items ?? []);
       }
     } catch (e: any) {
       setError(e.message);

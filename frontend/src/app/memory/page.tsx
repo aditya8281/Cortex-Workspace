@@ -26,9 +26,9 @@ export default function MemoryPage() {
     setLoading(true);
     setError(null);
     const loader = {
-      episodic: () => episodicMemory.list().then(r => setEpisodic(r.items)).catch(e => setError(e.message)),
-      semantic: () => semanticMemory.list().then(r => setSemantic(r.items)).catch(e => setError(e.message)),
-      working: () => workingMemory.list().then(r => setWorking(r.items)).catch(e => setError(e.message)),
+      episodic: () => episodicMemory.list().then(r => setEpisodic(Array.isArray(r) ? r : r.items ?? [])).catch(e => setError(e.message)),
+      semantic: () => semanticMemory.list().then(r => setSemantic(Array.isArray(r) ? r : r.items ?? [])).catch(e => setError(e.message)),
+      working: () => workingMemory.list().then(r => setWorking(Array.isArray(r) ? r : r.items ?? [])).catch(e => setError(e.message)),
       graph: () => memoryGraph.stats().then(setGraphStats).catch(e => setError(e.message)),
       search: () => Promise.resolve(),
     };
@@ -40,7 +40,7 @@ export default function MemoryPage() {
     setLoading(true);
     try {
       const res = await memorySearch.search({ query: searchQuery, limit: 20 });
-      setSearchResults(res.items);
+      setSearchResults(Array.isArray(res) ? res : res.items ?? []);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -183,12 +183,12 @@ export default function MemoryPage() {
                   <StatCard label="Nodes" value={String(graphStats.total_nodes)} />
                   <StatCard label="Edges" value={String(graphStats.total_edges)} />
                   <StatCard label="Density" value={`${(graphStats.density * 100).toFixed(1)}%`} />
-                  <StatCard label="Node Types" value={String(Object.keys(graphStats.node_types).length)} />
+                  <StatCard label="Node Types" value={String(Object.keys(graphStats.node_types ?? {}).length)} />
                 </div>
                 <Card className="p-4">
                   <h3 className="text-sm font-semibold text-text-primary mb-3">Node Types</h3>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(graphStats.node_types).map(([type, count]) => (
+                    {Object.entries(graphStats.node_types ?? {}).map(([type, count]) => (
                       <Badge key={type} variant="default">{type}: {count}</Badge>
                     ))}
                   </div>
@@ -196,7 +196,7 @@ export default function MemoryPage() {
                 <Card className="p-4">
                   <h3 className="text-sm font-semibold text-text-primary mb-3">Edge Types</h3>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(graphStats.edge_types).map(([type, count]) => (
+                    {Object.entries(graphStats.edge_types ?? {}).map(([type, count]) => (
                       <Badge key={type} variant="default">{type}: {count}</Badge>
                     ))}
                   </div>

@@ -142,7 +142,7 @@ export function SystemOverview() {
         />
       </div>
 
-      {metrics.processes.length > 0 && (
+      {(metrics.processes ?? []).length > 0 && (
         <Card className="p-4">
           <p className="text-xs text-text-muted font-medium mb-3">Top Processes</p>
           <div className="space-y-1.5">

@@ -117,7 +117,7 @@ export function EnvironmentCard() {
         <div className="space-y-1">
           <p className="text-xs font-medium text-text-muted">System Paths</p>
           <div className="space-y-0.5">
-            {data.paths.slice(0, 6).map((p, i) => (
+            {(data.paths ?? []).slice(0, 6).map((p, i) => (
               <p
                 key={i}
                 className="font-mono text-[0.625rem] text-text-secondary truncate"
@@ -126,9 +126,9 @@ export function EnvironmentCard() {
                 {p}
               </p>
             ))}
-            {data.paths.length > 6 && (
+            {(data.paths?.length ?? 0) > 6 && (
               <p className="text-[0.625rem] text-text-muted italic">
-                +{data.paths.length - 6} more
+                +{(data.paths?.length ?? 0) - 6} more
               </p>
             )}
           </div>

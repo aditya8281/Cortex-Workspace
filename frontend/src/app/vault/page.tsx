@@ -27,7 +27,7 @@ export default function VaultPage() {
       setStatus(s);
       if (!s.locked) {
         const f = await vault.files();
-        setFiles(f.items);
+        setFiles(Array.isArray(f) ? f : f.items ?? []);
       }
     } catch (e: any) {
       setError(e.message);

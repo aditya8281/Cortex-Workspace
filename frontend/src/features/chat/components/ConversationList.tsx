@@ -14,7 +14,7 @@ export function ConversationList({
   activeId,
   onSelect,
 }: ConversationListProps) {
-  if (!conversations.length) {
+  if (!conversations || !conversations.length) {
     return (
       <div className="px-3 py-8 text-center">
         <p className="text-sm text-text-muted">No conversations yet</p>

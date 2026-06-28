@@ -27,7 +27,7 @@ export default function AwarenessReposPage() {
     setError(null);
     try {
       const result = await repository.list();
-      setRepos(result.items);
+      setRepos(Array.isArray(result) ? result : result.items ?? []);
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "Failed to load repositories",
