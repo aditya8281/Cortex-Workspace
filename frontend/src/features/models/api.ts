@@ -14,9 +14,6 @@ export type {
   InstalledModel,
   DownloadJob,
   DownloadHistoryItem,
-} from "@/features/developer/api";
-export type {
-  InstalledModel as InstalledModelDownload,
 } from "@/features/integration/api";
 
 // ── Page-specific types ────────────────────────────────────────────────────
