@@ -9,12 +9,14 @@ import { Button } from "@/shared/ui/Button";
 import { Modal } from "@/shared/ui/Modal";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { useDownloadContext } from "@/shared/downloads/DownloadProvider";
 
 interface InstalledViewProps {
   onViewDetail: (modelId: string) => void;
 }
 
 export function InstalledView({ onViewDetail }: InstalledViewProps) {
+  const { actions } = useDownloadContext();
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -60,7 +62,7 @@ export function InstalledView({ onViewDetail }: InstalledViewProps) {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await downloads.remove(deleteTarget.model_id);
+      await actions.deleteLocal(deleteTarget.model_id);
       setModels(prev => prev.filter(m => m.model_id !== deleteTarget.model_id));
       if (defaultModelId === deleteTarget.model_id) {
         setDefaultModelId(null);
