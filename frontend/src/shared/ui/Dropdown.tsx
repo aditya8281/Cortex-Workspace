@@ -1,58 +1,84 @@
 "use client";
 
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { type ReactNode } from "react";
-import { cn } from "../../lib/utils";
+import { type ReactNode, useState, useRef, useEffect, useCallback } from "react";
+import { cn } from "@/shared/lib/utils";
+
+interface DropdownItem {
+  label: string;
+  onClick: () => void;
+  destructive?: boolean;
+  disabled?: boolean;
+}
 
 interface DropdownProps {
   trigger: ReactNode;
-  children: ReactNode;
-  align?: "start" | "center" | "end";
+  items: DropdownItem[];
+  align?: "left" | "right";
 }
 
-export default function Dropdown({ trigger, children, align = "end" }: DropdownProps) {
+export function Dropdown({ trigger, items, align = "left" }: DropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const close = useCallback(() => setOpen(false), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) close();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, close]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, close]);
+
   return (
-    <DropdownMenuPrimitive.Root>
-      <DropdownMenuPrimitive.Trigger asChild>
+    <div ref={ref} className="relative inline-flex">
+      <div onClick={() => setOpen((o) => !o)} className="cursor-pointer">
         {trigger}
-      </DropdownMenuPrimitive.Trigger>
-      <DropdownMenuPrimitive.Portal>
-        <DropdownMenuPrimitive.Content
-          align={align}
-          sideOffset={6}
+      </div>
+      {open && (
+        <div
           className={cn(
-            "z-50 min-w-[180px] rounded-xl bg-bg-elevated border border-border-subtle p-1.5",
-            "shadow-elevated animate-fade-in-scale"
+            "absolute z-50 mt-1.5 min-w-[160px] rounded-lg border border-border-default bg-bg-elevated py-1 shadow-elevated",
+            "animate-fade-in-scale origin-top-left",
+            align === "right" ? "right-0" : "left-0",
           )}
+          role="menu"
         >
-          {children}
-        </DropdownMenuPrimitive.Content>
-      </DropdownMenuPrimitive.Portal>
-    </DropdownMenuPrimitive.Root>
-  );
-}
-
-export function DropdownItem({
-  children,
-  className,
-  destructive,
-  ...props
-}: DropdownMenuPrimitive.DropdownMenuItemProps & { destructive?: boolean }) {
-  return (
-    <DropdownMenuPrimitive.Item
-      className={cn(
-        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm cursor-pointer outline-none transition-colors",
-        "text-text-secondary hover:bg-bg-hover hover:text-text",
-        destructive && "text-error hover:bg-error-muted",
-        className
+          {items.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => {
+                if (!item.disabled) {
+                  item.onClick();
+                  close();
+                }
+              }}
+              disabled={item.disabled}
+              className={cn(
+                "flex w-full items-center px-3 py-2 text-sm text-left transition-colors duration-150",
+                item.disabled
+                  ? "cursor-not-allowed text-text-muted"
+                  : item.destructive
+                    ? "text-danger hover:bg-danger/10"
+                    : "text-text-primary hover:bg-bg-hover",
+              )}
+              role="menuitem"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       )}
-      {...props}
-    >
-      {children}
-    </DropdownMenuPrimitive.Item>
+    </div>
   );
-}
-
-export function DropdownSeparator() {
-  return <DropdownMenuPrimitive.Separator className="my-1 h-px bg-border-subtle" />;
 }

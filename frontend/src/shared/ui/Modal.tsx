@@ -1,42 +1,71 @@
 "use client";
 
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { type ReactNode } from "react";
-import { cn } from "../../lib/utils";
+import { type ReactNode, useEffect, useCallback } from "react";
+import { cn } from "@/shared/lib/utils";
 
 interface ModalProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
   title?: string;
-  description?: string;
   children: ReactNode;
   className?: string;
 }
 
-export default function Modal({ open, onOpenChange, title, description, children, className }: ModalProps) {
+export function Modal({ open, onClose, title, children, className }: ModalProps) {
+  const handleEscape = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    },
+    [onClose],
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    document.addEventListener("keydown", handleEscape);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
+    };
+  }, [open, handleEscape]);
+
+  if (!open) return null;
+
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="modal-overlay" />
-        <DialogPrimitive.Content className={cn("modal-content", className)}>
-          {title && (
-            <DialogPrimitive.Title className="text-lg font-semibold text-text font-display">
-              {title}
-            </DialogPrimitive.Title>
-          )}
-          {description && (
-            <DialogPrimitive.Description className="text-sm text-text-muted mt-1">
-              {description}
-            </DialogPrimitive.Description>
-          )}
-          <div className="mt-4">{children}</div>
-          <DialogPrimitive.Close className="absolute right-4 top-4 text-text-muted hover:text-text transition-colors">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </DialogPrimitive.Close>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+    <div className="fixed inset-0 z-modal flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 animate-fade-in"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {/* Panel */}
+      <div
+        className={cn(
+          "relative z-10 w-full max-w-lg mx-4 rounded-xl border border-border-default bg-bg-elevated shadow-modal",
+          "animate-fade-in-scale",
+          className,
+        )}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        {title && (
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
+            <h2 className="text-title font-semibold text-text-primary">{title}</h2>
+            <button
+              onClick={onClose}
+              className="rounded-md p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-hover transition-colors duration-150"
+              aria-label="Close"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M4 4l8 8M12 4l-8 8" />
+              </svg>
+            </button>
+          </div>
+        )}
+        <div className="px-6 py-4">{children}</div>
+      </div>
+    </div>
   );
 }

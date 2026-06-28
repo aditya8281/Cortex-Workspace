@@ -1,3 +1,0 @@
-// Conversations Feature — API Layer
-// Populated in v1.03+ (Conversations Foundation)
-export {};
