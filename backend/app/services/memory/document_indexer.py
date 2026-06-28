@@ -206,7 +206,7 @@ def _detect_encoding(file_path: str) -> str:
     try:
         with open(file_path, "rb") as f:
             raw = f.read(min(os.path.getsize(file_path), 1024 * 1024))
-        result = chardet.detect(raw)
+        result = chardet.detect(raw)  # type: ignore[possibly-undefined]
         encoding = result.get("encoding") or "utf-8"
         confidence = result.get("confidence", 0)
 

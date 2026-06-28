@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -249,7 +249,7 @@ class TestWorkingMemoryService:
         assert item.id is not None
         assert item.slot == "active"
         assert item.priority == 5
-        assert item.expires_at > datetime.utcnow()
+        assert item.expires_at > datetime.now(timezone.utc).replace(tzinfo=None)
 
     def test_get_active_ordered_by_priority(self, db_session):
         service = WorkingMemoryService(db_session)
@@ -337,7 +337,7 @@ class TestWorkingMemoryService:
         item = service.add(user_id=1, session_id="s1", content="Expired")
 
         # Force expire
-        item.expires_at = datetime.utcnow() - timedelta(hours=1)
+        item.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)
         db_session.commit()
 
         count = service.cleanup_expired(user_id=1, session_id="s1")
@@ -620,7 +620,7 @@ class TestTemporalScoring:
     """TemporalScoring unit tests (no DB needed)."""
 
     def test_recency_score_recent(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         score = TemporalScoring.recency_score(
             created_at=now - timedelta(days=1),
             last_accessed=now,
@@ -628,7 +628,7 @@ class TestTemporalScoring:
         assert score > 0.8
 
     def test_recency_score_old(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         score = TemporalScoring.recency_score(
             created_at=now - timedelta(days=90),
             last_accessed=now - timedelta(days=60),
@@ -636,7 +636,7 @@ class TestTemporalScoring:
         assert score < 0.3
 
     def test_recency_score_no_access(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         score = TemporalScoring.recency_score(
             created_at=now - timedelta(days=30),
             last_accessed=None,
@@ -663,7 +663,7 @@ class TestTemporalScoring:
         assert TemporalScoring.time_of_day_similarity(now, different) < 0.2
 
     def test_composite_temporal_score(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         score = TemporalScoring.composite_temporal_score(
             created_at=now - timedelta(days=1),
             last_accessed=now,
@@ -780,7 +780,7 @@ class TestForgettingService:
         from backend.app.models.memory.episodic import EpisodicMemory
 
         old_mem = db_session.query(EpisodicMemory).filter(EpisodicMemory.id == memory.id).first()
-        old_mem.last_accessed = datetime.utcnow() - timedelta(days=30)
+        old_mem.last_accessed = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
         db_session.commit()
 
         forgetting = MemoryServiceFactory(db_session).forgetting
@@ -800,7 +800,7 @@ class TestForgettingService:
 
         for mem_id in [high.id, low.id]:
             mem = db_session.query(EpisodicMemory).filter(EpisodicMemory.id == mem_id).first()
-            mem.last_accessed = datetime.utcnow() - timedelta(days=30)
+            mem.last_accessed = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
         db_session.commit()
 
         forgetting = MemoryServiceFactory(db_session).forgetting

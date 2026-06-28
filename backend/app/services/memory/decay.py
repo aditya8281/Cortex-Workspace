@@ -193,7 +193,7 @@ class ForgettingService:
             "gc_candidates": episodic_low + semantic_low,
         }
 
-    def _days_since(self, dt: datetime) -> float:
+    def _days_since(self, dt: datetime | None) -> float:
         """Calculate days since a datetime."""
         if dt is None:
             return 0.0

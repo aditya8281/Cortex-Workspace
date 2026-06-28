@@ -294,7 +294,7 @@ class GraphBuilder:
                     count += 1
         return count
 
-    def _create_contains_edges(self, source: GraphNode, chunk: CodeChunk, nodes: dict[int, GraphNode]) -> int:
+    def _create_contains_edges(self, source: GraphNode, _chunk: CodeChunk, nodes: dict[int, GraphNode]) -> int:
         """Create 'contains' edges from file-level containment."""
         count = 0
         for node in nodes.values():
