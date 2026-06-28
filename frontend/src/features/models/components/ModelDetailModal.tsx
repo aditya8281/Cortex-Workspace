@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { ModelCatalogEntry } from "../api";
-import { catalog, downloads, getDefaultModel, setDefaultModel, formatBytes, formatParamCount } from "../api";
+import { catalog, getDefaultModel, setDefaultModel, formatBytes, formatParamCount } from "../api";
 import { Modal } from "@/shared/ui/Modal";
 import { Badge } from "@/shared/ui/Badge";
 import { Button } from "@/shared/ui/Button";
 import { cn } from "@/shared/lib/utils";
 import { VariantPicker } from "./VariantPicker";
+import { useDownloadContext } from "@/shared/downloads/DownloadProvider";
 
 // ── Local types mirroring API responses ──────────────────────────────────
 
@@ -69,6 +70,8 @@ export function ModelDetailModal({
   onDownload,
   onSetDefault,
 }: ModelDetailModalProps) {
+  const { actions } = useDownloadContext();
+
   // Data state
   const [detail, setDetail] = useState<ModelDetail | null>(null);
   const [inferenceConfig, setInferenceConfig] = useState<InferenceConfig | null>(null);
@@ -133,7 +136,7 @@ export function ModelDetailModal({
     if (!detail || !selectedVariantId) return;
     setDownloading(true);
     try {
-      await downloads.download(detail.name, selectedVariantId);
+      await actions.download(detail.name, selectedVariantId);
       onDownload?.(detail.name);
       onClose();
     } catch (e: any) {
@@ -141,7 +144,7 @@ export function ModelDetailModal({
     } finally {
       setDownloading(false);
     }
-  }, [detail, selectedVariantId, onDownload, onClose]);
+  }, [detail, selectedVariantId, actions, onDownload, onClose]);
 
   const handleUseInChat = useCallback(() => {
     if (!detail) return;
