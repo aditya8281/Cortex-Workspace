@@ -5,11 +5,12 @@ import { Button } from "@/shared/ui/Button";
 
 interface ChatInputProps {
   onSend: (content: string) => void;
+  onTyping?: () => void;
   disabled?: boolean;
   model?: string;
 }
 
-export function ChatInput({ onSend, disabled, model }: ChatInputProps) {
+export function ChatInput({ onSend, onTyping, disabled, model }: ChatInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -48,7 +49,7 @@ export function ChatInput({ onSend, disabled, model }: ChatInputProps) {
           <textarea
             ref={textareaRef}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => { setValue(e.target.value); onTyping?.(); }}
             onKeyDown={handleKeyDown}
             onInput={handleInput}
             placeholder="Type a message…"

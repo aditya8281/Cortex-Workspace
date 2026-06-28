@@ -5,6 +5,7 @@ import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/shared/layout/AppShell";
 import { Button } from "@/shared/ui/Button";
+import { StatusDot } from "@/shared/ui/StatusDot";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Modal } from "@/shared/ui/Modal";
 import { Input } from "@/shared/ui/Input";
@@ -12,6 +13,7 @@ import { AgentCard } from "./components/AgentCard";
 import { RunHistory } from "./components/RunHistory";
 import { RunDetail } from "./components/RunDetail";
 import { agentsApi, type Agent, type AgentRun, type AgentStep } from "./api";
+import { useWebSocket, type WSStatus } from "@/shared/ws/useWebSocket";
 
 export default function AgentsPage() {
   const { user, loading } = useAuth();
@@ -60,6 +62,40 @@ export default function AgentsPage() {
     loadRuns();
   }, [loadAgents, loadRuns]);
 
+  // ── Real-time agent run progress via WebSocket ──────────────────────────
+
+  const handleAgentWSMessage = useCallback((data: Record<string, unknown>) => {
+    if (data.type === "agent_runs" && Array.isArray(data.runs)) {
+      const wsRuns = data.runs as Array<{
+        id: number;
+        agent_id: number;
+        status: string;
+        completed_steps: number;
+        total_steps: number;
+        progress: number;
+        created_at: string;
+      }>;
+      if (wsRuns.length > 0) {
+        setRuns((prev) => {
+          const updated = prev.map((r) => {
+            const wsRun = wsRuns.find((w) => w.id === r.id);
+            if (wsRun) {
+              return { ...r, status: wsRun.status as AgentRun["status"] };
+            }
+            return r;
+          });
+          return updated;
+        });
+      }
+    }
+  }, []);
+
+  const { status: agentWsStatus } = useWebSocket({
+    path: "/api/v1/ws/agents",
+    enabled: !!user,
+    onMessage: handleAgentWSMessage,
+  });
+
   const handleCreate = async () => {
     if (!createForm.name.trim() || !createForm.system_prompt.trim()) return;
     setCreating(true);
@@ -104,11 +140,17 @@ export default function AgentsPage() {
     <AppShell>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-headline font-semibold text-text-primary">Agents</h1>
-            <p className="mt-1 text-sm text-text-secondary">
-              {agents.length} autonomous agent{agents.length !== 1 && "s"}
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-headline font-semibold text-text-primary">Agents</h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                {agents.length} autonomous agent{agents.length !== 1 && "s"}
+              </p>
+            </div>
+            <StatusDot
+              color={agentWsStatus === "connected" ? "success" : "danger"}
+              pulse={agentWsStatus === "connected"}
+            />
           </div>
           <Button onClick={() => setShowCreate(true)}>New Agent</Button>
         </div>

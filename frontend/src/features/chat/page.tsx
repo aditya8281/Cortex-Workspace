@@ -27,6 +27,7 @@ import {
   setDefaultModel,
   type InstalledModel,
 } from "@/features/models/api";
+import { useChatTyping } from "@/shared/ws/useChatTyping";
 
 export default function ChatPage() {
   const { user, loading } = useAuth();
@@ -43,6 +44,12 @@ export default function ChatPage() {
 
   const [showNew, setShowNew] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+
+  // Typing indicators via WebSocket
+  const { sendTyping, isOthersTyping, typingCount } = useChatTyping({
+    conversationId: activeId,
+    userId: user ? Number(user.id) : undefined,
+  });
 
   useEffect(() => {
     if (!loading && !user) router.push("/auth");
@@ -288,9 +295,19 @@ export default function ChatPage() {
                 </div>
               )}
 
+              {/* Typing indicator */}
+              {isOthersTyping && (
+                <div className="px-6 py-1.5">
+                  <p className="text-xs text-text-muted italic">
+                    Someone is typing{typingCount > 1 ? ` (${typingCount})` : ""}…
+                  </p>
+                </div>
+              )}
+
               {/* Input */}
               <ChatInput
                 onSend={handleSend}
+                onTyping={sendTyping}
                 disabled={streaming}
               />
             </>
