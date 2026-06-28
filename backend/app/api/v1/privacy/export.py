@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -44,7 +46,7 @@ def process_export(
     return export
 
 
-@router.get("/{export_id}/verify")
+@router.get("/{export_id}/verify", response_model=dict[str, Any])
 def verify_export(
     export_id: int,
     current_user: User = Depends(get_current_user),

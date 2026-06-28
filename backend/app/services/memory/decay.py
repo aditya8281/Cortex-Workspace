@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -41,7 +41,7 @@ class ForgettingService:
             "semantic_decayed": semantic_decayed,
             "episodic_gc": episodic_gc,
             "semantic_gc": semantic_gc,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         }
 
     def _decay_episodic(self, user_id: int) -> int:
@@ -193,9 +193,9 @@ class ForgettingService:
             "gc_candidates": episodic_low + semantic_low,
         }
 
-    def _days_since(self, dt: datetime) -> float:
+    def _days_since(self, dt: datetime | None) -> float:
         """Calculate days since a datetime."""
         if dt is None:
             return 0.0
-        delta = datetime.utcnow() - dt
+        delta = datetime.now(timezone.utc).replace(tzinfo=None) - dt
         return max(0.0, delta.total_seconds() / 86400.0)

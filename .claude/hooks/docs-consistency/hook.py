@@ -31,8 +31,9 @@ _RE_MARKDOWN_LINK = re.compile(r'\[.*?\]\(([^)]+)\)')
 
 CORE_DOCS = [
     "README.md", "CLAUDE.md", "AGENTS.md", "DESIGN.md",
-    "docs/GOVERNANCE.md", "docs/WORKFLOWS.md", "docs/ARCHITECTURE.md",
-    "docs/ROADMAP.md", "docs/API.md", "docs/DATABASE.md", "docs/SECURITY.md",
+    "docs/guides/governance.md", "docs/workflows/index.md",
+    "docs/architecture/overview.md", "docs/reference/api.md",
+    "docs/reference/database.md",
 ]
 
 
@@ -76,30 +77,11 @@ def check_links() -> list[str]:
     return findings
 
 
-def check_roadmap_consistency() -> list[str]:
-    """Check roadmap checkbox consistency."""
-    findings: list[str] = []
-    roadmap = ROOT / "docs" / "ROADMAP.md"
-    if not roadmap.exists():
-        return findings
-
-    content = read_file(roadmap)
-    unchecked = content.count("[ ]")
-    checked = content.count("[x]")
-
-    if unchecked + checked > 0:
-        pct = int(checked / (unchecked + checked) * 100)
-        findings.append(f"Roadmap: {checked}/{unchecked + checked} items complete ({pct}%)")
-
-    return findings
-
-
 def run_hook() -> HookResult:
     """Run the docs consistency hook."""
     findings: list[str] = []
     findings.extend(check_core_docs())
     findings.extend(check_links())
-    findings.extend(check_roadmap_consistency())
 
     errors = [f for f in findings if "MISSING" in f or "BROKEN" in f]
     warnings = [f for f in findings if f not in errors]

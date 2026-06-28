@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # Domain Documentation
 
 Domain-specific documentation for each service domain.

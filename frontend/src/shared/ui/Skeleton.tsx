@@ -1,16 +1,19 @@
-import { cn } from "../../lib/utils";
+"use client";
+
+import { cn } from "@/shared/lib/utils";
 
 interface SkeletonProps {
   className?: string;
 }
 
-export default function Skeleton({ className }: SkeletonProps) {
+export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        "rounded-xl bg-bg-surface shimmer-bg",
-        className
+        "shimmer-bg rounded-md",
+        className,
       )}
+      aria-hidden="true"
     />
   );
 }

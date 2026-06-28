@@ -162,7 +162,7 @@ async def get_run_status_endpoint(
     return {"run_id": run_id, "status": get_run_status(run_id)}
 
 
-@router.post("/agents/runs/{run_id}/stream")
+@router.post("/agents/runs/{run_id}/stream", response_model=None)
 async def stream_run_events(
     run_id: int,
     db: Session = Depends(get_db),

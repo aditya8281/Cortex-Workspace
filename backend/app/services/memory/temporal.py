@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class TemporalScoring:
@@ -28,7 +28,7 @@ class TemporalScoring:
         Returns:
             Score between 0.0 and 1.0.
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if last_accessed:
             days_since_created = max(0.0, (now - created_at).total_seconds() / 86400.0)

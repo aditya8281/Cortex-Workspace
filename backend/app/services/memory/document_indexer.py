@@ -11,6 +11,7 @@ import hashlib
 import logging
 import mimetypes
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -205,7 +206,7 @@ def _detect_encoding(file_path: str) -> str:
     try:
         with open(file_path, "rb") as f:
             raw = f.read(min(os.path.getsize(file_path), 1024 * 1024))
-        result = chardet.detect(raw)
+        result = chardet.detect(raw)  # type: ignore[possibly-undefined]
         encoding = result.get("encoding") or "utf-8"
         confidence = result.get("confidence", 0)
 
@@ -331,7 +332,7 @@ class DocumentIndexer:
         self._store_chunks(doc, chunks)
         self._embed_and_upsert(doc, chunks)
 
-        doc.last_indexed_at = __import__("datetime").datetime.utcnow()
+        doc.last_indexed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self._db.commit()
         logger.info("Indexed %s (%d chunks, version=%d)", file_path, len(chunks), doc.version)
         return True
@@ -400,7 +401,7 @@ class DocumentIndexer:
             self._db.add(db_chunk)
         self._db.flush()
 
-    def _embed_and_upsert(self, doc: Document, chunks: list) -> None:
+    def _embed_and_upsert(self, doc: Document, _chunks: list) -> None:
         db_chunks = (
             self._db.query(DocumentChunk)
             .filter(DocumentChunk.document_id == doc.id)

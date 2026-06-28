@@ -231,7 +231,7 @@ def get_mime_type(filename: str) -> str:
     return mapping.get(ext, "application/octet-stream")
 
 
-@router.get("/files/preview/{file_path:path}")
+@router.get("/files/preview/{file_path:path}", response_model=None)
 def preview_file(
     file_path: str,
     current_user: User = Depends(get_current_user),
@@ -250,7 +250,7 @@ def preview_file(
     )
 
 
-@router.get("/files/download/{file_path:path}")
+@router.get("/files/download/{file_path:path}", response_model=None)
 def download_file(
     file_path: str,
     current_user: User = Depends(get_current_user),

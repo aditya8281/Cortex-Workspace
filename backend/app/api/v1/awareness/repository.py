@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -242,7 +243,7 @@ def index_status(
 # ── Repository Scanner (P02 awareness) ─────────────────────────
 
 
-@router.post("/repos/scan")
+@router.post("/repos/scan", response_model=dict[str, Any])
 def scan_repository_structure(
     repo_path: str = Query(..., min_length=1, max_length=1000),
     db: Session = Depends(get_db),

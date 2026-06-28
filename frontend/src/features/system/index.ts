@@ -1,2 +1,0 @@
-// System Feature Module — Public API
-export { default } from './page';

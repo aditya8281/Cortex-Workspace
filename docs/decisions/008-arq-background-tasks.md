@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-008: Arq for Background Tasks
 
 **Status:** Accepted

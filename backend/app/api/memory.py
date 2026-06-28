@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -46,7 +48,7 @@ class MemorySearchPayload(BaseModel):
     limit: int = Field(default=10, ge=1, le=100)
 
 
-@router.get("/api/v1/memory")
+@router.get("/api/v1/memory", response_model=dict[str, Any])
 def list_memory(
     limit: int = 24,
     offset: int = 0,
@@ -73,7 +75,7 @@ def list_memory(
     }
 
 
-@router.post("/api/v1/memory")
+@router.post("/api/v1/memory", response_model=dict[str, Any])
 def create_memory(
     payload: MemoryCreatePayload,
     db: Session = Depends(get_db),
@@ -92,7 +94,7 @@ def create_memory(
     return {"status": "created", "entry": manager._serialize(entry)}
 
 
-@router.get("/api/v1/memory/{entry_id}")
+@router.get("/api/v1/memory/{entry_id}", response_model=dict[str, Any])
 def get_memory(
     entry_id: int,
     db: Session = Depends(get_db),
@@ -106,7 +108,7 @@ def get_memory(
     return manager._serialize(entry)
 
 
-@router.put("/api/v1/memory/{entry_id}")
+@router.put("/api/v1/memory/{entry_id}", response_model=dict[str, Any])
 def update_memory(
     entry_id: int,
     payload: MemoryUpdatePayload,
@@ -131,7 +133,7 @@ def update_memory(
     return {"status": "updated", "entry": manager._serialize(entry)}
 
 
-@router.delete("/api/v1/memory/{entry_id}")
+@router.delete("/api/v1/memory/{entry_id}", response_model=dict[str, Any])
 def delete_memory(
     entry_id: int,
     db: Session = Depends(get_db),
@@ -146,7 +148,7 @@ def delete_memory(
     return {"status": "deleted"}
 
 
-@router.post("/api/v1/memory/search")
+@router.post("/api/v1/memory/search", response_model=dict[str, Any])
 def search_memory(
     payload: MemorySearchPayload,
     db: Session = Depends(get_db),
@@ -171,7 +173,7 @@ class BulkEmbedPayload(BaseModel):
     entry_ids: list[int] = Field(min_length=1)
 
 
-@router.post("/api/v1/memory/scan-repo")
+@router.post("/api/v1/memory/scan-repo", response_model=dict[str, Any])
 async def scan_repo(
     payload: ScanRepoPayload,
     current_user: User = Depends(get_current_user),
@@ -185,7 +187,7 @@ async def scan_repo(
     return {"status": "queued", "job_id": job_id}
 
 
-@router.post("/api/v1/memory/bulk-embed")
+@router.post("/api/v1/memory/bulk-embed", response_model=dict[str, Any])
 async def bulk_embed(
     payload: BulkEmbedPayload,
     current_user: User = Depends(get_current_user),

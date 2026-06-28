@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -55,7 +57,7 @@ def list_semantic_memories(
     )
 
 
-@router.get("/categories")
+@router.get("/categories", response_model=list[dict[str, Any]])
 def get_semantic_categories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -65,7 +67,7 @@ def get_semantic_categories(
     return service.get_categories(current_user.id)
 
 
-@router.get("/search")
+@router.get("/search", response_model=dict[str, Any])
 def search_semantic_memories(
     query: str = Query(..., min_length=1, max_length=200),
     limit: int = Query(10, ge=1, le=50),
@@ -111,7 +113,7 @@ def update_semantic_memory(
     return SemanticMemoryResponse.model_validate(memory)
 
 
-@router.delete("/{memory_id}", status_code=204)
+@router.delete("/{memory_id}", status_code=204, response_model=None)
 def delete_semantic_memory(
     memory_id: int,
     db: Session = Depends(get_db),

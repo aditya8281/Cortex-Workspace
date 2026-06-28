@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -123,7 +123,7 @@ class MemorySearchService:
                 .filter(
                     WorkingMemory.user_id == user_id,
                     WorkingMemory.content.ilike(f"%{query}%"),
-                    WorkingMemory.expires_at > datetime.utcnow(),
+                    WorkingMemory.expires_at > datetime.now(timezone.utc).replace(tzinfo=None),
                 )
                 .all()
             )

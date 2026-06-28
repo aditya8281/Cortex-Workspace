@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-011: Multi-Agent Governance Ecosystem
 
 **Status:** Accepted

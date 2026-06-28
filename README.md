@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # CORTEX
 
 ## Vision
@@ -31,18 +33,31 @@ The goal is to transform a computer from a tool you operate into a companion tha
 
 | Area | State |
 |------|-------|
-| Tests | 486+ passing (backend pytest + frontend vitest) |
-| Frontend build | Passes |
-| Linting | ruff + ESLint + mypy — all clean |
-| Auth + vault backend | Production-quality foundation |
-| Vault UI | Full file browser with table/list/grid views |
-| Neural Dark redesign | Complete (warm dark, Neural Network background) |
-| CLI | Scaffolded (command stubs) |
+| Backend API | 186 endpoints (177 domain + 9 auth) across 10 domain routers |
+| Auth + Vault | Production-quality — JWT + Argon2, Fernet encryption, secure password cache, CSRF double-submit |
+| Agent System | Agent loop, run manager, stall detection, verifier, compactor, policy engine |
+| Memory System | Episodic, semantic, working memory with graph relationships and search |
+| Intelligence | Model catalog, providers, variants, benchmarks, recommendation engine |
 | LLM Integration | llama.cpp + Ollama with provider abstraction |
-| Model Catalog | Full catalogue with providers, variants, benchmarks |
-| Agentic Ecosystem | Governance, workflows, hooks, automation — complete |
+| Awareness | Device detection, file tracking, project detection, repo analysis, health monitoring |
+| Privacy | Consent management, audit logging, access control, RBAC/ABAC |
+| Frontend | 17 real pages + 4 Coming Soon, 38 components, 10 shared UI components |
+| Tests | 1,743 passing (backend pytest) |
+| Linting | ruff + mypy — clean |
+| Database | 37 Alembic migrations |
 
-**Phases 1–3 complete. Phases 4–6 partially complete. See [Implementation Guide](.agents/plans/implementation_steps.md) for details.**
+### Codebase Metrics
+
+| Metric | Value |
+|--------|-------|
+| Backend Python files | 379 |
+| Backend LoC | 40,947 |
+| Frontend TSX/TS files | 107 |
+| Frontend LoC | 9,933 |
+| Test files | 169 |
+| Test LoC | 18,041 |
+| Documentation files | 57 |
+| Git commits | 636 |
 
 ---
 
@@ -102,7 +117,35 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
   └──────────┘  └──────────┘  └──────────┘
 ```
 
-**For detailed architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).**
+**For detailed architecture, see [docs/architecture/overview.md](docs/architecture/overview.md).**
+
+---
+
+## Frontend Pages
+
+| Page | Status | Description |
+|------|--------|-------------|
+| `/` | Real | System overview — CPU, RAM, GPU, disk metrics |
+| `/chat` | Real | Conversations, streaming, model selection, code blocks |
+| `/agents` | Real | Agent management, chat, run history |
+| `/models` | Real | Browse, download, compare, installed models |
+| `/awareness` | Real | Device, environment, health, project cards |
+| `/awareness/repos` | Real | Repository management, add/list/remove |
+| `/awareness/indexing` | Real | Indexing configuration, graph view |
+| `/memory` | Real | Knowledge graph, search, memory management |
+| `/search` | Real | Unified search across all domains |
+| `/vault` | Real | Encrypted document locker |
+| `/privacy` | Real | Overview dashboard with consent, audit, storage |
+| `/privacy/audit` | Real | Audit log viewer with filters, pagination |
+| `/privacy/consent` | Real | Consent management with toggles |
+| `/system` | Real | System health monitoring |
+| `/settings` | Real | User settings, profile, preferences |
+| `/auth` | Real | Login |
+| `/auth/register` | Real | Registration |
+| `/marketplace` | Coming Soon | Model marketplace |
+| `/notes` | Coming Soon | Notes system |
+| `/scheduler` | Coming Soon | Task scheduling |
+| `/tasks` | Coming Soon | Task management |
 
 ---
 
@@ -111,7 +154,6 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS |
-| Frontend UI | framer-motion, Radix UI, cmdk, sonner, Three.js |
 | Backend | FastAPI, Python 3.12+ |
 | Database | PostgreSQL 16 (SQLite in tests only) |
 | ORM | SQLAlchemy 2.0 + Alembic |
@@ -122,7 +164,6 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 | Embeddings | ONNX Runtime (BGE-M3) |
 | LLM | llama.cpp, Ollama (provider abstraction) |
 | Task Queue | arq (Redis-based) |
-| CLI | TypeScript, Commander.js |
 
 ---
 
@@ -131,10 +172,11 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 ```bash
 make install       # uv sync + npm install
 make migrate       # alembic upgrade head
-make test          # 486+ tests (backend pytest + frontend vitest)
+make test          # 1,743 tests (backend pytest)
 make lint          # ruff + mypy
 make format        # ruff format
 make check         # lint + test
+make design        # Rebuild frontend via /project:design
 ```
 
 ### Make Targets
@@ -144,6 +186,7 @@ make check         # lint + test
 | `make dev` | Backend hot reload |
 | `make dev-frontend` | Frontend dev server |
 | `make dev-full` | Both |
+| `make design` | Rebuild frontend via `/project:design` |
 | `make db-shell` | psql |
 | `make db-reset` | Drop schema + remigrate |
 | `make db-backup` | pg_dump |
@@ -161,10 +204,12 @@ make check         # lint + test
 | [CLAUDE.md](./CLAUDE.md) | AI Agents | Development guidance, commands, patterns |
 | [AGENTS.md](./AGENTS.md) | AI Agents | Behavior rules, security, API patterns |
 | [DESIGN.md](./DESIGN.md) | Designers | Design system, tokens, components |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Engineers | System architecture, tech decisions, agent system |
-| [docs/API.md](docs/API.md) | Engineers | API reference, endpoints, auth |
-| [docs/DATABASE.md](docs/DATABASE.md) | Engineers | DB schema, migrations, conventions |
-| [docs/GOVERNANCE.md](docs/GOVERNANCE.md) | Everyone | Rules of engagement, security patterns |
+| [PRODUCT.md](./PRODUCT.md) | Designers | Product definition, brand, principles |
+| [docs/architecture/overview.md](docs/architecture/overview.md) | Engineers | System architecture, tech decisions |
+| [docs/reference/api.md](docs/reference/api.md) | Engineers | API reference, endpoints, auth |
+| [docs/reference/database.md](docs/reference/database.md) | Engineers | DB schema, migrations, conventions |
+| [docs/guides/governance.md](docs/guides/governance.md) | Everyone | Rules of engagement, security patterns |
+| [docs/domains/](docs/domains/) | Engineers | Domain-specific documentation |
 
 ---
 

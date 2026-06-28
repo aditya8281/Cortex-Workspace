@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-007: Three-Tier Embedding Fallback
 
 **Status:** Revisiting

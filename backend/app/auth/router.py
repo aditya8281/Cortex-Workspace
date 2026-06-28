@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
@@ -135,7 +136,7 @@ async def refresh(body: RefreshRequest, request: Request, response: Response, db
     return result
 
 
-@router.post("/api/v1/auth/logout")
+@router.post("/api/v1/auth/logout", response_model=dict[str, Any])
 async def logout(body: RefreshRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else None
     refresh_token = _get_refresh_token(request, body.refresh_token)
@@ -172,7 +173,7 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
     return to_user_response(db, user)
 
 
-@router.put("/api/v1/auth/me")
+@router.put("/api/v1/auth/me", response_model=dict[str, Any])
 async def update_me(
     body: MeUpdate,
     request: Request,
@@ -210,7 +211,7 @@ class DeleteAccountRequest(BaseModel):
     password: str
 
 
-@router.delete("/api/v1/auth/me")
+@router.delete("/api/v1/auth/me", response_model=dict[str, Any])
 async def delete_me(
     body: DeleteAccountRequest,
     request: Request,
@@ -261,7 +262,7 @@ class RestoreAccountRequest(BaseModel):
     password: str
 
 
-@router.post("/api/v1/auth/restore")
+@router.post("/api/v1/auth/restore", response_model=dict[str, Any])
 async def restore_account(
     body: RestoreAccountRequest,
     request: Request,

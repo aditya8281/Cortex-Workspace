@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # CORTEX Architecture
 
 ## Overview
@@ -64,13 +66,13 @@ backend/app/
 │   ├── deps.py          # Dependency injection (get_db, get_current_user)
 │   ├── metrics.py       # /metrics Prometheus endpoint
 │   ├── ws.py            # WebSocket upgrade endpoint
-│   └── v1/              # 18 domain routers
+│   └── v1/              # 10 domain routers
 ├── auth/                # Auth domain (service, dependencies, audit)
 ├── core/                # Cross-cutting concerns (config, security, redis, vector_db)
 ├── db/                  # Database layer (bootstrap, session factory)
 ├── models/              # SQLAlchemy ORM models (19 files)
 ├── schemas/             # Pydantic request/response schemas
-├── services/            # Business logic (48 files)
+├── services/            # Business logic (106 files)
 │   ├── llm/             # LLM provider abstraction
 │   └── ...              # embedding, retrieval, vault, indexing, etc.
 ├── agents/              # Agent system (tools, integrity, run_manager, run_store)
@@ -94,21 +96,8 @@ def get_hybrid_retrieval(db: Session) -> HybridRetrievalV2:
 
 ### Agent System
 
-The agent system is being rebuilt during V1 Phase 2. Current architecture (legacy) and target architecture coexist behind a feature flag.
+The agent system is implemented and operational with intent classification, streaming loops, tool policies, and completion verification.
 
-**Current (Legacy):**
-```
-User Request → PlannerAgent → ExecutorAgent → RunManager
-                 │                │                │
-                 Decompose        Execute tools    Track lifecycle
-                 into subtasks    (search, read,   (running → completed/failed)
-                 (JSON array)     write, exec,     Persist to AgentRun
-                                  git_*)           Cleanup orphaned runs
-                                  Approval gates
-                                  for dangerous ops
-```
-
-**Target (V1 Phase 2+):**
 ```
 User Request → Intent Classifier → [casual: fast path | agent: streaming loop]
 Agent loop:  single async generator, max 25 iter, stall detection
@@ -117,6 +106,8 @@ Agent loop:  single async generator, max 25 iter, stall detection
              auto-compaction at 85% (tiktoken)
              completion verifier (fresh-context LLM subagent)
 ```
+
+Feature flag: `CORTEX_NEW_AGENT_LOOP` (default: False) in Settings. When True, dispatch to the new streaming loop instead of the legacy Planner→Executor path.
 
 **Tool System (`backend/app/agents/tools/`):**
 
@@ -240,22 +231,53 @@ Feature flag: `CORTEX_NEW_AGENT_LOOP` (default: False) in Settings. When True, d
 
 ### Next.js 15 App Router
 
+17 real pages + 4 Coming Soon placeholders. Dark-only design system. 10 shared UI components. 38 feature components.
+
 ```
 frontend/
-├── app/                        # Pages (all "use client")
-│   ├── layout.tsx              # Root layout (providers, fonts)
-│   ├── api/[...path]/          # Catch-all proxy → FastAPI backend
-│   └── [route]/page.tsx        # Page components
 ├── src/
+│   ├── app/
+│   │   ├── layout.tsx              # Root layout (Geist font, dark bg)
+│   │   ├── globals.css             # Tailwind directives + design tokens
+│   │   ├── api/[...path]/          # Catch-all proxy → FastAPI backend
+│   │   ├── auth/page.tsx           # Login page
+│   │   ├── auth/register/          # Registration page
+│   │   ├── chat/                   # Conversations, streaming, code blocks
+│   │   ├── agents/                 # Agent management, chat, run history
+│   │   ├── models/                 # Browse, download, compare, installed
+│   │   ├── awareness/              # System overview (device, env, health, project)
+│   │   ├── awareness/repos/        # Repository management
+│   │   ├── awareness/indexing/     # Indexing config, graph view
+│   │   ├── memory/                 # Knowledge graph, search, memory CRUD
+│   │   ├── search/                 # Unified search
+│   │   ├── vault/                  # Encrypted document locker
+│   │   ├── privacy/                # Privacy overview dashboard
+│   │   ├── privacy/audit/          # Audit log viewer
+│   │   ├── privacy/consent/        # Consent management
+│   │   ├── system/                 # System health monitoring
+│   │   ├── settings/               # User settings, profile
+│   │   ├── marketplace/            # Coming Soon
+│   │   ├── notes/                  # Coming Soon
+│   │   ├── scheduler/              # Coming Soon
+│   │   └── tasks/                  # Coming Soon
 │   ├── shared/
-│   │   ├── api/                # Modular API clients (barrel-exported)
-│   │   ├── auth/               # AuthProvider, cortexApi, session helpers
-│   │   ├── design/             # Design tokens (tokens.ts)
-│   │   ├── hooks/              # useLiveMetrics, useSystemWebSocket, useFolderPicker
-│   │   ├── layout/             # DashboardShell (sidebar, header, mobile tabs)
-│   │   └── ui/                 # 20 custom components
-│   └── lib/utils.ts            # cn() helper (clsx + tailwind-merge)
-└── vitest.config.ts
+│   │   ├── ui/                     # Badge, Button, Card, Modal, Skeleton, Toast, etc.
+│   │   ├── layout/                 # AppShell, Header, Sidebar
+│   │   ├── auth/                   # AuthProvider, ProtectedRoute
+│   │   └── lib/                    # cn(), apiFetch()
+│   └── features/
+│       ├── dashboard/              # SystemOverview, MetricsRow
+│       ├── chat/                   # MessageBubble, CodeBlock, ConversationItem, SourcesPanel
+│       ├── agents/                 # Agent cards, chat, RunHistory
+│       ├── models/                 # ModelCard, BrowseView, InstalledView, DownloadsView, CompareView
+│       ├── awareness/              # DeviceCard, HealthCard, EnvironmentCard, ProjectCard, etc.
+│       ├── memory/                 # API client (memory/graph/search)
+│       ├── search/                 # API client (unified search)
+│       ├── vault/                  # API client (encrypted files)
+│       ├── privacy/                # ConsentToggle, AccessControlCard, StorageCard
+│       ├── developer/              # API client (developer tools)
+│       ├── settings/               # Settings page component
+│       └── system/                 # System health page component
 ```
 
 ### Key Patterns
@@ -263,9 +285,10 @@ frontend/
 - **Auth**: `AuthProvider` bootstraps via `GET /me`. Login sets httpOnly cookies. Auto token refresh on 401.
 - **API proxy**: Client-side fetch → Next.js API route → FastAPI. Same-origin, no CORS.
 - **State**: React Context for auth. Component-local state everywhere else. No external store.
-- **Design**: Dark-only glassmorphism. Custom tokens in `tokens.ts`. NeuralNetwork Canvas 2D animated background.
+- **Design**: DESIGN.md tokens. Dark-only. Geist font. Tonal elevation (Void → Elevated → Surface → Hover).
 - **SSE streaming**: Chat and agent responses stream via `ReadableStream` line-by-line parsing.
 - **Responsive**: Desktop (fixed 240px sidebar), tablet (overlay sidebar), mobile (bottom tab bar).
+- **Token mapping**: `text-text-primary`, `text-text-secondary`, `text-text-muted`, `bg-bg-surface`, `bg-bg-elevated` — NOT `text-primary`, `text-secondary`, `text-muted`, `bg-surface`.
 
 ---
 
@@ -302,9 +325,10 @@ Storage paths resolved via `storage_registries` table → `storage_root` pointer
 
 ## Database
 
-PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations. 34+ tables across 25 migrations.
+PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations. 37 migrations across 10 domain routers.
 
 - **ORM**: `Mapped[T]`, `mapped_column` syntax
+- **Models**: 44 model files
 - **Migrations**: Sequential prefix naming (`a00000000001_...`)
 - **Session**: Dynamic `SessionLocal` proxy; `get_engine()` creates engine lazily
 - **Bootstrap**: `bootstrap_database()` runs `alembic upgrade head` on startup
@@ -317,7 +341,7 @@ PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations. 34+ tables across 25 mig
 4. **Foreign keys with ON DELETE**: Explicit cascade rules
 5. **Indexes**: Composite indexes for common query patterns
 
-See [DATABASE.md](./DATABASE.md) for full schema reference.
+See [database.md](../reference/database.md) for full schema reference.
 
 ---
 
@@ -337,7 +361,7 @@ See [DATABASE.md](./DATABASE.md) for full schema reference.
 - **CSRF**: Double-submit cookie pattern (`cortex_csrf` cookie + `X-CSRF-Token` header)
 - **Flow**: Register/Login → set cookies → requests forward cookies via proxy → auto-refresh on 401
 
-See [GOVERNANCE.md](./GOVERNANCE.md) (Security section) for detailed patterns.
+See [governance.md](../guides/governance.md) (Security section) for detailed patterns.
 
 ---
 

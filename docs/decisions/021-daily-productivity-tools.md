@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-021: Daily Productivity Tools Architecture
 
 **Status:** Proposed

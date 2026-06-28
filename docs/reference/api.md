@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # CORTEX API Reference
 
 Base URL: `http://localhost:8000`

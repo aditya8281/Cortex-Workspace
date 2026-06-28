@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -34,7 +36,7 @@ def explain_decision(
     return service.explain_decision(body.decision_type, body.context)
 
 
-@router.get("/templates")
+@router.get("/templates", response_model=dict[str, Any])
 def get_decision_templates(
     current_user: User = Depends(get_current_user),  # noqa: ARG001
     db: Session = Depends(get_db),  # noqa: ARG001

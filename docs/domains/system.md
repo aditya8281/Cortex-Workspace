@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # System Domain — CORTEX
 
 **Domain:** System

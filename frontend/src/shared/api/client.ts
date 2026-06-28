@@ -1,107 +1,68 @@
-/**
- * Base HTTP client for Cortex API.
- * All requests go through this client with automatic token refresh and CSRF handling.
- */
+"use client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+const API_BASE = "/api/v1";
 
-interface RequestError extends Error {
-  status?: number;
-  body?: unknown;
+let csrfToken: string | null = null;
+
+function getCsrfToken(): string {
+  if (csrfToken) return csrfToken;
+  const match = document.cookie.match(/cortex_csrf=([^;]+)/);
+  csrfToken = match?.[1] ?? "";
+  return csrfToken;
 }
 
-interface RequestOptions {
-  body?: unknown;
-  headers?: Record<string, string>;
+export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
+  body?: Record<string, unknown> | unknown[] | null;
 }
 
-let _refreshPromise: Promise<boolean> | null = null;
-
-async function tryRefresh(): Promise<boolean> {
-  if (_refreshPromise) return _refreshPromise;
-  _refreshPromise = (async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ refresh_token: "" }),
-      });
-      return res.ok;
-    } catch {
-      return false;
-    } finally {
-      _refreshPromise = null;
-    }
-  })();
-  return _refreshPromise;
-}
-
-function getCsrfToken(): string | undefined {
-  return document.cookie
-    .split("; ")
-    .find((c) => c.startsWith("cortex_csrf="))
-    ?.split("=")[1];
-}
-
-async function request<T = unknown>(
-  method: string,
+export async function apiFetch<T>(
   path: string,
-  { body, headers: extraHeaders }: RequestOptions = {},
-  _retried = false,
+  options: ApiFetchOptions = {},
 ): Promise<T> {
-  const url = `${API_BASE}${path}`;
-  const bodyString = body !== undefined ? JSON.stringify(body) : undefined;
+  const { method = "GET", headers: customHeaders, body, ...rest } = options;
 
-  const csrfToken = getCsrfToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(customHeaders as Record<string, string>),
+  };
 
-  const res = await fetch(url, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
-      ...extraHeaders,
-    },
-    body: bodyString,
-    credentials: "include",
-  });
-
-  if (res.status === 401 && !_retried && !path.match(/\/api\/v1\/auth\/(login|register|refresh|logout|check-username)/)) {
-    const refreshed = await tryRefresh();
-    if (refreshed) {
-      return request<T>(method, path, { body, headers: extraHeaders }, true);
-    }
+  if (method !== "GET") {
+    headers["X-CSRF-Token"] = getCsrfToken();
   }
 
-  let data: Record<string, unknown> | null = null;
-  try {
-    data = await res.json();
-  } catch {
-    data = null;
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+    credentials: "include",
+    ...rest,
+  });
+
+  if (res.status === 401) {
+    // Try refresh
+    const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    });
+
+    if (refreshRes.ok) {
+      // Retry original request
+      return apiFetch<T>(path, options);
+    }
+
+    // Redirect to login
+    window.location.href = "/auth";
+    throw new Error("Session expired");
   }
 
   if (!res.ok) {
-    const detail = (data as Record<string, unknown> | null)?.detail;
-    const error = (data as Record<string, unknown> | null)?.error;
-    const msg =
-      (typeof detail === "string" ? detail : null) ??
-      (typeof error === "string" ? error : null) ??
-      `Request failed (${res.status})`;
-    const err: RequestError = new Error(msg);
-    err.status = res.status;
-    err.body = data;
-    throw err;
+    const error = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(error.detail || "Request failed");
   }
 
-  return data as T;
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  return res.json();
 }
-
-export const api = {
-  get: <T>(path: string) => request<T>("GET", path),
-  post: <T>(path: string, body?: unknown) => request<T>("POST", path, { body }),
-  put: <T>(path: string, body?: unknown) => request<T>("PUT", path, { body }),
-  patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, { body }),
-  delete: <T>(path: string) => request<T>("DELETE", path),
-};
-
-export { getCsrfToken, tryRefresh };

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -48,7 +50,7 @@ def list_episodic_memories(
     )
 
 
-@router.get("/search")
+@router.get("/search", response_model=dict[str, Any])
 def search_episodic_memories(
     query: str = Query(..., min_length=1, max_length=200),
     limit: int = Query(10, ge=1, le=50),
@@ -94,7 +96,7 @@ def update_episodic_memory(
     return EpisodicMemoryResponse.model_validate(memory)
 
 
-@router.delete("/{memory_id}", status_code=204)
+@router.delete("/{memory_id}", status_code=204, response_model=None)
 def delete_episodic_memory(
     memory_id: int,
     db: Session = Depends(get_db),

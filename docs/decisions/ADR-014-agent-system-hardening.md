@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-014: Agent System Hardening (v1.02 P03)
 
 **Date:** 2026-06-27

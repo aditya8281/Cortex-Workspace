@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -28,8 +28,8 @@ class EpisodicMemoryService:
             confidence=0.5,
             recency_score=1.0,
             access_count=0,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         self.db.add(memory)
         self.db.commit()
@@ -48,7 +48,7 @@ class EpisodicMemoryService:
         )
         if memory:
             memory.access_count += 1
-            memory.last_accessed = datetime.utcnow()
+            memory.last_accessed = datetime.now(timezone.utc).replace(tzinfo=None)
             self.db.commit()
         return memory
 
@@ -88,7 +88,7 @@ class EpisodicMemoryService:
         update_data = data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(memory, key, value)
-        memory.updated_at = datetime.utcnow()
+        memory.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(memory)
         return memory

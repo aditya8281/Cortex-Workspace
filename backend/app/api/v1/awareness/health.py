@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -12,7 +14,7 @@ from backend.app.services.awareness.health_monitor import SystemHealthService
 router = APIRouter(prefix="/system-health", tags=["awareness-health"])
 
 
-@router.get("")
+@router.get("", response_model=dict[str, Any])
 def get_system_health(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -38,7 +40,7 @@ def get_system_health(
     }
 
 
-@router.get("/status")
+@router.get("/status", response_model=dict[str, Any])
 def get_health_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

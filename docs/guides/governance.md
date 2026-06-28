@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # CORTEX Governance Rules
 
 This document defines the rules of engagement for all participants (human and agent) in the Cortex development process.
@@ -10,18 +12,17 @@ This document defines the rules of engagement for all participants (human and ag
 |-------|----------------|----------|
 | Agent behavior | CLAUDE.md | `/CLAUDE.md` |
 | Security patterns | AGENTS.md | `/AGENTS.md` |
-| System architecture | docs/ARCHITECTURE.md | `/docs/ARCHITECTURE.md` |
-| Development roadmap | `.agents/plans/implementation_steps.md` | `.agents/plans/implementation_steps.md` |
-| API reference | docs/API.md | `/docs/API.md` |
-| Database schema | docs/DATABASE.md | `/docs/DATABASE.md` |
-| Security patterns | docs/GOVERNANCE.md | `/docs/GOVERNANCE.md` (this file, Security section) |
-| Ecosystem governance | docs/GOVERNANCE.md | `/docs/GOVERNANCE.md` (this file) |
+| System architecture | docs/architecture/overview.md | `/docs/architecture/overview.md` |
+| Development roadmap | .agents/plans/IMPLEMENTATION_STEPS.md | `/`.agents/plans/IMPLEMENTATION_STEPS.md` |
+| API reference | docs/reference/api.md | `/docs/reference/api.md` |
+| Database schema | docs/reference/database.md | `/docs/reference/database.md` |
+| Governance | docs/guides/governance.md | `/docs/guides/governance.md` (this file) |
 | Design system | DESIGN.md | `/DESIGN.md` |
+| Product definition | PRODUCT.md | `/PRODUCT.md` |
 | Architectural decisions | docs/decisions/ | `/docs/decisions/` |
 | Audit history | docs/audits/ | `/docs/audits/` |
 | Hook system | .claude/hooks/ | `/.claude/hooks/` |
-| Automation scripts | scripts/automation/ | `/scripts/automation/` |
-| [Integrity System Design](docs/superpowers/specs/2026-06-25-integrity-system-design.md) | Implementation spec (architecture, RKM, engines, service, V1 scope) | `docs/superpowers/specs/2026-06-25-integrity-system-design.md` |
+| Frontend design | .claude/skills/design/SKILL.md | `/.claude/skills/design/SKILL.md` |
 
 **Rule:** If a topic appears in multiple files, the source of truth wins. Other files must reference it, not duplicate it.
 
