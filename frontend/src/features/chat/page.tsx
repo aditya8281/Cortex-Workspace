@@ -237,7 +237,7 @@ export default function ChatPage() {
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
                 {messages.map((msg, i) => (
-                  <MessageBubble key={msg.id || i} message={msg} />
+                  <MessageBubble key={msg.id || i} role={msg.role === "system" ? "assistant" : msg.role} content={msg.content} timestamp={msg.created_at} />
                 ))}
                 {streaming && <StreamingIndicator />}
                 <div ref={messagesEndRef} />
