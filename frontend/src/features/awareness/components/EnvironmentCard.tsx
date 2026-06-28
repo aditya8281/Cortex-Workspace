@@ -82,7 +82,7 @@ export function EnvironmentCard() {
   if (!data) return <SkeletonCard />;
 
   // Filter to safe variables only
-  const safeVars = Object.entries(data.variables).filter(([key]) =>
+  const safeVars = Object.entries(data.variables ?? {}).filter(([key]) =>
     SAFE_VARS.includes(key),
   );
 
