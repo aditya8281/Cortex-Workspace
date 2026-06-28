@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-012: "Warm Neural Dark" Design System
 
 **Status:** Accepted

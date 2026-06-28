@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # CLAUDE.md — CORTEX Control Plane
 
 This file is the **execution contract** for Claude Code. It defines what CORTEX is, what to do on entry, and what rules govern all work.
@@ -216,6 +218,22 @@ Hooks (enforce quality automatically)
 - **Commands** are thin orchestrators. They invoke skills and compose workflows.
 - **Skills** (in `.claude/skills/`) contain reusable intelligence.
 - **Discovery is automatic.** Every command starts with `cortex-repo-discovery`.
+
+### CORTEX Skills Reference
+
+| Skill | When to Use |
+|-------|-------------|
+| `cortex-repo-discovery` | First step of every command — find repo root, set CWD |
+| `cortex-repository-intelligence` | Before planning or analysis — discover git state, phase, repo structure |
+| `cortex-repo-health-scan` | Weekly health check, before release, quality concerns |
+| `cortex-ecosystem-integration` | After significant changes — verify ecosystem coherence |
+| `cortex-architecture-drift` | Before big changes — check architecture alignment |
+| `cortex-adversarial-challenge` | Before major decisions — poke holes in approach |
+| `cortex-system-validation` | Before merge — run full test/lint/build verification |
+| `cortex-engineering-review` | Before push — code quality, patterns, correctness |
+| `cortex-progress-tracker` | After completing work — update progress.md |
+| `cortex-post-reflection` | Before completion — systematic reflection framework |
+| `cortex-documentation-consistency` | After structural changes — verify doc accuracy |
 
 ### Mandatory Reviews
 

@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-003: Two-Password Authentication Model
 
 **Status:** Accepted

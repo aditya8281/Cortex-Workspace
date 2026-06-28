@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-022: Event-Driven Runner (Replaces ADR-008)
 
 **Status:** Proposed

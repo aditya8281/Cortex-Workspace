@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # Model Catalog + Download Manager — Design Spec
 
 > **For agentic workers:** This is the approved design. Do NOT start implementation until writing-plans creates the implementation plan.

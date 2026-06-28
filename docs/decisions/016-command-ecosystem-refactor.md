@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR 016: Command Ecosystem Architectural Refactor
 
 **Date:** 2026-06-25

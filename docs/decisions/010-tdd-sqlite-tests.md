@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-010: TDD with SQLite In-Memory Tests
 
 **Status:** Accepted

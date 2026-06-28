@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # Architecture Decision Records (ADRs)
 
 Cortex tracks architectural decisions in this directory. Each ADR follows the standard format: Context, Decision, Consequences, Alternatives.

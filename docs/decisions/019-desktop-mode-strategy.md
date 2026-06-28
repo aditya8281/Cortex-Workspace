@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-019: Desktop Mode Strategy
 
 **Status:** Proposed

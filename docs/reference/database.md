@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # CORTEX Database Reference
 
 PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations.

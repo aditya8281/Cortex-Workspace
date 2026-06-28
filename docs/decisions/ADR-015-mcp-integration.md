@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-015: MCP Integration (v1.02 P04)
 
 **Date:** 2026-06-27

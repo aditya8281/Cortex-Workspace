@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-009: Docker Compose for Infrastructure
 
 **Status:** Accepted

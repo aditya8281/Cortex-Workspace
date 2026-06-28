@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-015: Pluggable Embedding Provider (Replaces ADR-007)
 
 **Status:** Proposed

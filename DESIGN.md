@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 ---
 name: CORTEX
 description: "Local-first machine intelligence layer — calm, spatial, persistent, always aware."

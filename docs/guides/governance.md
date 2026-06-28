@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # CORTEX Governance Rules
 
 This document defines the rules of engagement for all participants (human and agent) in the Cortex development process.

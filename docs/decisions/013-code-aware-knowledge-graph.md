@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-013: Code-Aware Knowledge Graph
 
 **Status:** Accepted

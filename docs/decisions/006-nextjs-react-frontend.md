@@ -1,3 +1,5 @@
+Last updated: 2026-06-28
+
 # ADR-006: Next.js 15 + React 19 Frontend
 
 **Status:** Accepted
