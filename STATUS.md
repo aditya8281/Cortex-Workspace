@@ -23,7 +23,7 @@
 | Test files (total) | 201 (169 root + 32 backend) |
 | Test LoC | 18,041 |
 | Tests passing | 1,743 |
-| Test warnings | 5 (third-party deps, not ours) |
+| Test warnings | 5 (third-party: passlib, starlette) |
 | Database migrations | 37 |
 | Documentation files | 57 |
 | ADRs | 22 |
