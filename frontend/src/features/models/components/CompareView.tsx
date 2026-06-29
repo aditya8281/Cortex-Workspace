@@ -6,6 +6,7 @@ import { catalog } from "../api";
 import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { Skeleton } from "@/shared/ui/Skeleton";
 import { useDownloadContext } from "@/shared/downloads/DownloadProvider";
 
 interface CompareViewProps {
@@ -48,8 +49,28 @@ export function CompareView({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      <div className="space-y-6">
+        {/* Model headers skeleton */}
+        <div className="flex items-center gap-4">
+          {selectedIds.map(id => (
+            <Skeleton key={id} className="h-4 w-24" />
+          ))}
+        </div>
+        {/* Dimension rows skeleton */}
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-3 w-20" />
+            <div className="space-y-1.5">
+              {selectedIds.map(id => (
+                <div key={id} className="flex items-center gap-3">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-3 flex-1 rounded-sm" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

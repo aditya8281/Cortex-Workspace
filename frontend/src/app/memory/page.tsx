@@ -7,6 +7,7 @@ import { Badge } from "@/shared/ui/Badge";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { StatusDot } from "@/shared/ui/StatusDot";
+import { Skeleton } from "@/shared/ui/Skeleton";
 import { episodicMemory, semanticMemory, workingMemory, memoryGraph, memorySearch, type EpisodicMemory, type SemanticMemory, type GraphStats } from "@/features/memory/api";
 
 type Tab = "episodic" | "semantic" | "working" | "graph" | "search";
@@ -250,8 +251,16 @@ export default function MemoryPage() {
         )}
 
         {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="p-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-72" />
+                  <Skeleton className="h-3 w-36" />
+                </div>
+              </Card>
+            ))}
           </div>
         )}
       </div>

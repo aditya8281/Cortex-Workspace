@@ -6,6 +6,7 @@ import { Card } from "@/shared/ui/Card";
 import { Badge } from "@/shared/ui/Badge";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
+import { Skeleton } from "@/shared/ui/Skeleton";
 import { memorySearch, type SearchResult } from "@/features/memory/api";
 
 export default function SearchPage() {
@@ -126,8 +127,14 @@ export default function SearchPage() {
         </div>
 
         {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-lg border border-border-subtle bg-bg-elevated p-4 space-y-2">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-3 w-72" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            ))}
           </div>
         )}
       </div>

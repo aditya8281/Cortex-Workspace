@@ -8,6 +8,7 @@ import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { Modal } from "@/shared/ui/Modal";
 import { StatusDot } from "@/shared/ui/StatusDot";
+import { Skeleton } from "@/shared/ui/Skeleton";
 import { vault, type VaultStatus, type VaultFile } from "@/features/privacy/api";
 
 export default function VaultPage() {
@@ -166,8 +167,16 @@ export default function VaultPage() {
         )}
 
         {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="p-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-56" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </Card>
+            ))}
           </div>
         )}
 
