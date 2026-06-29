@@ -1,4 +1,4 @@
-Last updated: 2026-06-28
+Last updated: 2026-06-29
 
 # CLAUDE.md — CORTEX Control Plane
 
@@ -77,7 +77,7 @@ Six versions, each a complete milestone:
 | **V5** | The Workspace | Email, calendar, tasks, notes, documents, contacts |
 | **V6** | The Ecosystem | Marketplace, graph intelligence, cross-encoder, polish |
 
-**Current focus:** Backend is production-ready. Frontend is being built from scratch via `/project:design`.
+**Current focus:** Backend is production-ready. Frontend is fully built — 28 pages (17 real + 11 Coming Soon), 70+ components, Vitest + React Testing Library.
 
 ## Execution Contract
 
@@ -294,25 +294,25 @@ Hooks (enforce quality automatically)
 
 Tests at project root in `tests/`. SQLite in-memory, mocked external services. No real Postgres/Redis/Qdrant needed.
 
-Frontend: Vitest + jsdom + React Testing Library (once scaffolded via `/project:design`).
+Frontend: Vitest + jsdom + React Testing Library.
 
 ## Codebase Metrics
 
 | Metric | Value |
 |--------|-------|
-| Backend Python files | 415 |
-| Backend LoC | 45,180 |
-| Frontend TSX/TS files | 107 |
-| Frontend LoC | 9,934 |
-| Test files | 169 |
-| Test LoC | 18,041 |
-| Backend tests | 1,429 passing |
-| API endpoint files | 47 (10 domains) |
-| Frontend pages | 17 real + 4 Coming Soon |
-| Frontend components | 50 feature + 17 shared UI |
-| Database migrations | 37 |
-| Documentation files | 58 |
-| Git commits | 650 |
+| Backend Python files | 414 |
+| Backend LoC | 45,046 |
+| Frontend TSX/TS files | 124 |
+| Frontend LoC | 13,129 |
+| Test files | 186 |
+| Test LoC | 20,039 |
+| Backend tests | 1,619 collected |
+| API endpoint files | 50 (10 domains) |
+| Frontend pages | 17 real + 11 Coming Soon |
+| Frontend components | 51 feature + 19 shared UI |
+| Database migrations | 38 |
+| Documentation files | 73 |
+| Git commits | 701 |
 
 ## Environment
 

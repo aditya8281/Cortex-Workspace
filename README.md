@@ -1,4 +1,4 @@
-Last updated: 2026-06-28
+Last updated: 2026-06-29
 
 # CORTEX
 
@@ -33,7 +33,7 @@ The goal is to transform a computer from a tool you operate into a companion tha
 
 | Area | State |
 |------|-------|
-| Backend API | 186 endpoints (177 domain + 9 auth) across 10 domain routers |
+| Backend API | 237 REST endpoints + 6 WebSocket across 10 domain routers |
 | Auth + Vault | Production-quality — JWT + Argon2, Fernet encryption, secure password cache, CSRF double-submit |
 | Agent System | Agent loop, run manager, stall detection, verifier, compactor, policy engine |
 | Memory System | Episodic, semantic, working memory with graph relationships and search |
@@ -41,23 +41,23 @@ The goal is to transform a computer from a tool you operate into a companion tha
 | LLM Integration | llama.cpp + Ollama with provider abstraction |
 | Awareness | Device detection, file tracking, project detection, repo analysis, health monitoring |
 | Privacy | Consent management, audit logging, access control, RBAC/ABAC |
-| Frontend | 17 real pages + 4 Coming Soon, 38 components, 10 shared UI components |
-| Tests | 1,743 passing (backend pytest) |
+| Frontend | 17 real pages + 11 Coming Soon, 51 feature components, 19 shared UI components |
+| Tests | 1,619 passing (backend pytest) |
 | Linting | ruff + mypy — clean |
-| Database | 37 Alembic migrations |
+| Database | 38 Alembic migrations |
 
 ### Codebase Metrics
 
 | Metric | Value |
 |--------|-------|
-| Backend Python files | 379 |
-| Backend LoC | 40,947 |
-| Frontend TSX/TS files | 107 |
-| Frontend LoC | 9,933 |
-| Test files | 169 |
-| Test LoC | 18,041 |
-| Documentation files | 57 |
-| Git commits | 636 |
+| Backend Python files | 414 |
+| Backend LoC | 45,046 |
+| Frontend TSX/TS files | 124 |
+| Frontend LoC | 13,129 |
+| Test files | 186 |
+| Test LoC | 20,039 |
+| Documentation files | 73 |
+| Git commits | 701 |
 
 ---
 
@@ -146,6 +146,13 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 | `/notes` | Coming Soon | Notes system |
 | `/scheduler` | Coming Soon | Task scheduling |
 | `/tasks` | Coming Soon | Task management |
+| `/compare` | Coming Soon | Model comparison |
+| `/intelligence` | Coming Soon | Intelligence dashboard |
+| `/execution` | Coming Soon | Agent execution management |
+| `/developer` | Coming Soon | Developer tools & API |
+| `/docs` | Coming Soon | Documentation viewer |
+| `/apps` | Coming Soon | Application integrations |
+| `/knowledge` | Coming Soon | Knowledge graph explorer |
 
 ---
 
@@ -172,7 +179,7 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 ```bash
 make install       # uv sync + npm install
 make migrate       # alembic upgrade head
-make test          # 1,743 tests (backend pytest)
+make test          # 1,619 tests (backend pytest)
 make lint          # ruff + mypy
 make format        # ruff format
 make check         # lint + test
