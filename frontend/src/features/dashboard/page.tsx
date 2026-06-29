@@ -9,6 +9,8 @@ import { MetricsRow } from "./components/MetricsRow";
 import { QuickActions } from "./components/QuickActions";
 import { RecentActivity } from "./components/RecentActivity";
 import { dashboardApi, type ActivityItem } from "./api";
+import { Card } from "@/shared/ui/Card";
+import { Skeleton } from "@/shared/ui/Skeleton";
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -32,11 +34,40 @@ export default function DashboardPage() {
     loadActivity();
   }, [loadActivity]);
 
-  if (loading || !user) return null;
+  if (loading || !user) return (
+    <AppShell>
+      <div className="space-y-6">
+        <div className="space-y-1">
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <Skeleton className="h-16 w-full rounded-lg" />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-6 w-1/2" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </Card>
+          ))}
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-32" />
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-3">
+              <Skeleton className="h-3 w-2/3" />
+            </Card>
+          ))}
+        </div>
+      </div>
+    </AppShell>
+  );
 
   return (
     <AppShell>
-      <div className="space-y-6 stagger-children">
+      <div className="space-y-6 stagger-children animate-fade-in">
         <div>
           <h1 className="text-headline font-semibold text-text-primary">
             Dashboard

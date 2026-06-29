@@ -160,7 +160,7 @@ export default function ModelsPage() {
   return (
     <AppShell>
       <DownloadProvider>
-        <div className="mx-auto max-w-6xl space-y-6">
+        <div className="mx-auto max-w-6xl space-y-6 animate-fade-in">
         {/* Page header */}
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Models</h1>
@@ -214,7 +214,7 @@ export default function ModelsPage() {
         </div>
 
         {/* Tab content */}
-        <div role="tabpanel" aria-label={`${activeTab} tab`}>
+        <div role="tabpanel" aria-label={`${activeTab} tab`} className="animate-fade-in" key={activeTab}>
           {activeTab === "browse" && (
             <BrowseView
               hardware={hardware}

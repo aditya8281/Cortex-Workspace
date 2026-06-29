@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback,
   useRef,
+  useState,
 } from "react";
 import { cn } from "@/shared/lib/utils";
 
@@ -19,12 +20,42 @@ interface ModalProps {
 export function Modal({ open, onClose, title, children, className }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  // Mount immediately when opened
+  useEffect(() => {
+    if (open) {
+      setClosing(false);
+      setMounted(true);
+    }
+  }, [open]);
+
+  // Unmount after exit animation finishes
+  const handleAnimationEnd = useCallback(() => {
+    if (closing) {
+      setMounted(false);
+      setClosing(false);
+    }
+  }, [closing]);
+
+  // Trigger close animation instead of instant unmount
+  const handleClose = useCallback(() => {
+    setClosing(true);
+  }, []);
+
+  // Start closing when open goes false
+  useEffect(() => {
+    if (!open && mounted && !closing) {
+      setClosing(true);
+    }
+  }, [open, mounted, closing]);
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") handleClose();
     },
-    [onClose],
+    [handleClose],
   );
 
   // Focus trap
@@ -53,8 +84,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
   );
 
   useEffect(() => {
-    if (!open) return;
-    // Save focus and move into modal
+    if (!mounted || closing) return;
     previousFocusRef.current = document.activeElement as HTMLElement;
     requestAnimationFrame(() => {
       panelRef.current?.focus();
@@ -66,19 +96,21 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
       document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("keydown", handleTabTrap);
       document.body.style.overflow = "";
-      // Restore focus
       previousFocusRef.current?.focus();
     };
-  }, [open, handleEscape, handleTabTrap]);
+  }, [mounted, closing, handleEscape, handleTabTrap]);
 
-  if (!open) return null;
+  if (!mounted) return null;
+
+  const backdropAnim = closing ? "animate-fade-out" : "animate-fade-in";
+  const panelAnim = closing ? "animate-scale-out" : "animate-fade-in-scale";
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 animate-fade-in"
-        onClick={onClose}
+        className={cn("absolute inset-0 bg-black/60", backdropAnim)}
+        onClick={handleClose}
         aria-hidden="true"
       />
       {/* Panel */}
@@ -87,18 +119,18 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         tabIndex={-1}
         className={cn(
           "relative z-10 w-full max-w-lg mx-4 rounded-xl border border-border-default bg-bg-elevated shadow-modal",
-          "animate-fade-in-scale",
-          className,
+          panelAnim,
         )}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={typeof title === "string" ? title : undefined}
+        onAnimationEnd={panelAnim === "animate-scale-out" ? handleAnimationEnd : undefined}
       >
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
             <h2 className="text-title font-semibold text-text-primary">{title}</h2>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="rounded-md p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-hover transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none"
               aria-label="Close"
             >

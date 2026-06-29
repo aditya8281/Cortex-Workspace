@@ -38,6 +38,14 @@ const config: Config = {
         success: "#22c55e",
         warning: "#f59e0b",
       },
+      zIndex: {
+        dropdown: "100",
+        sticky: "200",
+        "modal-backdrop": "300",
+        modal: "400",
+        toast: "500",
+        tooltip: "600",
+      },
       fontFamily: {
         sans: ["var(--font-geist)", "system-ui", "sans-serif"],
         mono: ["var(--font-jetbrains-mono)", "monospace"],
@@ -87,6 +95,18 @@ const config: Config = {
           from: { opacity: "1", transform: "scale(1)" },
           to: { opacity: "0", transform: "scale(0.95)" },
         },
+        "fade-out": {
+          from: { opacity: "1" },
+          to: { opacity: "0" },
+        },
+        "slide-in-from-right": {
+          from: { opacity: "0", transform: "translateX(100%)" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "slide-out-to-right": {
+          from: { opacity: "1", transform: "translateX(0)" },
+          to: { opacity: "0", transform: "translateX(100%)" },
+        },
         shimmer: {
           from: { backgroundPosition: "-200% 0" },
           to: { backgroundPosition: "200% 0" },
@@ -109,6 +129,9 @@ const config: Config = {
         "slide-out-down": "slide-out-down 0.15s cubic-bezier(0.4, 0, 1, 1)",
         "scale-in": "scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
         "scale-out": "scale-out 0.12s cubic-bezier(0.4, 0, 1, 1)",
+        "fade-out": "fade-out 0.15s cubic-bezier(0.4, 0, 1, 1)",
+        "slide-in-from-right": "slide-in-from-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-out-to-right": "slide-out-to-right 0.2s cubic-bezier(0.4, 0, 1, 1)",
         shimmer: "shimmer 2s linear infinite",
         "pulse-dot": "pulse-dot 1.5s ease-in-out infinite",
         "spin-slow": "spin-slow 3s linear infinite",

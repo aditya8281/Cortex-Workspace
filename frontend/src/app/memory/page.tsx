@@ -59,7 +59,7 @@ export default function MemoryPage() {
 
   return (
     <AppShell>
-      <div className="max-w-5xl">
+      <div className="max-w-5xl animate-fade-in">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-headline font-semibold text-text-primary">Memory</h1>

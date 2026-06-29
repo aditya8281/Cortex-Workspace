@@ -100,9 +100,14 @@ export function Sidebar() {
                   : "text-text-secondary hover:text-text-primary hover:bg-bg-hover",
               )}
             >
-              {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent" />
-              )}
+              {/* Active indicator bar — always rendered, transitions opacity */}
+              <span
+                className={cn(
+                  "absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent",
+                  "transition-opacity duration-150 ease-out",
+                  isActive ? "opacity-100" : "opacity-0",
+                )}
+              />
               <span className="flex-shrink-0 transition-transform duration-150 group-hover:scale-105">{iconMap[item.icon]}</span>
               {item.name}
             </Link>

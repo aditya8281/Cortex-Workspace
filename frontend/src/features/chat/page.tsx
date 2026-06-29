@@ -215,7 +215,7 @@ export default function ChatPage() {
 
   return (
     <AppShell>
-      <div className="flex h-full gap-0 -m-6">
+      <div className="flex h-full gap-0 -m-6 animate-fade-in">
         {/* Conversation sidebar */}
         <div className="hidden sm:flex w-64 flex-shrink-0 flex-col border-r border-border-subtle bg-bg-elevated">
           <div className="p-3 border-b border-border-subtle">

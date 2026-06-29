@@ -40,7 +40,7 @@ export default function SearchPage() {
 
   return (
     <AppShell>
-      <div className="max-w-3xl">
+      <div className="max-w-3xl animate-fade-in">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-headline font-semibold text-text-primary">Universal Search</h1>

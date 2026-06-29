@@ -96,7 +96,7 @@ export function CompareView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Model headers */}
       <div className="flex items-center gap-4 flex-wrap">
         {selectedIds.map(id => (
