@@ -297,3 +297,22 @@ Discovery → Git Hygiene → System Validation → Integrity Scan → Hook Heal
 - **Create skills for repeated patterns** — evolve the ecosystem
 - **Use MCP servers** — leverage external knowledge and automation
 - **Hooks enforce quality** — let governance work automatically
+
+---
+
+## Feedback Loop
+
+**On entry:** Read `.claude/ecosystem/feedback.json`, filter last 10 entries where `command` matches this command name. If learnings exist, adapt behavior accordingly.
+
+**On exit:** Append entry to `.claude/ecosystem/feedback.json`:
+```json
+{
+  "timestamp": "<ISO-8601>",
+  "command": "/project:start",
+  "run_id": "<uuid>",
+  "outcome": "success|failure|partial",
+  "learnings": ["<what was discovered>"],
+  "suggestions": ["<improvements for next run>"],
+  "duration_ms": 0
+}
+```

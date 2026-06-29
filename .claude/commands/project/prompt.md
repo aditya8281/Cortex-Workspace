@@ -122,3 +122,22 @@ Generate the smallest, clearest, ecosystem-aware prompt that reuses existing sys
 - [ ] Existing documentation, tests, configuration reviewed
 - [ ] No unnecessary duplication
 - [ ] References only real repository artifacts
+
+---
+
+## Feedback Loop
+
+**On entry:** Read `.claude/ecosystem/feedback.json`, filter last 10 entries where `command` matches this command name. If learnings exist, adapt behavior accordingly.
+
+**On exit:** Append entry to `.claude/ecosystem/feedback.json`:
+```json
+{
+  "timestamp": "<ISO-8601>",
+  "command": "/project:prompt",
+  "run_id": "<uuid>",
+  "outcome": "success|failure|partial",
+  "learnings": ["<what was discovered>"],
+  "suggestions": ["<improvements for next run>"],
+  "duration_ms": 0
+}
+```

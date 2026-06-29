@@ -971,3 +971,22 @@ This command does **not** duplicate those systems. It invokes, references, and c
 ## Commit Guideline
 
 RULE (SHOULD ALWAYS FOLLOW): always make git msg of one line in standard manner, and never add any co authored by text never.
+
+---
+
+## Feedback Loop
+
+**On entry:** Read `.claude/ecosystem/feedback.json`, filter last 10 entries where `command` matches this command name. If learnings exist, adapt behavior accordingly.
+
+**On exit:** Append entry to `.claude/ecosystem/feedback.json`:
+```json
+{
+  "timestamp": "<ISO-8601>",
+  "command": "/project:update",
+  "run_id": "<uuid>",
+  "outcome": "success|failure|partial",
+  "learnings": ["<what was discovered>"],
+  "suggestions": ["<improvements for next run>"],
+  "duration_ms": 0
+}
+```

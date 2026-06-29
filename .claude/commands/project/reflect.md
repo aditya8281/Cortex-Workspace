@@ -92,3 +92,22 @@ If any action-item exists, save to `docs/audits/YYYY-MM-DD-reflect-{N}.md`.
 - [ ] Repository consistency beyond modified files evaluated
 - [ ] All recommended ecosystem improvements listed
 - [ ] Reflection based on current codebase state, not assumptions
+
+---
+
+## Feedback Loop
+
+**On entry:** Read `.claude/ecosystem/feedback.json`, filter last 10 entries where `command` matches this command name. If learnings exist, adapt behavior accordingly.
+
+**On exit:** Append entry to `.claude/ecosystem/feedback.json`:
+```json
+{
+  "timestamp": "<ISO-8601>",
+  "command": "/project:reflect",
+  "run_id": "<uuid>",
+  "outcome": "success|failure|partial",
+  "learnings": ["<what was discovered>"],
+  "suggestions": ["<improvements for next run>"],
+  "duration_ms": 0
+}
+```

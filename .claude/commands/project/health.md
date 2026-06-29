@@ -54,3 +54,22 @@ git log --oneline --since="2 weeks ago" | head -50
 ### 7. Save Report
 
 Save to `docs/audits/YYYY-MM-DD-health-report-{N}.md`.
+
+---
+
+## Feedback Loop
+
+**On entry:** Read `.claude/ecosystem/feedback.json`, filter last 10 entries where `command` matches this command name. If learnings exist, adapt behavior accordingly.
+
+**On exit:** Append entry to `.claude/ecosystem/feedback.json`:
+```json
+{
+  "timestamp": "<ISO-8601>",
+  "command": "/project:health",
+  "run_id": "<uuid>",
+  "outcome": "success|failure|partial",
+  "learnings": ["<what was discovered>"],
+  "suggestions": ["<improvements for next run>"],
+  "duration_ms": 0
+}
+```

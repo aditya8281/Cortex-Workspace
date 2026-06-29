@@ -239,9 +239,8 @@ Hooks (enforce quality automatically)
 
 | Review | When | Command |
 |--------|------|---------|
-| Code quality | Before push | `/project:review` |
-| Verification | Before merge | `/project:verify` |
-| Adversarial | Before major decisions | `/project:challenge` |
+| Full audit (code, security, forensics) | Before push / after major work | `/project:audit` |
+| Verification (pass/fail) | Before merge | `/project:verify` |
 | Reflection | Before completion | `/project:reflect` |
 | Architecture | Before big changes | `/project:architecture` |
 | Health | Weekly | `/project:health` |
@@ -258,29 +257,51 @@ Hooks (enforce quality automatically)
 
 ## Strategic Commands
 
-### Orchestrators
+### Core Workflow
 
 | Command | When | Purpose |
 |---------|------|---------|
+| `/project:start` | Session start | Launcher — health checks, auto-resolve, drop into dev |
+| `/project:cortex` | During implementation | Core execution workflow for concrete tasks |
 | `/project:update` | Before significant changes | Transforms ideas into approved plans |
-| `/project:develop` | Start of session | Determines next work, delegates to cortex workflow |
 | `/project:design` | Frontend work | Rebuilds frontend from scratch in phases |
 
-### Specialist Commands
+### Verification & Quality
 
 | Command | When | Purpose |
 |---------|------|---------|
-| `/project:prompt` | Before complex work | Generate ecosystem-aware prompts |
-| `/project:audit` | During audits | Deep code-level scan |
-| `/project:review` | Before push | Code quality analysis |
-| `/project:verify` | Before merge | Automated verification suite |
-| `/project:release` | Before release | Release readiness check |
-| `/project:architecture` | Before big changes | Architecture alignment |
-| `/project:challenge` | Before decisions | Adversarial review |
-| `/project:health` | Weekly | Repository health check |
-| `/project:ideas` | Weekly | Innovation discovery |
-| `/project:improve` | Weekly | Ecosystem self-improvement |
+| `/project:audit` | During/after audits | Full forensics — code, WS, routes, config, type safety |
+| `/project:verify` | Before merge | Automated pass/fail (tests, lint, build) |
+| `/project:release` | Before release | Release readiness gate |
+| `/project:health` | Weekly | Ecosystem health — skills, docs, governance |
+
+### Analysis & Planning
+
+| Command | When | Purpose |
+|---------|------|---------|
+| `/project:architecture` | Before big changes | Architecture alignment check |
+| `/project:feature-gap` | During planning | Roadmap vs codebase gap analysis |
+| `/project:ideas` | Weekly | Innovation and opportunity discovery |
+
+### Ecosystem Evolution
+
+| Command | When | Purpose |
+|---------|------|---------|
+| `/project:improve` | Weekly/after work | Analyzes feedback log, proposes ecosystem improvements |
 | `/project:reflect` | Before completion | Reflection framework |
+| `/project:prompt` | Before complex work | Ecosystem-aware prompt generation |
+
+## Feedback Loop (Self-Improvement)
+
+Every command reads `.claude/ecosystem/feedback.json` on entry (last 10 entries for that command) and appends its outcome on exit. This creates an evolving ecosystem — commands adapt based on accumulated experience.
+
+**How it works:**
+1. Command reads recent learnings → adapts behavior if patterns exist
+2. Command executes → observes outcomes
+3. Command appends entry (outcome, learnings, suggestions) → log grows
+4. `/project:improve` analyzes ALL entries → proposes command/skill improvements quarterly
+
+**Feedback log:** `.claude/ecosystem/feedback.json`
 
 ## Common Gotchas
 

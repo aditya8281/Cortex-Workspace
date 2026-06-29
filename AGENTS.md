@@ -102,3 +102,37 @@ See [`.agents/plans/IMPLEMENTATION_STEPS.md`](.agents/plans/IMPLEMENTATION_STEPS
 - **Error handling:** Use `HTTPException` with appropriate status codes. 404 for not found, 403 for forbidden, 409 for conflicts.
 - **Pydantic schemas:** Define request/response schemas in `backend/app/schemas/`. Use `BaseModel` with explicit field types. Never use `dict` for structured responses.
 - **Router organization:** Each domain gets its own router file in `backend/app/api/v1/`. Include it in `backend/app/api/router.py` with appropriate prefix and tags.
+
+## ECOSYSTEM EVOLUTION
+
+The CORTEX ecosystem is not static — it learns from every interaction.
+
+### Feedback Loop
+
+Every command reads and writes `.claude/ecosystem/feedback.json`:
+
+1. **On entry:** Read last 10 entries for this command. If learnings exist, adapt behavior.
+2. **On exit:** Append outcome (success/failure/partial), learnings, suggestions.
+3. **On improve:** `/project:improve` analyzes ALL entries, proposes command/skill improvements quarterly.
+
+### Command Set (14 commands)
+
+| Category | Commands |
+|----------|----------|
+| Core Workflow | `/project:start`, `/project:cortex`, `/project:update`, `/project:design` |
+| Verification | `/project:audit`, `/project:verify`, `/project:release`, `/project:health` |
+| Analysis | `/project:architecture`, `/project:feature-gap`, `/project:ideas` |
+| Evolution | `/project:improve`, `/project:reflect`, `/project:prompt` |
+
+### Removed Commands (merged into others)
+
+| Removed | Merged Into | Reason |
+|---------|-------------|--------|
+| `/project:review` | `/project:audit` | Overlap — audit now covers code quality |
+| `/project:challenge` | `/project:audit` | Overlap — audit now covers adversarial review |
+| `/project:integrity` | `/project:audit` | Overlap — audit now covers structural integrity |
+| `/project:develop` | `/project:cortex` | Overlap — cortex is the core workflow |
+| `/project:next` | `/project:cortex` | Overlap — cortex handles continuation |
+| `/project:phase` | `/project:cortex` | Overlap — cortex handles phase execution |
+| `/project:redesign` | `/project:design` | Overlap — design handles all frontend rebuilds |
+| `/project:enhance_plan` | `/project:update` | Overlap — update handles plan evolution |
