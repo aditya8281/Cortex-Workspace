@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export type WSStatus = "connecting" | "connected" | "disconnected" | "error";
 
 export interface UseWebSocketOptions {
-  /** Backend path (e.g. "/api/v1/ws/system"). Used as-is against ws://host:8000 */
+  /** Backend path (e.g. "/api/v1/ws/system"). Concatenated after getWsBaseUrl(). */
   path: string;
   /** Auto-reconnect on disconnect. Default: true */
   autoReconnect?: boolean;
@@ -40,12 +40,27 @@ export interface UseWebSocketReturn {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-/** Backend WebSocket base URL. WS connects directly to FastAPI (port 8000)
- *  because Next.js rewrites don't proxy WebSocket upgrades. */
+/** Backend WebSocket base URL. WS connects directly to FastAPI because Next.js
+ *  rewrites don't proxy WebSocket upgrades. Port from NEXT_PUBLIC_BACKEND_PORT
+ *  env var, or parse from CORTEX_BACKEND_URL, or fallback to 8000. */
 export function getWsBaseUrl(): string {
-  if (typeof window === "undefined") return "ws://localhost:8000";
-  // In dev, frontend is at :3000, backend at :8000
-  return `ws://${window.location.hostname}:8000`;
+  const getPort = (): string => {
+    // NEXT_PUBLIC_* vars are inlined by Next.js at compile time
+    const fromPublic = process.env.NEXT_PUBLIC_BACKEND_PORT;
+    if (fromPublic) return fromPublic;
+    // Runtime SSR fallback — try CORTEX_BACKEND_URL
+    const backendUrl = process.env.CORTEX_BACKEND_URL;
+    if (backendUrl) {
+      try {
+        const parsed = new URL(backendUrl);
+        if (parsed.port) return parsed.port;
+      } catch { /* ignore */ }
+    }
+    return "8000";
+  };
+
+  if (typeof window === "undefined") return `ws://localhost:${getPort()}`;
+  return `ws://${window.location.hostname}:${getPort()}`;
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
@@ -97,16 +112,28 @@ export function useWebSocket({
 
     setStatus("connecting");
 
+    const scheduleRetry = () => {
+      if (autoReconnect && retryCount.current < maxRetries) {
+        const delay = RECONNECT_DELAYS[Math.min(retryCount.current, RECONNECT_DELAYS.length - 1)];
+        retryCount.current += 1;
+        retryTimer.current = setTimeout(() => {
+          if (mountedRef.current) connect();
+        }, delay);
+      }
+    };
+
     try {
       // Fetch access token via API (browser can't read httpOnly cookie)
       const res = await fetch("/api/v1/auth/ws-token", { credentials: "include" });
       if (!res.ok) {
         setStatus("error");
+        scheduleRetry();
         return;
       }
       const { token } = await res.json();
       if (!token || typeof token !== "string") {
         setStatus("error");
+        scheduleRetry();
         return;
       }
 
@@ -136,14 +163,7 @@ export function useWebSocket({
         if (!mountedRef.current) return;
         setStatus("disconnected");
         onCloseRef.current?.();
-
-        if (autoReconnect && retryCount.current < maxRetries) {
-          const delay = RECONNECT_DELAYS[Math.min(retryCount.current, RECONNECT_DELAYS.length - 1)];
-          retryCount.current += 1;
-          retryTimer.current = setTimeout(() => {
-            if (mountedRef.current) connect();
-          }, delay);
-        }
+        scheduleRetry();
       };
 
       ws.onerror = (error) => {
@@ -154,6 +174,7 @@ export function useWebSocket({
     } catch {
       if (!mountedRef.current) return;
       setStatus("error");
+      scheduleRetry();
     }
   }, [path, enabled, autoReconnect, maxRetries, cleanup]);
 
