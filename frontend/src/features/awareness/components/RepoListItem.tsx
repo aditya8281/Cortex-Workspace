@@ -7,6 +7,7 @@ import { Button } from "@/shared/ui/Button";
 import { StatusDot } from "@/shared/ui/StatusDot";
 import { repository, type RepoInfo } from "../api";
 import { IndexProgress } from "./IndexProgress";
+import { useToast } from "@/shared/ui/Toast";
 
 interface RepoListItemProps {
   repo: RepoInfo;
@@ -38,6 +39,7 @@ export function RepoListItem({ repo, onGraph, onDelete }: RepoListItemProps) {
   const mountedRef = useRef(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     return () => {
@@ -108,7 +110,10 @@ export function RepoListItem({ repo, onGraph, onDelete }: RepoListItemProps) {
       repository.delete(repo.id).then(() => {
         if (mountedRef.current) onDelete(repo.id);
       }).catch(() => {
-        if (mountedRef.current) setDeleting(false);
+        if (mountedRef.current) {
+          setDeleting(false);
+          toast("Failed to delete repository", "error");
+        }
       });
     } else {
       // First click — show confirmation, auto-reset after 4 seconds

@@ -366,6 +366,9 @@ export default function ChatPage() {
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             placeholder="What do you want to talk about?"
+            maxLength={128}
+            required
+            aria-required="true"
             onKeyDown={(e) => {
               if (e.key === "Enter") handleCreate();
             }}

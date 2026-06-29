@@ -10,6 +10,7 @@ import { Badge } from "@/shared/ui/Badge";
 import { LogViewer } from "./components/LogViewer";
 import { systemApi, type LLMHealth } from "./api";
 import { useMetrics } from "@/shared/ws/MetricsProvider";
+import { Skeleton } from "@/shared/ui/Skeleton";
 
 export default function SystemPage() {
   const { user, loading } = useAuth();
@@ -38,14 +39,40 @@ export default function SystemPage() {
     return () => clearInterval(interval);
   }, [loadLLM]);
 
-  if (loading || !user) return null;
+  if (loading || !user) return (
+    <AppShell>
+      <div className="space-y-6">
+        <Skeleton className="h-6 w-16" />
+        <Skeleton className="h-4 w-40" />
+        <Card className="p-5">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-3 w-3 rounded-full" />
+            <div className="space-y-1">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+        </Card>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-4">
+              <Skeleton className="h-3 w-12 mb-2" />
+              <Skeleton className="h-6 w-20 mb-3" />
+              <Skeleton className="h-1.5 w-full rounded-full" />
+            </Card>
+          ))}
+        </div>
+      </div>
+    </AppShell>
+  );
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-headline font-semibold text-text-primary">System</h1>
+
             <p className="mt-1 text-sm text-text-secondary">
               Health monitoring and diagnostics
             </p>

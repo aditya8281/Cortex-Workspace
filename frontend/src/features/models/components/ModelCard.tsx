@@ -49,7 +49,7 @@ export function ModelCard({
     <Card className="p-4 flex flex-col gap-3" role="article" aria-label={model.display_name}>
       {/* Header: name + badges */}
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-title font-semibold text-text-primary leading-tight">
+        <h3 className="text-title font-semibold text-text-primary leading-tight truncate min-w-0">
           {model.display_name}
         </h3>
         <div className="flex items-center gap-1.5 flex-shrink-0">

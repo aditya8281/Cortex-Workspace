@@ -238,12 +238,16 @@ export default function AgentsPage() {
             value={createForm.name}
             onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
             placeholder="e.g. Code Reviewer"
+            maxLength={64}
+            required
+            aria-required="true"
           />
           <Input
             label="Description"
             value={createForm.description}
             onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
             placeholder="What does this agent do?"
+            maxLength={256}
           />
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1.5">
@@ -253,6 +257,7 @@ export default function AgentsPage() {
               value={createForm.system_prompt}
               onChange={(e) => setCreateForm({ ...createForm, system_prompt: e.target.value })}
               rows={4}
+              maxLength={8192}
               placeholder="You are a helpful agent that..."
               className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25 transition-colors duration-150"
             />

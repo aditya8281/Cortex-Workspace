@@ -10,6 +10,8 @@ import { Input } from "@/shared/ui/Input";
 import { Badge } from "@/shared/ui/Badge";
 import { StatusDot } from "@/shared/ui/StatusDot";
 import { settingsApi, type UserProfile } from "./api";
+import { Skeleton } from "@/shared/ui/Skeleton";
+import { useToast } from "@/shared/ui/Toast";
 
 export default function SettingsPage() {
   const { user, loading, logout } = useAuth();
@@ -23,6 +25,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [vaultLocked, setVaultLocked] = useState(true);
   const [activeTab, setActiveTab] = useState<"profile" | "vault" | "privacy" | "account">("profile");
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!loading && !user) router.push("/auth");
@@ -62,13 +65,35 @@ export default function SettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
-      // ignore
+      toast("Failed to save profile", "error");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading || !user) return null;
+  if (loading || !user) return (
+    <AppShell>
+      <div className="max-w-3xl space-y-6">
+        <Skeleton className="h-6 w-20" />
+        <Skeleton className="h-4 w-48" />
+        <div className="flex gap-0.5 p-0.5 rounded-lg bg-bg-surface border border-border-subtle">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-8 flex-1 rounded-md" />
+          ))}
+        </div>
+        <Card className="p-5">
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-10 w-32 rounded-md ml-auto" />
+          </div>
+        </Card>
+      </div>
+    </AppShell>
+  );
 
   const tabs = [
     { key: "profile" as const, label: "Profile" },
@@ -79,7 +104,7 @@ export default function SettingsPage() {
 
   return (
     <AppShell>
-      <div className="max-w-3xl">
+      <div className="max-w-3xl animate-fade-in">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-headline font-semibold text-text-primary">Settings</h1>
@@ -129,12 +154,16 @@ export default function SettingsPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
+                  maxLength={32}
+                  required
+                  aria-required="true"
                 />
                 <Input
                   label="Nickname"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
                   placeholder="What should we call you?"
+                  maxLength={64}
                 />
                 <div>
                   <label className="block text-xs font-medium text-text-secondary mb-1.5">
@@ -144,6 +173,7 @@ export default function SettingsPage() {
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     rows={3}
+                    maxLength={512}
                     placeholder="Tell us about yourself"
                     className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25 transition-colors duration-150"
                   />

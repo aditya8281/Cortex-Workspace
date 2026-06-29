@@ -9,6 +9,7 @@ import { Button } from "@/shared/ui/Button";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { ConsentToggle } from "../components/ConsentToggle";
 import { consent, type ConsentEntry } from "../api";
+import { Skeleton } from "@/shared/ui/Skeleton";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -86,7 +87,27 @@ export default function ConsentPage() {
     }
   };
 
-  if (loading || !user) return null;
+  if (loading || !user) return (
+    <AppShell>
+      <div className="max-w-4xl space-y-6">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-4 w-64" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Card key={i} className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1.5">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+                <Skeleton className="h-6 w-10 rounded-full" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </AppShell>
+  );
 
   const grantedCount = entries.filter((e) => e.granted).length;
 
