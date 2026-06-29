@@ -39,7 +39,7 @@ async def websocket_demo(ws: WebSocket) -> None:
         await ws.close(code=4001)
         return
     try:
-        user_id = await verify_ws_token(token)
+        await verify_ws_token(token)
     except Exception:
         await ws.send_json({"type": "error", "message": "Invalid token or account deleted"})
         await ws.close(code=4001)

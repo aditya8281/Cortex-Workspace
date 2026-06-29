@@ -272,7 +272,8 @@ async def delete_me(
 
     # Revoke the current access token so stale JWTs stop working
     try:
-        from jose import JWTError, jwt as jose_jwt
+        from jose import JWTError
+        from jose import jwt as jose_jwt
 
         # Decode and revoke access token
         for key in settings.all_secret_keys:

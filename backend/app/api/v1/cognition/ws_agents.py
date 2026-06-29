@@ -64,7 +64,7 @@ async def agents_ws(ws: WebSocket, token: str = Query(None)):
     # Accept FIRST so the browser sees a 101 with CORS headers
     await ws.accept()
 
-    token = manager.extract_ws_token(ws, token)
+    token = manager.extract_ws_token(ws, token)  # type: ignore[assignment]
     if not token:
         await ws.send_json({"type": "error", "message": "Authentication required"})
         await ws.close(code=4001)
@@ -80,7 +80,7 @@ async def agents_ws(ws: WebSocket, token: str = Query(None)):
     try:
         while True:
             try:
-                data = _fetch_agent_runs(user_id)
+                data = _fetch_agent_runs(str(user_id))
             except Exception:
                 data = {"type": "agent_runs", "runs": []}
             await manager.send(ws, data)

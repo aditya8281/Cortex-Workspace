@@ -12,11 +12,12 @@ list, and wraps `send` to inject CORS headers into the websocket.accept message.
 from __future__ import annotations
 
 import logging
+from collections.abc import MutableMapping
 from typing import Any
 
 from starlette.datastructures import Headers
 from starlette.middleware.cors import CORSMiddleware
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.types import Receive, Scope, Send
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class CORSMiddlewareWithWS(CORSMiddleware):
 
         # Origin is allowed — wrap send to inject CORS headers into the
         # websocket.accept message that ws.accept() produces.
-        async def send_with_cors(message: dict[str, Any]) -> None:
+        async def send_with_cors(message: MutableMapping[str, Any]) -> None:
             if message["type"] in ("websocket.accept", "websocket.close"):
                 raw_headers: list[tuple[bytes, bytes]] = message.get("headers") or []
 

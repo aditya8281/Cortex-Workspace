@@ -16,17 +16,17 @@ if str(_ROOT) not in sys.path:
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from backend.app.core.cors import CORSMiddlewareWithWS as CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from backend.app.auth.router import router as auth_router
 from backend.app.api.memory import router as memory_router
 from backend.app.api.router import api_router
 from backend.app.api.ws import router as ws_router
+from backend.app.auth.router import router as auth_router
 from backend.app.core.config import settings
+from backend.app.core.cors import CORSMiddlewareWithWS as CORSMiddleware
 from backend.app.core.csrf import setup_csrf_protection
 from backend.app.core.https_redirect import setup_https_redirect
 from backend.app.core.logging import get_logger, setup_logging
