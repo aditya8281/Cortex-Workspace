@@ -6,7 +6,7 @@ import json
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
-from backend.app.core.security import verify_access_token
+from backend.app.core.db import verify_ws_token
 from backend.app.core.websocket import manager
 
 router = APIRouter()
@@ -39,9 +39,9 @@ async def chat_ws(ws: WebSocket, token: str = Query(None)):
         await ws.close(code=4001, reason="Authentication required")
         return
     try:
-        user_id = verify_access_token(token)
+        user_id = await verify_ws_token(token)
     except Exception:
-        await ws.close(code=4001, reason="Invalid token")
+        await ws.close(code=4001, reason="Invalid token or account deleted")
         return
 
     uid = int(user_id)

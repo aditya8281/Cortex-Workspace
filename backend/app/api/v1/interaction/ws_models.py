@@ -7,7 +7,7 @@ import json
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
-from backend.app.core.security import verify_access_token
+from backend.app.core.db import verify_ws_token
 from backend.app.services.download.downloader import DownloadStatus, download_manager
 
 router = APIRouter()
@@ -75,9 +75,9 @@ async def model_download_progress_ws(ws: WebSocket, token: str = Query(None)):
         await ws.close(code=4001, reason="Authentication required")
         return
     try:
-        _user_id = verify_access_token(token)
+        _user_id = await verify_ws_token(token)
     except Exception:
-        await ws.close(code=4001, reason="Invalid token")
+        await ws.close(code=4001, reason="Invalid token or account deleted")
         return
     await ws.accept()
     try:

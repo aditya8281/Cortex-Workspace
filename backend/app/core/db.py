@@ -83,6 +83,49 @@ async def get_current_user(
     return user
 
 
+async def verify_ws_token(token: str) -> int:
+    """Verify a WebSocket JWT: check validity, revocation, and user existence.
+
+    Returns user_id on success. Raises Exception on failure (caller should
+    close the WebSocket with an appropriate code).
+    """
+    from backend.app.models.interaction.user import User
+
+    user_id = verify_access_token(token)
+
+    # Check revocation via JTI
+    try:
+        payload = None
+        for key in settings.all_secret_keys:
+            try:
+                payload = jwt.decode(token, key, algorithms=[settings.ALGORITHM])
+                break
+            except JWTError:
+                continue
+        if payload is not None:
+            jti = payload.get("jti")
+            if jti and await is_access_token_revoked(jti):
+                raise Exception("Token has been revoked")
+    except Exception as exc:
+        if "Token has been revoked" in str(exc):
+            raise
+        # Fall through — revocation check failed but JWT is valid
+
+    # Check user exists and is not deleted
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(
+            User.id == int(user_id),
+            User.deleted_at.is_(None),
+        ).first()
+        if not user:
+            raise Exception("User not found or account deleted")
+    finally:
+        db.close()
+
+    return int(user_id)
+
+
 async def get_current_user_optional(
     request: Request,
     token: HTTPAuthorizationCredentials | None = Depends(oauth2_scheme_optional),

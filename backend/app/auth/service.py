@@ -175,10 +175,20 @@ async def logout_user(db: Session, refresh_token: str | None, ip: str | None = N
 
 async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None):
     from backend.app.core.security import create_access_token_async
+    from backend.app.models.interaction.user import User
 
     info = await verify_refresh_token(refresh_token)
     if not info:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+    # Check user exists and is not deleted
+    user = db.query(User).filter(
+        User.id == int(info["user_id"]),
+        User.deleted_at.is_(None),
+    ).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found or account deleted")
+
     new = await rotate_refresh_token(info["jti"], info["user_id"])
     if new is None:
         # Token was already revoked — this is a reuse attempt.

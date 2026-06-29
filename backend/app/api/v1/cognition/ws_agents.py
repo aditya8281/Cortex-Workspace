@@ -7,7 +7,7 @@ import asyncio
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import func, select
 
-from backend.app.core.security import verify_access_token
+from backend.app.core.db import verify_ws_token
 from backend.app.core.websocket import manager
 from backend.app.db.session import SessionLocal
 from backend.app.models.cognition.agent import AgentRun, AgentStep
@@ -76,9 +76,9 @@ async def agents_ws(ws: WebSocket, token: str = Query(None)):
         await ws.close(code=4001, reason="Authentication required")
         return
     try:
-        user_id = verify_access_token(token)
+        user_id = await verify_ws_token(token)
     except Exception:
-        await ws.close(code=4001, reason="Invalid token")
+        await ws.close(code=4001, reason="Invalid token or account deleted")
         return
 
     await manager.connect(ws, channel=f"agents:{user_id}", user_id=int(user_id))

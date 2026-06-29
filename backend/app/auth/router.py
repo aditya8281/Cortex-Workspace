@@ -12,7 +12,12 @@ logger = logging.getLogger(__name__)
 from backend.app.auth import service as auth_service
 from backend.app.core.config import settings
 from backend.app.core.db import get_db
-from backend.app.core.security import revoke_access_token, verify_access_token
+from backend.app.core.security import (
+    revoke_access_token,
+    revoke_refresh_token_by_jti,
+    verify_access_token,
+    verify_refresh_token,
+)
 from backend.app.models.interaction.user import User
 from backend.app.schemas.interaction.user import (
     MeUpdate,
@@ -159,7 +164,10 @@ async def logout(body: RefreshRequest, request: Request, response: Response, db:
 
 
 @router.get("/api/v1/auth/ws-token")
-async def get_ws_token(request: Request):
+async def get_ws_token(
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """Return the access token for WebSocket connections.
     Frontend cannot read httpOnly cookies, so this endpoint
     extracts the token and returns it for use in WS query params."""
@@ -167,9 +175,18 @@ async def get_ws_token(request: Request):
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        verify_access_token(token)
+        user_id = verify_access_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Check user exists and is not deleted
+    user = db.query(User).filter(
+        User.id == int(user_id),
+        User.deleted_at.is_(None),
+    ).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found or account deleted")
+
     return {"token": token}
 
 
@@ -252,6 +269,30 @@ async def delete_me(
 
     if not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid password")
+
+    # Revoke the current access token so stale JWTs stop working
+    try:
+        from jose import JWTError, jwt as jose_jwt
+
+        # Decode and revoke access token
+        for key in settings.all_secret_keys:
+            try:
+                payload = jose_jwt.decode(token, key, algorithms=[settings.ALGORITHM])
+                jti = payload.get("jti")
+                if jti:
+                    await revoke_access_token(jti, expires_in_minutes=30)
+                break
+            except JWTError:
+                continue
+
+        # Also revoke the refresh token from its cookie
+        refresh_token = request.cookies.get("cortex_refresh")
+        if refresh_token:
+            refresh_data = await verify_refresh_token(refresh_token)
+            if refresh_data and "jti" in refresh_data:
+                await revoke_refresh_token_by_jti(refresh_data["jti"])
+    except Exception:
+        pass  # Best-effort revocation — soft-delete still blocks future logins
 
     # Clear vault cache
     try:

@@ -8,8 +8,8 @@ import json
 import psutil
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
+from backend.app.core.db import verify_ws_token
 from backend.app.core.logging import get_recent_logs
-from backend.app.core.security import verify_access_token
 from backend.app.core.system_info import get_disk_info, get_gpu_info, get_ram_info
 
 router = APIRouter()
@@ -97,9 +97,9 @@ async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
         await ws.close(code=4001, reason="Authentication required")
         return
     try:
-        _user_id = verify_access_token(token)
+        _user_id = await verify_ws_token(token)
     except Exception:
-        await ws.close(code=4001, reason="Invalid token")
+        await ws.close(code=4001, reason="Invalid token or account deleted")
         return
     await ws.accept()
     tick = 0
