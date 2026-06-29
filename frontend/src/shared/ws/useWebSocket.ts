@@ -42,7 +42,7 @@ export interface UseWebSocketReturn {
 
 /** Backend WebSocket base URL. WS connects directly to FastAPI (port 8000)
  *  because Next.js rewrites don't proxy WebSocket upgrades. */
-function getWsBaseUrl(): string {
+export function getWsBaseUrl(): string {
   if (typeof window === "undefined") return "ws://localhost:8000";
   // In dev, frontend is at :3000, backend at :8000
   return `ws://${window.location.hostname}:8000`;
@@ -105,6 +105,10 @@ export function useWebSocket({
         return;
       }
       const { token } = await res.json();
+      if (!token || typeof token !== "string") {
+        setStatus("error");
+        return;
+      }
 
       const url = `${getWsBaseUrl()}${path}`;
       const ws = new WebSocket(url, [token]);

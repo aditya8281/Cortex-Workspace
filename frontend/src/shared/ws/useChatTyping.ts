@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useWebSocket } from "./useWebSocket";
 
 interface TypingUser {
   userId: number;
@@ -14,98 +15,75 @@ interface UseChatTypingOptions {
 
 /**
  * Hook for chat typing indicators via WebSocket.
+ * Uses the shared useWebSocket hook for auto-reconnect.
  * Sends typing events when user types, receives typing events from others.
  */
 export function useChatTyping({ conversationId, userId }: UseChatTypingOptions) {
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
-  const mountedRef = useRef(true);
   const currentConvRef = useRef<number | null>(null);
 
-  // Connect to chat WS
-  useEffect(() => {
-    mountedRef.current = true;
+  // Track pending join/leave for when WS reconnects
+  const pendingJoinRef = useRef<number | null>(null);
 
-    async function connect() {
-      if (!userId) return;
-
-      try {
-        const res = await fetch("/api/v1/auth/ws-token", { credentials: "include" });
-        if (!res.ok) return;
-        const { token } = await res.json();
-
-        const wsUrl = `ws://${window.location.hostname}:8000/api/v1/ws/chat`;
-        const ws = new WebSocket(wsUrl, [token]);
-        wsRef.current = ws;
-
-        ws.onmessage = (event) => {
-          if (!mountedRef.current) return;
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === "typing" && data.user_id !== userId) {
-              setTypingUsers((prev) => {
-                if (prev.some((u) => u.userId === data.user_id && u.conversationId === data.conversation_id)) {
-                  return prev;
-                }
-                return [...prev, { userId: data.user_id, conversationId: data.conversation_id }];
-              });
-              // Auto-remove after 5 seconds
-              setTimeout(() => {
-                setTypingUsers((prev) =>
-                  prev.filter((u) => !(u.userId === data.user_id && u.conversationId === data.conversation_id)),
-                );
-              }, 5000);
-            } else if (data.type === "stop_typing" && data.user_id !== userId) {
-              setTypingUsers((prev) =>
-                prev.filter((u) => !(u.userId === data.user_id && u.conversationId === data.conversation_id)),
-              );
-            }
-          } catch {
-            // ignore
+  const handleWSMessage = useCallback(
+    (data: Record<string, unknown>) => {
+      if (data.type === "typing" && data.user_id !== userId) {
+        const uid = data.user_id as number;
+        const cid = data.conversation_id as number;
+        setTypingUsers((prev) => {
+          if (prev.some((u) => u.userId === uid && u.conversationId === cid)) {
+            return prev;
           }
-        };
-      } catch {
-        // WS connection failed, typing indicators disabled
+          return [...prev, { userId: uid, conversationId: cid }];
+        });
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+          setTypingUsers((prev) =>
+            prev.filter((u) => !(u.userId === uid && u.conversationId === cid)),
+          );
+        }, 5000);
+      } else if (data.type === "stop_typing" && data.user_id !== userId) {
+        const uid = data.user_id as number;
+        const cid = data.conversation_id as number;
+        setTypingUsers((prev) =>
+          prev.filter((u) => !(u.userId === uid && u.conversationId === cid)),
+        );
       }
-    }
+    },
+    [userId],
+  );
 
-    connect();
+  const { send, status } = useWebSocket({
+    path: "/api/v1/ws/chat",
+    enabled: !!userId,
+    onMessage: handleWSMessage,
+  });
 
-    return () => {
-      mountedRef.current = false;
-      if (wsRef.current) {
-        wsRef.current.onclose = null;
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-    };
-  }, [userId]);
-
-  // Join/leave conversation channels
+  // Join/leave conversation on connect and conversationId change
   useEffect(() => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    if (status !== "connected") return;
 
     if (currentConvRef.current !== null) {
-      ws.send(JSON.stringify({ action: "leave", conversation_id: currentConvRef.current }));
+      send({ action: "leave", conversation_id: currentConvRef.current });
     }
 
     if (conversationId !== null) {
-      ws.send(JSON.stringify({ action: "join", conversation_id: conversationId }));
+      send({ action: "join", conversation_id: conversationId });
       currentConvRef.current = conversationId;
+    } else {
+      currentConvRef.current = null;
     }
-  }, [conversationId]);
+  }, [conversationId, status, send]);
 
   // Send typing indicator
   const sendTyping = useCallback(() => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN || !conversationId) return;
+    if (status !== "connected" || !conversationId) return;
 
     if (!isTypingRef.current) {
       isTypingRef.current = true;
-      ws.send(JSON.stringify({ action: "typing", conversation_id: conversationId }));
+      send({ action: "typing", conversation_id: conversationId });
     }
 
     // Reset the stop_typing timeout
@@ -114,9 +92,9 @@ export function useChatTyping({ conversationId, userId }: UseChatTypingOptions) 
     }
     typingTimeoutRef.current = setTimeout(() => {
       isTypingRef.current = false;
-      ws.send(JSON.stringify({ action: "stop_typing", conversation_id: conversationId }));
+      send({ action: "stop_typing", conversation_id: conversationId });
     }, 3000);
-  }, [conversationId]);
+  }, [conversationId, status, send]);
 
   // Others typing in this conversation
   const isOthersTyping = typingUsers.filter((u) => u.conversationId === conversationId);

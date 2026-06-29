@@ -16,7 +16,7 @@ if str(_ROOT) not in sys.path:
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from backend.app.core.cors import CORSMiddlewareWithWS as CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
@@ -48,6 +48,9 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     UPLOAD_PATHS = {"/api/v1/me/profile/photo", "/api/v1/privacy/vault/files/upload"}
 
     async def dispatch(self, request: Request, call_next):
+        # BaseHTTPMiddleware breaks WebSocket upgrades — bypass early
+        if request.scope.get("type") == "websocket":
+            return await call_next(request)
         if request.method in ("POST", "PUT", "PATCH"):
             content_length = request.headers.get("content-length")
             if content_length:

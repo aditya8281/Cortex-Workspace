@@ -17,6 +17,7 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
+import { getWsBaseUrl } from "./useWebSocket";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -67,13 +68,6 @@ const MetricsContext = createContext<MetricsContextType>({
 
 export function useMetrics() {
   return useContext(MetricsContext);
-}
-
-// ── WebSocket URL ──────────────────────────────────────────────────────────
-
-function getWsBaseUrl(): string {
-  if (typeof window === "undefined") return "ws://localhost:8000";
-  return `ws://${window.location.hostname}:8000`;
 }
 
 // ── Provider ───────────────────────────────────────────────────────────────
@@ -145,7 +139,9 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
         timerRef.current = setTimeout(() => { if (mountedRef.current) connect(); }, delay);
       };
 
-      ws.onerror = () => {};
+      ws.onerror = (e) => {
+        console.warn("[metrics-ws] error", e);
+      };
     } catch {
       // retry
       if (mountedRef.current) {

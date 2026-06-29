@@ -70,21 +70,31 @@ export default function AgentsPage() {
         id: number;
         agent_id: number;
         status: string;
-        completed_steps: number;
-        total_steps: number;
-        progress: number;
         created_at: string;
       }>;
       if (wsRuns.length > 0) {
         setRuns((prev) => {
-          const updated = prev.map((r) => {
-            const wsRun = wsRuns.find((w) => w.id === r.id);
-            if (wsRun) {
-              return { ...r, status: wsRun.status as AgentRun["status"] };
+          const existing = new Map(prev.map((r) => [r.id, r]));
+          for (const wsRun of wsRuns) {
+            const existingRun = existing.get(wsRun.id);
+            if (existingRun) {
+              existing.set(wsRun.id, { ...existingRun, status: wsRun.status as AgentRun["status"] });
+            } else {
+              // New run — add with partial data, full data on next REST fetch
+              existing.set(wsRun.id, {
+                id: wsRun.id,
+                agent_id: wsRun.agent_id,
+                status: wsRun.status as AgentRun["status"],
+                input: "",
+                output: null,
+                token_usage: 0,
+                error: null,
+                created_at: wsRun.created_at,
+                completed_at: null,
+              });
             }
-            return r;
-          });
-          return updated;
+          }
+          return Array.from(existing.values());
         });
       }
     }

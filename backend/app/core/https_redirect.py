@@ -23,6 +23,9 @@ class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        # BaseHTTPMiddleware breaks WebSocket upgrades — bypass early
+        if request.scope.get("type") == "websocket":
+            return await call_next(request)
         if not settings.HTTPS_REDIRECT_ENABLED:
             return await call_next(request)
 
