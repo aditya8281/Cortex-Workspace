@@ -18,6 +18,9 @@ router = APIRouter()
 
 @router.websocket("/ws/demo")
 async def websocket_demo(ws: WebSocket) -> None:
+    # Accept FIRST so the browser sees a 101 with CORS headers
+    await ws.accept()
+
     # Accept token from sec-websocket-protocol header (preferred) or query param (legacy)
     token = None
     protocols = ws.headers.get("sec-websocket-protocol", "")
@@ -27,19 +30,22 @@ async def websocket_demo(ws: WebSocket) -> None:
     if not token:
         token = ws.query_params.get("token")
     if not token:
-        await ws.close(code=4001, reason="Missing authentication token")
+        await ws.send_json({"type": "error", "message": "Missing authentication token"})
+        await ws.close(code=4001)
         return
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
-            await ws.close(code=4001, reason="Invalid token")
+            await ws.send_json({"type": "error", "message": "Invalid token"})
+            await ws.close(code=4001)
             return
     except JWTError:
-        await ws.close(code=4001, reason="Invalid token")
+        await ws.send_json({"type": "error", "message": "Invalid token"})
+        await ws.close(code=4001)
         return
 
-    await manager.connect(ws, channel="demo")
+    await manager.register(ws, channel="demo")
     try:
         while True:
             raw = await ws.receive_text()

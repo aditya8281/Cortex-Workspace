@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 
 import psutil
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
@@ -12,6 +13,7 @@ from backend.app.core.db import verify_ws_token
 from backend.app.core.logging import get_recent_logs
 from backend.app.core.system_info import get_disk_info, get_gpu_info, get_ram_info
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -92,16 +94,25 @@ def collect_logs(n: int = 15) -> dict:
 @router.websocket("/ws/system")
 async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
     """Push real-time metrics (every 500ms) and activity logs (every 3s)."""
+    logger.info("[ws/system] Connection attempt from %s", ws.client)
+
+    # Accept FIRST so the browser sees a 101 with CORS headers
+    await ws.accept()
+
     token = _extract_ws_token(ws, token)
     if not token:
-        await ws.close(code=4001, reason="Authentication required")
+        logger.warning("[ws/system] No token provided")
+        await ws.send_json({"type": "error", "message": "Authentication required"})
+        await ws.close(code=4001)
         return
     try:
         _user_id = await verify_ws_token(token)
-    except Exception:
-        await ws.close(code=4001, reason="Invalid token or account deleted")
+    except Exception as e:
+        logger.warning("[ws/system] Token verification failed: %s", e)
+        await ws.send_json({"type": "error", "message": "Invalid token or account deleted"})
+        await ws.close(code=4001)
         return
-    await ws.accept()
+    logger.info("[ws/system] User %s connected", _user_id)
     tick = 0
     try:
         while True:

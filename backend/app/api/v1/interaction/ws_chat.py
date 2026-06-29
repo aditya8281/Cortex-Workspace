@@ -34,18 +34,23 @@ async def chat_ws(ws: WebSocket, token: str = Query(None)):
       {"type": "typing", "conversation_id": 123, "user_id": 456}
       {"type": "stop_typing", "conversation_id": 123, "user_id": 456}
     """
+    # Accept FIRST so the browser sees a 101 with CORS headers
+    await ws.accept()
+
     token = _extract_ws_token(ws, token)
     if not token:
-        await ws.close(code=4001, reason="Authentication required")
+        await ws.send_json({"type": "error", "message": "Authentication required"})
+        await ws.close(code=4001)
         return
     try:
         user_id = await verify_ws_token(token)
     except Exception:
-        await ws.close(code=4001, reason="Invalid token or account deleted")
+        await ws.send_json({"type": "error", "message": "Invalid token or account deleted"})
+        await ws.close(code=4001)
         return
 
     uid = int(user_id)
-    await manager.connect(ws, channel="chat", user_id=uid)
+    await manager.register(ws, channel="chat", user_id=uid)
 
     # Track which conversations this connection has joined
     joined_channels: set[str] = set()

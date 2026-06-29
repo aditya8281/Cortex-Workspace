@@ -21,6 +21,7 @@ class ConnectionManager:
         self._user_connections: dict[int, set[WebSocket]] = {}
 
     async def connect(self, ws: WebSocket, channel: str = "default", user_id: int | None = None) -> None:
+        """Accept a new WebSocket connection and register it with the manager."""
         channel_conns = self.active.get(channel, set())
         if len(channel_conns) >= MAX_CONNECTIONS_PER_CHANNEL:
             await ws.close(code=1013, reason="Too many connections")
@@ -35,10 +36,34 @@ class ConnectionManager:
                 return
 
         await ws.accept()
+        self._do_register(ws, channel, user_id)
+
+    async def register(self, ws: WebSocket, channel: str = "default", user_id: int | None = None) -> None:
+        """Register an already-accepted WebSocket without calling ws.accept() again.
+
+        Use this with the accept-first pattern (accept → verify → register).
+        """
+        channel_conns = self.active.get(channel, set())
+        if len(channel_conns) >= MAX_CONNECTIONS_PER_CHANNEL:
+            await ws.close(code=1013, reason="Too many connections")
+            logger.warning("WebSocket registration rejected: channel '%s' full", channel)
+            return
+
+        if user_id is not None:
+            user_conns = self._user_connections.get(user_id, set())
+            if len(user_conns) >= MAX_CONNECTIONS_PER_USER:
+                await ws.close(code=1013, reason="Too many connections for user")
+                logger.warning("WebSocket registration rejected: user %d exceeded limit", user_id)
+                return
+
+        self._do_register(ws, channel, user_id)
+
+    def _do_register(self, ws: WebSocket, channel: str, user_id: int | None = None) -> None:
+        """Internal: add a WebSocket to the tracking sets (accept must already have happened)."""
         self.active.setdefault(channel, set()).add(ws)
         if user_id is not None:
             self._user_connections.setdefault(user_id, set()).add(ws)
-        logger.info("WebSocket connected to channel '%s' (%d active)", channel, len(self.active[channel]))
+        logger.info("WebSocket registered on channel '%s' (%d active)", channel, len(self.active[channel]))
 
     def disconnect(self, ws: WebSocket, channel: str = "default", user_id: int | None = None) -> None:
         self.active.get(channel, set()).discard(ws)

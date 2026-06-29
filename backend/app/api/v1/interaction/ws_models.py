@@ -70,16 +70,20 @@ def _build_download_payload() -> dict:
 @router.websocket("/ws/models")
 async def model_download_progress_ws(ws: WebSocket, token: str = Query(None)):
     """Push download progress for all active model downloads every second."""
+    # Accept FIRST so the browser sees a 101 with CORS headers
+    await ws.accept()
+
     token = _extract_ws_token(ws, token)
     if not token:
-        await ws.close(code=4001, reason="Authentication required")
+        await ws.send_json({"type": "error", "message": "Authentication required"})
+        await ws.close(code=4001)
         return
     try:
         _user_id = await verify_ws_token(token)
     except Exception:
-        await ws.close(code=4001, reason="Invalid token or account deleted")
+        await ws.send_json({"type": "error", "message": "Invalid token or account deleted"})
+        await ws.close(code=4001)
         return
-    await ws.accept()
     try:
         while True:
             payload = _build_download_payload()
