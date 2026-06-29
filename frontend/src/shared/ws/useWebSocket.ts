@@ -40,30 +40,23 @@ export interface UseWebSocketReturn {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-/** Backend WebSocket base URL. WS connects directly to FastAPI because Next.js
- *  rewrites don't proxy WebSocket upgrades. Port resolved from:
- *  1. NEXT_PUBLIC_CORTEX_BACKEND_URL (preferred — full URL, inlined in browser)
- *  2. NEXT_PUBLIC_BACKEND_PORT (just the port)
- *  3. Fallback to 8000
+/** Backend WebSocket base URL. Parsed from NEXT_PUBLIC_CORTEX_BACKEND_URL
+ *  (set via CORTEX_BACKEND_URL in .env.local, exposed by next.config.ts).
+ *  Converts http(s)://host:port → ws(s)://host:port.
  */
 export function getWsBaseUrl(): string {
-  const getPort = (): string => {
-    // Full backend URL — works in browser because NEXT_PUBLIC_ prefix
-    const fullUrl = process.env.NEXT_PUBLIC_CORTEX_BACKEND_URL;
-    if (fullUrl) {
-      try {
-        const parsed = new URL(fullUrl);
-        if (parsed.port) return parsed.port;
-      } catch { /* ignore */ }
-    }
-    // Explicit port override
-    const port = process.env.NEXT_PUBLIC_BACKEND_PORT;
-    if (port) return port;
-    return "8000";
-  };
-
-  if (typeof window === "undefined") return `ws://localhost:${getPort()}`;
-  return `ws://${window.location.hostname}:${getPort()}`;
+  // Browser: reads NEXT_PUBLIC_* var inlined by Next.js at compile time
+  const rawUrl = process.env.NEXT_PUBLIC_CORTEX_BACKEND_URL;
+  // SSR: reads CORTEX_BACKEND_URL directly (available in Node.js)
+  const backendUrl = rawUrl || process.env.CORTEX_BACKEND_URL;
+  if (backendUrl) {
+    try {
+      const url = new URL(backendUrl);
+      const protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      return `${protocol}//${url.host}`;
+    } catch { /* ignore bad URL */ }
+  }
+  return "ws://localhost:8000";
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
