@@ -122,7 +122,9 @@ export function BrowseView({
     catalog.recommended().then(res => {
       const all = Object.values(res.workloads).flatMap(w => w.recommendations ?? []);
       setRecommended(all.slice(0, 4));
-    }).catch(() => {});
+    }).catch(() => {
+      // Recommended is non-critical — show browse without recommendations
+    });
   }, []);
 
   const toggleCapability = (cap: string) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/shared/layout/AppShell";
@@ -14,17 +14,23 @@ export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [activityError, setActivityError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.push("/auth");
   }, [user, loading, router]);
 
-  useEffect(() => {
+  const loadActivity = useCallback(() => {
+    setActivityError(null);
     dashboardApi
       .getRecentActivity()
       .then((res) => setActivity(res.items))
-      .catch(() => {});
+      .catch(() => setActivityError("Failed to load recent activity"));
   }, []);
+
+  useEffect(() => {
+    loadActivity();
+  }, [loadActivity]);
 
   if (loading || !user) return null;
 
@@ -48,7 +54,19 @@ export default function DashboardPage() {
           <h2 className="text-title font-semibold text-text-primary mb-3">
             Recent Activity
           </h2>
-          <RecentActivity items={activity} />
+          {activityError ? (
+            <div className="rounded-lg border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
+              {activityError}
+              <button
+                onClick={loadActivity}
+                className="ml-2 text-xs font-medium text-danger underline hover:text-danger/80"
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <RecentActivity items={activity} />
+          )}
         </div>
       </div>
     </AppShell>

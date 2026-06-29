@@ -32,15 +32,18 @@ function formatDate(dateStr: string | null): string {
 export function RepoListItem({ repo, onGraph, onDelete }: RepoListItemProps) {
   const [indexing, setIndexing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [progress, setProgress] = useState(0);
   const [indexStatus, setIndexStatus] = useState("");
   const mountedRef = useRef(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       mountedRef.current = false;
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
     };
   }, []);
 
@@ -96,15 +99,25 @@ export function RepoListItem({ repo, onGraph, onDelete }: RepoListItemProps) {
     }
   }, [repo.id, startPolling]);
 
-  const handleDelete = useCallback(async () => {
-    setDeleting(true);
-    try {
-      await repository.delete(repo.id);
-      if (mountedRef.current) onDelete(repo.id);
-    } catch {
-      if (mountedRef.current) setDeleting(false);
+  const handleDeleteClick = useCallback(() => {
+    if (confirmDelete) {
+      // Second click — execute delete
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      setConfirmDelete(false);
+      setDeleting(true);
+      repository.delete(repo.id).then(() => {
+        if (mountedRef.current) onDelete(repo.id);
+      }).catch(() => {
+        if (mountedRef.current) setDeleting(false);
+      });
+    } else {
+      // First click — show confirmation, auto-reset after 4 seconds
+      setConfirmDelete(true);
+      confirmTimerRef.current = setTimeout(() => {
+        if (mountedRef.current) setConfirmDelete(false);
+      }, 4000);
     }
-  }, [repo.id, onDelete]);
+  }, [repo.id, onDelete, confirmDelete]);
 
   const primaryLanguage = repo.primary_language;
 
@@ -152,14 +165,25 @@ export function RepoListItem({ repo, onGraph, onDelete }: RepoListItemProps) {
         <Button size="sm" variant="ghost" onClick={() => onGraph(repo.id)}>
           Graph
         </Button>
-        <Button
-          size="sm"
-          variant="danger"
-          onClick={handleDelete}
-          loading={deleting}
-        >
-          Delete
-        </Button>
+        {confirmDelete ? (
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={handleDeleteClick}
+            loading={deleting}
+          >
+            Confirm?
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={handleDeleteClick}
+            loading={deleting}
+          >
+            Delete
+          </Button>
+        )}
       </div>
     </Card>
   );

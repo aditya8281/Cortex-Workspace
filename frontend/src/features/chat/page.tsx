@@ -44,6 +44,7 @@ export default function ChatPage() {
 
   const [showNew, setShowNew] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [chatError, setChatError] = useState<string | null>(null);
 
   // Typing indicators via WebSocket
   const { sendTyping, isOthersTyping, typingCount } = useChatTyping({
@@ -69,7 +70,7 @@ export default function ChatPage() {
       const res = await chatApi.list();
       setConversations(res.conversations);
     } catch {
-      // ignore
+      setChatError("Failed to load conversations");
     }
   }, []);
 
@@ -107,7 +108,7 @@ export default function ChatPage() {
       setShowNew(false);
       setNewTitle("");
     } catch {
-      // ignore
+      setChatError("Failed to create conversation");
     }
   };
 
@@ -202,6 +203,17 @@ export default function ChatPage() {
               New Chat
             </Button>
           </div>
+          {chatError && (
+            <div className="mx-3 mt-3 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-xs text-danger">
+              {chatError}
+              <button
+                onClick={() => { setChatError(null); loadConversations(); }}
+                className="ml-1 font-medium underline hover:text-danger/80"
+              >
+                Retry
+              </button>
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto">
             {conversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -217,13 +229,19 @@ export default function ChatPage() {
                   isActive={activeId === conv.id}
                   onSelect={(id) => { setActiveId(Number(id)); setSources([]); }}
                   onRename={(id, title) => {
-                    chatApi.rename(Number(id), title).catch(() => {});
                     setConversations((prev) => prev.map((c) => c.id === Number(id) ? { ...c, title } : c));
+                    chatApi.rename(Number(id), title).catch(() => {
+                      setChatError("Failed to rename conversation");
+                    });
                   }}
                   onDelete={(id) => {
-                    chatApi.delete(Number(id)).catch(() => {});
+                    const prevConv = conversations.find((c) => c.id === Number(id));
                     setConversations((prev) => prev.filter((c) => c.id !== Number(id)));
                     if (activeId === Number(id)) { setActiveId(null); setMessages([]); }
+                    chatApi.delete(Number(id)).catch(() => {
+                      if (prevConv) setConversations((prev) => [prevConv, ...prev]);
+                      setChatError("Failed to delete conversation");
+                    });
                   }}
                 />
               ))

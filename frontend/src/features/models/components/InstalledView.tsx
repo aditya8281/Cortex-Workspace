@@ -23,6 +23,7 @@ export function InstalledView({ onViewDetail }: InstalledViewProps) {
   const [defaultModelId, setDefaultModelId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InstalledModel | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -69,8 +70,8 @@ export function InstalledView({ onViewDetail }: InstalledViewProps) {
         localStorage.removeItem("cortex_default_model");
       }
       setDeleteTarget(null);
-    } catch {
-      // ignore
+    } catch (e: any) {
+      setDeleteError(e.message ?? "Failed to delete model");
     } finally {
       setDeleting(false);
     }
@@ -176,14 +177,19 @@ export function InstalledView({ onViewDetail }: InstalledViewProps) {
       {/* Delete confirmation */}
       <Modal
         open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => { setDeleteTarget(null); setDeleteError(null); }}
         title="Delete Model"
       >
         <p className="text-sm text-text-secondary mb-4">
           Delete <span className="font-mono text-text-primary">{deleteTarget?.display_name}</span>? This will remove it from Ollama.
         </p>
+        {deleteError && (
+          <div className="mb-4 rounded-lg border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
+            {deleteError}
+          </div>
+        )}
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+          <Button variant="ghost" onClick={() => { setDeleteTarget(null); setDeleteError(null); }}>
             Cancel
           </Button>
           <Button

@@ -7,9 +7,9 @@ const config: Config = {
     extend: {
       fontSize: {
         headline: ["1.25rem", { lineHeight: "1.75rem", fontWeight: "600" }],
-        title: ["0.9375rem", { lineHeight: "1.25rem", fontWeight: "600" }],
+        title: ["0.9375rem", { lineHeight: "1.25rem", fontWeight: "500" }],
         body: ["0.875rem", { lineHeight: "1.25rem" }],
-        label: ["0.75rem", { lineHeight: "1rem" }],
+        label: ["0.625rem", { lineHeight: "0.875rem" }],
       },
       colors: {
         // Primary accent
@@ -31,8 +31,8 @@ const config: Config = {
         "border-accent": "rgba(14,165,201,0.3)",
         // Text
         "text-primary": "#e8e8ed",
-        "text-secondary": "#9a9aaa",
-        "text-muted": "#7a7a8a",
+        "text-secondary": "#7a7a8a",
+        "text-muted": "#555566",
         // Semantic
         danger: "#ef4444",
         success: "#22c55e",

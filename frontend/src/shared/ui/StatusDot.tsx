@@ -3,7 +3,7 @@
 import { cn } from "@/shared/lib/utils";
 
 type StatusColor = "accent" | "success" | "warning" | "danger";
-type StatusSize = "xs" | "sm" | "md";
+type StatusSize = "xs" | "sm" | "md" | "lg";
 
 interface StatusDotProps {
   color?: StatusColor;
@@ -23,6 +23,7 @@ const sizeStyles: Record<StatusSize, { dot: string; pulse: string; wrapper: stri
   xs: { dot: "h-1.5 w-1.5", pulse: "h-1.5 w-1.5", wrapper: "h-1.5 w-1.5" },
   sm: { dot: "h-2 w-2", pulse: "h-2 w-2", wrapper: "h-2 w-2" },
   md: { dot: "h-2.5 w-2.5", pulse: "h-2.5 w-2.5", wrapper: "h-2.5 w-2.5" },
+  lg: { dot: "h-3.5 w-3.5", pulse: "h-3.5 w-3.5", wrapper: "h-3.5 w-3.5" },
 };
 
 export function StatusDot({

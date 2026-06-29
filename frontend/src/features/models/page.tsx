@@ -51,18 +51,25 @@ export default function ModelsPage() {
     }
   }, [authLoading, user, router]);
 
+  const [hardwareError, setHardwareError] = useState<string | null>(null);
+
   // ── Load hardware on mount ──────────────────────────────────────────────
 
-  useEffect(() => {
+  const loadHardware = useCallback(() => {
+    setHardwareError(null);
     catalog
       .hardware()
       .then(setHardware)
       .catch(() => {
-        // Fallback: estimate from available RAM
         setHardware(null);
+        setHardwareError("Failed to load hardware info");
       })
       .finally(() => setHardwareLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadHardware();
+  }, [loadHardware]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -141,6 +148,18 @@ export default function ModelsPage() {
 
         {/* Hardware bar */}
         <HardwareBar hardware={hardware} loading={hardwareLoading} />
+
+        {hardwareError && (
+          <div className="rounded-lg border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
+            {hardwareError}
+            <button
+              onClick={loadHardware}
+              className="ml-2 text-xs font-medium text-danger underline hover:text-danger/80"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Tab bar */}
         <div
