@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/shared/auth/AuthProvider";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { Card } from "@/shared/ui/Card";
@@ -137,7 +138,15 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 // ── Main registration page ─────────────────────────────────────────────────
 
 export default function RegisterPage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
+
+  // Already logged in — redirect to dashboard
+  useEffect(() => {
+    if (!loading && user) router.replace("/");
+  }, [user, loading, router]);
+
+  if (loading || user) return null;
   const [step, setStep] = useState(0);
 
   // Step 1: Account

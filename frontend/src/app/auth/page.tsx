@@ -1,24 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/shared/auth/AuthProvider";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { Card } from "@/shared/ui/Card";
 import { apiFetch } from "@/shared/api/client";
 
 export default function LoginPage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Already logged in — redirect to dashboard immediately
+  useEffect(() => {
+    if (!loading && user) router.replace("/");
+  }, [user, loading, router]);
+
+  if (loading || user) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setSubmitting(true);
     try {
       await apiFetch("/auth/login", {
         method: "POST",
@@ -30,7 +39,7 @@ export default function LoginPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -77,7 +86,7 @@ export default function LoginPage() {
           type="submit"
           variant="primary"
           className="w-full"
-          loading={loading}
+          loading={submitting}
         >
           Sign in
         </Button>
