@@ -20,7 +20,12 @@ from backend.app.services.intelligence.ollama_catalog import (
 
 @pytest.fixture
 def service(tmp_path: Path) -> OllamaCatalogService:
-    """Create a catalog service with a temp cache dir."""
+    """Create a catalog service with a temp cache dir.
+
+    Mocks _load_seed_catalog to return empty so tests that mock
+    cloud/local/registry sources get only their mocked data — the
+    773-model seed baseline would otherwise dominate every assertion.
+    """
     import backend.app.services.intelligence.ollama_catalog as mod
 
     svc = OllamaCatalogService()
@@ -28,6 +33,8 @@ def service(tmp_path: Path) -> OllamaCatalogService:
     mod.CACHE_DIR = tmp_path
     mod.CACHE_FILE = tmp_path / "ollama_catalog.json"
     mod.FALLBACK_FILE = tmp_path / "ollama_catalog_fallback.json"
+    # Patch seed catalog to empty so tests control their own data
+    mod._load_seed_catalog = lambda: []
     return svc
 
 
