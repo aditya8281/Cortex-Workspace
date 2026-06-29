@@ -8,6 +8,7 @@ import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { Skeleton } from "@/shared/ui/Skeleton";
 import { Modal } from "@/shared/ui/Modal";
 import { ConversationItem } from "./components/ConversationItem";
 import { MessageBubble } from "./components/MessageBubble";
@@ -186,7 +187,31 @@ export default function ChatPage() {
     }
   };
 
-  if (loading || !user) return null;
+  if (loading || !user) return (
+    <AppShell>
+      <div className="flex h-full gap-0 -m-6">
+        <div className="hidden sm:flex w-64 flex-shrink-0 flex-col border-r border-border-subtle bg-bg-elevated">
+          <div className="p-3 border-b border-border-subtle">
+            <Skeleton className="h-8 w-full rounded-md" />
+          </div>
+          <div className="p-3 space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-1">
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-2 w-1/2" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="space-y-3 text-center">
+            <Skeleton className="h-5 w-48 mx-auto" />
+            <Skeleton className="h-3 w-64 mx-auto" />
+          </div>
+        </div>
+      </div>
+    </AppShell>
+  );
 
   return (
     <AppShell>

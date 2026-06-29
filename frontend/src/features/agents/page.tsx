@@ -4,9 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/shared/layout/AppShell";
+import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { StatusDot } from "@/shared/ui/StatusDot";
 import { EmptyState } from "@/shared/ui/EmptyState";
+import { Skeleton } from "@/shared/ui/Skeleton";
 import { Modal } from "@/shared/ui/Modal";
 import { Input } from "@/shared/ui/Input";
 import { AgentCard } from "./components/AgentCard";
@@ -144,7 +146,38 @@ export default function AgentsPage() {
     }
   };
 
-  if (loading || !user) return null;
+  if (loading || !user) return (
+    <AppShell>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="h-9 w-24 rounded-md" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {[1, 2].map((i) => (
+            <Card key={i} className="p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </Card>
+          ))}
+        </div>
+        <Card className="divide-y divide-border-subtle">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-start gap-3 px-4 py-3">
+              <Skeleton className="h-5 w-16 rounded-md" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          ))}
+        </Card>
+      </div>
+    </AppShell>
+  );
 
   return (
     <AppShell>
