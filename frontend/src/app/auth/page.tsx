@@ -24,8 +24,9 @@ export default function LoginPage() {
         method: "POST",
         body: { username, password },
       });
-      router.push("/");
-      router.refresh();
+      // Full reload so AuthProvider re-mounts and fetches /me with new cookie.
+      // router.push keeps the React tree — AuthProvider won't re-run its useEffect.
+      window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

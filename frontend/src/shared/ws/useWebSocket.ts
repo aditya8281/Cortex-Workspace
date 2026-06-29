@@ -106,8 +106,8 @@ export function useWebSocket({
       }
       const { token } = await res.json();
 
-      const url = `${getWsBaseUrl()}${path}?token=${encodeURIComponent(token)}`;
-      const ws = new WebSocket(url);
+      const url = `${getWsBaseUrl()}${path}`;
+      const ws = new WebSocket(url, [token]);
       wsRef.current = ws;
 
       ws.onopen = () => {

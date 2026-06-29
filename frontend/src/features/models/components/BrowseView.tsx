@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { ModelWithFit, RecommendedModel, HardwareInfo, RamFitStatus } from "../api";
+import type { ModelWithFit, ModelRecommendation, HardwareInfo, RamFitStatus } from "../api";
 import { catalog, calculateRamFit, getDefaultModel } from "../api";
 import { formatParamCount } from "../api";
 import { Card } from "@/shared/ui/Card";
@@ -32,7 +32,7 @@ export function BrowseView({
   compareDisabled,
 }: BrowseViewProps) {
   const [models, setModels] = useState<ModelWithFit[]>([]);
-  const [recommended, setRecommended] = useState<RecommendedModel[]>([]);
+  const [recommended, setRecommended] = useState<ModelRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -286,9 +286,9 @@ export function BrowseView({
         </div>
       ) : models.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {models.map(model => (
+          {models.map((model, i) => (
             <ModelCard
-              key={model.model_id}
+              key={`${model.model_id}-${i}`}
               model={model}
               onDownload={onDownload}
               onViewDetail={onViewDetail}

@@ -36,8 +36,8 @@ export function useChatTyping({ conversationId, userId }: UseChatTypingOptions) 
         if (!res.ok) return;
         const { token } = await res.json();
 
-        const wsUrl = `ws://${window.location.hostname}:8000/api/v1/ws/chat?token=${encodeURIComponent(token)}`;
-        const ws = new WebSocket(wsUrl);
+        const wsUrl = `ws://${window.location.hostname}:8000/api/v1/ws/chat`;
+        const ws = new WebSocket(wsUrl, [token]);
         wsRef.current = ws;
 
         ws.onmessage = (event) => {

@@ -1,3 +1,6 @@
+/**
+ * Settings API — profile, consent, vault status
+ */
 import { apiFetch } from "@/shared/api/client";
 
 export interface UserProfile {
@@ -11,10 +14,13 @@ export interface UserProfile {
 }
 
 export interface ConsentItem {
-  id: string;
-  name: string;
-  description: string;
+  id: number;
+  user_id: number;
+  consent_type: string;
+  scope: string | null;
   granted: boolean;
+  context: Record<string, any> | null;
+  created_at: string;
 }
 
 export const settingsApi = {
@@ -26,17 +32,19 @@ export const settingsApi = {
     }),
 
   getConsents: () => apiFetch<ConsentItem[]>("/privacy/consent"),
-  grantConsent: (consentId: string) =>
-    apiFetch<{ status: string }>("/privacy/consent/grant", {
+  grantConsent: (consentType: string, scope?: string) =>
+    apiFetch<ConsentItem>("/privacy/consent/grant", {
       method: "POST",
-      body: { consent_id: consentId },
+      body: { consent_type: consentType, scope },
     }),
-  revokeConsent: (consentId: string) =>
-    apiFetch<{ status: string }>("/privacy/consent/revoke", {
-      method: "POST",
-      body: { consent_id: consentId },
-    }),
+  revokeConsent: (consentType: string, reason?: string) => {
+    const qs = new URLSearchParams({ consent_type: consentType });
+    if (reason) qs.set("reason", reason);
+    return apiFetch<{ consent_type: string; success: boolean }>(
+      `/privacy/consent/revoke?${qs}`,
+    );
+  },
 
   getVaultStatus: () =>
-    apiFetch<{ locked: boolean; file_count: number }>("/privacy/vault/status"),
+    apiFetch<{ locked: boolean; has_vault_password: boolean }>("/privacy/vault/status"),
 };

@@ -61,22 +61,16 @@ export default function SystemPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <StatusDot
-                color={llm?.ollama === "healthy" ? "success" : llm?.ollama === "degraded" ? "warning" : "danger"}
-                pulse={llm?.ollama === "healthy"}
+                color={llm?.status === "healthy" ? "success" : llm?.status === "error" ? "danger" : "warning"}
+                pulse={llm?.status === "healthy"}
               />
               <div>
                 <p className="text-sm font-medium text-text-primary">LLM Engine</p>
                 <p className="text-xs text-text-muted">
-                  {llm?.active_model ?? "No model loaded"} · {llm?.ollama ?? "unknown"}
+                  {llm?.status ?? "unknown"} {llm?.latency_ms != null ? `· ${Math.round(llm.latency_ms)}ms` : ""}
+                  {llm?.error && <span className="text-danger ml-1">· {llm.error}</span>}
                 </p>
               </div>
-            </div>
-            <div className="flex gap-2">
-              {llm?.installed_models?.map((m) => (
-                <Badge key={m} variant={m === llm.active_model ? "success" : "default"}>
-                  {m}
-                </Badge>
-              ))}
             </div>
           </div>
         </Card>

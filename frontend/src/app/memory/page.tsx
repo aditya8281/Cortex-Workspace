@@ -26,9 +26,9 @@ export default function MemoryPage() {
     setLoading(true);
     setError(null);
     const loader = {
-      episodic: () => episodicMemory.list().then(r => setEpisodic(Array.isArray(r) ? r : r.items ?? [])).catch(e => setError(e.message)),
-      semantic: () => semanticMemory.list().then(r => setSemantic(Array.isArray(r) ? r : r.items ?? [])).catch(e => setError(e.message)),
-      working: () => workingMemory.list().then(r => setWorking(Array.isArray(r) ? r : r.items ?? [])).catch(e => setError(e.message)),
+      episodic: () => episodicMemory.list().then(r => setEpisodic(r.memories)).catch(e => setError(e.message)),
+      semantic: () => semanticMemory.list().then(r => setSemantic(r.memories)).catch(e => setError(e.message)),
+      working: () => workingMemory.list("default").then(r => setWorking(r.memories)).catch(e => setError(e.message)),
       graph: () => memoryGraph.stats().then(setGraphStats).catch(e => setError(e.message)),
       search: () => Promise.resolve(),
     };
@@ -39,8 +39,8 @@ export default function MemoryPage() {
     if (!searchQuery.trim()) return;
     setLoading(true);
     try {
-      const res = await memorySearch.search({ query: searchQuery, limit: 20 });
-      setSearchResults(Array.isArray(res) ? res : res.items ?? []);
+      const res = await memorySearch.search({ query: searchQuery, max_results: 20 });
+      setSearchResults(res.results ?? []);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -104,9 +104,7 @@ export default function MemoryPage() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-text-primary leading-relaxed">{m.content}</p>
                     <div className="flex items-center gap-3 mt-2">
-                      {m.emotion_tags.map(tag => (
-                        <Badge key={tag} variant="default">{tag}</Badge>
-                      ))}
+                      {m.emotion && <Badge variant="default">{m.emotion}</Badge>}
                       <span className="text-xs text-text-muted">
                         importance: {(m.importance * 100).toFixed(0)}%
                       </span>
@@ -136,7 +134,7 @@ export default function MemoryPage() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-text-primary leading-relaxed">{m.content}</p>
                     <div className="flex items-center gap-3 mt-2">
-                      <Badge variant="default">{m.category}</Badge>
+                      {m.category && <Badge variant="default">{m.category}</Badge>}
                       {m.source && <span className="text-xs text-text-muted">source: {m.source}</span>}
                       <span className="text-xs text-text-muted">
                         confidence: {(m.confidence * 100).toFixed(0)}%
@@ -182,23 +180,26 @@ export default function MemoryPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <StatCard label="Nodes" value={String(graphStats.total_nodes)} />
                   <StatCard label="Edges" value={String(graphStats.total_edges)} />
-                  <StatCard label="Density" value={`${(graphStats.density * 100).toFixed(1)}%`} />
-                  <StatCard label="Node Types" value={String(Object.keys(graphStats.node_types ?? {}).length)} />
+                  <StatCard label="Avg Edge Weight" value={String(graphStats.avg_edge_weight.toFixed(2))} />
+                  <StatCard label="Node Types" value={String(Object.keys(graphStats.nodes_by_type ?? {}).length)} />
                 </div>
                 <Card className="p-4">
                   <h3 className="text-sm font-semibold text-text-primary mb-3">Node Types</h3>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(graphStats.node_types ?? {}).map(([type, count]) => (
+                    {Object.entries(graphStats.nodes_by_type ?? {}).map(([type, count]) => (
                       <Badge key={type} variant="default">{type}: {count}</Badge>
                     ))}
                   </div>
                 </Card>
                 <Card className="p-4">
-                  <h3 className="text-sm font-semibold text-text-primary mb-3">Edge Types</h3>
+                  <h3 className="text-sm font-semibold text-text-primary mb-3">Strongest Connections</h3>
                   <div className="flex flex-wrap gap-2">
-                    {Object.entries(graphStats.edge_types ?? {}).map(([type, count]) => (
-                      <Badge key={type} variant="default">{type}: {count}</Badge>
+                    {graphStats.strongest_connections?.map((edge, i) => (
+                      <Badge key={i} variant="default">{edge.source_id} → {edge.target_id}: {edge.weight.toFixed(2)}</Badge>
                     ))}
+                    {(!graphStats.strongest_connections || graphStats.strongest_connections.length === 0) && (
+                      <span className="text-xs text-text-muted">No connections yet</span>
+                    )}
                   </div>
                 </Card>
               </>
@@ -232,9 +233,10 @@ export default function MemoryPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-text-primary leading-relaxed">{r.content}</p>
                       <div className="flex items-center gap-3 mt-2">
-                        <Badge variant="default">{r.memory_type}</Badge>
+                        {r.language && <Badge variant="default">{r.language}</Badge>}
+                        {r.chunk_type && <Badge variant="default">{r.chunk_type}</Badge>}
                         <span className="text-xs text-text-muted">score: {(r.score * 100).toFixed(0)}%</span>
-                        <span className="text-xs text-text-muted">importance: {(r.importance * 100).toFixed(0)}%</span>
+                        {r.source && <span className="text-xs text-text-muted">source: {r.source}</span>}
                       </div>
                     </div>
                   </div>

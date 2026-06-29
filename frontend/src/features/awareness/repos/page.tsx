@@ -7,7 +7,7 @@ import { AppShell } from "@/shared/layout/AppShell";
 import { Button } from "@/shared/ui/Button";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { EmptyState } from "@/shared/ui/EmptyState";
-import { repository, type RepoEntry } from "../api";
+import { repository, type RepoInfo } from "../api";
 import { AddRepoModal } from "../components/AddRepoModal";
 import { RepoListItem } from "../components/RepoListItem";
 import { GraphView } from "../components/GraphView";
@@ -16,7 +16,7 @@ export default function AwarenessReposPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [repos, setRepos] = useState<RepoEntry[]>([]);
+  const [repos, setRepos] = useState<RepoInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedRepoId, setSelectedRepoId] = useState<number | null>(null);
@@ -27,7 +27,7 @@ export default function AwarenessReposPage() {
     setError(null);
     try {
       const result = await repository.list();
-      setRepos(Array.isArray(result) ? result : result.items ?? []);
+      setRepos(Array.isArray(result) ? result : result.repos ?? []);
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "Failed to load repositories",
@@ -48,7 +48,7 @@ export default function AwarenessReposPage() {
   // Auth guard — render nothing while checking
   if (authLoading || !user) return null;
 
-  const handleAddSuccess = (repo: RepoEntry) => {
+  const handleAddSuccess = (repo: RepoInfo) => {
     setRepos((prev) => [...prev, repo]);
   };
 

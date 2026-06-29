@@ -1,44 +1,60 @@
+/**
+ * System API Client — aligned with backend v1 system endpoints
+ *
+ * Backend routes: /api/v1/system/*, /api/v1/models/health, /api/v1/models/metrics
+ */
 import { apiFetch } from "@/shared/api/client";
 
+// ── Types (matching backend Pydantic schemas) ──────────────────────────────
+
+export interface SystemProcess {
+  pid: number;
+  name: string;
+  cpu: number;
+  memory: number;
+  status: string;
+}
+
+// Backend: SystemMetricsResponse
 export interface SystemMetrics {
   cpu_percent: number;
-  memory_percent: number;
-  memory_used_mb: number;
-  memory_total_mb: number;
-  disk_percent: number;
-  disk_used_gb: number;
+  ram_total_gb: number;
+  ram_used_gb: number;
+  ram_percent: number;
+  gpu_name: string;
+  gpu_type: string;
+  gpu_percent: number | null;
   disk_total_gb: number;
-  active_connections: number;
-  requests_today: number;
-  avg_response_ms: number;
-  uptime_seconds: number;
+  disk_used_gb: number;
+  disk_percent: number;
+  processes: SystemProcess[];
 }
 
-export interface SystemLog {
-  timestamp: string;
-  level: string;
-  message: string;
-  module: string;
-}
-
+// Backend: LLMHealthResponse
 export interface LLMHealth {
-  ollama: "healthy" | "degraded" | "down";
-  active_model: string | null;
-  installed_models: string[];
-  requests_per_minute: number;
-  avg_latency_ms: number;
+  status: string;
+  latency_ms: number;
+  error: string | null;
 }
 
+// Backend: LLMMetricsResponse
 export interface LLMMetrics {
   total_requests: number;
   total_tokens: number;
-  avg_tokens_per_request: number;
-  error_rate: number;
+  avg_latency: number;
 }
+
+// ── Endpoints ──────────────────────────────────────────────────────────────
 
 export const systemApi = {
   getMetrics: () => apiFetch<SystemMetrics>("/system/metrics"),
-  getLogs: (limit = 50) => apiFetch<{ logs: SystemLog[] }>(`/system/logs?limit=${limit}`),
+
+  getLogs: (limit = 50) =>
+    apiFetch<{ logs: Record<string, any>[]; total: number }>(
+      `/system/logs?limit=${limit}`,
+    ),
+
   getLLMHealth: () => apiFetch<LLMHealth>("/models/health"),
+
   getLLMMetrics: () => apiFetch<LLMMetrics>("/models/metrics"),
 };

@@ -25,10 +25,10 @@ export default function SearchPage() {
       if (mode === "ask") {
         const res = await memorySearch.answer({ query });
         setAnswer(res.answer);
-        setResults(Array.isArray(res.sources) ? res.sources : []);
+        setResults(res.results ?? []);
       } else {
-        const res = await memorySearch.search({ query, limit: 20 });
-        setResults(Array.isArray(res) ? res : res.items ?? []);
+        const res = await memorySearch.search({ query, max_results: 20 });
+        setResults(res.results ?? []);
       }
     } catch (e: any) {
       setError(e.message);
@@ -103,9 +103,10 @@ export default function SearchPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-text-primary leading-relaxed">{r.content}</p>
                   <div className="flex items-center gap-3 mt-2">
-                    <Badge variant="default">{r.memory_type}</Badge>
+                    {r.language && <Badge variant="default">{r.language}</Badge>}
+                    {r.chunk_type && <Badge variant="default">{r.chunk_type}</Badge>}
                     <span className="text-xs text-text-muted">relevance: {(r.score * 100).toFixed(0)}%</span>
-                    <span className="text-xs text-text-muted">importance: {(r.importance * 100).toFixed(0)}%</span>
+                    {r.source && <span className="text-xs text-text-muted">source: {r.source}</span>}
                   </div>
                 </div>
               </div>

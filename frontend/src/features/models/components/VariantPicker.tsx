@@ -2,12 +2,12 @@
 
 import { useMemo } from "react";
 import { cn } from "@/shared/lib/utils";
-import type { ModelVariantEntry } from "../api";
+import type { ModelVariantInfo } from "../api";
 import { formatBytes } from "../api";
 import { Badge } from "@/shared/ui/Badge";
 
 interface VariantPickerProps {
-  variants: ModelVariantEntry[];
+  variants: ModelVariantInfo[];
   selectedVariantId: string | null;
   onSelect: (variantId: string) => void;
   disabled?: boolean;
@@ -27,7 +27,7 @@ export function VariantPicker({
   const sorted = useMemo(
     () =>
       [...variants].sort((a, b) => {
-        if (a.downloaded !== b.downloaded) return a.downloaded ? -1 : 1;
+        if (a.downloaded !== b.downloaded) return a.downloaded === true ? -1 : 1;
         return (a.size_bytes ?? 0) - (b.size_bytes ?? 0);
       }),
     [variants],
@@ -80,11 +80,11 @@ export function VariantPicker({
                           ? "bg-warning"
                           : "bg-danger",
                     )}
-                    style={{ width: `${Math.round(v.quality_score * 100)}%` }}
+                    style={{ width: `${Math.round((v.quality_score ?? 0) * 100)}%` }}
                   />
                 </div>
                 <span className="text-[0.625rem] text-text-muted font-mono tabular-nums w-8 text-right">
-                  {Math.round(v.quality_score * 100)}%
+                  {Math.round((v.quality_score ?? 0) * 100)}%
                 </span>
               </div>
             )}

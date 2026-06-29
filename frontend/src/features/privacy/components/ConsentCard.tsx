@@ -18,7 +18,7 @@ export function ConsentCard() {
     const load = async () => {
       try {
         const res = await consent.list();
-        if (!cancelled) setEntries(Array.isArray(res) ? res : res.items ?? []);
+        if (!cancelled) setEntries(res);
       } catch {
         // silently fail — component shows empty state
       } finally {
@@ -34,22 +34,21 @@ export function ConsentCard() {
 
   const grantedCount = entries.filter((e) => e.granted).length;
 
-  const handleToggle = useCallback((scope: string, granted: boolean) => {
+  const handleToggle = useCallback((consentType: string, granted: boolean) => {
     setEntries((prev) =>
-      prev.map((e) => (e.scope === scope ? { ...e, granted } : e)),
+      prev.map((e) => (e.consent_type === consentType ? { ...e, granted: granted ? 1 : 0 } : e)),
     );
   }, []);
 
   const grantAll = async () => {
     setSavingAll(true);
-    setEntries((prev) => prev.map((e) => ({ ...e, granted: true })));
+    setEntries((prev) => prev.map((e) => ({ ...e, granted: 1 })));
 
     try {
-      await Promise.all(entries.map((e) => consent.grant({ scope: e.scope })));
+      await Promise.all(entries.map((e) => consent.grant({ consent_type: e.consent_type })));
     } catch {
-      // Revert on failure by refetching
       const res = await consent.list();
-      setEntries(Array.isArray(res) ? res : res.items ?? []);
+      setEntries(res);
     } finally {
       setSavingAll(false);
     }
@@ -57,20 +56,19 @@ export function ConsentCard() {
 
   const revokeAll = async () => {
     setSavingAll(true);
-    const grantedScopes = entries
+    const grantedTypes = entries
       .filter((e) => e.granted)
-      .map((e) => e.scope);
+      .map((e) => e.consent_type);
 
-    setEntries((prev) => prev.map((e) => ({ ...e, granted: false })));
+    setEntries((prev) => prev.map((e) => ({ ...e, granted: 0 })));
 
     try {
       await Promise.all(
-        grantedScopes.map((scope) => consent.revoke({ scope })),
+        grantedTypes.map((ct) => consent.revoke({ consent_type: ct })),
       );
     } catch {
-      // Revert on failure by refetching
       const res = await consent.list();
-      setEntries(Array.isArray(res) ? res : res.items ?? []);
+      setEntries(res);
     } finally {
       setSavingAll(false);
     }
@@ -100,13 +98,13 @@ export function ConsentCard() {
         <>
           <div className="space-y-2.5 mb-4">
             {displayedEntries.map((entry) => (
-              <div key={entry.id} className="flex items-center justify-between">
+              <div key={entry.consent_type} className="flex items-center justify-between">
                 <span className="text-xs text-text-secondary capitalize">
-                  {entry.scope.replace(/_/g, " ")}
+                  {entry.consent_type.replace(/_/g, " ")}
                 </span>
                 <ConsentToggle
-                  scope={entry.scope}
-                  initialGranted={entry.granted}
+                  scope={entry.consent_type}
+                  initialGranted={entry.granted === 1}
                   onToggle={handleToggle}
                 />
               </div>

@@ -1,24 +1,28 @@
 /**
- * Developer API Client — Code Intelligence & GitHub
+ * Developer API Client — aligned with backend v1 developer endpoints
  *
+ * Covers: Model Catalog, GitHub connection
  * Backend routes: /api/v1/models/*, /api/v1/me/github
  */
 import { apiFetch } from "@/shared/api/client";
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Types (matching backend Pydantic schemas) ──────────────────────────────
 
-export interface GitHubRepo {
-  id: number;
-  name: string;
-  full_name: string;
-  private: boolean;
-  description: string;
-  html_url: string;
-  language: string;
-  stargazers_count: number;
-  updated_at: string;
+// Backend: /me/github — GitHubResponse
+export interface GitHubStatus {
+  connected: boolean;
+  github_username: string | null;
 }
 
+// Backend: ModelProviderInfo
+export interface ModelProviderInfo {
+  name: string;
+  size_bytes: number;
+  context_length: number;
+  capabilities: string[];
+}
+
+// Backend: ModelCatalogEntry — simplified (variants is just strings in list endpoint)
 export interface ModelCatalogEntry {
   name: string;
   display_name: string;
@@ -30,19 +34,32 @@ export interface ModelCatalogEntry {
   capabilities: string[];
   description: string;
   downloaded: boolean;
-  variants: ModelVariantEntry[];
-  hardware_requirements: { min_ram_gb: number; recommended_ram_gb: number } | null;
+  variants: string[];
+  hardware_requirements: Record<string, any>;
 }
 
-export interface ModelVariantEntry {
-  variant_id: string;
-  quantization: string;
-  size_bytes: number | null;
-  size_gb: number | null;
-  downloaded: boolean;
-  quality_score: number | null;
+// Backend: CatalogSourceStatusResponse
+export interface CatalogSourceStatus {
+  cloud: string;
+  local: string;
+  registry: string;
+  last_updated: string;
+  from_fallback: boolean;
+  errors: Record<string, string>;
 }
 
+// Backend: ModelListResponse
+export interface ModelListResponse {
+  models: ModelCatalogEntry[];
+  total_count: number;
+  downloaded_count: number;
+  available_from_providers: ModelProviderInfo[];
+  type_counts: Record<string, number>;
+  size_counts: Record<string, number>;
+  catalog_status: CatalogSourceStatus | null;
+}
+
+// Backend: HardwareInfoResponse
 export interface HardwareInfo {
   ram_gb: number;
   ram_available_gb: number;
@@ -57,41 +74,142 @@ export interface HardwareInfo {
   supports_metal: boolean;
 }
 
-export interface ModelComparison {
-  winner_model: string;
-  dimension_wins: Record<string, string>;
-  dimensions: {
-    dimension: string;
-    display_name: string;
-    values: Record<string, any>;
-    winner: string;
-    higher_is_better: boolean;
-  }[];
-  summary: string;
+// Backend: RecommendationVariant
+export interface RecommendationVariant {
+  quantization: string | null;
+  size_gb: number | null;
+  vram_required_gb: number | null;
+  quality_score: number | null;
 }
 
-export interface RecommendedModel {
+// Backend: RecommendationPerformance
+export interface RecommendationPerformance {
+  tokens_per_second: number | null;
+  prompt_eval_tps: number | null;
+  memory_usage_gb: number | null;
+  vram_usage_gb: number | null;
+  quantization_quality: string | null;
+  quality_notes: string | null;
+  speed_rating: string | null;
+  fit_rating: string | null;
+  context_length_max: number | null;
+}
+
+// Backend: RecommendationExplanation
+export interface RecommendationExplanation {
+  why: string | null;
+  tradeoff: string | null;
+  suitability: string | null;
+}
+
+// Backend: ModelRecommendation
+export interface ModelRecommendation {
   model_id: string;
   display_name: string;
   family: string;
-  parameter_count: number;
+  parameter_count: number | null;
   capabilities: string[];
-  description: string;
+  description: string | null;
   score: number;
-  explanation: { why: string; tradeoff: string; suitability: string };
+  variant: RecommendationVariant | null;
+  performance: RecommendationPerformance | null;
+  explanation: RecommendationExplanation | null;
+}
+
+// Backend: WorkloadRecommendations
+export interface WorkloadRecommendations {
+  label: string;
+  description: string;
+  recommendations: ModelRecommendation[];
+}
+
+// Backend: RecommendedModelsAllResponse
+export interface RecommendedModelsAllResponse {
+  hardware: Record<string, any>;
+  workloads: Record<string, WorkloadRecommendations>;
+}
+
+// Backend: ModelSearchResult
+export interface ModelSearchResult {
+  name: string;
+  display_name: string;
+  provider: string;
+  model_type: string;
+  size_bytes: number | null;
+  context_length: number | null;
+  capabilities: string[];
+  description: string | null;
+  tags: string[];
+}
+
+// Backend: ModelVariantInfo (for detail view)
+export interface ModelVariantInfo {
+  variant_id: string;
+  quantization: string;
+  quantization_level: string | null;
+  parameter_count: number | null;
+  size_bytes: number | null;
+  size_gb: number | null;
+  vram_required_gb: number | null;
+  quality_score: number | null;
+  downloaded: boolean | null;
+  ollama_tag: string | null;
+}
+
+// Backend: ModelDetailResponse
+export interface ModelDetail {
+  model_id: string;
+  display_name: string;
+  family: string;
+  parameter_count: number | null;
+  architecture: string | null;
+  context_length_default: number | null;
+  context_length_max: number | null;
+  capabilities: string[];
+  license: string | null;
+  recommended_use_cases: string[];
+  description: string | null;
+  tags: string[];
+  benchmarks: Record<string, any> | null;
+  variants: ModelVariantInfo[];
+}
+
+// Backend: DimensionComparisonResponse
+export interface DimensionComparison {
+  dimension: string;
+  display_name: string;
+  values: Record<string, number>;
+  winner: string;
+  higher_is_better: boolean;
+}
+
+// Backend: ModelComparisonResponse
+export interface ModelComparison {
+  winner_model: string;
+  dimension_wins: Record<string, string>;
+  dimensions: DimensionComparison[];
+  summary: string;
+}
+
+// Backend: RefreshCatalogResponse
+export interface RefreshCatalogResponse {
+  status: string;
+  message: string;
+  total_models: number | null;
+  source_status: CatalogSourceStatus | null;
 }
 
 // ── GitHub ─────────────────────────────────────────────────────────────────
 
 export const github = {
-  list: () =>
-    apiFetch<{ items: GitHubRepo[] }>("/me/github"),
+  status: () =>
+    apiFetch<GitHubStatus>("/me/github"),
 
-  add: (data: { repo_url: string }) =>
-    apiFetch<GitHubRepo>("/me/github", { method: "POST", body: data }),
+  connect: (data: { username: string; token: string }) =>
+    apiFetch<GitHubStatus>("/me/github", { method: "POST", body: data }),
 
-  remove: (data: { repo_id: number }) =>
-    apiFetch<{ removed: boolean }>("/me/github", { method: "DELETE", body: data }),
+  disconnect: () =>
+    apiFetch<GitHubStatus>("/me/github", { method: "DELETE" }),
 };
 
 // ── Model Catalog ──────────────────────────────────────────────────────────
@@ -102,23 +220,12 @@ export const catalog = {
     if (params?.model_type) searchParams.set("model_type", params.model_type);
     if (params?.downloaded_only) searchParams.set("downloaded_only", "true");
     const qs = searchParams.toString();
-    return apiFetch<{
-      models: ModelCatalogEntry[];
-      total_count: number;
-      downloaded_count: number;
-      available_from_providers: { provider: string; model_count: number }[];
-      type_counts: Record<string, number>;
-      size_counts: Record<string, number>;
-      catalog_status: Record<string, string>;
-    }>(`/models${qs ? `?${qs}` : ""}`);
+    return apiFetch<ModelListResponse>(`/models${qs ? `?${qs}` : ""}`);
   },
 
   recommended: (workload?: string) => {
     const qs = workload ? `?workload=${encodeURIComponent(workload)}` : "";
-    return apiFetch<{
-      hardware: Record<string, any>;
-      workloads: Record<string, { recommendations: RecommendedModel[] }>;
-    }>(`/models/recommended${qs}`);
+    return apiFetch<RecommendedModelsAllResponse>(`/models/recommended${qs}`);
   },
 
   hardware: () =>
@@ -129,8 +236,8 @@ export const catalog = {
     if (params.q) searchParams.set("q", params.q);
     if (params.capabilities) searchParams.set("capabilities", params.capabilities);
     if (params.limit) searchParams.set("limit", String(params.limit));
-    return apiFetch<{ models: ModelCatalogEntry[]; total_count: number }>(
-      `/models/search?${searchParams.toString()}`
+    return apiFetch<{ models: ModelSearchResult[]; total_count: number }>(
+      `/models/search?${searchParams.toString()}`,
     );
   },
 
@@ -142,22 +249,17 @@ export const catalog = {
 
   autocomplete: (q: string) =>
     apiFetch<{ suggestions: string[] }>(
-      `/models/autocomplete?q=${encodeURIComponent(q)}`
+      `/models/autocomplete?q=${encodeURIComponent(q)}`,
     ),
 
   detail: (modelId: string) =>
-    apiFetch<ModelCatalogEntry & { architecture?: string; license?: string; tags: string[]; benchmarks?: Record<string, any> }>(
-      `/models/${modelId}`
-    ),
+    apiFetch<ModelDetail>(`/models/${modelId}`),
 
   inferenceConfig: (modelId: string) =>
     apiFetch<{ model_id: string; context_length?: number; temperature: number; top_p: number; top_k: number; repeat_penalty: number; seed: number; num_predict: number; num_ctx?: number; image_resolution?: number }>(
-      `/models/${modelId}/inference-config`
+      `/models/${modelId}/inference-config`,
     ),
 
   refresh: () =>
-    apiFetch<{ status: string; message: string; total_models: number | null }>(
-      "/models/refresh",
-      { method: "POST" }
-    ),
+    apiFetch<RefreshCatalogResponse>("/models/refresh", { method: "POST" }),
 };

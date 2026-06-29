@@ -1,7 +1,13 @@
 "use client";
 
 import { Card } from "@/shared/ui/Card";
-import type { SystemLog } from "../api";
+export interface SystemLog {
+  timestamp: string;
+  level: string;
+  message: string;
+  module: string;
+  [key: string]: any;
+}
 
 const levelColors: Record<string, string> = {
   ERROR: "text-danger",

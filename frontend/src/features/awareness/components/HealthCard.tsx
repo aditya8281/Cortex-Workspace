@@ -92,43 +92,43 @@ export function HealthCard() {
 
   if (!data) return <SkeletonCard />;
 
-  const color = statusColor(data.status ?? "error");
+  const color = statusColor(data.overall_status ?? "error");
 
   return (
     <Card role="article" aria-label="Health info">
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-text-primary">Health</h3>
 
-        {/* Status */}
+        {/* Overall Status */}
         <div className="flex items-center gap-2">
-          <StatusDot color={color} pulse={data.status.toLowerCase() === "healthy"} />
+          <StatusDot color={color} pulse={data.overall_status === "healthy"} />
           <span className={`text-xs font-semibold capitalize text-${color}`}>
-            {statusLabel(data.status)}
+            {statusLabel(data.overall_status)}
           </span>
         </div>
 
-        {/* Indexing Active */}
-        <div className="flex items-center gap-2 text-xs text-text-secondary">
-          <span className="font-medium text-text-muted">Indexing:</span>
-          {data.indexing_active ? (
-            <StatusDot color="success" pulse />
-          ) : (
-            <StatusDot color="warning" />
-          )}
-          <span>{data.indexing_active ? "Active" : "Inactive"}</span>
-        </div>
+        {/* Services */}
+        {data.services?.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-text-muted">Services</p>
+            {data.services.map(s => (
+              <div key={s.id} className="flex items-center gap-2 text-xs text-text-secondary">
+                <StatusDot color={s.status === "healthy" ? "success" : s.status === "warning" ? "warning" : "danger"} />
+                <span className="font-medium">{s.service_name}</span>
+                <span className="text-text-muted">{s.status}</span>
+                {s.response_time_ms != null && <span className="text-text-muted">({s.response_time_ms.toFixed(0)}ms)</span>}
+              </div>
+            ))}
+          </div>
+        )}
 
-        {/* Watched Count */}
-        <p className="text-xs text-text-secondary">
-          <span className="font-medium text-text-muted">Watched:</span>{" "}
-          {data.watched_count} {data.watched_count === 1 ? "directory" : "directories"}
-        </p>
-
-        {/* Last Scan */}
-        <p className="text-xs text-text-secondary">
-          <span className="font-medium text-text-muted">Last scan:</span>{" "}
-          {data.last_scan ? formatTime(data.last_scan) : "Never"}
-        </p>
+        {/* Summary */}
+        {data.summary && Object.keys(data.summary).length > 0 && (
+          <p className="text-xs text-text-secondary">
+            <span className="font-medium text-text-muted">Total:</span>{" "}
+            {data.summary.total ?? data.services?.length ?? 0} service{(data.summary.total ?? 0) !== 1 ? "s" : ""}
+          </p>
+        )}
       </div>
     </Card>
   );

@@ -15,8 +15,8 @@ export function ExportCard() {
 
     try {
       const res = await dataExport.create({
-        format: "json",
-        include: ["all"],
+        export_type: "json",
+        data_types: ["all"],
       });
 
       if (res.status === "pending" || res.status === "processing") {

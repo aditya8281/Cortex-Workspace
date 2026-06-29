@@ -35,7 +35,7 @@ export default function ConsentPage() {
     const load = async () => {
       try {
         const res = await consent.list();
-        if (!cancelled) setEntries(Array.isArray(res) ? res : res.items ?? []);
+        if (!cancelled) setEntries(res);
       } catch {
         // silently fail — component shows empty state
       } finally {
@@ -51,20 +51,20 @@ export default function ConsentPage() {
 
   const handleToggle = useCallback((scope: string, granted: boolean) => {
     setEntries((prev) =>
-      prev.map((e) => (e.scope === scope ? { ...e, granted } : e)),
+      prev.map((e) => (e.consent_type === scope ? { ...e, granted: granted ? 1 : 0 } : e)),
     );
   }, []);
 
   const grantAll = async () => {
     setSavingAll(true);
-    setEntries((prev) => prev.map((e) => ({ ...e, granted: true })));
+    setEntries((prev) => prev.map((e) => ({ ...e, granted: 1 })));
 
     try {
-      await Promise.all(entries.map((e) => consent.grant({ scope: e.scope })));
+      await Promise.all(entries.map((e) => consent.grant({ consent_type: e.consent_type })));
     } catch {
       // Revert on failure by refetching
       const res = await consent.list();
-      setEntries(res.items);
+      setEntries(res);
     } finally {
       setSavingAll(false);
     }
@@ -72,15 +72,15 @@ export default function ConsentPage() {
 
   const revokeAll = async () => {
     setSavingAll(true);
-    const grantedScopes = entries.filter((e) => e.granted).map((e) => e.scope);
-    setEntries((prev) => prev.map((e) => ({ ...e, granted: false })));
+    const grantedScopes = entries.filter((e) => e.granted).map((e) => e.consent_type);
+    setEntries((prev) => prev.map((e) => ({ ...e, granted: 0 })));
 
     try {
-      await Promise.all(grantedScopes.map((scope) => consent.revoke({ scope })));
+      await Promise.all(grantedScopes.map((consent_type) => consent.revoke({ consent_type })));
     } catch {
       // Revert on failure by refetching
       const res = await consent.list();
-      setEntries(res.items);
+      setEntries(res);
     } finally {
       setSavingAll(false);
     }
@@ -131,25 +131,25 @@ export default function ConsentPage() {
         ) : (
           <div className="space-y-3">
             {entries.map((entry) => (
-              <Card key={entry.id}>
+              <Card key={entry.consent_type}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-text-primary capitalize">
-                      {entry.scope.replace(/_/g, " ")}
+                      {entry.consent_type.replace(/_/g, " ")}
                     </p>
                     <p className="mt-0.5 text-xs text-text-muted">
-                      {entry.scope}
+                      {entry.consent_type}
                     </p>
                     <div className="mt-2 flex items-center gap-4 text-xs text-text-muted">
-                      <span>Granted: {formatDate(entry.granted_at)}</span>
+                      <span>Granted: {formatDate(entry.created_at)}</span>
                       {entry.revoked_at && (
                         <span>Revoked: {formatDate(entry.revoked_at)}</span>
                       )}
                     </div>
                   </div>
                   <ConsentToggle
-                    scope={entry.scope}
-                    initialGranted={entry.granted}
+                    scope={entry.consent_type}
+                    initialGranted={entry.granted === 1}
                     onToggle={handleToggle}
                   />
                 </div>

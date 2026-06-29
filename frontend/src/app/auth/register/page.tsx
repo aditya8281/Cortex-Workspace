@@ -220,8 +220,7 @@ export default function RegisterPage() {
           handles: github.trim() ? { github: github.trim() } : null,
         },
       });
-      router.push("/");
-      router.refresh();
+      window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {

@@ -5,16 +5,16 @@ import { Card } from "@/shared/ui/Card";
 import { Badge } from "@/shared/ui/Badge";
 import { Button } from "@/shared/ui/Button";
 import { StatusDot } from "@/shared/ui/StatusDot";
-import { repository, type RepoEntry } from "../api";
+import { repository, type RepoInfo } from "../api";
 import { IndexProgress } from "./IndexProgress";
 
 interface RepoListItemProps {
-  repo: RepoEntry;
+  repo: RepoInfo;
   onGraph: (id: number) => void;
   onDelete: (id: number) => void;
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null): string {
   if (!dateStr) return "Never";
   try {
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -56,7 +56,7 @@ export function RepoListItem({ repo, onGraph, onDelete }: RepoListItemProps) {
       try {
         const result = await repository.indexStatus(repo.id);
         if (!mountedRef.current) return;
-        setProgress(result.progress);
+        setProgress(result.total_files > 0 ? Math.round((result.indexed_files / result.total_files) * 100) : 0);
         setIndexStatus(result.status);
         if (result.status === "indexed" || result.status === "error") {
           stopPolling();
@@ -106,20 +106,20 @@ export function RepoListItem({ repo, onGraph, onDelete }: RepoListItemProps) {
     }
   }, [repo.id, onDelete]);
 
-  const primaryLanguage = repo.languages?.[0] ?? null;
+  const primaryLanguage = repo.primary_language;
 
   return (
-    <Card className="space-y-3" role="article" aria-label={`Repository: ${repo.name}`}>
+    <Card className="space-y-3" role="article" aria-label={`Repository: ${repo.repo_name}`}>
       {/* Header row */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center gap-2">
-            <StatusDot color={repo.is_indexed ? "success" : "warning"} />
+            <StatusDot color={repo.status === "indexed" ? "success" : "warning"} />
             <h3 className="truncate text-sm font-semibold text-text-primary">
-              {repo.name}
+              {repo.repo_name}
             </h3>
           </div>
-          <p className="truncate font-mono text-xs text-text-muted">{repo.path}</p>
+          <p className="truncate font-mono text-xs text-text-muted">{repo.repo_path}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {primaryLanguage && <Badge variant="default">{primaryLanguage}</Badge>}
@@ -128,10 +128,9 @@ export function RepoListItem({ repo, onGraph, onDelete }: RepoListItemProps) {
 
       {/* Stats row */}
       <div className="flex items-center gap-4 text-xs text-text-secondary">
-        <span>{repo.file_count.toLocaleString()} files</span>
-        <span>{repo.total_lines.toLocaleString()} lines</span>
-        {repo.is_indexed && (
-          <span>Indexed: {formatDate(repo.last_indexed)}</span>
+        <span>{repo.total_files.toLocaleString()} files</span>
+        {repo.status === "indexed" && (
+          <span>Indexed: {formatDate(repo.last_indexed_at)}</span>
         )}
       </div>
 

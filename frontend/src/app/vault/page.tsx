@@ -27,7 +27,7 @@ export default function VaultPage() {
       setStatus(s);
       if (!s.locked) {
         const f = await vault.files();
-        setFiles(Array.isArray(f) ? f : f.items ?? []);
+        setFiles(f);
       }
     } catch (e: any) {
       setError(e.message);
@@ -42,7 +42,7 @@ export default function VaultPage() {
     if (!password.trim()) return;
     setUnlocking(true);
     try {
-      await vault.unlock({ password });
+      await vault.unlock({ vault_password: password });
       setUnlockOpen(false);
       setPassword("");
       await load();
@@ -99,22 +99,16 @@ export default function VaultPage() {
           </div>
         )}
 
-        {/* Stats */}
+        {/* Vault Info */}
         {status && !status.locked && (
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <Card className="p-4 text-center">
-              <p className="text-headline font-semibold text-text-primary">{status.file_count}</p>
-              <p className="text-xs text-text-muted mt-1">Files</p>
-            </Card>
-            <Card className="p-4 text-center">
-              <p className="text-headline font-semibold text-text-primary">{formatBytes(status.total_size)}</p>
-              <p className="text-xs text-text-muted mt-1">Total Size</p>
-            </Card>
-            <Card className="p-4 text-center">
-              <p className="text-headline font-semibold text-text-primary">
-                {status.last_accessed ? new Date(status.last_accessed).toLocaleDateString() : "Never"}
-              </p>
-              <p className="text-xs text-text-muted mt-1">Last Accessed</p>
+          <div className="mb-6">
+            <Card className="p-3 flex items-center gap-3">
+              <Badge color={status.has_vault_password ? "success" : "warning"}>
+                {status.has_vault_password ? "Password Set" : "No Password"}
+              </Badge>
+              <span className="text-xs text-text-muted">
+                {files.length} item{files.length !== 1 ? "s" : ""} in vault
+              </span>
             </Card>
           </div>
         )}
@@ -131,16 +125,24 @@ export default function VaultPage() {
               files.map(f => (
                 <Card key={f.path} className="p-3 flex items-center gap-3">
                   <div className="h-8 w-8 rounded-md bg-bg-surface flex items-center justify-center flex-shrink-0">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-muted">
-                      <path d="M3 1h5l3 3v8a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" />
-                    </svg>
+                    {f.is_dir ? (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-muted">
+                        <path d="M2 3h4l1-1.5h5v10H2V3z" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text-muted">
+                        <path d="M3 1h5l3 3v8a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" />
+                      </svg>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-text-primary truncate">{f.name}</p>
-                    <p className="text-xs text-text-muted">{formatBytes(f.size)} · {f.mime_type}</p>
+                    <p className="text-xs text-text-muted">
+                      {f.is_dir ? "Folder" : (f.size != null ? formatBytes(f.size) : "Unknown size")}
+                    </p>
                   </div>
                   <span className="text-xs text-text-muted whitespace-nowrap">
-                    {new Date(f.modified_at).toLocaleDateString()}
+                    {f.modified != null ? new Date(f.modified * 1000).toLocaleDateString() : "—"}
                   </span>
                 </Card>
               ))

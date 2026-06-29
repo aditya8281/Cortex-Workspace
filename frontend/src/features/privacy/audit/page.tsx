@@ -44,7 +44,7 @@ function relativeTime(dateStr: string): string {
 
 function AuditLogItem({ log }: { log: AuditLog }) {
   const [expanded, setExpanded] = useState(false);
-  const hasError = !!log.error_details;
+  const hasError = !!log.error_message;
 
   return (
     <div
@@ -54,8 +54,8 @@ function AuditLogItem({ log }: { log: AuditLog }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <Badge variant={actionVariant(log.action)}>{log.action}</Badge>
-          <span className={`text-xs ${log.success ? "text-success" : "text-danger"}`}>
-            {log.success ? "Success" : "Failed"}
+          <span className={`text-xs ${log.success === 1 ? "text-success" : "text-danger"}`}>
+            {log.success === 1 ? "Success" : "Failed"}
           </span>
         </div>
         <div className="mt-1 text-xs text-text-secondary">
@@ -63,11 +63,11 @@ function AuditLogItem({ log }: { log: AuditLog }) {
           {log.resource_id && <span> / {log.resource_id}</span>}
         </div>
         {expanded && hasError && (
-          <p className="mt-1.5 text-xs text-danger">{log.error_details}</p>
+          <p className="mt-1.5 text-xs text-danger">{log.error_message}</p>
         )}
       </div>
       <div className="flex flex-col items-end gap-1 shrink-0">
-        <span className="text-xs text-text-muted tabular-nums">{relativeTime(log.created_at)}</span>
+        <span className="text-xs text-text-muted tabular-nums">{relativeTime(log.timestamp)}</span>
         {log.ip_address && (
           <span className="text-xs text-text-muted font-mono">{log.ip_address}</span>
         )}
@@ -91,19 +91,14 @@ export default function AuditPage() {
   const loadLogs = async (effectiveLimit: number) => {
     setFetching(true);
     try {
-      const params: { limit: number; action?: string; user_id?: number } = {
+      const params: { limit: number; action?: string } = {
         limit: effectiveLimit,
       };
       if (actionFilter !== "all") params.action = actionFilter;
-      if (userFilter) {
-        const uid = parseInt(userFilter, 10);
-        if (!isNaN(uid)) params.user_id = uid;
-      }
 
       const res = await audit.logs(params);
-      const items = Array.isArray(res) ? res : res.items ?? [];
-      setLogs(items);
-      setHasMore(items.length >= effectiveLimit);
+      setLogs(res);
+      setHasMore(res.length >= effectiveLimit);
     } catch {
       // silently fail — keep current data
     } finally {

@@ -4,12 +4,12 @@ import { useState } from "react";
 import { Modal } from "@/shared/ui/Modal";
 import { Input } from "@/shared/ui/Input";
 import { Button } from "@/shared/ui/Button";
-import { repository, type RepoEntry } from "../api";
+import { repository, type RepoInfo } from "../api";
 
 interface AddRepoModalProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: (repo: RepoEntry) => void;
+  onSuccess: (repo: RepoInfo) => void;
 }
 
 export function AddRepoModal({ open, onClose, onSuccess }: AddRepoModalProps) {
@@ -27,7 +27,7 @@ export function AddRepoModal({ open, onClose, onSuccess }: AddRepoModalProps) {
     }
     setLoading(true);
     try {
-      const repo = await repository.create({
+      const { repo } = await repository.create({
         name: name.trim(),
         path: path.trim(),
       });

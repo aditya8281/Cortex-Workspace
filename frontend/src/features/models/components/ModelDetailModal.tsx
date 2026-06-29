@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { ModelCatalogEntry } from "../api";
+import type { ModelCatalogEntry, ModelDetail as ModelDetailResponse } from "../api";
 import { catalog, getDefaultModel, setDefaultModel, formatBytes, formatParamCount } from "../api";
 import { Modal } from "@/shared/ui/Modal";
 import { Badge } from "@/shared/ui/Badge";
@@ -10,14 +10,7 @@ import { cn } from "@/shared/lib/utils";
 import { VariantPicker } from "./VariantPicker";
 import { useDownloadContext } from "@/shared/downloads/DownloadProvider";
 
-// ── Local types mirroring API responses ──────────────────────────────────
-
-type ModelDetail = ModelCatalogEntry & {
-  architecture?: string;
-  license?: string;
-  tags: string[];
-  benchmarks?: Record<string, any>;
-};
+// ── Use ModelDetail from API (developer/api.ts) ──────────────────────────────
 
 interface InferenceConfig {
   model_id: string;
@@ -73,7 +66,7 @@ export function ModelDetailModal({
   const { actions } = useDownloadContext();
 
   // Data state
-  const [detail, setDetail] = useState<ModelDetail | null>(null);
+  const [detail, setDetail] = useState<ModelDetailResponse | null>(null);
   const [inferenceConfig, setInferenceConfig] = useState<InferenceConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +78,7 @@ export function ModelDetailModal({
 
   // Derived
   const defaultModel = defaultModelId;
-  const isDefaultModel = detail ? detail.name === defaultModel : false;
+  const isDefaultModel = detail ? detail.model_id === defaultModel : false;
 
   // Fetch data when modal opens
   const fetchData = useCallback(async () => {
@@ -98,12 +91,12 @@ export function ModelDetailModal({
         catalog.detail(modelId),
         catalog.inferenceConfig(modelId).catch(() => null),
       ]);
-      setDetail(detailData as ModelDetail);
+      setDetail(detailData);
       setInferenceConfig(configData);
 
       // Auto-select first downloaded variant, or first variant
       if (detailData.variants.length > 0) {
-        const downloaded = detailData.variants.find((v) => v.downloaded);
+        const downloaded = detailData.variants.find((v) => v.downloaded === true);
         setSelectedVariantId(downloaded?.variant_id ?? detailData.variants[0].variant_id);
       }
     } catch (e: any) {
@@ -136,8 +129,8 @@ export function ModelDetailModal({
     if (!detail || !selectedVariantId) return;
     setDownloading(true);
     try {
-      await actions.download(detail.name, selectedVariantId);
-      onDownload?.(detail.name);
+      await actions.download(detail.model_id, selectedVariantId);
+      onDownload?.(detail.model_id);
       onClose();
     } catch (e: any) {
       setError(e.message ?? "Download failed");
@@ -148,9 +141,9 @@ export function ModelDetailModal({
 
   const handleUseInChat = useCallback(() => {
     if (!detail) return;
-    setDefaultModel(detail.name);
-    setDefaultModelId(detail.name);
-    onSetDefault?.(detail.name);
+    setDefaultModel(detail.model_id);
+    setDefaultModelId(detail.model_id);
+    onSetDefault?.(detail.model_id);
     onClose();
   }, [detail, onSetDefault, onClose]);
 
@@ -184,11 +177,9 @@ export function ModelDetailModal({
     <Modal open={open} onClose={onClose} title={detail?.display_name ?? ""} className="max-w-xl">
       {detail && (
         <div className="space-y-5">
-          {/* Provider + type */}
+          {/* Family */}
           <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <span className="font-medium">{detail.provider}</span>
-            <span className="text-text-muted">·</span>
-            <span className="capitalize">{detail.model_type}</span>
+            <span className="font-medium">{detail.family}</span>
           </div>
 
           {/* Meta row: params, context, license */}
@@ -202,16 +193,16 @@ export function ModelDetailModal({
               {formatParamCount(detail.parameter_count)}
             </span>
 
-            {detail.context_length != null && (
+            {detail.context_length_default != null && (
               <span className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 font-mono text-xs text-text-primary">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-muted">
                   <rect x="1" y="3" width="2" height="6" rx="0.5" fill="currentColor" />
                   <rect x="4.5" y="1" width="2" height="8" rx="0.5" fill="currentColor" />
                   <rect x="8" y="0" width="2" height="9" rx="0.5" fill="currentColor" />
                 </svg>
-                {(detail.context_length >= 1000
-                  ? `${(detail.context_length / 1000).toFixed(0)}K`
-                  : String(detail.context_length)
+                {(detail.context_length_default >= 1000
+                  ? `${(detail.context_length_default / 1000).toFixed(0)}K`
+                  : String(detail.context_length_default)
                 )}{" "}
                 ctx
               </span>

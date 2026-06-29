@@ -111,8 +111,8 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
       if (!res.ok) return;
       const { token } = await res.json();
 
-      const url = `${getWsBaseUrl()}/api/v1/ws/system?token=${encodeURIComponent(token)}`;
-      const ws = new WebSocket(url);
+      const url = `${getWsBaseUrl()}/api/v1/ws/system`;
+      const ws = new WebSocket(url, [token]);
       wsRef.current = ws;
 
       ws.onopen = () => {

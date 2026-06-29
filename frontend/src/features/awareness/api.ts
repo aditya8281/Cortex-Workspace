@@ -1,12 +1,12 @@
 /**
- * Awareness API Client — v1.04 Awareness Foundation
+ * Awareness API Client — aligned with backend v1 awareness endpoints
  *
  * Covers: Device, Environment, Files, Health, Indexing, Project, Repository
  * Backend routes: /api/v1/awareness/*
  */
 import { apiFetch } from "@/shared/api/client";
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Types (matching backend Pydantic schemas) ──────────────────────────────
 
 export interface DeviceInfo {
   hostname: string;
@@ -55,24 +55,87 @@ export interface ProjectInfo {
   config: Record<string, any>;
 }
 
-export interface RepoEntry {
+// Backend RepoInfo from schemas/developer/repository.py
+export interface RepoInfo {
   id: number;
-  name: string;
-  path: string;
-  description: string;
-  languages: string[];
-  file_count: number;
-  total_lines: number;
-  is_indexed: boolean;
-  created_at: string;
-  last_indexed: string;
+  user_id: number;
+  repo_path: string;
+  repo_name: string;
+  primary_language: string | null;
+  total_files: number;
+  total_chunks: number;
+  last_indexed_at: string | null;
+  status: string;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
-export interface AwarenessHealth {
+// Backend RepoListResponse
+export interface RepoListResponse {
+  repos: RepoInfo[];
+}
+
+// Backend RepoIndexStatusResponse
+export interface RepoIndexStatus {
+  repo_id: number;
   status: string;
-  indexing_active: boolean;
-  watched_count: number;
-  last_scan: string;
+  total_files: number;
+  total_chunks: number;
+  indexed_files: number;
+  indexed: number;
+  pending: number;
+  errors: number;
+  last_indexed_at: string | null;
+}
+
+// Backend GraphBuildResponse
+export interface GraphBuildResult {
+  status: string;
+  nodes_created: number;
+  edges_created: number;
+}
+
+// Backend GraphGetResponse
+export interface GraphData {
+  nodes: any[];
+  edges: any[];
+}
+
+// Backend NodeContextResponse
+export interface NodeContext {
+  node_id: number;
+  label: string;
+  node_type: string;
+  neighbors: any[];
+}
+
+// Backend awareness health response (dict[str, Any])
+export interface AwarenessHealth {
+  services: Array<{
+    id: number;
+    service_name: string;
+    status: string;
+    response_time_ms: number | null;
+    error_message: string | null;
+    last_check: string | null;
+  }>;
+  overall_status: string;
+  summary: Record<string, any>;
+}
+
+// Backend scan response
+export interface ScanResult {
+  id: number;
+  repo_path: string;
+  repo_name: string;
+  languages: string[];
+  total_files: number;
+  total_lines: number;
+  framework: string | null;
+  dependencies: string[];
+  git_branch: string;
+  last_commit_hash: string;
+  last_indexed: string | null;
 }
 
 // ── Device ─────────────────────────────────────────────────────────────────
@@ -145,35 +208,41 @@ export const project = {
 
 export const repository = {
   list: () =>
-    apiFetch<{ items: RepoEntry[] }>("/awareness/repos"),
+    apiFetch<RepoListResponse>("/awareness/repos"),
 
-  create: (data: { name: string; path: string; description?: string }) =>
-    apiFetch<RepoEntry>("/awareness/repos", { method: "POST", body: data }),
+  create: (data: { name: string; path: string }) =>
+    apiFetch<{ status: string; repo: RepoInfo }>("/awareness/repos", { method: "POST", body: data }),
 
   get: (id: number) =>
-    apiFetch<RepoEntry>(`/awareness/repos/${id}`),
+    apiFetch<{ repo: RepoInfo }>(`/awareness/repos/${id}`),
 
-  update: (id: number, data: Partial<{ name: string; description: string }>) =>
-    apiFetch<RepoEntry>(`/awareness/repos/${id}`, { method: "PUT", body: data }),
+  update: (id: number, data: { name?: string }) =>
+    apiFetch<{ status: string; repo: RepoInfo }>(`/awareness/repos/${id}`, { method: "PUT", body: data }),
 
   delete: (id: number) =>
-    apiFetch<void>(`/awareness/repos/${id}`, { method: "DELETE" }),
+    apiFetch<{ status: string }>(`/awareness/repos/${id}`, { method: "DELETE" }),
 
-  index: (id: number) =>
-    apiFetch<{ status: string }>(`/awareness/repos/${id}/index`, { method: "POST" }),
+  index: (id: number, force?: boolean) => {
+    const qs = force ? "?force=true" : "";
+    return apiFetch<{ status: string; job_id?: string; result?: { status: string; files_scanned: number; files_indexed: number; files_skipped: number; chunks_created: number } }>(
+      `/awareness/repos/${id}/index${qs}`, { method: "POST" },
+    );
+  },
 
   indexStatus: (id: number) =>
-    apiFetch<{ status: string; progress: number; last_indexed: string }>(`/awareness/repos/${id}/status`),
+    apiFetch<RepoIndexStatus>(`/awareness/repos/${id}/status`),
 
-  scanAll: () =>
-    apiFetch<{ scanned: number }>("/awareness/repos/scan", { method: "POST" }),
+  scan: (repoPath: string) => {
+    const qs = `?repo_path=${encodeURIComponent(repoPath)}`;
+    return apiFetch<ScanResult>(`/awareness/repos/scan${qs}`);
+  },
 
   buildGraph: (id: number) =>
-    apiFetch<{ nodes: number; edges: number }>(`/awareness/repos/${id}/graph`, { method: "POST" }),
+    apiFetch<GraphBuildResult>(`/awareness/repos/${id}/graph`, { method: "POST" }),
 
   getGraph: (id: number) =>
-    apiFetch<{ nodes: any[]; edges: any[] }>(`/awareness/repos/${id}/graph`),
+    apiFetch<GraphData>(`/awareness/repos/${id}/graph`),
 
   graphNode: (repoId: number, nodeId: number) =>
-    apiFetch<any>(`/awareness/repos/${repoId}/graph/node/${nodeId}`),
+    apiFetch<NodeContext>(`/awareness/repos/${repoId}/graph/node/${nodeId}`),
 };

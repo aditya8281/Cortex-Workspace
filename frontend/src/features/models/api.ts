@@ -7,10 +7,11 @@ export { catalog } from "@/features/developer/api";
 export { downloads, sync } from "@/features/integration/api";
 export type {
   ModelCatalogEntry,
-  ModelVariantEntry,
+  ModelDetail,
+  ModelVariantInfo,
   HardwareInfo,
   ModelComparison,
-  RecommendedModel,
+  ModelRecommendation,
 } from "@/features/developer/api";
 export type {
   InstalledModel,

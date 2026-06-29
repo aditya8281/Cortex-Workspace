@@ -21,9 +21,9 @@ export function ConsentToggle({ scope, initialGranted, onToggle }: ConsentToggle
 
     try {
       if (next) {
-        await consent.grant({ scope });
+        await consent.grant({ consent_type: scope });
       } else {
-        await consent.revoke({ scope });
+        await consent.revoke({ consent_type: scope });
       }
       onToggle(scope, next);
     } catch {

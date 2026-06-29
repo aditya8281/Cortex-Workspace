@@ -5,15 +5,8 @@ import { Card } from "@/shared/ui/Card";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { privacySettings, type StorageUsage } from "../api";
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const i = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1,
-  );
-  const value = bytes / Math.pow(1024, i);
-  return `${value.toFixed(1)} ${units[i]}`;
+function formatGB(gb: number): string {
+  return `${gb.toFixed(1)} GB`;
 }
 
 export function StorageCard() {
@@ -40,13 +33,9 @@ export function StorageCard() {
     };
   }, []);
 
-  const vaultPct =
-    data && data.total_bytes > 0
-      ? (data.vault_bytes / data.total_bytes) * 100
-      : 0;
-  const dbPct =
-    data && data.total_bytes > 0
-      ? (data.database_bytes / data.total_bytes) * 100
+  const usagePct =
+    data && data.total_disk_gb > 0
+      ? (data.used_disk_gb / data.total_disk_gb) * 100
       : 0;
 
   return (
@@ -62,68 +51,63 @@ export function StorageCard() {
       ) : data ? (
         <>
           <div className="mb-3">
-            <p className="text-xs text-text-muted">Total</p>
+            <p className="text-xs text-text-muted">Disk Usage</p>
             <p className="text-lg font-semibold text-text-primary tabular-nums">
-              {formatBytes(data.total_bytes)}
+              {formatGB(data.used_disk_gb)}{" "}
+              <span className="text-xs font-normal text-text-muted">
+                of {formatGB(data.total_disk_gb)}
+              </span>
             </p>
           </div>
 
-          {/* Combined usage bar */}
+          {/* Disk usage bar */}
           <div className="h-2 w-full overflow-hidden rounded-full bg-bg-surface mb-3">
             <div
               className="h-full rounded-full bg-accent transition-[width] duration-300"
-              style={{ width: `${Math.min(vaultPct + dbPct, 100)}%` }}
+              style={{ width: `${Math.min(usagePct, 100)}%` }}
             />
           </div>
 
           <div className="space-y-2">
-            {/* Vault row */}
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs text-text-secondary">Vault</span>
-                <span className="text-xs text-text-muted tabular-nums">
-                  {formatBytes(data.vault_bytes)}
-                </span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-surface">
-                <div
-                  className="h-full rounded-full bg-accent transition-[width] duration-300"
-                  style={{ width: `${vaultPct}%` }}
-                />
-              </div>
+            {/* Free space */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-text-secondary">Free</span>
+              <span className="text-xs text-text-muted tabular-nums">
+                {formatGB(data.free_disk_gb)}
+              </span>
             </div>
 
-            {/* Database row */}
-            <div>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs text-text-secondary">Database</span>
-                <span className="text-xs text-text-muted tabular-nums">
-                  {formatBytes(data.database_bytes)}
-                </span>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-surface">
-                <div
-                  className="h-full rounded-full bg-accent/60 transition-[width] duration-300"
-                  style={{ width: `${dbPct}%` }}
-                />
-              </div>
+            {/* Models size */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-text-secondary">Models</span>
+              <span className="text-xs text-text-muted tabular-nums">
+                {formatGB(data.models_total_gb)}
+              </span>
+            </div>
+
+            {/* Cache */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-text-secondary">Cache</span>
+              <span className="text-xs text-text-muted tabular-nums">
+                {formatGB(data.cache_gb)}
+              </span>
             </div>
           </div>
 
-          {/* By-type breakdown */}
-          {Object.keys(data.by_type ?? {}).length > 0 && (
+          {/* Models breakdown */}
+          {data.models && data.models.length > 0 && (
             <div className="mt-3 border-t border-border-subtle pt-3">
               <p className="mb-1 block text-xs text-text-muted">
-                Breakdown by type
+                Installed models
               </p>
               <div className="space-y-1">
-                {Object.entries(data.by_type).map(([type, bytes]) => (
-                  <div key={type} className="flex items-center justify-between">
-                    <span className="text-xs text-text-secondary capitalize">
-                      {type.replace(/_/g, " ")}
+                {data.models.map((model) => (
+                  <div key={model.name} className="flex items-center justify-between">
+                    <span className="text-xs text-text-secondary truncate mr-2">
+                      {model.name}
                     </span>
-                    <span className="text-xs text-text-muted tabular-nums">
-                      {formatBytes(bytes)}
+                    <span className="text-xs text-text-muted tabular-nums shrink-0">
+                      {formatGB(model.size_gb)}
                     </span>
                   </div>
                 ))}

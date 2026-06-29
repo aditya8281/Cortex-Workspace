@@ -22,8 +22,8 @@ export function AccessControlCard() {
           accessControl.permissions(),
         ]);
         if (!cancelled) {
-          setRoles(Array.isArray(rolesRes) ? rolesRes : rolesRes.items ?? []);
-          setPermissions(Array.isArray(permsRes) ? permsRes : permsRes.items ?? []);
+          setRoles(Array.isArray(rolesRes) ? rolesRes : []);
+          setPermissions(Array.isArray(permsRes) ? permsRes : []);
         }
       } catch {
         if (!cancelled) setError("Failed to load access control data");
