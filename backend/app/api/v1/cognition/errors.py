@@ -33,7 +33,7 @@ def analyze_error(
     )
 
 
-@router.get("/patterns")
+@router.get("/patterns", response_model=list[dict[str, Any]])
 def get_error_patterns(
     days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),

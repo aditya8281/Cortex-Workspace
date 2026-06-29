@@ -29,9 +29,14 @@ export function useChatTyping({ conversationId, userId }: UseChatTypingOptions) 
 
   const handleWSMessage = useCallback(
     (data: Record<string, unknown>) => {
-      if (data.type === "typing" && data.user_id !== userId) {
-        const uid = data.user_id as number;
-        const cid = data.conversation_id as number;
+      if (
+        data.type === "typing" &&
+        data.user_id !== userId &&
+        typeof data.user_id === "number" &&
+        typeof data.conversation_id === "number"
+      ) {
+        const uid = data.user_id;
+        const cid = data.conversation_id;
         setTypingUsers((prev) => {
           if (prev.some((u) => u.userId === uid && u.conversationId === cid)) {
             return prev;
@@ -44,9 +49,14 @@ export function useChatTyping({ conversationId, userId }: UseChatTypingOptions) 
             prev.filter((u) => !(u.userId === uid && u.conversationId === cid)),
           );
         }, 5000);
-      } else if (data.type === "stop_typing" && data.user_id !== userId) {
-        const uid = data.user_id as number;
-        const cid = data.conversation_id as number;
+      } else if (
+        data.type === "stop_typing" &&
+        data.user_id !== userId &&
+        typeof data.user_id === "number" &&
+        typeof data.conversation_id === "number"
+      ) {
+        const uid = data.user_id;
+        const cid = data.conversation_id;
         setTypingUsers((prev) =>
           prev.filter((u) => !(u.userId === uid && u.conversationId === cid)),
         );

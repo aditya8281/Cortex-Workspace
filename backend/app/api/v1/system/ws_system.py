@@ -12,22 +12,10 @@ from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from backend.app.core.db import verify_ws_token
 from backend.app.core.logging import get_recent_logs
 from backend.app.core.system_info import get_disk_info, get_gpu_info, get_ram_info
+from backend.app.core.websocket import manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-
-def _extract_ws_token(ws: WebSocket, token: str | None = None) -> str | None:
-    """Extract JWT from query param, sec-websocket-protocol header, or cookie."""
-    if token:
-        return token
-    protocols = ws.headers.get("sec-websocket-protocol", "")
-    if protocols:
-        return protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
-    return ws.cookies.get("cortex_access")
-
-
-# ── Metrics ──────────────────────────────────────────────────────────
 
 
 def collect_metrics() -> dict:
@@ -99,7 +87,7 @@ async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
     # Accept FIRST so the browser sees a 101 with CORS headers
     await ws.accept()
 
-    token = _extract_ws_token(ws, token)
+    token = manager.extract_ws_token(ws, token)
     if not token:
         logger.warning("[ws/system] No token provided")
         await ws.send_json({"type": "error", "message": "Authentication required"})

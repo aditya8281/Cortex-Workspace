@@ -1,3 +1,15 @@
+"""Demo WebSocket endpoint for manual development testing.
+
+Usage:
+  1. Obtain a valid JWT token from your local CORTEX instance.
+  2. Connect via a WebSocket client (e.g., wscat, Postman):
+     wscat -c ws://localhost:8000/ws/demo -H "sec-websocket-protocol: <token>"
+  3. Send JSON messages with actions: "echo", "stream", or custom.
+
+This endpoint is NOT used by any frontend page — it exists solely for
+ad-hoc testing of the WebSocket infrastructure (auth, streaming, lifecycle).
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,9 +18,8 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from jose import JWTError, jwt
 
-from backend.app.core.config import settings
+from backend.app.core.db import verify_ws_token
 from backend.app.core.websocket import manager
 
 logger = logging.getLogger(__name__)
@@ -21,27 +32,16 @@ async def websocket_demo(ws: WebSocket) -> None:
     # Accept FIRST so the browser sees a 101 with CORS headers
     await ws.accept()
 
-    # Accept token from sec-websocket-protocol header (preferred) or query param (legacy)
-    token = None
-    protocols = ws.headers.get("sec-websocket-protocol", "")
-    if protocols:
-        # Token is sent as the first subprotocol
-        token = protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
-    if not token:
-        token = ws.query_params.get("token")
+    # Accept token from sec-websocket-protocol header (preferred), query param (legacy), or cookie
+    token = manager.extract_ws_token(ws) or ws.query_params.get("token")
     if not token:
         await ws.send_json({"type": "error", "message": "Missing authentication token"})
         await ws.close(code=4001)
         return
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None:
-            await ws.send_json({"type": "error", "message": "Invalid token"})
-            await ws.close(code=4001)
-            return
-    except JWTError:
-        await ws.send_json({"type": "error", "message": "Invalid token"})
+        user_id = await verify_ws_token(token)
+    except Exception:
+        await ws.send_json({"type": "error", "message": "Invalid token or account deleted"})
         await ws.close(code=4001)
         return
 

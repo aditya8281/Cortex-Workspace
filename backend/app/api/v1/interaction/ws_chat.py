@@ -12,15 +12,6 @@ from backend.app.core.websocket import manager
 router = APIRouter()
 
 
-def _extract_ws_token(ws: WebSocket, token: str | None = None) -> str | None:
-    """Extract JWT from query param, sec-websocket-protocol header, or cookie."""
-    if token:
-        return token
-    protocols = ws.headers.get("sec-websocket-protocol", "")
-    if protocols:
-        return protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
-    return ws.cookies.get("cortex_access")
-
 
 @router.websocket("/ws/chat")
 async def chat_ws(ws: WebSocket, token: str = Query(None)):
@@ -37,7 +28,7 @@ async def chat_ws(ws: WebSocket, token: str = Query(None)):
     # Accept FIRST so the browser sees a 101 with CORS headers
     await ws.accept()
 
-    token = _extract_ws_token(ws, token)
+    token = manager.extract_ws_token(ws, token)
     if not token:
         await ws.send_json({"type": "error", "message": "Authentication required"})
         await ws.close(code=4001)

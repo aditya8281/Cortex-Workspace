@@ -15,7 +15,7 @@ import { AgentCard } from "./components/AgentCard";
 import { RunHistory } from "./components/RunHistory";
 import { RunDetail } from "./components/RunDetail";
 import { agentsApi, type Agent, type AgentRun, type AgentStep } from "./api";
-import { useWebSocket, type WSStatus } from "@/shared/ws/useWebSocket";
+import { useWebSocket } from "@/shared/ws/useWebSocket";
 
 export default function AgentsPage() {
   const { user, loading } = useAuth();
@@ -67,15 +67,16 @@ export default function AgentsPage() {
   // ── Real-time agent run progress via WebSocket ──────────────────────────
 
   const handleAgentWSMessage = useCallback((data: Record<string, unknown>) => {
-    if (data.type === "agent_runs" && Array.isArray(data.runs)) {
-      const wsRuns = data.runs as Array<{
-        id: number;
-        agent_id: number;
-        status: string;
-        created_at: string;
-      }>;
-      if (wsRuns.length > 0) {
-        setRuns((prev) => {
+    if (data.type !== "agent_runs" || !Array.isArray(data.runs)) return;
+    const isValidRun = (r: unknown): r is { id: number; agent_id: number; status: string; created_at: string } =>
+      typeof r === "object" && r !== null &&
+      typeof (r as Record<string, unknown>).id === "number" &&
+      typeof (r as Record<string, unknown>).agent_id === "number" &&
+      typeof (r as Record<string, unknown>).status === "string" &&
+      typeof (r as Record<string, unknown>).created_at === "string";
+    const wsRuns = data.runs.filter(isValidRun);
+    if (wsRuns.length === 0) return;
+    setRuns((prev) => {
           const existing = new Map(prev.map((r) => [r.id, r]));
           for (const wsRun of wsRuns) {
             const existingRun = existing.get(wsRun.id);
@@ -98,9 +99,7 @@ export default function AgentsPage() {
           }
           return Array.from(existing.values());
         });
-      }
-    }
-  }, []);
+    }, []);
 
   const { status: agentWsStatus } = useWebSocket({
     path: "/api/v1/ws/agents",

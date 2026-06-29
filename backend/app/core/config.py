@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     ENV: str = "development"
     CORTEX_ROOT: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("CORTEX_ROOT", "CORTEX_STORAGE_ROOT"),
+        validation_alias=AliasChoices("CORTEX_ROOT"),
     )
     MEMORY_PATH: str | None = Field(
         default=None,
@@ -39,6 +39,21 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = ""  # Comma-separated list of allowed CORS origins for production
 
     def model_post_init(self, __context) -> None:
+        import logging
+        import os
+
+        logger = logging.getLogger(__name__)
+
+        # Deprecation warnings for renamed env vars
+        if os.environ.get("CORTEX_STORAGE_ROOT"):
+            logger.warning(
+                "CORTEX_STORAGE_ROOT is deprecated. Use CORTEX_ROOT instead."
+            )
+        if os.environ.get("CORTEX_NEW_AGENT"):
+            logger.warning(
+                "CORTEX_NEW_AGENT is deprecated. Use CORTEX_NEW_AGENT_LOOP instead."
+            )
+
         if self.CORS_ORIGINS:
             self.ALLOWED_ORIGINS = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
@@ -71,7 +86,7 @@ class Settings(BaseSettings):
     # streaming loop is not yet built (next Phase 2 component).
     CORTEX_NEW_AGENT_LOOP: bool = Field(
         default=False,
-        validation_alias=AliasChoices("CORTEX_NEW_AGENT_LOOP", "CORTEX_NEW_AGENT"),
+        validation_alias=AliasChoices("CORTEX_NEW_AGENT_LOOP"),
     )
 
     # HTTPS redirect

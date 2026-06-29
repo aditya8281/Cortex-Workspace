@@ -11,11 +11,14 @@ list, and wraps `send` to inject CORS headers into the websocket.accept message.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from starlette.datastructures import Headers
 from starlette.middleware.cors import CORSMiddleware
 from starlette.types import ASGIApp, Receive, Scope, Send
+
+logger = logging.getLogger(__name__)
 
 
 class CORSMiddlewareWithWS(CORSMiddleware):
@@ -30,6 +33,7 @@ class CORSMiddlewareWithWS(CORSMiddleware):
         # ── WebSocket path ───────────────────────────────────────────────
         headers = Headers(scope=scope)
         origin = headers.get("origin")
+        logger.info("[cors-ws] WS scope path=%s origin=%s", scope.get("path"), origin)
 
         # No origin → same-origin or non-browser client — pass through
         if origin is None:
@@ -38,13 +42,15 @@ class CORSMiddlewareWithWS(CORSMiddleware):
 
         # Check if origin is allowed
         if not self.allow_all_origins and not self.is_allowed_origin(origin=origin):
+            logger.warning("[cors-ws] REJECTED origin=%s allowed=%s", origin, self.allow_origins)
+            # Origin not allowed — reject the WebSocket connection
             await self.app(scope, receive, send)
             return
 
         # Origin is allowed — wrap send to inject CORS headers into the
         # websocket.accept message that ws.accept() produces.
         async def send_with_cors(message: dict[str, Any]) -> None:
-            if message["type"] == "websocket.accept":
+            if message["type"] in ("websocket.accept", "websocket.close"):
                 raw_headers: list[tuple[bytes, bytes]] = message.get("headers") or []
 
                 # If credentials allowed, echo the specific origin (not *)

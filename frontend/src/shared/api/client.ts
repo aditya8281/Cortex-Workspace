@@ -23,6 +23,23 @@ export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
  */
 const MAX_RETRIES = 1;
 
+/**
+ * Shared refresh promise so concurrent 401s only fire ONE refresh request.
+ * The second 401 waits for the first refresh to complete, then retries.
+ */
+let refreshPromise: Promise<Response> | null = null;
+
+async function doRefresh(): Promise<Response> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = fetch(`${API_BASE}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+  }).finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+}
+
 /** Auth endpoints where 401 = bad credentials, not expired session */
 function isAuthPath(path: string): boolean {
   return (
@@ -71,10 +88,7 @@ export async function apiFetch<T>(
     }
 
     try {
-      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-      });
+      const refreshRes = await doRefresh();
 
       if (refreshRes.ok) {
         return apiFetch<T>(path, {
@@ -143,10 +157,7 @@ export async function apiFetchStream(
     }
 
     try {
-      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-      });
+      const refreshRes = await doRefresh();
 
       if (refreshRes.ok) {
         return apiFetchStream(path, {

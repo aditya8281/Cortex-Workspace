@@ -42,3 +42,21 @@ class ConfidenceScoreRecord(BaseModel):
 class ConfidenceScoreListResponse(BaseModel):
     items: list[ConfidenceScoreRecord]
     total: int
+
+
+class CalibrationItem(BaseModel):
+    """Calibration data for a single task type."""
+
+    total: int
+    calibrated: int
+    score: float
+
+
+class CalibrationResponse(BaseModel):
+    """Calibration data for confidence predictions over a date range."""
+
+    total: int
+    calibrated: int
+    by_type: dict[str, CalibrationItem]
+    task_type: str | None = None
+    days: int

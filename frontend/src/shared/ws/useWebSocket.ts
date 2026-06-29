@@ -60,6 +60,7 @@ export function getWsBaseUrl(): string {
 }
 
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000, 30000];
+const HEARTBEAT_MS = 30000; // send a ping every 30s to keep connection alive
 
 // ── Hook ───────────────────────────────────────────────────────────────────
 
@@ -78,7 +79,9 @@ export function useWebSocket({
   const wsRef = useRef<WebSocket | null>(null);
   const retryCount = useRef(0);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heartbeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  const intentionalClose = useRef(false);
 
   // Store callbacks in refs to avoid reconnecting on callback change
   const onMessageRef = useRef(onMessage);
@@ -91,31 +94,47 @@ export function useWebSocket({
   onErrorRef.current = onError;
 
   const cleanup = useCallback(() => {
+    intentionalClose.current = true;
+
+    if (heartbeatTimer.current) {
+      clearInterval(heartbeatTimer.current);
+      heartbeatTimer.current = null;
+    }
     if (retryTimer.current) {
       clearTimeout(retryTimer.current);
       retryTimer.current = null;
     }
     if (wsRef.current) {
-      wsRef.current.onclose = null; // prevent auto-reconnect on manual close
+      wsRef.current.onclose = null; // prevent reconnect on manual close
+      wsRef.current.onerror = null;
       wsRef.current.close();
       wsRef.current = null;
     }
+  }, []);
+
+  const startHeartbeat = useCallback((ws: WebSocket) => {
+    if (heartbeatTimer.current) clearInterval(heartbeatTimer.current);
+    heartbeatTimer.current = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "ping" }));
+      }
+    }, HEARTBEAT_MS);
   }, []);
 
   const connect = useCallback(async () => {
     if (!enabled || !mountedRef.current) return;
     cleanup();
 
+    intentionalClose.current = false;
     setStatus("connecting");
 
     const scheduleRetry = () => {
-      if (autoReconnect && retryCount.current < maxRetries) {
-        const delay = RECONNECT_DELAYS[Math.min(retryCount.current, RECONNECT_DELAYS.length - 1)];
-        retryCount.current += 1;
-        retryTimer.current = setTimeout(() => {
-          if (mountedRef.current) connect();
-        }, delay);
-      }
+      if (!autoReconnect || retryCount.current >= maxRetries || !mountedRef.current) return;
+      const delay = RECONNECT_DELAYS[Math.min(retryCount.current, RECONNECT_DELAYS.length - 1)];
+      retryCount.current += 1;
+      retryTimer.current = setTimeout(() => {
+        if (mountedRef.current) connect();
+      }, delay);
     };
 
     try {
@@ -138,9 +157,10 @@ export function useWebSocket({
       wsRef.current = ws;
 
       ws.onopen = () => {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current) { ws.close(); return; }
         setStatus("connected");
         retryCount.current = 0;
+        startHeartbeat(ws);
         onOpenRef.current?.();
       };
 
@@ -159,20 +179,22 @@ export function useWebSocket({
         if (!mountedRef.current) return;
         setStatus("disconnected");
         onCloseRef.current?.();
-        scheduleRetry();
+        if (!intentionalClose.current) {
+          scheduleRetry();
+        }
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = (event) => {
         if (!mountedRef.current) return;
         setStatus("error");
-        onErrorRef.current?.(error);
+        onErrorRef.current?.(event);
       };
     } catch {
       if (!mountedRef.current) return;
       setStatus("error");
       scheduleRetry();
     }
-  }, [path, enabled, autoReconnect, maxRetries, cleanup]);
+  }, [path, enabled, autoReconnect, maxRetries, cleanup, startHeartbeat]);
 
   const send = useCallback((data: Record<string, unknown>) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

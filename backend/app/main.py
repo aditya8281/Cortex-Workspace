@@ -22,7 +22,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from backend.app.api.auth import router as auth_router
+from backend.app.auth.router import router as auth_router
 from backend.app.api.memory import router as memory_router
 from backend.app.api.router import api_router
 from backend.app.api.ws import router as ws_router
@@ -260,6 +260,12 @@ def create_daemon_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # ⚠️ Middleware stack: order matters. For EVERY BaseHTTPMiddleware subclass
+    # that implements its own `dispatch`, you MUST add a WebSocket bypass:
+    #     if request.scope.get("type") == "websocket":
+    #         return await call_next(request)
+    # Without this, ALL WebSocket connections silently break (uvicorn sends
+    # a CORS-less 403 instead of the 101 upgrade).
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,
@@ -271,6 +277,9 @@ def create_daemon_app() -> FastAPI:
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=500)
     app.add_middleware(RequestSizeLimitMiddleware)
+
+    # NOTE: RateLimitMiddleware, CSRFMiddleware, and HTTPSRedirectMiddleware
+    # are added inside setup_*() calls below — each HAS the WS bypass check.
 
     setup_rate_limiting(app)
     setup_csrf_protection(app)

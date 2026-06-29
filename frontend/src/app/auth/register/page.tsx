@@ -168,7 +168,7 @@ export default function RegisterPage() {
   const [description, setDescription] = useState("");
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const usernameCheck = useUsernameCheck();
   const pwValidation = validatePassword(password);
@@ -212,7 +212,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async () => {
     setError("");
-    setLoading(true);
+    setSubmitting(true);
     try {
       await apiFetch("/auth/register", {
         method: "POST",
@@ -233,7 +233,7 @@ export default function RegisterPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -470,7 +470,7 @@ export default function RegisterPage() {
             variant="primary"
             onClick={handleSubmit}
             disabled={!canProceed[step]}
-            loading={loading}
+            loading={submitting}
             className="flex-1"
           >
             Create account

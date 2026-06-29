@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.db import get_current_user, get_db
 from backend.app.schemas.cognition.task_plan import (
+    PlanNextStepsResponse,
     TaskPlanCreate,
     TaskPlanListResponse,
     TaskPlanResponse,
@@ -122,7 +123,7 @@ def cancel_plan(
     return service.cancel_plan(plan_id)
 
 
-@router.get("/plan/{plan_id}/next-steps")
+@router.get("/plan/{plan_id}/next-steps", response_model=PlanNextStepsResponse)
 def get_next_steps(
     plan_id: int,
     db: Session = Depends(get_db),

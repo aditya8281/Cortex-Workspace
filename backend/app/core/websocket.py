@@ -16,6 +16,16 @@ MAX_MESSAGE_SIZE = 65536  # 64KB
 class ConnectionManager:
     """Manage WebSocket connections and broadcast messages."""
 
+    @staticmethod
+    def extract_ws_token(ws: WebSocket, token: str | None = None) -> str | None:
+        """Extract JWT from query param, sec-websocket-protocol header, or cookie."""
+        if token:
+            return token
+        protocols = ws.headers.get("sec-websocket-protocol", "")
+        if protocols:
+            return protocols.split(",")[0].strip() if "," in protocols else protocols.strip()
+        return ws.cookies.get("cortex_access")
+
     def __init__(self) -> None:
         self.active: dict[str, set[WebSocket]] = {}
         self._user_connections: dict[int, set[WebSocket]] = {}

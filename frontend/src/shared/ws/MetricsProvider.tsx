@@ -5,21 +5,65 @@
  *
  * Backend pushes metrics every 500ms + logs every 3s + processes every 5s.
  * System page and dashboard both consume from here.
+ *
+ * Uses the shared useWebSocket hook so there's one WS connection pattern
+ * across the entire app (no duplicate connection logic).
  */
 
 import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
-  useRef,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
-import { getWsBaseUrl } from "./useWebSocket";
+import { useWebSocket } from "./useWebSocket";
 
 // ── Types ──────────────────────────────────────────────────────────────────
+
+/** Runtime type guard — validates incoming metrics payload at the boundary. */
+function isLiveMetrics(data: unknown): data is LiveMetrics {
+  if (typeof data !== "object" || data === null) return false;
+  const d = data as Record<string, unknown>;
+  return (
+    typeof d.cpu_percent === "number" &&
+    typeof d.ram_percent === "number" &&
+    typeof d.ram_used_gb === "number" &&
+    typeof d.ram_total_gb === "number" &&
+    typeof d.gpu_name === "string" &&
+    typeof d.gpu_type === "string" &&
+    (d.gpu_percent === null || typeof d.gpu_percent === "number") &&
+    typeof d.disk_total_gb === "number" &&
+    typeof d.disk_used_gb === "number" &&
+    typeof d.disk_percent === "number"
+  );
+}
+
+/** Runtime type guard for a single process info item. */
+function isProcessInfo(item: unknown): item is ProcessInfo {
+  if (typeof item !== "object" || item === null) return false;
+  const o = item as Record<string, unknown>;
+  return (
+    typeof o.pid === "number" &&
+    typeof o.name === "string" &&
+    typeof o.cpu_percent === "number" &&
+    typeof o.memory_percent === "number"
+  );
+}
+
+/** Runtime type guard for a single system log item. */
+function isSystemLog(item: unknown): item is SystemLog {
+  if (typeof item !== "object" || item === null) return false;
+  const o = item as Record<string, unknown>;
+  return (
+    typeof o.timestamp === "string" &&
+    typeof o.level === "string" &&
+    typeof o.module === "string" &&
+    typeof o.message === "string"
+  );
+}
 
 export interface LiveMetrics {
   cpu_percent: number;
@@ -77,92 +121,35 @@ export function MetricsProvider({ children }: { children: ReactNode }) {
   const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
   const [processes, setProcesses] = useState<ProcessInfo[]>([]);
   const [logs, setLogs] = useState<SystemLog[]>([]);
-  const [connected, setConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const retryRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mountedRef = useRef(true);
 
-  const cleanup = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (wsRef.current) {
-      wsRef.current.onclose = null;
-      wsRef.current.close();
-      wsRef.current = null;
+  const handleMessage = useCallback((data: Record<string, unknown>) => {
+    if (data.type === "metrics" && isLiveMetrics(data)) {
+      setMetrics(data);
+    } else if (data.type === "logs" && Array.isArray(data.logs) && data.logs.every(isSystemLog)) {
+      setLogs(data.logs);
+    } else if (data.type === "processes" && Array.isArray(data.processes) && data.processes.every(isProcessInfo)) {
+      setProcesses(data.processes);
     }
   }, []);
 
-  const connect = useCallback(async () => {
-    if (!user || !mountedRef.current) return;
-    cleanup();
-    setConnected(false);
+  const { status } = useWebSocket({
+    path: "/api/v1/ws/system",
+    enabled: !!user,
+    onMessage: handleMessage,
+  });
 
-    try {
-      const res = await fetch("/api/v1/auth/ws-token", { credentials: "include" });
-      if (!res.ok) return;
-      const { token } = await res.json();
-
-      const url = `${getWsBaseUrl()}/api/v1/ws/system`;
-      const ws = new WebSocket(url, [token]);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (mountedRef.current) {
-          setConnected(true);
-          retryRef.current = 0;
-        }
-      };
-
-      ws.onmessage = (event) => {
-        if (!mountedRef.current) return;
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === "metrics") {
-            setMetrics(data);
-          } else if (data.type === "logs" && Array.isArray(data.logs)) {
-            setLogs(data.logs);
-          } else if (data.type === "processes" && Array.isArray(data.processes)) {
-            setProcesses(data.processes);
-          }
-        } catch { /* non-JSON */ }
-      };
-
-      ws.onclose = () => {
-        if (!mountedRef.current) return;
-        setConnected(false);
-        // Reconnect with backoff
-        const delay = [1000, 2000, 4000, 8000, 16000][Math.min(retryRef.current, 4)];
-        retryRef.current += 1;
-        timerRef.current = setTimeout(() => { if (mountedRef.current) connect(); }, delay);
-      };
-
-      ws.onerror = (e) => {
-        console.warn("[metrics-ws] error", e);
-      };
-    } catch {
-      // retry
-      if (mountedRef.current) {
-        const delay = [1000, 2000, 4000][Math.min(retryRef.current, 2)];
-        retryRef.current += 1;
-        timerRef.current = setTimeout(() => connect(), delay);
-      }
-    }
-  }, [user, cleanup]);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    if (user) connect();
-    return () => {
-      mountedRef.current = false;
-      cleanup();
-    };
-  }, [user, connect, cleanup]);
+  const value = useMemo<MetricsContextType>(
+    () => ({
+      metrics,
+      processes,
+      logs,
+      connected: status === "connected",
+    }),
+    [metrics, processes, logs, status],
+  );
 
   return (
-    <MetricsContext.Provider value={{ metrics, processes, logs, connected }}>
+    <MetricsContext.Provider value={value}>
       {children}
     </MetricsContext.Provider>
   );

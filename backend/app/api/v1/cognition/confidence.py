@@ -27,7 +27,7 @@ def estimate_confidence(
     return service.estimate_task_confidence(body.task_type, context=ctx)
 
 
-@router.post("/combine")
+@router.post("/combine", response_model=dict[str, Any])
 def combine_confidences(
     confidences: list[int] = Query(..., description="Confidence scores to combine"),
     weights: list[float] | None = Query(None, description="Weights for each score"),
@@ -39,7 +39,7 @@ def combine_confidences(
     return service.combine_confidences(confidences, weights)
 
 
-@router.get("/calibration")
+@router.get("/calibration", response_model=dict[str, Any])
 def get_calibration(
     days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),

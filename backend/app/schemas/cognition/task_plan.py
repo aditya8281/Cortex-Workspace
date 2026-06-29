@@ -54,3 +54,10 @@ class TaskPlanListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class PlanNextStepsResponse(BaseModel):
+    """Response containing indices of ready-to-execute steps in a plan."""
+
+    plan_id: int
+    ready_steps: list[int]

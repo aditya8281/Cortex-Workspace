@@ -9,7 +9,6 @@ API_V1_PREFIX applied by main.py (/api/v1) is the only prefix needed.
 
 from fastapi import APIRouter
 
-from backend.app.api.memory import router as memory_router
 from backend.app.api.metrics import router as metrics_router
 from backend.app.api.v1.awareness.router import router as awareness_router
 from backend.app.api.v1.cognition.router import router as cognition_router
@@ -25,7 +24,9 @@ from backend.app.api.v1.system.router import router as system_router
 api_router = APIRouter()
 
 # ── Legacy domains (pre-v1.02, kept for backward compatibility) ──
-api_router.include_router(memory_router, tags=["Memory"])
+# Note: memory_router is included DIRECTLY in main.py (paths hardcode /api/v1/memory/...).
+# Including it here would create ghost paths at /api/v1/api/v1/memory/...
+# metrics_router uses relative paths (/metrics) so it's safe to include here.
 api_router.include_router(metrics_router, tags=["Metrics"])
 
 # ── v1.02 domain routers (paths defined in endpoint files, no prefix here) ──

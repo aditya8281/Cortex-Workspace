@@ -65,7 +65,7 @@ def execute_with_retry(
     )
 
 
-@router.get("/list")
+@router.get("/list", response_model=list[dict[str, Any]])
 def list_tools(
     category: str | None = Query(None, description="Filter by category"),
 ) -> list[dict[str, Any]]:

@@ -19,11 +19,40 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useAuth } from "@/shared/auth/AuthProvider";
 import { useWebSocket } from "@/shared/ws/useWebSocket";
 import { downloads } from "@/features/integration/api";
 import type { DownloadJob, DownloadHistoryItem } from "@/features/integration/api";
 
 // ── Types ──────────────────────────────────────────────────────────────────
+
+/** Runtime type guard for download model records pushed via WebSocket. */
+function isDownloadModel(item: unknown): item is {
+  name: string;
+  progress: number;
+  status: string;
+  speed_bytes_sec: number;
+  eta_seconds: number | null;
+  bytes_downloaded: number;
+  total_bytes: number;
+  queue_position: number | null;
+  download_id: string;
+  error?: string;
+} {
+  if (typeof item !== "object" || item === null) return false;
+  const o = item as Record<string, unknown>;
+  return (
+    typeof o.name === "string" &&
+    typeof o.progress === "number" &&
+    typeof o.status === "string" &&
+    typeof o.speed_bytes_sec === "number" &&
+    (o.eta_seconds === null || typeof o.eta_seconds === "number") &&
+    typeof o.bytes_downloaded === "number" &&
+    typeof o.total_bytes === "number" &&
+    (o.queue_position === null || typeof o.queue_position === "number") &&
+    typeof o.download_id === "string"
+  );
+}
 
 export interface DownloadState {
   active: DownloadJob[];
@@ -62,6 +91,7 @@ export function useDownloadContext(): DownloadContextType {
 // ── Provider ───────────────────────────────────────────────────────────────
 
 export function DownloadProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [active, setActive] = useState<DownloadJob[]>([]);
   const [queued, setQueued] = useState<DownloadJob[]>([]);
   const [history, setHistory] = useState<DownloadHistoryItem[]>([]);
@@ -99,20 +129,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   // ── WebSocket for real-time progress ─────────────────────────────────
 
   const handleWSMessage = useCallback((data: Record<string, unknown>) => {
-    if (data.type !== "model_progress" || !Array.isArray(data.models)) return;
+    if (data.type !== "model_progress" || !Array.isArray(data.models) || !data.models.every(isDownloadModel)) return;
 
-    const models = data.models as Array<{
-      name: string;
-      progress: number;
-      status: string;
-      speed_bytes_sec: number;
-      eta_seconds: number | null;
-      bytes_downloaded: number;
-      total_bytes: number;
-      queue_position: number | null;
-      download_id: string;
-      error?: string;
-    }>;
+    const models = data.models;
 
     const newActive: DownloadJob[] = [];
     const newQueued: DownloadJob[] = [];
@@ -154,7 +173,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   const { status: wsStatus } = useWebSocket({
     path: "/api/v1/ws/models",
-    enabled: true,
+    enabled: !!user,
     onMessage: handleWSMessage,
   });
 
