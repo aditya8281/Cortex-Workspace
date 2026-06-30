@@ -33,7 +33,7 @@ async def websocket_demo(ws: WebSocket) -> None:
     await ws.accept()
 
     # Accept token from sec-websocket-protocol header (preferred), query param (legacy), or cookie
-    token = manager.extract_ws_token(ws) or ws.query_params.get("token")
+    token = manager.extract_ws_token(ws)
     if not token:
         await ws.send_json({"type": "error", "message": "Missing authentication token"})
         await ws.close(code=4001)
