@@ -236,13 +236,13 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 | v1.06 | Cognition & Execution Core | Capability | 5 | 8 | 6-7 days |
 | v1.07 | Memory Evolution | Capability | 4 | 6 | 5-6 days |
 | v1.08 | Awareness Expansion | Capability | 5 | 10 | 6-7 days |
-| v1.09 | The Knowledge | Capability | 6 | 10 | 10-14 days |
+| v1.09 | The Knowledge | Capability | 11 | 20 | 18-24 days |
 | v1.10 | Planning & Orchestration | Capability | 5 | 13 | 7-8 days |
 | v1.11 | Interaction & Communication | Capability | 5 | 12 | 7-8 days |
 | v1.12 | Developer Intelligence | Capability | 6 | 15 | 8-9 days |
 | v1.13 | Utility & Integration | Capability | 6 | 19 | 10-12 days |
 | v1.14 | Advanced Intelligence | Capability | 4 | 4 | 5-6 days |
-| **Total** | | | **77** | **120** | **~107-140 days** |
+| **Total** | | | **82** | **130** | **~115-154 days** |
 
 ### Phase Counts by Version
 
@@ -256,7 +256,7 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 | v1.06 | 5 | P01-P05 |
 | v1.07 | 4 | P01-P04 |
 | v1.08 | 5 | P01-P05 |
-| v1.09 | 6 | P01-P06 |
+| v1.09 | 11 | P01-P11 |
 | v1.10 | 5 | P01-P05 |
 | v1.11 | 5 | P01-P05 |
 | v1.12 | 6 | P01-P06 |
@@ -724,7 +724,7 @@ Each subsystem gets its own spec → plan → implement cycle. Never implement m
 | v1.06 | Cognition Core | 6-7 days | 6-7 days | — | No change |
 | v1.07 | Memory Evolution | 5-6 days | 5-6 days | — | No change |
 | v1.08 | Awareness Expansion | 6-7 days | 6-7 days | — | No change |
-| v1.09 | The Knowledge | 7-8 days | 10-14 days | +3-6d | Expanded from abstract learning to concrete knowledge management |
+| v1.09 | The Knowledge | 7-8 days | 18-24 days | +11-16d | Merged with original learning capabilities — 11 phases, 20 caps total |
 | v1.10 | Planning & Orchestration | 7-8 days | 7-8 days | — | No change |
 | v1.11 | Interaction | 7-8 days | 7-8 days | — | No change |
 | v1.12 | Developer Intelligence | 8-9 days | 8-9 days | — | No change |

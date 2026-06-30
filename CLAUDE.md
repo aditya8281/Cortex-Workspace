@@ -81,7 +81,7 @@ CORTEX is built across 14 executable versions (v1.01–v1.14), preceded by a bas
 | **v1.06** | The Developer | Skills, hooks, commands, developer ecosystem | ✅ |
 | **v1.07** | The Interaction | SSE streaming UI, chat interface, agent dashboard | ✅ |
 | **v1.08** | The Planning | Autonomous planning, version management, progress tracking | Next |
-| **v1.09** | The Knowledge | Directory-based knowledge ingestion, file parsing & chunking, embedding & vector storage, watchdog auto-sync, chat memory toggle, knowledge graph, hybrid semantic search | In planning — 6 phases, 41 tasks |
+| **v1.09** | The Knowledge | Knowledge management (directory ingestion, sync, search, graph) + Learning (preferences, workflows, habits, feedback, personalization, patterns, anomaly detection) | In planning — 11 phases, 72 tasks |
 | **v1.10** | The Scheduler | Cron-based task scheduling, recurring agent actions | — |
 | **v1.11** | The Researcher | Web search, deep research, citation management | — |
 | **v1.12** | The Integrator | External service connectors, API gateway | — |
