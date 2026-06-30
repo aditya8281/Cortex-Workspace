@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +86,27 @@ class ConnectionManager:
                 self._user_connections.pop(user_id, None)
         logger.info("WebSocket disconnected from channel '%s'", channel)
 
+    async def check_disconnected(self, ws: WebSocket) -> bool:
+        """Probe if client has disconnected without waiting for a message.
+
+        FastAPI/Starlette queues received frames. If client sent a close frame
+        (or the TCP socket died), receive() raises WebSocketDisconnect immediately.
+        We try with a zero-timeout receive — if nothing is queued it raises
+        TimeoutError (expected). Any other disconnect error means the client is gone.
+
+        Call this periodically in push-only loops to detect stale connections.
+        """
+        try:
+            data = await asyncio.wait_for(ws.receive(), timeout=0)
+            # If we get here the client actually sent something
+            return isinstance(data, dict) and data.get("type") in ("websocket.disconnect",)
+        except asyncio.TimeoutError:
+            return False  # nothing queued — still alive
+        except WebSocketDisconnect:
+            return True
+        except Exception:
+            return True
+
     async def send(self, ws: WebSocket, data: dict[str, Any]) -> None:
         try:
             text = json.dumps(data)
@@ -91,6 +114,8 @@ class ConnectionManager:
                 logger.warning("WebSocket message too large (%d bytes), dropping", len(text))
                 return
             await ws.send_text(text)
+        except WebSocketDisconnect:
+            raise
         except Exception:
             logger.exception("Failed to send WebSocket message")
 

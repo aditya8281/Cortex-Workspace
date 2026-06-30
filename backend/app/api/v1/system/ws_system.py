@@ -117,6 +117,11 @@ async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
                 processes = collect_processes()
                 await manager.send(ws, {"type": "processes", "processes": processes})
 
+            # Probe for disconnect every 60 ticks (~30s)
+            if tick % 60 == 0 and await manager.check_disconnected(ws):
+                logger.info("[ws/system] Client disconnected (probe), user %s", uid)
+                break
+
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         pass

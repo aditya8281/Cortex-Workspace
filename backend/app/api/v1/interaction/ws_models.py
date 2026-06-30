@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
@@ -11,6 +12,8 @@ from backend.app.core.websocket import manager
 from backend.app.services.download.downloader import DownloadStatus, download_manager
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 def _build_download_payload() -> dict:
@@ -82,10 +85,16 @@ async def model_download_progress_ws(ws: WebSocket, token: str = Query(None)):
     uid = int(user_id)
     await manager.register(ws, channel=f"models:{uid}", user_id=uid)
     try:
+        tick = 0
         while True:
+            tick += 1
             payload = _build_download_payload()
             if payload["models"]:
                 await manager.send(ws, payload)
+            # Probe for disconnect every 30s — critical since we skip send() when idle
+            if tick % 30 == 0 and await manager.check_disconnected(ws):
+                logger.info("[ws/models] Client disconnected (probe), user %s", uid)
+                break
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         pass
