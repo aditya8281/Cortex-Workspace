@@ -62,7 +62,7 @@ The current repository contains:
 | Version | Name | Phases | Status |
 |---------|------|--------|--------|
 | v1.08 | The Planning | — | Next — autonomous planning, version management |
-| v1.09 | The Learning | — | Not started |
+| v1.09 | The Knowledge | — | In planning — 6 phases, 41 tasks |
 | v1.10 | The Scheduler | — | Not started |
 | v1.11 | The Researcher | — | Not started |
 | v1.12 | The Integrator | — | Not started |
@@ -145,7 +145,7 @@ The 7 Red Team deliverables are:
                           ┌────┬────┼────┬────┐
                           │    │    │    │    │
                        v1.03  v1.04  v1.05  v1.09
-                       (Mem)  (Awr)  (Pri)  (Lrn)
+                       (Mem)  (Awr)  (Pri)  (Kno)
                           │    │      │      │
                        v1.07  v1.08   │    v1.10
                        (MemE) (AwrE)  │    (Plan)
@@ -166,12 +166,12 @@ v1.01 ──> v1.02
 v1.02 ──> v1.03 (Memory Foundation)
 v1.02 ──> v1.04 (Awareness Foundation)
 v1.02 ──> v1.05 (Privacy & Trust)
-v1.02 ──> v1.09 (Learning Foundation)
+v1.02 ──> v1.09 (Knowledge Management)
 v1.03 ──> v1.06 (Cognition Core)  [also needs v1.04]
 v1.03 ──> v1.07 (Memory Evolution)
 v1.04 ──> v1.06 (Cognition Core)  [also needs v1.03]
 v1.04 ──> v1.08 (Awareness Expansion)
-v1.06 ──> v1.09 (Learning Foundation)
+v1.06 ──> v1.09 (Knowledge Management)
 v1.06 ──> v1.10 (Planning & Orchestration)  [also needs v1.09]
 v1.06 ──> v1.11 (Interaction)  [also needs v1.08]
 v1.06 ──> v1.12 (Developer Intelligence)  [also needs v1.03]
@@ -191,7 +191,7 @@ v1.01 → v1.02 → v1.03 → v1.06 → v1.09 → v1.10 → v1.14
 
 **Critical Path Duration:** ~78 days (minimum, single-track)
 
-This chain determines the minimum time to full intelligence. Delays in any version on this chain delay the entire project. The chain passes through: Repository Restructure → Backend Architecture → Memory Foundation → Cognition Core → Learning Foundation → Planning & Orchestration → Advanced Intelligence.
+This chain determines the minimum time to full intelligence. Delays in any version on this chain delay the entire project. The chain passes through: Repository Restructure → Backend Architecture → Memory Foundation → Cognition Core → Knowledge Management → Planning & Orchestration → Advanced Intelligence.
 
 ---
 
@@ -203,7 +203,7 @@ Multiple versions can be developed simultaneously after v1.02 completes:
 TRACK A (Memory):     v1.03 ──────────────> v1.07
 TRACK B (Awareness):  v1.04 ──────────────> v1.08
 TRACK C (Privacy):    v1.05
-TRACK D (Learning):   v1.09 (after v1.06)
+TRACK D (Knowledge): v1.09 (after v1.06)
 TRACK E (Interaction):v1.11 (after v1.08, v1.06)
 TRACK F (Developer):  v1.12 (after v1.06, v1.03)
 TRACK G (Utility):    v1.13 (after v1.08, v1.09)
@@ -236,13 +236,13 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 | v1.06 | Cognition & Execution Core | Capability | 5 | 8 | 6-7 days |
 | v1.07 | Memory Evolution | Capability | 4 | 6 | 5-6 days |
 | v1.08 | Awareness Expansion | Capability | 5 | 10 | 6-7 days |
-| v1.09 | Learning Foundation | Capability | 5 | 10 | 7-8 days |
+| v1.09 | The Knowledge | Capability | 6 | 10 | 10-14 days |
 | v1.10 | Planning & Orchestration | Capability | 5 | 13 | 7-8 days |
 | v1.11 | Interaction & Communication | Capability | 5 | 12 | 7-8 days |
 | v1.12 | Developer Intelligence | Capability | 6 | 15 | 8-9 days |
 | v1.13 | Utility & Integration | Capability | 6 | 19 | 10-12 days |
 | v1.14 | Advanced Intelligence | Capability | 4 | 4 | 5-6 days |
-| **Total** | | | **76** | **120** | **~104-135 days** |
+| **Total** | | | **77** | **120** | **~107-140 days** |
 
 ### Phase Counts by Version
 
@@ -256,7 +256,7 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 | v1.06 | 5 | P01-P05 |
 | v1.07 | 4 | P01-P04 |
 | v1.08 | 5 | P01-P05 |
-| v1.09 | 5 | P01-P05 |
+| v1.09 | 6 | P01-P06 |
 | v1.10 | 5 | P01-P05 |
 | v1.11 | 5 | P01-P05 |
 | v1.12 | 6 | P01-P06 |
@@ -347,13 +347,13 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 **Duration:** 6-7 days
 **Location:** `.agents/plans/versions/v1.08/`
 
-#### v1.09: Learning Foundation
-**Question:** Can Cortex adapt?
+#### v1.09: The Knowledge — Knowledge Management
+**Question:** Can Cortex understand and remember what's in my files?
 **Type:** Capability delivery
-**What it does:** Preference, workflow, habit learning. Feedback, behavior adaptation, personalization, knowledge refinement, improvement, pattern recognition, anomaly detection
-**Capabilities:** L1, L2, L3, L4, L5, L6, L7, L8, L9, L10 (10)
-**Phases:** 5
-**Duration:** 7-8 days
+**What it does:** Directory-based knowledge ingestion, 13+ file type parsing, content chunking and embedding, semantic search, filesystem watchdog auto-sync, per-conversation memory toggle for RAG in chat, knowledge graph with force-directed visualization, per-source embedding model selection, incremental hash-based sync
+**Capabilities:** K1 (Knowledge Source Management), K2 (Content Parsing & Chunking), K3 (File Embedding & Vector Storage), K4 (Watchdog Auto-Sync), K5 (Incremental Re-Indexing), K6 (Chat Memory Integration), K7 (Knowledge Graph Relationships), K8 (Hybrid Semantic Search), K9 (Per-Source Embedding Config), K10 (Knowledge Graph Visualization) — 10 capabilities
+**Phases:** 6
+**Duration:** 10-14 days
 **Location:** `.agents/plans/versions/v1.09/`
 
 #### v1.10: Planning & Orchestration
@@ -459,7 +459,7 @@ This matrix maps every reference architecture feature to its implementing versio
 | v1.06 | v1.03 + v1.04 | v1.09, v1.10, v1.11, v1.12, v1.14 (reasoning, confidence, problem solving) | YES |
 | v1.07 | v1.03 | v1.14 (consolidation, evolution, cross-domain memory) | No — parallel track |
 | v1.08 | v1.04 | v1.11, v1.13 (desktop, terminal, browser, calendar, email awareness) | No — parallel track |
-| v1.09 | v1.02 + v1.06 | v1.10, v1.13 (preference, workflow, habit learning) | YES — via v1.10 |
+| v1.09 | v1.02 + v1.06 | v1.10, v1.13 (directory sync, knowledge search) | YES — via v1.10 |
 | v1.10 | v1.09 + v1.06 | v1.14 (planning, decomposition, scheduling, orchestration) | YES |
 | v1.11 | v1.06 + v1.08 | v1.14 (voice, command palette, proactive, multi-modal) | No — parallel track |
 | v1.12 | v1.06 + v1.03 | None (terminal — no downstream versions) | No — parallel track |
@@ -478,8 +478,8 @@ v1.01 → v1.02 → v1.03 → v1.06 → v1.09 → v1.10 → v1.14
 
 **Why this is the critical path:**
 1. v1.03 (Memory Foundation) feeds into v1.06 (Cognition) — you can't think without memory
-2. v1.06 (Cognition) feeds into v1.09 (Learning) — you can't learn without cognition
-3. v1.09 (Learning) feeds into v1.10 (Planning) — you can't plan without learning
+2. v1.06 (Cognition) feeds into v1.09 (Knowledge) — knowledge understanding builds on cognition
+3. v1.09 (Knowledge) feeds into v1.10 (Planning) — planning benefits from indexed knowledge
 4. v1.10 (Planning) feeds into v1.14 (Advanced Intelligence) — you can't strategize without planning
 
 **Non-critical parallel tracks that can accelerate delivery:**
@@ -561,13 +561,13 @@ Build thinking, deepen memory, extend awareness. v1.06 requires both v1.03 and v
 **v1.07 (5-6 days):** Procedural memory, consolidation, knowledge evolution, cross-domain memory.
 **v1.08 (6-7 days):** Desktop, terminal, browser, clipboard, calendar, email, workspace, notification awareness.
 
-### Stage 4: Learning (v1.09)
-Build adaptation and personalization. Depends on v1.06 (cognition).
+### Stage 4: Knowledge Management (v1.09)
+Build file knowledge understanding, semantic search, and knowledge graph. Depends on v1.02 + v1.06 (architecture + cognition).
 
-**v1.09 (7-8 days):** Preference, workflow, habit learning. Behavior adaptation. Pattern recognition. Anomaly detection.
+**v1.09 (10-14 days):** Directory ingestion, file parsing & chunking, embedding & vector storage, watchdog auto-sync, chat memory toggle, knowledge graph, hybrid search.
 
 ### Stage 5: Planning + Orchestration (v1.10)
-Build task decomposition, scheduling, and autonomous operation. Depends on v1.09 (learning) + v1.06 (cognition).
+Build task decomposition, scheduling, and autonomous operation. Depends on v1.09 (knowledge) + v1.06 (cognition).
 
 **v1.10 (7-8 days):** Planning, decomposition, decision support, goal management, scheduling, parallel execution, rollback.
 
@@ -597,7 +597,7 @@ Build the final intelligence capabilities. Depends on v1.10 (planning) + v1.11 (
 | v1.06 | Cortex thinks | Reasoning, confidence, problem solving | 30 |
 | v1.07 | Memory deepens | Consolidation, evolution, cross-domain | 36 |
 | v1.08 | Awareness extends | Desktop, terminal, calendar, email | 46 |
-| v1.09 | Cortex adapts | Learns preferences, workflows, habits | 56 |
+| v1.09 | Cortex knows files | Understands file contents, search, knowledge graph | 56 |
 | v1.10 | Cortex plans | Task decomposition, scheduling, orchestration | 69 |
 | v1.11 | Cortex communicates | Voice, proactive, multi-modal | 81 |
 | v1.12 | Cortex codes | Deep code understanding, review, generation | 96 |
@@ -724,7 +724,7 @@ Each subsystem gets its own spec → plan → implement cycle. Never implement m
 | v1.06 | Cognition Core | 6-7 days | 6-7 days | — | No change |
 | v1.07 | Memory Evolution | 5-6 days | 5-6 days | — | No change |
 | v1.08 | Awareness Expansion | 6-7 days | 6-7 days | — | No change |
-| v1.09 | Learning Foundation | 7-8 days | 7-8 days | — | No change |
+| v1.09 | The Knowledge | 7-8 days | 10-14 days | +3-6d | Expanded from abstract learning to concrete knowledge management |
 | v1.10 | Planning & Orchestration | 7-8 days | 7-8 days | — | No change |
 | v1.11 | Interaction | 7-8 days | 7-8 days | — | No change |
 | v1.12 | Developer Intelligence | 8-9 days | 8-9 days | — | No change |
@@ -787,7 +787,7 @@ Current v1.03 (Memory) before v1.06 (Cognition/Execution). Memory systems are de
 v1.05 (Privacy) after v1.03 (Memory) but before v1.06 (Cognition). Privacy architecture should wrap the agent loop from the start. **Verdict:** Partially correct. Prompt security in v1.02, full privacy in v1.05.
 
 **Issue 3: Learning Before Planning**
-v1.09 (Learning) before v1.10 (Planning). **Verdict:** CORRECT. Keep as-is. Learning provides preference/pattern data that planning uses. The dependency is one-directional: Learning → Planning.
+v1.09 (Knowledge) before v1.10 (Planning). **Verdict:** CORRECT. Keep as-is. Knowledge provides file understanding data that planning uses. The dependency is one-directional: Knowledge → Planning.
 
 **Issue 4: Developer Intelligence Too Late**
 v1.12 (Developer Intelligence) near the end. Would be helpful during v1.03-v1.11 implementation. **Verdict:** WORTH CONSIDERING but not critical. The team can use existing tools during development.
@@ -808,7 +808,7 @@ v1.05  Privacy and Trust          (10-16 days) -- unchanged
 v1.06  Cognition Core             (13-20 days) -- unchanged
 v1.07  Memory Evolution           (10-16 days) -- unchanged
 v1.08  Awareness Expansion        (14-22 days) -- unchanged
-v1.09  Learning Foundation        (13-20 days) -- unchanged
+v1.09  Knowledge Management    (10-14 days) -- expanded from Learning to Knowledge
 v1.10  Planning and Orchestration (16-24 days) -- unchanged
 v1.11  Interaction                (14-22 days) -- unchanged
 v1.12  Developer Intelligence     (16-24 days) -- unchanged
@@ -831,7 +831,7 @@ v1.05  Privacy and Trust          (10-16 days)
 v1.06  Cognition Core             (13-20 days)
 v1.07  Memory Evolution           (10-16 days)
 v1.08  Awareness + Basic Utility  (18-28 days) -- merge Calendar/Tasks from v1.13
-v1.09  Learning Foundation        (13-20 days)
+v1.09  Knowledge Management    (10-14 days)
 v1.10  Planning and Orchestration (16-24 days)
 v1.11  Interaction                (14-22 days)
 v1.12  Developer Intelligence     (16-24 days)
@@ -855,8 +855,8 @@ v1.01 -> v1.02 -> v1.03 -> v1.07 -> v1.06 -> v1.09 -> v1.10 -> v1.14
 - v1.02 (architecture) must come before capabilities — correct
 - v1.03 (memory) must come before v1.07 (memory evolution) — correct
 - v1.07 (memory evolution) before v1.06 (cognition) — DEBATABLE. Basic memory should suffice for cognition.
-- v1.06 (cognition) before v1.09 (learning) — correct. Learning needs cognition to evaluate.
-- v1.09 (learning) before v1.10 (planning) — correct. Planning benefits from learned patterns.
+- v1.06 (cognition) before v1.09 (knowledge) — correct. Knowledge needs cognition to evaluate.
+- v1.09 (knowledge) before v1.10 (planning) — correct. Planning benefits from indexed knowledge.
 - v1.10 (planning) before v1.14 (advanced) — correct.
 
 **Issue:** v1.07 → v1.06 dependency is questionable. Consider swapping or making them parallel.

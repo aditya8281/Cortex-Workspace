@@ -81,7 +81,7 @@ CORTEX is built across 14 executable versions (v1.01–v1.14), preceded by a bas
 | **v1.06** | The Developer | Skills, hooks, commands, developer ecosystem | ✅ |
 | **v1.07** | The Interaction | SSE streaming UI, chat interface, agent dashboard | ✅ |
 | **v1.08** | The Planning | Autonomous planning, version management, progress tracking | Next |
-| **v1.09** | The Learning | Preference learning, pattern recognition, outcome tracking | — |
+| **v1.09** | The Knowledge | Directory-based knowledge ingestion, file parsing & chunking, embedding & vector storage, watchdog auto-sync, chat memory toggle, knowledge graph, hybrid semantic search | In planning — 6 phases, 41 tasks |
 | **v1.10** | The Scheduler | Cron-based task scheduling, recurring agent actions | — |
 | **v1.11** | The Researcher | Web search, deep research, citation management | — |
 | **v1.12** | The Integrator | External service connectors, API gateway | — |
@@ -98,7 +98,7 @@ CORTEX is built across 14 executable versions (v1.01–v1.14), preceded by a bas
 | **v5** | The Workspace | Email, calendar, tasks, notes, documents, contacts |
 | **v6** | The Ecosystem | Marketplace, graph intelligence, cross-encoder, polish |
 
-**Current state:** v1.01–v1.07 complete. Backend production-ready. Frontend fully built — 30 pages (20 real + 10 Coming Soon), 84 components. Next: v1.08 (The Planning).
+**Current state:** v1.01–v1.07 complete. v1.09 (The Knowledge) in planning — 6 phases, 41 tasks. Backend production-ready. Frontend fully built — 30 pages (20 real + 10 Coming Soon), 84 components. Next: v1.08 (The Planning).
 
 ## Execution Contract
 
