@@ -10,7 +10,7 @@ import { CompareView } from "./components/CompareView";
 import { DownloadsView } from "./components/DownloadsView";
 import { InstalledView } from "./components/InstalledView";
 import { ModelDetailModal } from "./components/ModelDetailModal";
-import { catalog } from "./api";
+import { catalog, downloads, getDefaultModel, setDefaultModel } from "./api";
 import { DownloadProvider } from "@/shared/downloads/DownloadProvider";
 import { DockedDownloadPanel } from "./components/DockedDownloadPanel";
 import { Card } from "@/shared/ui/Card";
@@ -73,7 +73,38 @@ export default function ModelsPage() {
     loadHardware();
   }, [loadHardware]);
 
+  // State for default model
+  const [defaultModel, setDefaultModelState] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDefaultModelState(getDefaultModel());
+  }, []);
+
   // ── Handlers ─────────────────────────────────────────────────────────────
+
+  const handleOpenChat = useCallback((_modelId: string) => {
+    router.push("/chat");
+  }, [router]);
+
+  const handleSetDefaultModel = useCallback((modelId: string) => {
+    setDefaultModel(modelId);
+    setDefaultModelState(modelId);
+  }, []);
+
+  const handleDeleteModel = useCallback(
+    async (modelId: string) => {
+      try {
+        await downloads.deleteLocal(modelId);
+        if (defaultModel === modelId) {
+          setDefaultModelState(null);
+          localStorage.removeItem("cortex_default_model");
+        }
+      } catch {
+        // ignore — InstalledView handles its own error state
+      }
+    },
+    [defaultModel],
+  );
 
   const handleToggleCompare = useCallback((modelId: string) => {
     setCompareSelectedIds((prev) => {
@@ -236,7 +267,13 @@ export default function ModelsPage() {
           {activeTab === "downloads" && <DownloadsView />}
 
           {activeTab === "installed" && (
-            <InstalledView onViewDetail={handleViewDetail} />
+            <InstalledView
+              hardware={hardware}
+              onDelete={handleDeleteModel}
+              onOpenChat={handleOpenChat}
+              onSetDefault={handleSetDefaultModel}
+              defaultModel={defaultModel}
+            />
           )}
         </div>
       </div>

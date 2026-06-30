@@ -1,206 +1,169 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import type { InstalledModel } from "../api";
-import { downloads, setDefaultModel, getDefaultModel, formatBytes, formatParamCount } from "../api";
+import { useState, useEffect, useCallback } from "react";
+import type { FamilySummary, HardwareInfo, ModelFamiliesResponse } from "@/features/developer/api";
+import { catalog } from "@/features/developer/api";
 import { Card } from "@/shared/ui/Card";
 import { Badge } from "@/shared/ui/Badge";
 import { Button } from "@/shared/ui/Button";
-import { Modal } from "@/shared/ui/Modal";
-import { Skeleton } from "@/shared/ui/Skeleton";
 import { EmptyState } from "@/shared/ui/EmptyState";
-import { useDownloadContext } from "@/shared/downloads/DownloadProvider";
+import { Skeleton } from "@/shared/ui/Skeleton";
 
 interface InstalledViewProps {
-  onViewDetail: (modelId: string) => void;
+  hardware: HardwareInfo | null;
+  onDelete: (modelId: string) => void;
+  onOpenChat: (modelId: string) => void;
+  onSetDefault: (modelId: string) => void;
+  defaultModel: string | null;
 }
 
-export function InstalledView({ onViewDetail }: InstalledViewProps) {
-  const { actions } = useDownloadContext();
-  const [models, setModels] = useState<InstalledModel[]>([]);
+export function InstalledView({
+  hardware,
+  onDelete,
+  onOpenChat,
+  onSetDefault,
+  defaultModel,
+}: InstalledViewProps) {
+  const [data, setData] = useState<ModelFamiliesResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [defaultModelId, setDefaultModelId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<InstalledModel | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const loadInstalled = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await downloads.installed();
-      setModels(res.models);
-    } catch {
-      // ignore
+      const result = await catalog.families();
+      // Filter to families where default variant is downloaded
+      const installedFamilies = result.families.filter(
+        (fam) => fam.default_variant.downloaded
+      );
+      setData({
+        ...result,
+        families: installedFamilies,
+      });
+    } catch (e: any) {
+      setError(e.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    load();
-    setDefaultModelId(getDefaultModel());
   }, []);
 
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      await downloads.syncInstalled();
-      await load();
-    } catch {
-      // ignore
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleSetDefault = (modelId: string) => {
-    setDefaultModel(modelId);
-    setDefaultModelId(modelId);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await actions.deleteLocal(deleteTarget.model_id);
-      setModels(prev => prev.filter(m => m.model_id !== deleteTarget.model_id));
-      if (defaultModelId === deleteTarget.model_id) {
-        setDefaultModelId(null);
-        localStorage.removeItem("cortex_default_model");
-      }
-      setDeleteTarget(null);
-    } catch (e: any) {
-      setDeleteError(e.message ?? "Failed to delete model");
-    } finally {
-      setDeleting(false);
-    }
-  };
+  useEffect(() => { loadInstalled(); }, [loadInstalled]);
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="p-4">
-            <div className="space-y-3">
-              <Skeleton className="h-5 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-3 w-1/3" />
-            </div>
-          </Card>
+      <div className="space-y-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 w-full rounded-lg" />
         ))}
       </div>
     );
   }
 
-  if (models.length === 0) {
+  if (error) {
+    return (
+      <div className="rounded-lg bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-danger">
+        {error}
+        <Button size="sm" variant="ghost" className="ml-2" onClick={loadInstalled}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (!data || data.families.length === 0) {
     return (
       <EmptyState
         title="No models installed"
-        description="Browse the catalog to download your first model"
+        description="Download a model from the Browse tab to get started"
       />
     );
   }
 
+  // Compute storage summary
+  const totalSizeGb = data.families.reduce(
+    (acc, fam) => acc + (fam.default_variant.size_gb ?? 0), 0
+  );
+
   return (
-    <>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-text-secondary">
-          {models.length} model{models.length !== 1 ? "s" : ""} installed
-        </p>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={handleSync}
-          disabled={syncing}
-        >
-          {syncing ? "Syncing..." : "Sync from Ollama"}
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {models.map(model => {
-          const isDefault = model.model_id === defaultModelId;
-          const primaryVariant = model.variants?.[0];
-
-          return (
-            <Card key={model.model_id} className="p-4 flex flex-col gap-3" role="article" aria-label={model.display_name}>
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-title font-semibold text-text-primary leading-tight truncate min-w-0">
-                  {model.display_name}
-                </h3>
-                {isDefault && <Badge variant="success">Default</Badge>}
-              </div>
-
-              <p className="text-xs text-text-muted">
-                {formatParamCount(model.parameter_count)} · {primaryVariant ? formatBytes(primaryVariant.size_bytes) : "?"} · {primaryVariant?.quantization ?? "?"}
-              </p>
-
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {model.capabilities?.map((cap) => (
-                  <Badge key={cap} variant="default">{cap}</Badge>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 mt-auto pt-1">
-                {!isDefault && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleSetDefault(model.model_id)}
-                  >
-                    Set as Default
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onViewDetail(model.model_id)}
-                >
-                  View Details
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-auto text-danger hover:text-danger"
-                  onClick={() => setDeleteTarget(model)}
-                  aria-label={`Delete ${model.display_name}`}
-                >
-                  Delete
-                </Button>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Delete confirmation */}
-      <Modal
-        open={!!deleteTarget}
-        onClose={() => { setDeleteTarget(null); setDeleteError(null); }}
-        title="Delete Model"
-      >
-        <p className="text-sm text-text-secondary mb-4">
-          Delete <span className="font-mono text-text-primary">{deleteTarget?.display_name}</span>? This will remove it from Ollama.
-        </p>
-        {deleteError && (
-          <div className="mb-4 rounded-lg border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
-            {deleteError}
-          </div>
-        )}
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => { setDeleteTarget(null); setDeleteError(null); }}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="bg-danger hover:bg-danger/80"
-          >
-            {deleting ? "Deleting..." : "Delete"}
-          </Button>
+    <div className="space-y-6">
+      {/* Storage summary */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-text-primary">
+            Installed Models
+          </h3>
+          <span className="text-xs text-text-muted">
+            {totalSizeGb.toFixed(1)} GB used
+          </span>
         </div>
-      </Modal>
-    </>
+        <div className="h-2 rounded-full bg-bg-surface overflow-hidden">
+          <div
+            className="h-full rounded-full bg-accent"
+            style={{ width: `${Math.min(100, (totalSizeGb / 500) * 100)}%` }}
+          />
+        </div>
+        <p className="text-xs text-text-muted mt-1">
+          {data.families.length} families · {data.total_models} total models
+        </p>
+      </Card>
+
+      {/* Installed families */}
+      <div className="space-y-4">
+        {data.families.map((fam) => (
+          <Card key={fam.family} className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-text-primary">
+                {fam.display_name}
+              </h3>
+              <div className="flex items-center gap-2">
+                {fam.default_variant.model_id === defaultModel && (
+                  <Badge variant="success">Default</Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="text-xs text-text-muted mb-3">
+              {fam.model_count} variant{fam.model_count !== 1 ? "s" : ""} ·{" "}
+              {fam.default_variant.size_gb} GB
+            </div>
+
+            {/* Capabilities */}
+            <div className="flex items-center gap-1.5 mb-3">
+              {fam.capabilities.map((cap) => (
+                <Badge key={cap} variant="default">{cap}</Badge>
+              ))}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => onOpenChat(fam.default_variant.model_id)}
+              >
+                Open Chat
+              </Button>
+              {fam.default_variant.model_id !== defaultModel && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onSetDefault(fam.default_variant.model_id)}
+                >
+                  Set Default
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onDelete(fam.default_variant.model_id)}
+              >
+                Delete
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }
