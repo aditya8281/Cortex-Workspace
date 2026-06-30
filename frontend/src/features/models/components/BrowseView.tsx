@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { ModelWithFit, ModelRecommendation, HardwareInfo, RamFitStatus } from "../api";
-import { catalog, calculateRamFit, getDefaultModel } from "../api";
-import { formatParamCount } from "../api";
-import { Card } from "@/shared/ui/Card";
+import type { FamilySummary, HardwareInfo, ModelFamiliesResponse } from "@/features/developer/api";
+import { catalog } from "@/features/developer/api";
+import { calculateRamFit, getDefaultModel } from "@/features/models/api";
 import { Badge } from "@/shared/ui/Badge";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Skeleton } from "@/shared/ui/Skeleton";
-import { ModelCard } from "./ModelCard";
+import { FamilyCard } from "./FamilyCard";
+import { EmbeddingSection } from "./EmbeddingSection";
 
 interface BrowseViewProps {
   hardware: HardwareInfo | null;
@@ -31,8 +31,7 @@ export function BrowseView({
   onToggleCompare,
   compareDisabled,
 }: BrowseViewProps) {
-  const [models, setModels] = useState<ModelWithFit[]>([]);
-  const [recommended, setRecommended] = useState<ModelRecommendation[]>([]);
+  const [data, setData] = useState<ModelFamiliesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,8 +39,7 @@ export function BrowseView({
   const [capabilityFilter, setCapabilityFilter] = useState<string[]>([]);
   const [sizeFilter, setSizeFilter] = useState<SizeFilter>(null);
   const [sort, setSort] = useState<string>("relevance");
-  const [totalCount, setTotalCount] = useState(0);
-  const defaultModel = getDefaultModel();
+  const ram_gb = hardware?.ram_gb ?? 32;
 
   // Debounce search
   useEffect(() => {
@@ -49,172 +47,108 @@ export function BrowseView({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const loadModels = useCallback(async () => {
+  const loadFamilies = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      let result;
-      if (debouncedQuery) {
-        const caps = capabilityFilter.length > 0 ? capabilityFilter.join(",") : undefined;
-        result = await catalog.search({ q: debouncedQuery, capabilities: caps, limit: 200 });
-        result = { ...result, models: result.models.map(m => enrichModel(m)) };
-      } else {
-        const res = await catalog.list({ downloaded_only: false });
-        let enriched = res.models.map(m => enrichModel(m));
-
-        // Client-side capability filter
-        if (capabilityFilter.length > 0) {
-          enriched = enriched.filter(m =>
-            capabilityFilter.some(c => m.capabilities.includes(c))
-          );
-        }
-
-        result = { models: enriched, total_count: res.total_count };
-      }
-
-      // Client-side size filter
-      let filtered = result.models;
-      if (sizeFilter) {
-        filtered = filtered.filter(m => {
-          const params = m.parameter_count ?? 0;
-          if (sizeFilter === "small") return params < 4_000_000_000;
-          if (sizeFilter === "medium") return params >= 4_000_000_000 && params <= 14_000_000_000;
-          return params > 14_000_000_000;
-        });
-      }
-
-      // Sort
-      if (sort !== "relevance") {
-        filtered.sort((a, b) => {
-          if (sort === "size_asc") return (a.size_bytes ?? 0) - (b.size_bytes ?? 0);
-          if (sort === "size_desc") return (b.size_bytes ?? 0) - (a.size_bytes ?? 0);
-          if (sort === "params_asc") return (a.parameter_count ?? 0) - (b.parameter_count ?? 0);
-          if (sort === "params_desc") return (b.parameter_count ?? 0) - (a.parameter_count ?? 0);
-          return 0;
-        });
-      }
-
-      setModels(filtered);
-      setTotalCount(result.total_count);
+      const result = await catalog.families();
+      setData(result);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [debouncedQuery, capabilityFilter, sizeFilter, sort, hardware]);
-
-  const enrichModel = (m: any): ModelWithFit => {
-    const ram = hardware?.ram_gb ?? 32;
-    const minRam = m.hardware_requirements?.min_ram_gb ?? null;
-    const { percent, status } = calculateRamFit(ram, minRam);
-    return {
-      ...m,
-      model_id: m.name, // Detail modal uses model_id; catalog returns name
-      ramFitPercent: percent,
-      ramFitStatus: status,
-      isDefault: m.name === defaultModel,
-    };
-  };
-
-  useEffect(() => { loadModels(); }, [loadModels]);
-
-  // Load recommended on mount
-  useEffect(() => {
-    catalog.recommended().then(res => {
-      const all = Object.values(res.workloads).flatMap(w => w.recommendations ?? []);
-      setRecommended(all.slice(0, 4));
-    }).catch(() => {
-      // Recommended is non-critical — show browse without recommendations
-    });
   }, []);
 
-  const toggleCapability = (cap: string) => {
-    setCapabilityFilter(prev =>
-      prev.includes(cap) ? prev.filter(c => c !== cap) : [...prev, cap]
+  useEffect(() => { loadFamilies(); }, [loadFamilies]);
+
+  if (!data && loading) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 w-full rounded-lg" />
+        ))}
+      </div>
     );
-  };
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-danger">
+        {error}
+        <Button size="sm" variant="ghost" className="ml-2" onClick={loadFamilies}>
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  // Filter families
+  let filteredFamilies = data.families.filter((fam) => {
+    if (debouncedQuery) {
+      const q = debouncedQuery.toLowerCase();
+      if (
+        !fam.family.toLowerCase().includes(q) &&
+        !fam.display_name.toLowerCase().includes(q) &&
+        !fam.default_variant.model_id.toLowerCase().includes(q)
+      ) {
+        return false;
+      }
+    }
+
+    if (capabilityFilter.length > 0) {
+      if (!capabilityFilter.some((c) => fam.capabilities.includes(c))) {
+        return false;
+      }
+    }
+
+    if (sizeFilter) {
+      const params = fam.param_range[1] ?? 0;
+      if (sizeFilter === "small" && params >= 4) return false;
+      if (sizeFilter === "medium" && (params < 4 || params > 14)) return false;
+      if (sizeFilter === "large" && params <= 14) return false;
+    }
+
+    return true;
+  });
+
+  // Sort
+  if (sort !== "relevance") {
+    filteredFamilies = [...filteredFamilies].sort((a, b) => {
+      if (sort === "size_asc") return (a.default_variant.size_bytes ?? 0) - (b.default_variant.size_bytes ?? 0);
+      if (sort === "size_desc") return (b.default_variant.size_bytes ?? 0) - (a.default_variant.size_bytes ?? 0);
+      if (sort === "params_asc") return (a.param_range[1] ?? 0) - (b.param_range[1] ?? 0);
+      if (sort === "params_desc") return (b.param_range[1] ?? 0) - (a.param_range[1] ?? 0);
+      return 0;
+    });
+  }
 
   const capabilities = ["chat", "code", "vision"];
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    setRefreshMessage(null);
-    try {
-      const res = await catalog.refresh();
-      setRefreshMessage(res.message ?? "Catalog refresh started");
-      // Re-load models after a short delay to let background refresh start
-      setTimeout(() => loadModels(), 2000);
-    } catch (e: any) {
-      setRefreshMessage(e.message ?? "Refresh failed");
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Recommended */}
-      {recommended.length > 0 && !debouncedQuery && (
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary mb-3">
-            Recommended for your hardware
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-            {recommended.map(rec => (
-              <Card key={rec.model_id} className="p-3">
-                <p className="text-sm font-medium text-text-primary mb-1">
-                  {rec.display_name}
-                </p>
-                <p className="text-xs text-text-muted mb-2 line-clamp-2">
-                  {rec.explanation?.why ?? rec.description}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Badge variant="default">{formatParamCount(rec.parameter_count)}</Badge>
-                  <span className="text-[0.625rem] text-text-muted">
-                    score: {Math.round(rec.score * 100)}%
-                  </span>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
-        {/* Refresh catalog */}
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="text-xs"
-          >
-            {refreshing ? "Refreshing..." : "Refresh Catalog"}
-          </Button>
-          {refreshMessage && !refreshing && (
-            <span className="text-[0.625rem] text-text-muted">{refreshMessage}</span>
-          )}
-        </div>
         <div className="flex-1 min-w-[200px]">
           <Input
             label="Search models"
-            placeholder="Search by name, capability..."
+            placeholder="Search by name, family..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        {/* Capability chips */}
         <div className="flex items-center gap-1.5">
-          {capabilities.map(cap => (
+          {capabilities.map((cap) => (
             <button
               key={cap}
-              onClick={() => toggleCapability(cap)}
+              onClick={() =>
+                setCapabilityFilter((prev) =>
+                  prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap]
+                )
+              }
               className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-150 ${
                 capabilityFilter.includes(cap)
                   ? "bg-accent/12 text-accent"
@@ -226,9 +160,8 @@ export function BrowseView({
           ))}
         </div>
 
-        {/* Size filter */}
         <div className="flex items-center gap-1.5">
-          {(["small", "medium", "large"] as const).map(size => (
+          {(["small", "medium", "large"] as const).map((size) => (
             <button
               key={size}
               onClick={() => setSizeFilter(sizeFilter === size ? null : size)}
@@ -243,12 +176,11 @@ export function BrowseView({
           ))}
         </div>
 
-        {/* Sort */}
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value)}
-          className="h-9 rounded-md border border-border-default bg-bg-surface px-2.5 text-xs text-text-secondary focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none"
-          aria-label="Sort models"
+          className="h-9 rounded-md border border-border-default bg-bg-surface px-2.5 text-xs text-text-secondary"
+          aria-label="Sort families"
         >
           <option value="relevance">Relevance</option>
           <option value="size_asc">Size ↑</option>
@@ -260,53 +192,37 @@ export function BrowseView({
 
       {/* Results count */}
       <p className="text-xs text-text-muted">
-        {totalCount > 0 ? `${totalCount} models` : ""}
+        {filteredFamilies.length} families · {data.total_models} models
       </p>
 
-      {/* Error */}
-      {error && (
-        <div className="rounded-lg bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-danger">
-          {error}
-          <Button size="sm" variant="ghost" className="ml-2" onClick={loadModels}>
-            Retry
-          </Button>
-        </div>
-      )}
-
-      {/* Card grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="p-4">
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-3 w-1/3" />
-                <Skeleton className="h-1.5 w-full rounded-full" />
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : models.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {models.map((model, i) => (
-            <ModelCard
-              key={`${model.model_id}-${i}`}
-              model={model}
+      {/* Families grid */}
+      {filteredFamilies.length > 0 ? (
+        <div className="space-y-4">
+          {filteredFamilies.map((fam) => (
+            <FamilyCard
+              key={fam.family}
+              family={fam}
+              ram_gb={ram_gb}
               onDownload={onDownload}
               onViewDetail={onViewDetail}
-              compareSelected={compareSelectedIds.includes(model.model_id)}
               onToggleCompare={onToggleCompare}
-              compareDisabled={compareDisabled}
+              compareSelectedIds={compareSelectedIds}
             />
           ))}
         </div>
       ) : (
         <EmptyState
-          title="No models found"
-          description={searchQuery ? "Try a different search query or filters" : "No models available in catalog"}
+          title="No families found"
+          description={searchQuery ? "Try a different search query or filters" : "No models available"}
         />
       )}
+
+      {/* Embedding models section */}
+      <EmbeddingSection
+        families={data.embedding_families}
+        onDownload={onDownload}
+        onViewDetail={onViewDetail}
+      />
     </div>
   );
 }
