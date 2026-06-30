@@ -67,7 +67,8 @@ async def list_models(
         param_size = model.get("parameter_size", "")
 
         # Skip models with no parameter count (cloud-only or incomplete data)
-        param_count = _guess_param_count(param_size or base)
+        # Prefer param count from model name (e.g. "qwen3:8b" → 8B) over seed data
+        param_count = _guess_param_count(name) or _guess_param_count(param_size or base)
         if param_count is None:
             continue
 
@@ -89,7 +90,12 @@ async def list_models(
         desc = model.get("description", "")
         if not desc or desc.startswith("Ollama model:"):
             size_gb = size_bytes / (1024**3)
-            desc = f"{param_size or '?'} parameter model ({size_gb:.1f} GB)"
+            # Use param_count (from name) instead of seed param_size
+            if param_count >= 1:
+                pc_str = f"{param_count:.1f}B" if param_count % 1 else f"{int(param_count)}B"
+            else:
+                pc_str = f"{param_count * 1000:.0f}M"
+            desc = f"{pc_str} parameter model ({size_gb:.1f} GB)"
             if family:
                 desc += f" from {family} family"
 
@@ -345,19 +351,74 @@ async def get_model_detail(
     db: Session = Depends(get_db),
 ):
     """Get detailed model info with variants."""
+    # Try full tag first (qwen3:8b), then base name (qwen3)
+    base = model_id.split(":")[0]
     model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == model_id)).scalar_one_or_none()
-
     if not model:
-        raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+        model = db.execute(select(ModelCatalog).where(ModelCatalog.model_id == base)).scalar_one_or_none()
 
-    variants = db.execute(select(ModelVariant).where(ModelVariant.model_catalog_id == model.id)).scalars().all()
+    # If not in DB, build from Ollama catalog data
+    catalog_info: dict[str, Any] | None = None
+    if not model:
+        from backend.app.services.intelligence.ollama_catalog import get_ollama_catalog
+        catalog_models, _ = await get_ollama_catalog()
+        for cm in catalog_models:
+            if cm.get("name") == model_id or cm.get("name") == base:
+                catalog_info = cm
+                break
+
+    if not model and not catalog_info:
+        raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
 
     # Check if model is downloaded via Ollama
     available = await llm_manager.list_all_models()
     available_names = {m.name for m in available}
-    downloaded = model.model_id in available_names or model.model_id.split(":")[0] in available_names
+    resolved_id = model.model_id if model else model_id
+    resolved_base = resolved_id.split(":")[0]
+    downloaded = resolved_id in available_names or resolved_base in available_names
 
-    # Derive parameter_size from parameter_count
+    # Build from catalog (Ollama JSON) when not in DB
+    if catalog_info and not model:
+        size_bytes = catalog_info.get("size", catalog_info.get("size_bytes", 0)) or 0
+        param_size = catalog_info.get("parameter_size", "")
+        # Prefer param count from model name over seed data
+        param_count = _guess_param_count(resolved_id) or _guess_param_count(param_size or resolved_base) or 0
+        if param_count >= 1:
+            pc_str = f"{param_count:.1f}B" if param_count != int(param_count) else f"{int(param_count)}B"
+        else:
+            pc_str = f"{param_count * 1000:.0f}M"
+        family = catalog_info.get("family", "")
+        caps = catalog_info.get("capabilities", ["chat"])
+        size_gb = size_bytes / (1024**3)
+        desc = catalog_info.get("description", "")
+        if not desc or desc.startswith("Ollama model:"):
+            desc = f"{pc_str} parameter model ({size_gb:.1f} GB)"
+            if family:
+                desc += f" from {family} family"
+
+        return {
+            "model_id": resolved_id,
+            "display_name": resolved_id.replace("-", " ").title(),
+            "family": family,
+            "parameter_count": param_count,
+            "parameter_size": pc_str,
+            "architecture": None,
+            "context_length_default": catalog_info.get("context_length", 4096),
+            "context_length_max": None,
+            "capabilities": caps,
+            "license": None,
+            "recommended_use_cases": [],
+            "description": desc,
+            "tags": [],
+            "benchmarks": None,
+            "downloaded": downloaded,
+            "variants": [],
+        }
+
+    # Path for models in DB
+    assert model is not None
+    variants = db.execute(select(ModelVariant).where(ModelVariant.model_catalog_id == model.id)).scalars().all()
+
     param_size = None
     if model.parameter_count:
         if model.parameter_count >= 1000:
@@ -512,11 +573,11 @@ def _estimate_hardware(size_bytes: int) -> dict:
     """Rough RAM requirements based on model size in bytes."""
     if not size_bytes:
         return {"min_ram_gb": 4, "recommended_ram_gb": 8}
-    ram_gb = (size_bytes / (1024**3)) * 1.2
-    return {
-        "min_ram_gb": max(2, int(ram_gb)),
-        "recommended_ram_gb": max(4, int(ram_gb * 1.5)),
-    }
+    ram_gb = size_bytes / (1024**3)
+    # Add overhead for KV cache and framework
+    min_ram = max(4, int(ram_gb * 1.2))
+    rec_ram = max(8, int(ram_gb * 1.8))
+    return {"min_ram_gb": min_ram, "recommended_ram_gb": rec_ram}
 
 
 def _detect_hardware() -> dict:

@@ -109,6 +109,7 @@ export function BrowseView({
     const { percent, status } = calculateRamFit(ram, minRam);
     return {
       ...m,
+      model_id: m.name, // Detail modal uses model_id; catalog returns name
       ramFitPercent: percent,
       ramFitStatus: status,
       isDefault: m.name === defaultModel,
