@@ -1,4 +1,4 @@
-Last updated: 2026-06-28
+Last updated: 2026-06-30
 
 # CORTEX API Reference
 
@@ -242,12 +242,17 @@ All routes under `/api/v1/` (developer router has no prefix).
 | Route | Method | Purpose |
 |-------|--------|---------|
 | `/api/v1/models` | GET | Model catalog listing |
-| `/api/v1/models/catalog` | GET | Full catalog with variants |
-| `/api/v1/models/{modelId}/details` | GET | Model details |
-| `/api/v1/models/compare` | GET | Compare models side-by-side |
+| `/api/v1/models/refresh` | POST | Refresh model catalog |
 | `/api/v1/models/recommended` | GET | Recommended models for hardware |
+| `/api/v1/models/hardware` | GET | Hardware info for recommendations |
 | `/api/v1/models/search` | GET | Search models |
+| `/api/v1/models/autocomplete` | GET | Model name autocomplete |
+| `/api/v1/models/compare` | POST | Compare models side-by-side |
+| `/api/v1/models/{modelId}` | GET | Model details |
+| `/api/v1/models/{modelId}/inference-config` | GET | Inference configuration for model |
 | `/api/v1/me/github` | GET | GitHub connection info |
+| `/api/v1/me/github` | POST | Connect GitHub account |
+| `/api/v1/me/github` | DELETE | Disconnect GitHub account |
 
 ## Integration Domain
 
@@ -264,7 +269,12 @@ All routes under `/api/v1/` (integration router has no prefix).
 | `/api/v1/models/{name}/download` | POST | Start download |
 | `/api/v1/models/{name}/progress` | GET | Download progress |
 | `/api/v1/models/{name}/cancel` | POST | Cancel download |
-| `/api/v1/models/{name}` | DELETE | Remove model |
+| `/api/v1/models/{name}/local` | DELETE | Remove model from local storage |
+| `/api/v1/models/downloads/{job_id}/pause` | POST | Pause download |
+| `/api/v1/models/downloads/{job_id}/resume` | POST | Resume download |
+| `/api/v1/models/downloads/reorder` | POST | Reorder download queue |
+| `/api/v1/models/downloads/bulk-cancel` | POST | Cancel multiple downloads |
+| `/api/v1/models/downloads/clear-completed` | POST | Clear completed downloads |
 
 ### Sync
 
@@ -276,14 +286,16 @@ All routes under `/api/v1/` (integration router has no prefix).
 | `/api/v1/sync/stop` | POST | Stop sync job |
 | `/api/v1/sync/status` | GET | Sync status |
 | `/api/v1/sync/jobs` | GET | List sync jobs |
+| `/api/v1/sync/jobs/{job_id}` | GET | Get sync job details |
 
 ## WebSocket
 
 | Route | Purpose |
 |-------|---------|
 | `/ws` | Echo + demo + system metrics |
-| `/ws/models` | Model download progress |
-| `/ws/system` | System metrics stream |
+| `/ws/models` | Model download progress (1s updates) |
+| `/ws/system` | System metrics (500ms) + logs (3s) + processes (5s) |
+| `/ws/chat` | Chat streaming |
 
 ---
 

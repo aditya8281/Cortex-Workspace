@@ -1,4 +1,4 @@
-Last updated: 2026-06-28
+Last updated: 2026-06-30
 
 # Architecture Decision Records (ADRs)
 
@@ -41,6 +41,7 @@ Cortex tracks architectural decisions in this directory. Each ADR follows the st
 
 | # | Decision | Status | Phase |
 |---|----------|--------|-------|
+| 016 | [Command Ecosystem Refactor](016-command-ecosystem-refactor.md) | Proposed | — |
 | 017 | [MCP Integration](017-mcp-integration.md) | Proposed | V3 |
 | 018 | [Plugin Architecture](018-plugin-architecture.md) | Proposed | V2-V3 |
 | 019 | [Desktop Mode Strategy](019-desktop-mode-strategy.md) | Proposed | V3-V5 |
@@ -50,7 +51,7 @@ Cortex tracks architectural decisions in this directory. Each ADR follows the st
 ## Creating New ADRs
 
 1. Copy an existing ADR as template
-2. Number sequentially (next: 022)
+2. Number sequentially (next: 023)
 3. Set Status to "Proposed"
 4. Fill in: Context, Decision, Consequences, Alternatives, Related
 5. Update this index

@@ -1,4 +1,4 @@
-Last updated: 2026-06-29
+Last updated: 2026-06-30
 
 # CLAUDE.md — CORTEX Control Plane
 
@@ -66,18 +66,39 @@ When documents conflict, this order governs:
 
 ## What CORTEX Is Building
 
-Six versions, each a complete milestone:
+CORTEX is built across 14 executable versions (v1.01–v1.14), preceded by a baseline snapshot (v1.0). After v1.14, major milestone versions (v2–v6) extend into advanced capabilities.
 
-| Version | Name | What It Delivers |
-|---------|------|------------------|
-| **V1** | The Brain Works | Agent loop, daemon lifecycle, streaming, chat, system monitoring |
-| **V2** | The Architecture | Provider/MCP abstraction, plugin system, memory, knowledge graph |
-| **V3** | The Desktop | Tauri shell, TUI, performance optimization |
-| **V4** | The Automaton | Scheduler, MCP server, research, sessions |
-| **V5** | The Workspace | Email, calendar, tasks, notes, documents, contacts |
-| **V6** | The Ecosystem | Marketplace, graph intelligence, cross-encoder, polish |
+### Executable Versions
 
-**Current focus:** Backend is production-ready. Frontend is fully built — 28 pages (17 real + 11 Coming Soon), 70+ components, Vitest + React Testing Library.
+| Version | Name | What It Delivers | Status |
+|---------|------|------------------|--------|
+| **v1.0** | Snapshot | Current state baseline | ✅ |
+| **v1.01** | Foundation | Repository restructure, project skeleton, CI/CD | ✅ |
+| **v1.02** | The Brain | Streaming agent loop, tool policy, context compaction, MCP | ✅ |
+| **v1.03** | The Memory | Embeddings pipeline, vector store, RAG retrieval, knowledge graph | ✅ |
+| **v1.04** | The Awareness | File indexing, code intelligence, change tracking | ✅ |
+| **v1.05** | The Vault | Fernet encryption, secure password cache, vault CLI | ✅ |
+| **v1.06** | The Developer | Skills, hooks, commands, developer ecosystem | ✅ |
+| **v1.07** | The Interaction | SSE streaming UI, chat interface, agent dashboard | ✅ |
+| **v1.08** | The Planning | Autonomous planning, version management, progress tracking | Next |
+| **v1.09** | The Learning | Preference learning, pattern recognition, outcome tracking | — |
+| **v1.10** | The Scheduler | Cron-based task scheduling, recurring agent actions | — |
+| **v1.11** | The Researcher | Web search, deep research, citation management | — |
+| **v1.12** | The Integrator | External service connectors, API gateway | — |
+| **v1.13** | The Optimizer | Performance tuning, caching strategy, monitoring | — |
+| **v1.14** | The Polished | UI polish, accessibility, documentation completeness | — |
+
+### Milestone Versions (Reference)
+
+| Version | Name | Focus |
+|---------|------|-------|
+| **v2** | The Architecture | Provider/MCP abstraction, plugin system, memory architecture |
+| **v3** | The Desktop | Tauri shell, TUI, performance optimization |
+| **v4** | The Automaton | Scheduler, MCP server, research, sessions |
+| **v5** | The Workspace | Email, calendar, tasks, notes, documents, contacts |
+| **v6** | The Ecosystem | Marketplace, graph intelligence, cross-encoder, polish |
+
+**Current state:** v1.01–v1.07 complete. Backend production-ready. Frontend fully built — 30 pages (20 real + 10 Coming Soon), 84 components. Next: v1.08 (The Planning).
 
 ## Execution Contract
 
@@ -321,19 +342,19 @@ Frontend: Vitest + jsdom + React Testing Library.
 
 | Metric | Value |
 |--------|-------|
-| Backend Python files | 414 |
-| Backend LoC | 45,046 |
-| Frontend TSX/TS files | 124 |
-| Frontend LoC | 13,129 |
-| Test files | 186 |
-| Test LoC | 20,039 |
-| Backend tests | 1,619 collected |
-| API endpoint files | 50 (10 domains) |
-| Frontend pages | 17 real + 11 Coming Soon |
-| Frontend components | 51 feature + 19 shared UI |
-| Database migrations | 38 |
-| Documentation files | 73 |
-| Git commits | 701 |
+| Backend Python files | 425 |
+| Backend LoC | 46,733 |
+| Frontend TSX/TS files | 149 |
+| Frontend LoC | 17,348 |
+| Test files | 194 |
+| Test LoC | 21,784 |
+| Backend tests | 2,077 collected |
+| API endpoint files | 59 (10 domains) |
+| Frontend pages | 20 real + 10 Coming Soon |
+| Frontend components | 72 feature + 12 shared UI |
+| Database migrations | 13 active |
+| Documentation files | 32 |
+| Git commits | 738 |
 
 ## Environment
 
@@ -350,4 +371,4 @@ Required: `SECRET_KEY`, `DATABASE_URL` (port 5435), `APP_NAME`, `API_V1_PREFIX`.
 | Database Schema | `docs/reference/database.md` |
 | Governance | `docs/guides/governance.md` |
 | ADRs | `docs/decisions/` |
-| Domain Docs | `docs/domains/` |
+| Memory Domain | `docs/domains/memory.md` |

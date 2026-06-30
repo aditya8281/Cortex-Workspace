@@ -15,7 +15,7 @@ This document is the navigation layer for the entire Cortex implementation roadm
 
 ## Current Repository State
 
-**Last updated:** 2026-06-28
+**Last updated:** 2026-06-30
 
 The current repository contains:
 
@@ -28,9 +28,9 @@ The current repository contains:
 - **Developer Ecosystem:** 142 skills, 18 commands, 16 hooks
 - **Storage:** PostgreSQL 16 + Redis 7 + Qdrant (embedded)
 - **Embeddings:** ONNX Runtime BGE-M3 (768-dim)
-- **Tests:** 1429 passing, 17 frontend pages, 24 backend API endpoint files
+- **Tests:** 2077 passing, 30 frontend pages, 59 backend API endpoint files
 
-### Versions Complete (v1.01–v1.05)
+### Versions Complete (v1.01–v1.07)
 
 | Version | Name | Phases | Key Deliverables |
 |---------|------|--------|------------------|
@@ -39,34 +39,35 @@ The current repository contains:
 | v1.03 | Memory Foundation | 5/5 ✅ | Episodic/semantic/working memory, graph services, memory search, forgetting, 35 memory API endpoints |
 | v1.04 | Awareness Foundation | 4/4 ✅ | Filesystem indexing, repository scanning, project detection, device info, health monitoring, 58 awareness tests |
 | v1.05 | Privacy & Trust | 4/4 ✅ | 6 privacy models, encryption (Fernet), access control, audit logging, consent, data export, transparency, vault management, 79 privacy tests |
+| v1.06 | Cognition & Execution | 8/8 ✅ | Agent system hardening, integrity engines, execution monitoring, cognition dashboard |
+| v1.07 | Interaction & Models | 6/6 ✅ | SSE streaming UI, chat interface, agent dashboard, models page redesign, download manager, 2077 tests |
 
-### What Works (After v1.01–v1.05)
+### What Works (After v1.01–v1.07)
 
 - **Memory domain:** Episodic, semantic, working memory, memory graph, auto-connections, long-term memory, search (vector + fulltext + graph via RRF + MMR), forgetting/temporal decay
-- **Awareness domain:** Filesystem indexing, repository scanning, project detection, device info, environment scanning, health monitoring, indexing config
+- **Awareness domain:** Filesystem indexing, repository scanning, project detection, device info, environment scanning, health monitoring, indexing config, context & attention
 - **Privacy domain:** Fernet encryption, access control (RBAC + ABAC), audit logging, consent management, data export, data deletion, transparency reports, vault (lock/unlock/upload/download/move/rename)
-- **Agent system:** Tool execution loop, stall detection, context compaction, tool policy/MCP gating
+- **Cognition domain:** Integrity analysis (10 engines), execution monitoring, agent hardening
+- **Agent system:** Tool execution loop, stall detection, context compaction, tool policy/MCP gating, 8+ tools with JSON Schema
 - **Event bus:** 30 event types, 8 handlers, cross-domain communication
 - **MCP integration:** Discovery, wrapper, transport, config, search, bridge
 - **Observability:** Token counting, TPS, context window tracking, timing, logging, baseline metrics
-- **Frontend:** 17 pages (auth, dashboard, chat, agents, models, memory, search, awareness/*, privacy/*, settings, system) + 4 Coming Soon (marketplace, notes, scheduler, tasks)
+- **Frontend:** 30 pages (20 real + 10 Coming Soon), 84 components, dark-only design system
 - **Auth:** JWT access + refresh tokens, CSRF double-submit
-- **Integration:** Model downloads, sync, Ollama catalog
-- **1429 tests passing**
+- **Integration:** Model downloads (pause/resume/reorder/bulk), sync, Ollama catalog, recommended models
+- **2077 tests passing**
 
-### What's Not Yet Built (v1.06–v1.14)
+### What's Not Yet Built (v1.08–v1.14)
 
 | Version | Name | Phases | Status |
 |---------|------|--------|--------|
-| v1.06 | Cognition & Execution Core | 5 | Not started |
-| v1.07 | Memory Evolution | 4 | Not started |
-| v1.08 | Awareness Expansion | 5 | Not started |
-| v1.09 | Learning Foundation | 5 | Not started |
-| v1.10 | Planning & Orchestration | 5 | Not started |
-| v1.11 | Interaction & Voice | 5 | Not started |
-| v1.12 | Developer Craft | 6 | Not started |
-| v1.13 | Daily Life Tools | 6 | Not started |
-| v1.14 | Advanced Intelligence | 4 | Not started |
+| v1.08 | The Planning | — | Next — autonomous planning, version management |
+| v1.09 | The Learning | — | Not started |
+| v1.10 | The Scheduler | — | Not started |
+| v1.11 | The Researcher | — | Not started |
+| v1.12 | The Integrator | — | Not started |
+| v1.13 | The Optimizer | — | Not started |
+| v1.14 | The Polished | — | Not started |
 
 ---
 

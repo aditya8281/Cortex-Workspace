@@ -1,4 +1,4 @@
-Last updated: 2026-06-28
+Last updated: 2026-06-30
 
 # CORTEX Architecture
 
@@ -70,9 +70,9 @@ backend/app/
 ├── auth/                # Auth domain (service, dependencies, audit)
 ├── core/                # Cross-cutting concerns (config, security, redis, vector_db)
 ├── db/                  # Database layer (bootstrap, session factory)
-├── models/              # SQLAlchemy ORM models (19 files)
+├── models/              # SQLAlchemy ORM models (44 files)
 ├── schemas/             # Pydantic request/response schemas
-├── services/            # Business logic (106 files)
+├── services/            # Business logic (101 files)
 │   ├── llm/             # LLM provider abstraction
 │   └── ...              # embedding, retrieval, vault, indexing, etc.
 ├── agents/              # Agent system (tools, integrity, run_manager, run_store)
@@ -231,7 +231,7 @@ Feature flag: `CORTEX_NEW_AGENT_LOOP` (default: False) in Settings. When True, d
 
 ### Next.js 15 App Router
 
-17 real pages + 4 Coming Soon placeholders. Dark-only design system. 10 shared UI components. 38 feature components.
+20 real pages + 10 Coming Soon placeholders. Dark-only design system. 12 shared UI components. 72 feature components.
 
 ```
 frontend/
@@ -248,6 +248,7 @@ frontend/
 │   │   ├── awareness/              # System overview (device, env, health, project)
 │   │   ├── awareness/repos/        # Repository management
 │   │   ├── awareness/indexing/     # Indexing config, graph view
+│   │   ├── awareness/context/      # Context and attention system
 │   │   ├── memory/                 # Knowledge graph, search, memory CRUD
 │   │   ├── search/                 # Unified search
 │   │   ├── vault/                  # Encrypted document locker
@@ -256,26 +257,40 @@ frontend/
 │   │   ├── privacy/consent/        # Consent management
 │   │   ├── system/                 # System health monitoring
 │   │   ├── settings/               # User settings, profile
+│   │   ├── cognition/              # Cognition dashboard
+│   │   ├── execution/              # Execution monitoring
+│   │   ├── compare/                # Coming Soon — model comparison
 │   │   ├── marketplace/            # Coming Soon
 │   │   ├── notes/                  # Coming Soon
 │   │   ├── scheduler/              # Coming Soon
-│   │   └── tasks/                  # Coming Soon
+│   │   ├── tasks/                  # Coming Soon
+│   │   ├── apps/                   # Coming Soon
+│   │   ├── knowledge/              # Coming Soon
+│   │   ├── intelligence/           # Coming Soon
+│   │   └── developer/              # Coming Soon
 │   ├── shared/
 │   │   ├── ui/                     # Badge, Button, Card, Modal, Skeleton, Toast, etc.
-│   │   ├── layout/                 # AppShell, Header, Sidebar
-│   │   ├── auth/                   # AuthProvider, ProtectedRoute
-│   │   └── lib/                    # cn(), apiFetch()
+│   │   ├── layout/                 # AppShell, Header, Sidebar, MobileNav
+│   │   ├── auth/                   # AuthProvider
+│   │   ├── ws/                     # MetricsProvider, useWebSocket, useChatTyping
+│   │   ├── downloads/              # DownloadProvider, useDownloadContext
+│   │   ├── design/                 # Design tokens
+│   │   ├── api/                    # API client (apiFetch)
+│   │   ├── lib/                    # cn(), utilities
+│   │   └── types/                  # Shared TypeScript types
 │   └── features/
-│       ├── dashboard/              # SystemOverview, MetricsRow
-│       ├── chat/                   # MessageBubble, CodeBlock, ConversationItem, SourcesPanel
 │       ├── agents/                 # Agent cards, chat, RunHistory
-│       ├── models/                 # ModelCard, BrowseView, InstalledView, DownloadsView, CompareView
 │       ├── awareness/              # DeviceCard, HealthCard, EnvironmentCard, ProjectCard, etc.
-│       ├── memory/                 # API client (memory/graph/search)
-│       ├── search/                 # API client (unified search)
-│       ├── vault/                  # API client (encrypted files)
-│       ├── privacy/                # ConsentToggle, AccessControlCard, StorageCard
+│       ├── chat/                   # MessageBubble, CodeBlock, ConversationItem, SourcesPanel
+│       ├── cognition/              # Cognition components
+│       ├── dashboard/              # SystemOverview, MetricsRow
 │       ├── developer/              # API client (developer tools)
+│       ├── execution/              # Execution monitoring components
+│       ├── integration/            # Integration components
+│       ├── intelligence/           # Intelligence components
+│       ├── memory/                 # API client (memory/graph/search)
+│       ├── models/                 # ModelCard, BrowseView, InstalledView, DownloadsView, CompareView
+│       ├── privacy/                # ConsentToggle, AccessControlCard, StorageCard
 │       ├── settings/               # Settings page component
 │       └── system/                 # System health page component
 ```
@@ -325,7 +340,7 @@ Storage paths resolved via `storage_registries` table → `storage_root` pointer
 
 ## Database
 
-PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations. 37 migrations across 10 domain routers.
+PostgreSQL 16 with SQLAlchemy 2.0 + Alembic migrations. 13 active migrations across 10 domain routers.
 
 - **ORM**: `Mapped[T]`, `mapped_column` syntax
 - **Models**: 44 model files

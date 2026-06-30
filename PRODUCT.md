@@ -1,4 +1,4 @@
-Last updated: 2026-06-28
+Last updated: 2026-06-30
 
 # Product
 
@@ -22,7 +22,7 @@ Success means: the interface disappears into the task. Users feel like they are 
 
 | Area | State |
 |------|-------|
-| Backend API | 237 REST + 6 WebSocket endpoints across 10 domain routers — production-ready |
+| Backend API | 200+ REST + 3 WebSocket endpoints across 10 domain routers — production-ready |
 | Auth + Vault | Production-quality — JWT + Argon2, Fernet encryption |
 | Agent System | Agent loop, run manager, stall detection, verifier, compactor |
 | Memory System | Episodic, semantic, working memory with graph search |
@@ -30,7 +30,7 @@ Success means: the interface disappears into the task. Users feel like they are 
 | LLM Integration | llama.cpp + Ollama with provider abstraction |
 | Awareness | Device, file, project, repo detection + health monitoring |
 | Privacy | Consent, audit, access control, RBAC/ABAC |
-| Frontend | **Built via `/project:design` — 28 pages (17 real + 11 Coming Soon), 70+ components** |
+| Frontend | **Built via `/project:design` — 30 pages (20 real + 10 Coming Soon), 84 components** |
 
 ## Brand Personality
 
