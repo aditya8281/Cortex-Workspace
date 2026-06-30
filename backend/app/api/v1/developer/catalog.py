@@ -335,11 +335,27 @@ async def get_model_detail(
 
     variants = db.execute(select(ModelVariant).where(ModelVariant.model_catalog_id == model.id)).scalars().all()
 
+    # Check if model is downloaded via Ollama
+    available = await llm_manager.list_all_models()
+    available_names = {m.name for m in available}
+    downloaded = model.model_id in available_names or model.model_id.split(":")[0] in available_names
+
+    # Derive parameter_size from parameter_count
+    param_size = None
+    if model.parameter_count:
+        if model.parameter_count >= 1000:
+            param_size = f"{model.parameter_count:.0f}B"
+        elif model.parameter_count >= 1:
+            param_size = f"{model.parameter_count:.1f}B"
+        else:
+            param_size = f"{model.parameter_count * 1000:.0f}M"
+
     return {
         "model_id": model.model_id,
         "display_name": model.display_name,
         "family": model.family,
         "parameter_count": model.parameter_count,
+        "parameter_size": param_size,
         "architecture": model.architecture,
         "context_length_default": model.context_length_default,
         "context_length_max": model.context_length_max,
@@ -349,6 +365,7 @@ async def get_model_detail(
         "description": model.description,
         "tags": model.tags or [],
         "benchmarks": model.benchmarks,
+        "downloaded": downloaded,
         "variants": [
             {
                 "variant_id": v.variant_id,

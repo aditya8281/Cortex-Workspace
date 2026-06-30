@@ -132,8 +132,14 @@ async def _stream_chat_response(
     user_id: int | None = None,
 ) -> AsyncGenerator[str, None]:
     """Generator that yields SSE events for the chat response."""
-    from backend.app.services.intelligence.llm.manager import llm_manager
-    from backend.app.services.intelligence.llm.provider import LLMMessage
+    try:
+        from backend.app.services.intelligence.llm.manager import llm_manager
+        from backend.app.services.intelligence.llm.provider import LLMMessage
+    except Exception as exc:
+        logger.error("Failed to import LLM modules: %s", exc, exc_info=True)
+        yield f"data: {json.dumps({'type': 'chunk', 'content': f'LLM import error: {exc}', 'tokens': 0})}\n\n"
+        yield f"data: {json.dumps({'type': 'done', 'total_tokens': 0, 'sources': []})}\n\n"
+        return
 
     svc = ConversationService(db)
 
@@ -152,15 +158,26 @@ async def _stream_chat_response(
             db.commit()
 
     # Build context using RAG pipeline (retrieves relevant knowledge + history)
-    rag = get_rag_pipeline(db)
-    conv = svc.get(conversation_id, user_id) if user_id else None
-    repo_id = conv.repo_id if conv else None
-    rag_context = rag.retrieve_context(user_content, repo_id=repo_id)
-    sources = [{"file_path": r.file_path, "score": r.score, "content": r.content[:300]} for r in rag_context.results]
+    try:
+        rag = get_rag_pipeline(db)
+        conv = svc.get(conversation_id, user_id) if user_id else None
+        repo_id = conv.repo_id if conv else None
+        rag_context = rag.retrieve_context(user_content, repo_id=repo_id)
+        sources = [{"file_path": r.file_path, "score": r.score, "content": r.content[:300]} for r in rag_context.results]
+    except Exception as exc:
+        logger.error("RAG pipeline failed: %s", exc, exc_info=True)
+        rag_context = None
+        sources = []
+
+    # Recover from any failed transaction before new queries
+    try:
+        db.rollback()
+    except Exception:
+        pass
 
     history = svc.get_context_messages(conversation_id, max_tokens=28000)
     system_parts = ["You are Cortex, a helpful AI assistant with access to the user's codebase and knowledge."]
-    if rag_context.formatted_context:
+    if rag_context and rag_context.formatted_context:
         context_block = rag_context.formatted_context
         system_parts.append(f"Relevant context from the codebase:\n\n{context_block}")
         system_parts.append(
@@ -212,16 +229,28 @@ async def send_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    svc = ConversationService(db)
-    conv = svc.get(conversation_id, current_user.id)
-    if not conv:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    logger.info("send_message called: conv=%s user=%s content_len=%d", conversation_id, current_user.id, len(payload.content))
+    try:
+        svc = ConversationService(db)
+        conv = svc.get(conversation_id, current_user.id)
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("send_message setup error: %s", exc, exc_info=True)
+        raise
 
     async def _wrapped_stream():
-        async for event in _stream_chat_response(
-            conversation_id, payload.content, db, model=payload.model, user_id=current_user.id
-        ):
-            yield event
+        try:
+            async for event in _stream_chat_response(
+                conversation_id, payload.content, db, model=payload.model, user_id=current_user.id
+            ):
+                yield event
+        except Exception as exc:
+            logger.error("_wrapped_stream error: %s", exc, exc_info=True)
+            yield f"data: {json.dumps({'type': 'chunk', 'content': f'Error: {exc}', 'tokens': 0})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'total_tokens': 0, 'sources': []})}\n\n"
         background_svc = ConversationService(db)
 
         async def _extract_with_logging():

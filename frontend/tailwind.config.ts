@@ -67,6 +67,10 @@ const config: Config = {
         "glow-strong": "0 0 40px rgba(14,165,201,0.2)",
       },
       keyframes: {
+        "progress-shimmer": {
+          from: { backgroundPosition: "-200% 0" },
+          to: { backgroundPosition: "200% 0" },
+        },
         "fade-in": {
           from: { opacity: "0", transform: "translateY(6px)" },
           to: { opacity: "1", transform: "translateY(0)" },
@@ -133,6 +137,7 @@ const config: Config = {
         "slide-in-from-right": "slide-in-from-right 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
         "slide-out-to-right": "slide-out-to-right 0.2s cubic-bezier(0.4, 0, 1, 1)",
         shimmer: "shimmer 2s linear infinite",
+        "progress-shimmer": "progress-shimmer 2s linear infinite",
         "pulse-dot": "pulse-dot 1.5s ease-in-out infinite",
         "spin-slow": "spin-slow 3s linear infinite",
       },

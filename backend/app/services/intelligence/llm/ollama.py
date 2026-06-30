@@ -19,13 +19,9 @@ class OllamaProvider(LLMProvider):
         self._client = httpx.AsyncClient(base_url=self._base_url, timeout=timeout)
 
     async def chat(self, messages: list[dict], tools: list[dict], config: Any) -> tuple[str, list[dict] | None]:
-        model = "llama3.2"
-        if isinstance(config, dict) and "model" in config:
+        model = await self._default_model()
+        if isinstance(config, dict) and config.get("model"):
             model = config["model"]
-        elif tools:
-            models = self.list_models()
-            if models:
-                model = models[0]["name"]
 
         formatted = [{"role": m["role"], "content": m["content"]} for m in messages]
         resp = await self._client.post(
@@ -73,8 +69,8 @@ class OllamaProvider(LLMProvider):
         }
 
     async def chat_stream(self, messages: list, tools: list, config: Any):
-        model = "llama3.2"
-        if isinstance(config, dict) and "model" in config:
+        model = await self._default_model()
+        if isinstance(config, dict) and config.get("model"):
             model = config["model"]
         formatted = [{"role": m["role"], "content": m["content"]} for m in messages]
         async with self._client.stream(
@@ -95,7 +91,9 @@ class OllamaProvider(LLMProvider):
                 if line:
                     chunk = json.loads(line)
                     if "message" in chunk and "content" in chunk["message"]:
-                        yield chunk["message"]["content"]
+                        token = chunk["message"]["content"]
+                        if token:  # skip empty chunks (thinking tokens)
+                            yield token
 
     def list_models(self) -> list[dict[str, Any]]:
         for attempt in range(3):

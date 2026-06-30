@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -51,7 +51,7 @@ class WorkflowOrchestrator:
             steps=copy.deepcopy(steps),
             status="idle",
             current_step=0,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         self.db.add(workflow)
         self.db.commit()
@@ -69,7 +69,7 @@ class WorkflowOrchestrator:
             raise ValueError(f"Workflow {workflow_id} not found")
 
         workflow.status = "running"
-        workflow.last_run = datetime.utcnow()
+        workflow.last_run = datetime.now(timezone.utc)
         start_time = time.time()
         # Working copy — mutations happen here, saved back at commit points
         local_steps = copy.deepcopy(workflow.steps)

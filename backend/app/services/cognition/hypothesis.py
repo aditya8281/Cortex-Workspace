@@ -8,7 +8,7 @@ Lifecycle:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -49,7 +49,7 @@ class HypothesisService:
             confidence_history=[
                 {
                     "value": confidence,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "trigger": "creation",
                     "evidence_count": len(ev_for) + len(ev_against),
                 }
@@ -58,7 +58,7 @@ class HypothesisService:
             source=source,
             related_plan_id=related_plan_id,
             related_hypothesis_id=related_hypothesis_id,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         self.db.add(hypo)
         self.db.commit()
@@ -84,7 +84,7 @@ class HypothesisService:
             "text": text,
             "weight": weight,
             "source": source,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         if supports:
@@ -101,14 +101,14 @@ class HypothesisService:
             {
                 "value": new_confidence,
                 "previous_value": old_confidence,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "trigger": f"evidence_{'added' if supports else 'contradicted'}",
                 "evidence_text": text[:100],
                 "evidence_weight": weight,
             }
         )
         hypo.confidence_history = history
-        hypo.updated_at = datetime.utcnow()
+        hypo.updated_at = datetime.now(timezone.utc)
         self.db.commit()
         self.db.refresh(hypo)
 
@@ -131,15 +131,15 @@ class HypothesisService:
             raise ValueError(f"Hypothesis is already {hypo.status}")
 
         hypo.status = status
-        hypo.resolved_at = datetime.utcnow()
+        hypo.resolved_at = datetime.now(timezone.utc)
         hypo.resolution_reason = reason
-        hypo.updated_at = datetime.utcnow()
+        hypo.updated_at = datetime.now(timezone.utc)
 
         history = list(hypo.confidence_history or [])
         history.append(
             {
                 "value": hypo.confidence,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "trigger": f"resolved_{status}",
                 "reason": reason,
             }
@@ -201,10 +201,10 @@ class HypothesisService:
         h1.evidence_against = combined_against
         h1.hypothesis = f"{h1.hypothesis} + {h2.hypothesis}"
         h1.confidence = self._calculate_confidence(combined_for, combined_against)
-        h1.updated_at = datetime.utcnow()
+        h1.updated_at = datetime.now(timezone.utc)
 
         h2.status = "merged"
-        h2.resolved_at = datetime.utcnow()
+        h2.resolved_at = datetime.now(timezone.utc)
         h2.resolution_reason = f"Merged into hypothesis {h1.id}"
 
         self.db.commit()
@@ -240,11 +240,11 @@ class HypothesisService:
     def _check_auto_resolve(self, hypo: Hypothesis) -> None:
         if hypo.confidence >= self.AUTO_CONFIRM_THRESHOLD:
             hypo.status = "confirmed"
-            hypo.resolved_at = datetime.utcnow()
+            hypo.resolved_at = datetime.now(timezone.utc)
             hypo.resolution_reason = "Auto-confirmed: confidence exceeded threshold"
             self.db.commit()
         elif hypo.confidence <= self.AUTO_REJECT_THRESHOLD:
             hypo.status = "rejected"
-            hypo.resolved_at = datetime.utcnow()
+            hypo.resolved_at = datetime.now(timezone.utc)
             hypo.resolution_reason = "Auto-rejected: confidence below threshold"
             self.db.commit()

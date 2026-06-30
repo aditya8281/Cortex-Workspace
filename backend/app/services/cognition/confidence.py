@@ -7,7 +7,7 @@ Tracks calibration: how well do confidence scores predict actual outcomes?
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -120,7 +120,7 @@ class ConfidenceEstimationService:
                 context=context,
                 source=context.get("source", "estimation"),
                 related_id=context.get("related_id"),
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             self.db.add(score)
             self.db.commit()
@@ -185,7 +185,7 @@ class ConfidenceEstimationService:
         if not self.db:
             return {"error": "Database not available"}
 
-        since = datetime.utcnow() - timedelta(days=days)
+        since = datetime.now(timezone.utc) - timedelta(days=days)
         query = self.db.query(ConfidenceScore).filter(
             ConfidenceScore.user_id == user_id,
             ConfidenceScore.created_at >= since,

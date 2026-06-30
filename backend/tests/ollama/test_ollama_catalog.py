@@ -197,6 +197,90 @@ class TestCapabilityDetection:
         assert "thinking" in caps
 
 
+# ── Normalization tests ───────────────────────────────────────────
+
+
+class TestNormalization:
+    def test_param_size_raw_number_to_human(self) -> None:
+        model = {"parameter_size": "675000000000", "quantization_level": "fp8"}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["parameter_size"] == "675B"
+
+    def test_param_size_raw_billions(self) -> None:
+        model = {"parameter_size": "8000000000"}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["parameter_size"] == "8B"
+
+    def test_param_size_raw_millions(self) -> None:
+        model = {"parameter_size": "700000000"}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["parameter_size"] == "700M"
+
+    def test_param_size_already_human(self) -> None:
+        model = {"parameter_size": "8B"}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["parameter_size"] == "8B"
+
+    def test_param_size_already_human_m(self) -> None:
+        model = {"parameter_size": "137M"}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["parameter_size"] == "137M"
+
+    def test_quantization_level_moved_to_quantization(self) -> None:
+        model = {"quantization_level": "Q4_K_M"}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["quantization"] == "Q4_K_M"
+        assert "quantization_level" not in result
+
+    def test_quantization_uppercased(self) -> None:
+        model = {"quantization": "q4_km"}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["quantization"] == "Q4_KM"
+
+    def test_quantization_empty_when_missing(self) -> None:
+        model = {}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["quantization"] == ""
+
+    def test_size_zero_stays_zero(self) -> None:
+        model = {"size": 0}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["size"] == 0
+        assert result["size_bytes"] == 0
+
+    def test_size_nonzero_copied(self) -> None:
+        model = {"size": 4700000000000}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["size"] == 4700000000000
+        assert result["size_bytes"] == 4700000000000
+
+    def test_capabilities_completion_to_chat(self) -> None:
+        model = {"capabilities": ["completion"]}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["capabilities"] == ["chat"]
+
+    def test_capabilities_empty_becomes_chat(self) -> None:
+        model = {"capabilities": []}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["capabilities"] == ["chat"]
+
+    def test_capabilities_preserved(self) -> None:
+        model = {"capabilities": ["tools", "vision"]}
+        result = OllamaCatalogService._normalize_model(model)
+        assert result["capabilities"] == ["tools", "vision"]
+
+    def test_normalize_all(self) -> None:
+        models = [
+            {"name": "a", "parameter_size": "8000000000", "size": 0, "capabilities": ["completion"]},
+            {"name": "b", "parameter_size": "8B", "size": 4700000000000, "capabilities": ["tools"]},
+        ]
+        result = OllamaCatalogService._normalize_all(models)
+        assert result[0]["parameter_size"] == "8B"
+        assert result[0]["capabilities"] == ["chat"]
+        assert result[1]["parameter_size"] == "8B"
+        assert result[1]["capabilities"] == ["tools"]
+
+
 # ── API entry building tests ─────────────────────────────────────
 
 

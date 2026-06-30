@@ -11,6 +11,8 @@ const navigation = [
   { name: "Agents", href: "/agents", icon: "cpu" },
   { name: "Models", href: "/models", icon: "download" },
   { name: "Awareness", href: "/awareness", icon: "eye" },
+  { name: "Cognition", href: "/cognition", icon: "brain" },
+  { name: "Execution", href: "/execution", icon: "play" },
   { name: "System", href: "/system", icon: "activity" },
   { name: "Settings", href: "/settings", icon: "settings" },
   { name: "Privacy", href: "/privacy", icon: "shield" },
@@ -61,6 +63,16 @@ const iconMap: Record<string, React.ReactNode> = {
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M1 9s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" />
       <circle cx="9" cy="9" r="2.5" />
+    </svg>
+  ),
+  brain: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M9 2c-2 0-3.5 1-4.5 2.5C3.5 5.5 2 7 2 9c0 2 1 3.5 2.5 4.5M9 2c2 0 3.5 1 4.5 2.5C14.5 5.5 16 7 16 9c0 2-1 3.5-2.5 4.5M9 2v14M5 6.5C5.8 7.3 7 8 9 8s3.2-.7 4-1.5M5 11.5c.8.8 2 1.5 4 1.5s3.2-.7 4-1.5" />
+    </svg>
+  ),
+  play: (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <polygon points="5,2 16,9 5,16" />
     </svg>
   ),
 };

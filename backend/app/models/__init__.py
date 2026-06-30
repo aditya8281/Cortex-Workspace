@@ -2,9 +2,12 @@
 
 # Memory domain
 # Awareness domain
+from backend.app.models.awareness.attention_tracker import AttentionTracker
+from backend.app.models.awareness.context_engine import ContextEvent, ContextRule, ContextState
 from backend.app.models.awareness.file_index import IndexedFile
 from backend.app.models.awareness.indexing_config import IndexingConfig
 from backend.app.models.awareness.repo_index import CodeChunk, RepoIndex
+from backend.app.models.awareness.system_snapshot import SystemSnapshot
 
 # Cognition domain
 from backend.app.models.cognition.agent import Agent, AgentFeedback, AgentRun, AgentStep
@@ -77,10 +80,15 @@ __all__ = [
     "StorageRegistry",
     "WorkingMemory",
     # Awareness
+    "AttentionTracker",
+    "ContextEvent",
+    "ContextRule",
+    "ContextState",
     "IndexedFile",
     "IndexingConfig",
     "CodeChunk",
     "RepoIndex",
+    "SystemSnapshot",
     # Intelligence
     "EmbeddingCache",
     "Capability",

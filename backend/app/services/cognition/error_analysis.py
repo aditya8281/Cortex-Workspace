@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -128,7 +128,7 @@ class ErrorAnalysisService:
 
     def get_error_patterns(self, user_id: int, days: int = 30) -> list[dict[str, Any]]:
         """Return common error patterns with counts and severity breakdown."""
-        since = datetime.utcnow() - timedelta(days=days)
+        since = datetime.now(timezone.utc) - timedelta(days=days)
         errors = (
             self.db.query(ErrorAnalysis)
             .filter(ErrorAnalysis.user_id == user_id, ErrorAnalysis.created_at >= since)
@@ -174,7 +174,7 @@ class ErrorAnalysisService:
         analysis = self._get_analysis_or_raise(analysis_id)
         analysis.resolved = 1
         analysis.resolution_method = resolution_method
-        analysis.resolved_at = datetime.utcnow()
+        analysis.resolved_at = datetime.now(timezone.utc)
         self.db.commit()
         self.db.refresh(analysis)
         return analysis

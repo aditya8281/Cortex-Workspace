@@ -21,6 +21,7 @@ import {
 } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useWebSocket } from "@/shared/ws/useWebSocket";
+import { useToast } from "@/shared/ui/Toast";
 import { downloads } from "@/features/integration/api";
 import type { DownloadJob, DownloadHistoryItem } from "@/features/integration/api";
 
@@ -92,12 +93,14 @@ export function useDownloadContext(): DownloadContextType {
 
 export function DownloadProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [active, setActive] = useState<DownloadJob[]>([]);
   const [queued, setQueued] = useState<DownloadJob[]>([]);
   const [history, setHistory] = useState<DownloadHistoryItem[]>([]);
 
   const activeRef = useRef(active);
   activeRef.current = active;
+  const prevActiveRef = useRef<Set<string>>(new Set());
 
   // ── Load queue from REST (initial + fallback) ────────────────────────
 
@@ -163,13 +166,27 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // Toast feedback for terminal statuses
+    const prevActive = prevActiveRef.current;
+    for (const m of models) {
+      if (!prevActive.has(m.download_id)) continue;
+      if (m.status === "completed") {
+        const label = m.name.split(":")[0].replace(/-/g, " ");
+        toast(`${label} downloaded`, "success");
+      } else if (m.status === "failed") {
+        const label = m.name.split(":")[0].replace(/-/g, " ");
+        toast(`${label} failed: ${m.error ?? "unknown error"}`, "error");
+      }
+    }
+    prevActiveRef.current = new Set(newActive.map(j => j.job_id));
+
     setActive(newActive);
     setQueued(newQueued);
 
     if (hasTerminal) {
       loadHistory();
     }
-  }, [loadHistory]);
+  }, [loadHistory, toast]);
 
   const { status: wsStatus } = useWebSocket({
     path: "/api/v1/ws/models",
@@ -200,10 +217,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
     try {
       await downloads.download(modelId, variant);
+      const label = modelId.split(":")[0].replace(/-/g, " ");
+      toast(`Download started: ${label}`, "info");
     } catch {
       setActive(prev => prev.filter(j => j.job_id !== optimisticJob.job_id));
+      toast("Download failed to start", "error");
     }
-  }, []);
+  }, [toast]);
 
   const pause = useCallback(async (jobId: string) => {
     try {
@@ -238,9 +258,11 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     // Remove from active and queued
     setActive(prev => prev.filter(j => j.model_id !== modelId));
     setQueued(prev => prev.filter(j => j.model_id !== modelId));
+    const label = modelId.split(":")[0].replace(/-/g, " ");
+    toast(`Download cancelled: ${label}`, "info");
     // Refresh history
     setTimeout(() => loadHistory(), 500);
-  }, [loadHistory]);
+  }, [loadHistory, toast]);
 
   const deleteLocal = useCallback(async (modelId: string) => {
     // Cancel if downloading/queued
@@ -249,11 +271,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
     try {
       await downloads.deleteLocal(modelId);
+      const label = modelId.split(":")[0].replace(/-/g, " ");
+      toast(`Deleted: ${label}`, "info");
     } catch {
-      // ignore
+      toast("Failed to delete model", "error");
     }
     loadHistory();
-  }, [loadHistory]);
+  }, [loadHistory, toast]);
 
   const retry = useCallback(async (modelId: string) => {
     try {

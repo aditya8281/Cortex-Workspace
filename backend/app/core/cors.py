@@ -48,6 +48,11 @@ class CORSMiddlewareWithWS(CORSMiddleware):
             await self.app(scope, receive, send)
             return
 
+        # Capture the client-requested subprotocol so we can echo it back.
+        # Browsers REQUIRE the server to echo the subprotocol in the 101
+        # accept response — without this, every WS connection silently fails.
+        requested_protocol = Headers(scope=scope).get("sec-websocket-protocol", "").strip()
+
         # Origin is allowed — wrap send to inject CORS headers into the
         # websocket.accept message that ws.accept() produces.
         async def send_with_cors(message: MutableMapping[str, Any]) -> None:
@@ -62,6 +67,10 @@ class CORSMiddlewareWithWS(CORSMiddleware):
                     raw_headers.append((b"access-control-allow-origin", origin.encode()))
 
                 message["headers"] = raw_headers
+
+                # Echo back the requested subprotocol (required by browsers)
+                if message["type"] == "websocket.accept" and requested_protocol:
+                    message["subprotocol"] = requested_protocol
 
             await send(message)
 

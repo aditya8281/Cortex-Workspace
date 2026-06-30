@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import type { ModelWithFit, RamFitStatus } from "../api";
 import { formatBytes, formatParamCount, formatSpeed } from "../api";
 import { Card } from "@/shared/ui/Card";
@@ -45,8 +46,21 @@ export function ModelCard({
   const primaryVariant = model.variants?.[0];
   const minRam = model.hardware_requirements?.min_ram_gb ?? null;
 
+  // Flash effect when download first appears
+  const [flash, setFlash] = useState(false);
+  const prevDownloading = useRef(false);
+  useEffect(() => {
+    if (downloading && !prevDownloading.current) {
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 600);
+      prevDownloading.current = true;
+      return () => clearTimeout(t);
+    }
+    if (!downloading) prevDownloading.current = false;
+  }, [downloading]);
+
   return (
-    <Card className="p-4 flex flex-col gap-3" role="article" aria-label={model.display_name}>
+    <Card className={`p-4 flex flex-col gap-3 ${flash ? "ring-2 ring-accent/40 shadow-glow transition-shadow duration-300" : ""}`} role="article" aria-label={model.display_name}>
       {/* Header: name + badges */}
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-title font-semibold text-text-primary leading-tight truncate min-w-0">
@@ -72,7 +86,7 @@ export function ModelCard({
       </div>
 
       {/* Size + variant */}
-      {primaryVariant && (
+      {primaryVariant && (primaryVariant.size_bytes ?? 0) > 0 && (
         <p className="text-xs text-text-muted">
           {formatBytes(primaryVariant.size_bytes ?? 0)} · {primaryVariant.quantization}
         </p>
@@ -110,18 +124,33 @@ export function ModelCard({
       {downloading && job && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <div className="flex-1 h-2 rounded-full bg-bg-surface overflow-hidden">
+            <div className="flex-1 h-2 rounded-full bg-bg-surface overflow-hidden relative">
               <div
-                className="h-full rounded-full bg-accent transition-[width] duration-300"
-                style={{ width: `${Math.round(downloadProgress * 100)}%` }}
+                className="h-full rounded-full transition-[width] duration-500 ease-out"
+                style={{
+                  width: `${Math.round(downloadProgress * 100)}%`,
+                  background: job.status === "paused"
+                    ? "var(--color-warning)"
+                    : `linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent-hover) 100%)`,
+                }}
                 role="progressbar"
                 aria-valuenow={Math.round(downloadProgress * 100)}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-label={`Downloading ${model.display_name}: ${Math.round(downloadProgress * 100)}%`}
               />
+              {job.status === "downloading" && (
+                <div
+                  className="absolute inset-0 rounded-full animate-progress-shimmer pointer-events-none"
+                  style={{
+                    backgroundImage: `linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.08) 50%, transparent 75%)`,
+                    backgroundSize: "200% 100%",
+                    width: `${Math.round(downloadProgress * 100)}%`,
+                  }}
+                />
+              )}
             </div>
-            <span className="text-xs text-text-muted font-mono ml-2 w-10 text-right">
+            <span className="text-xs text-text-muted font-mono ml-2 w-10 text-right tabular-nums">
               {Math.round(downloadProgress * 100)}%
             </span>
           </div>
@@ -172,8 +201,9 @@ export function ModelCard({
       {/* Actions */}
       <div className="flex items-center gap-2 mt-auto pt-1">
         {downloading ? (
-          <span className="text-xs text-text-muted font-mono">
-            {job?.status === "queued" ? "Queued" : "Downloading"}
+          <span className="text-xs text-text-muted font-mono flex items-center gap-1.5">
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${job?.status === "paused" ? "bg-warning" : "bg-accent animate-pulse-dot"}`} />
+            {job?.status === "queued" ? "Queued" : job?.status === "paused" ? "Paused" : "Downloading"}
           </span>
         ) : model.downloaded ? (
           <>

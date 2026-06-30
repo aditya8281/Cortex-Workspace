@@ -18,6 +18,8 @@ class ModelCatalogEntry(BaseModel):
     provider: str
     model_type: str
     parameter_count: float | None = None
+    parameter_size: str | None = None
+    quantization: str | None = None
     size_bytes: int | None = None
     context_length: int | None = None
     capabilities: list[str]
@@ -266,6 +268,7 @@ class ModelDetailResponse(BaseModel):
     display_name: str
     family: str
     parameter_count: float | None = None
+    parameter_size: str | None = None
     architecture: str | None = None
     context_length_default: int | None = None
     context_length_max: int | None = None
@@ -276,6 +279,7 @@ class ModelDetailResponse(BaseModel):
     tags: list[str]
     benchmarks: dict | None = None
     variants: list[ModelVariantInfo]
+    downloaded: bool = False
 
 
 class CatalogueRefreshResponse(BaseModel):

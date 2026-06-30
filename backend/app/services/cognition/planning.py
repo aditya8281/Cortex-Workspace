@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -151,7 +151,7 @@ class TaskPlanningService:
         steps[step_index] = step
         plan.steps = steps
         plan.current_step = max(plan.current_step, step_index + 1)
-        plan.updated_at = datetime.utcnow()
+        plan.updated_at = datetime.now(timezone.utc)
 
         self.db.commit()
         self.db.refresh(plan)
@@ -173,7 +173,7 @@ class TaskPlanningService:
             step["error"] = reason
         steps[step_index] = step
         plan.steps = steps
-        plan.updated_at = datetime.utcnow()
+        plan.updated_at = datetime.now(timezone.utc)
 
         self.db.commit()
         self.db.refresh(plan)
@@ -203,7 +203,7 @@ class TaskPlanningService:
         if plan.status in ("completed", "cancelled"):
             raise ValueError(f"Cannot cancel plan with status '{plan.status}'")
         plan.status = "cancelled"
-        plan.updated_at = datetime.utcnow()
+        plan.updated_at = datetime.now(timezone.utc)
         self.db.commit()
         self.db.refresh(plan)
         return plan

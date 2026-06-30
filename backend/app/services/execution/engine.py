@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -49,8 +49,8 @@ class ExecutionEngine:
                     status="blocked",
                     error_message=f"Action verification failed: {'; '.join(verification_result['errors'])}",
                     verification_result=verification_result,
-                    started_at=datetime.utcnow(),
-                    completed_at=datetime.utcnow(),
+                    started_at=datetime.now(timezone.utc),
+                    completed_at=datetime.now(timezone.utc),
                     duration_ms=0,
                     workflow_id=workflow_id,
                     meta=metadata,
@@ -66,7 +66,7 @@ class ExecutionEngine:
             tool_name=tool_name,
             parameters=params,
             status="running",
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
             verification_result=verification_result,
             workflow_id=workflow_id,
             meta=metadata,
@@ -103,7 +103,7 @@ class ExecutionEngine:
 
         # Record timing
         end_time = time.time()
-        execution.completed_at = datetime.utcnow()
+        execution.completed_at = datetime.now(timezone.utc)
         execution.duration_ms = int((end_time - start_time) * 1000)
 
         self.db.commit()

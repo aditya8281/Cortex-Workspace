@@ -237,6 +237,9 @@ class OllamaCatalogService:
         models = list(merged.values())
         models.sort(key=lambda m: m.get("name", ""))
 
+        # Normalize all models for consistent data presentation
+        models = self._normalize_all(models)
+
         if not models:
             logger.warning("All catalog sources failed, attempting fallback")
             fallback = self._load_fallback()
@@ -481,6 +484,95 @@ class OllamaCatalogService:
         except Exception as e:
             logger.debug("Registry blob fetch failed for %s %s: %s", model, digest, e)
             return ""
+
+    # Model names that indicate code-specialized models.
+    # Used to infer "code" capability when the source didn't provide it.
+    _CODE_NAME_PATTERNS: list[str] = [
+        "code", "coder", "codellama", "codestral", "deepcoder",
+        "phind", "wizardcoder", "starcoder", "granite-code",
+        "codebooga", "dolphincoder", "sqlcoder", "codeqwen",
+        "deepseek-coder", "qwen-coder", "magicoder", "codegeex",
+        "codegemma", "codeup", "opencoder", "stable-code",
+    ]
+
+    @staticmethod
+    def _normalize_model(model: dict[str, Any]) -> dict[str, Any]:
+        """Normalize a single model dict for consistent presentation.
+
+        Handles format differences across sources (seed, cloud, local, registry):
+          - parameter_size: raw numbers ("675000000000") → human-readable ("675B")
+          - quantization_level → quantization field
+          - size=0 → None (unknown, not "0 B")
+          - capabilities: ["completion"] → ["chat"], code-inference from name
+        """
+        # --- parameter_size normalization ---
+        param_size = model.get("parameter_size", "")
+        if param_size:
+            raw = param_size.strip()
+            # Already human-readable (e.g. "8B", "7B", "137M")
+            if raw.upper().endswith("B") or raw.upper().endswith("M"):
+                model["parameter_size"] = raw
+            else:
+                # Try numeric parse — raw count like "675000000000"
+                try:
+                    count = float(raw)
+                    if count >= 1_000_000_000_000:
+                        model["parameter_size"] = f"{count / 1_000_000_000_000:.0f}T"
+                    elif count >= 1_000_000_000:
+                        model["parameter_size"] = f"{count / 1_000_000_000:.0f}B"
+                    elif count >= 1_000_000:
+                        model["parameter_size"] = f"{count / 1_000_000:.0f}M"
+                    else:
+                        model["parameter_size"] = raw  # too small to simplify
+                except (ValueError, TypeError):
+                    model["parameter_size"] = raw  # leave as-is
+
+        # --- quantization normalization ---
+        # Seed uses "quantization_level", live API uses "quantization"
+        quant = model.get("quantization", "") or model.get("quantization_level", "")
+        model["quantization"] = quant.upper() if quant else ""
+        # Remove the duplicate key if both existed
+        model.pop("quantization_level", None)
+
+        # --- size normalization ---
+        size = model.get("size", 0) or model.get("size_bytes", 0)
+        if size and size > 0:
+            model["size"] = size
+            model["size_bytes"] = size
+        else:
+            model["size"] = 0
+            model["size_bytes"] = 0
+
+        # --- capabilities normalization ---
+        caps = model.get("capabilities", [])
+        # "completion" is the registry's only cap — translate to "chat"
+        if caps == ["completion"] or not caps:
+            caps = ["chat"]
+
+        # Infer "code" capability from model name for code-specialized models
+        name_lower = model.get("name", "").lower()
+        if any(pat in name_lower for pat in OllamaCatalogService._CODE_NAME_PATTERNS) and "code" not in caps:
+            caps.append("code")
+
+        model["capabilities"] = caps
+
+        return model
+
+    @staticmethod
+    def _normalize_all(models: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Normalize all models in the catalog and remove cloud-only models.
+
+        Cloud models (names ending in ``-cloud``) are Ollama cloud-hosted
+        inference endpoints that cannot be downloaded locally.
+        """
+        normalized: list[dict[str, Any]] = []
+        for model in models:
+            name = model.get("name", "")
+            # Skip cloud-only models — they can't be downloaded locally
+            if name.endswith("-cloud"):
+                continue
+            normalized.append(OllamaCatalogService._normalize_model(model))
+        return normalized
 
     @staticmethod
     def _detect_capabilities(template: str) -> list[str]:
