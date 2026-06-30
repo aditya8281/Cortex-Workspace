@@ -566,9 +566,8 @@ class OllamaCatalogService:
             caps.append("code")
 
         # Detect embedding capability from model name
-        if "embedding" not in caps and any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS):
-            if "embed" in name_lower or "bert" in name_lower or "bge" in name_lower:
-                caps.append("embedding")
+        if "embedding" not in caps and any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS) and ("embed" in name_lower or "bert" in name_lower or "bge" in name_lower):
+            caps.append("embedding")
 
         model["capabilities"] = caps
 
@@ -632,9 +631,8 @@ class OllamaCatalogService:
         # Detect embedding from model name
         if model_name:
             name_lower = model_name.lower()
-            if any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS):
-                if "embed" in name_lower or "bert" in name_lower or "bge" in name_lower:
-                    capabilities.append("embedding")
+            if any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS) and ("embed" in name_lower or "bert" in name_lower or "bge" in name_lower):
+                capabilities.append("embedding")
 
         return capabilities
 

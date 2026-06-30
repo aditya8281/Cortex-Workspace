@@ -143,16 +143,16 @@ export default function ModelsPage() {
   const handleDownloadFromBrowse = useCallback(
     (modelId: string) => {
       // Show model detail so user can pick variant before downloading
-      setDetailModalModelId(modelId);
+      // Load family from model name (modelId is like "qwen3:8b", family is "qwen3")
+      const familyName = modelId.split(":")[0];
+      handleViewDetail(familyName);
     },
-    [],
+    [handleViewDetail],
   );
 
   const handleDownloadFromModal = useCallback(
     (_modelName: string) => {
-      // The modal already calls downloads.download internally,
-      // so we just close and refresh the downloading state
-      setDetailModalModelId(null);
+      setDetailOpen(false);
     },
     [],
   );
