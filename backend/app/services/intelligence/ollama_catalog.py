@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -556,6 +557,12 @@ class OllamaCatalogService:
 
         model["capabilities"] = caps
 
+        # Parse context length from parameters if available
+        if "parameters" in model:
+            num_ctx = OllamaCatalogService._parse_num_ctx(model.get("parameters", ""))
+            if num_ctx:
+                model["context_length"] = num_ctx
+
         return model
 
     @staticmethod
@@ -599,6 +606,21 @@ class OllamaCatalogService:
             capabilities.append("thinking")
 
         return capabilities
+
+    @staticmethod
+    def _parse_num_ctx(parameters: str) -> int | None:
+        """Parse num_ctx from Ollama parameters blob.
+
+        Args:
+            parameters: The parameters blob text (e.g. "num_ctx=8192\\ntemperature=0.7").
+
+        Returns:
+            The context length as int, or None if not found.
+        """
+        if not parameters:
+            return None
+        match = re.search(r'num_ctx[=\s]+(\d+)', parameters)
+        return int(match.group(1)) if match else None
 
     @staticmethod
     def _build_api_entry(
