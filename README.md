@@ -1,4 +1,4 @@
-Last updated: 2026-06-29
+Last updated: 2026-06-30
 
 # CORTEX
 
@@ -33,31 +33,31 @@ The goal is to transform a computer from a tool you operate into a companion tha
 
 | Area | State |
 |------|-------|
-| Backend API | 237 REST endpoints + 6 WebSocket across 10 domain routers |
+| Backend API | 200+ REST + 4 WebSocket endpoints across 10 domain routers |
 | Auth + Vault | Production-quality — JWT + Argon2, Fernet encryption, secure password cache, CSRF double-submit |
 | Agent System | Agent loop, run manager, stall detection, verifier, compactor, policy engine |
 | Memory System | Episodic, semantic, working memory with graph relationships and search |
 | Intelligence | Model catalog, providers, variants, benchmarks, recommendation engine |
 | LLM Integration | llama.cpp + Ollama with provider abstraction |
-| Awareness | Device detection, file tracking, project detection, repo analysis, health monitoring |
+| Awareness | Device detection, file tracking, project detection, repo analysis, health monitoring, context & attention |
 | Privacy | Consent management, audit logging, access control, RBAC/ABAC |
-| Frontend | 17 real pages + 11 Coming Soon, 51 feature components, 19 shared UI components |
-| Tests | 1,619 passing (backend pytest) |
+| Frontend | 20 real pages + 10 Coming Soon, 72 feature components, 12 shared UI components |
+| Tests | 2,077 passing (backend pytest) |
 | Linting | ruff + mypy — clean |
-| Database | 38 Alembic migrations |
+| Database | 13 active Alembic migrations |
 
 ### Codebase Metrics
 
 | Metric | Value |
 |--------|-------|
-| Backend Python files | 414 |
-| Backend LoC | 45,046 |
-| Frontend TSX/TS files | 124 |
-| Frontend LoC | 13,129 |
-| Test files | 186 |
-| Test LoC | 20,039 |
-| Documentation files | 73 |
-| Git commits | 701 |
+| Backend Python files | 425 |
+| Backend LoC | 46,733 |
+| Frontend TSX/TS files | 149 |
+| Frontend LoC | 17,348 |
+| Test files | 194 |
+| Test LoC | 21,784 |
+| Documentation files | 32 |
+| Git commits | 738 |
 
 ---
 
@@ -132,6 +132,7 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 | `/awareness` | Real | Device, environment, health, project cards |
 | `/awareness/repos` | Real | Repository management, add/list/remove |
 | `/awareness/indexing` | Real | Indexing configuration, graph view |
+| `/awareness/context` | Real | Context and attention system |
 | `/memory` | Real | Knowledge graph, search, memory management |
 | `/search` | Real | Unified search across all domains |
 | `/vault` | Real | Encrypted document locker |
@@ -140,19 +141,20 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 | `/privacy/consent` | Real | Consent management with toggles |
 | `/system` | Real | System health monitoring |
 | `/settings` | Real | User settings, profile, preferences |
+| `/cognition` | Real | Cognition dashboard |
+| `/execution` | Real | Execution monitoring |
 | `/auth` | Real | Login |
 | `/auth/register` | Real | Registration |
+| `/compare` | Coming Soon | Model comparison |
 | `/marketplace` | Coming Soon | Model marketplace |
 | `/notes` | Coming Soon | Notes system |
 | `/scheduler` | Coming Soon | Task scheduling |
 | `/tasks` | Coming Soon | Task management |
-| `/compare` | Coming Soon | Model comparison |
-| `/intelligence` | Coming Soon | Intelligence dashboard |
-| `/execution` | Coming Soon | Agent execution management |
-| `/developer` | Coming Soon | Developer tools & API |
-| `/docs` | Coming Soon | Documentation viewer |
 | `/apps` | Coming Soon | Application integrations |
 | `/knowledge` | Coming Soon | Knowledge graph explorer |
+| `/intelligence` | Coming Soon | Intelligence dashboard |
+| `/developer` | Coming Soon | Developer tools & API |
+| `/docs` | Coming Soon | Documentation viewer |
 
 ---
 
@@ -179,7 +181,7 @@ CORTEX combines a FastAPI backend, Next.js frontend, Rust-based code intelligenc
 ```bash
 make install       # uv sync + npm install
 make migrate       # alembic upgrade head
-make test          # 1,619 tests (backend pytest)
+make test          # 2,077 tests (backend pytest)
 make lint          # ruff + mypy
 make format        # ruff format
 make check         # lint + test
@@ -216,7 +218,8 @@ make design        # Rebuild frontend via /project:design
 | [docs/reference/api.md](docs/reference/api.md) | Engineers | API reference, endpoints, auth |
 | [docs/reference/database.md](docs/reference/database.md) | Engineers | DB schema, migrations, conventions |
 | [docs/guides/governance.md](docs/guides/governance.md) | Everyone | Rules of engagement, security patterns |
-| [docs/domains/](docs/domains/) | Engineers | Domain-specific documentation |
+| [docs/domains/memory.md](docs/domains/memory.md) | Engineers | Memory domain documentation |
+| [docs/decisions/](docs/decisions/) | Engineers | Architecture Decision Records (ADRs) |
 
 ---
 
