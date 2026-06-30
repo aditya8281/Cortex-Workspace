@@ -23,6 +23,8 @@ class ModelCatalog(Base):
     context_length_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
     capabilities: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=list)
     license: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    embedding_dim: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    pooling_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recommended_use_cases: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=list)
     not_recommended_for: Mapped[list | None] = mapped_column(JSONB, nullable=True, default=list)
     release_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
