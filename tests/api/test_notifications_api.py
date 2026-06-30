@@ -1,3 +1,4 @@
+"""Tests for notifications API — notification CRUD and read status."""
 HEADERS = {"Authorization": "Bearer fake-token"}
 
 

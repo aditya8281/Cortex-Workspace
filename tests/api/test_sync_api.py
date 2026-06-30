@@ -1,3 +1,4 @@
+"""Tests for sync API — data synchronization endpoints."""
 from unittest.mock import patch
 
 HEADERS = {"Authorization": "Bearer fake-token"}

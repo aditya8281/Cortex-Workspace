@@ -1,3 +1,4 @@
+"""Tests for agent run store — run persistence and retrieval."""
 from __future__ import annotations
 
 """Tests for run persistence — RunStore, snapshots, replay buffer, PID tracking."""

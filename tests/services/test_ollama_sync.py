@@ -1,3 +1,4 @@
+"""Tests for Ollama sync service — catalog synchronization logic."""
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

@@ -1,3 +1,4 @@
+"""Tests for agent relationship integrity — entity linking and graph consistency."""
 import uuid
 
 from backend.app.agents.integrity.model.relationship_model import (

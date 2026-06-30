@@ -1,3 +1,4 @@
+"""Tests for conversations API security — ownership checks and cross-user access."""
 from unittest.mock import MagicMock, patch
 
 from backend.app.api.deps import get_current_user

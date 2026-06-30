@@ -1,3 +1,4 @@
+"""Tests for knowledge API — knowledge graph CRUD and traversal."""
 def test_knowledge_health(client, mock_auth):
     resp = client.get("/api/v1/memory/knowledge/health")
     assert resp.status_code == 200

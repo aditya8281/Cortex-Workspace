@@ -1,3 +1,4 @@
+"""Tests for agent context integrity — context window management and truncation."""
 # tests/agents/integrity/test_context.py
 from pathlib import Path
 

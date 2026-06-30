@@ -1,3 +1,4 @@
+"""Tests for agents API — CRUD operations and agent lifecycle."""
 from unittest.mock import AsyncMock, patch
 
 HEADERS = {"Authorization": "Bearer fake-token"}

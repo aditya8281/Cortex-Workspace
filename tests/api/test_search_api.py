@@ -1,3 +1,4 @@
+"""Tests for search API — fulltext and vector search operations."""
 from unittest.mock import AsyncMock, MagicMock, patch
 
 HEADERS = {"Authorization": "Bearer fake-token"}

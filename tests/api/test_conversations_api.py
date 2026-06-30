@@ -1,3 +1,4 @@
+"""Tests for conversations API — message creation, retrieval, history."""
 import json
 from unittest.mock import MagicMock, patch
 

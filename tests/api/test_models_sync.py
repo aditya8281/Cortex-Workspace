@@ -1,3 +1,4 @@
+"""Tests for models sync — catalog synchronization with Ollama."""
 from unittest.mock import AsyncMock, MagicMock, patch
 
 HEADERS = {"Authorization": "Bearer fake-token"}

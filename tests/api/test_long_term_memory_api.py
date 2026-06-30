@@ -1,3 +1,4 @@
+"""Tests for long-term memory API — memory storage, retrieval, and forgetting."""
 from unittest.mock import MagicMock
 
 import pytest

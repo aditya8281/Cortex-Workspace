@@ -1,3 +1,4 @@
+"""Tests for JSON column handling — SQLite compatibility and serialization."""
 from __future__ import annotations
 
 from backend.app.models.interaction.user import User

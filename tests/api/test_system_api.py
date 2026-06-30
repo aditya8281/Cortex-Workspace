@@ -1,3 +1,4 @@
+"""Tests for system API — health checks and system information."""
 from unittest.mock import patch
 
 HEADERS = {"Authorization": "Bearer fake-token"}

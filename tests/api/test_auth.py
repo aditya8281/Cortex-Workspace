@@ -1,3 +1,4 @@
+"""Tests for auth API — login, register, token refresh, logout."""
 # Tests for auth flows.  Uses the session-scoped ``client`` fixture
 # provided by conftest.py which gives each test session a clean in-memory DB.
 

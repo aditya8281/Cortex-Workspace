@@ -1,3 +1,4 @@
+"""Tests for vault service — encryption, decryption, file operations."""
 # Tests for vault encryption and lock/unlock lifecycle.
 
 import os

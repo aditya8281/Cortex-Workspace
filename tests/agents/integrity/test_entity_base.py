@@ -1,3 +1,4 @@
+"""Tests for agent entity base — core entity types and relationships."""
 # tests/agents/integrity/test_entity_base.py
 import uuid
 
