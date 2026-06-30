@@ -64,6 +64,7 @@ class TestAwarenessAPI:
     def test_scan_directory(self, auth_client: TestClient, tmp_path: object) -> None:
         """POST /files/scan indexes files in directory."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "test.py").write_text("print('hello')")
 
@@ -78,6 +79,7 @@ class TestAwarenessAPI:
     def test_detect_changes(self, auth_client: TestClient, tmp_path: object) -> None:
         """GET /files/changes detects file changes."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "a.py").write_text("original")
 
@@ -94,6 +96,7 @@ class TestAwarenessAPI:
     def test_directory_summary(self, auth_client: TestClient, tmp_path: object) -> None:
         """GET /files/summary returns file stats."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "a.py").write_text("print('a')")
         (p / "b.js").write_text("console.log('b')")
@@ -107,6 +110,7 @@ class TestAwarenessAPI:
     def test_scan_repository(self, auth_client: TestClient, tmp_path: object) -> None:
         """POST /repository/scan indexes repository."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "requirements.txt").write_text("fastapi==0.100.0")
         (p / "main.py").write_text("from fastapi import FastAPI")
@@ -123,6 +127,7 @@ class TestAwarenessAPI:
     def test_scan_project(self, auth_client: TestClient, tmp_path: object) -> None:
         """GET /project/scan detects project type."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "requirements.txt").write_text("fastapi")
         (p / "tests").mkdir()
@@ -143,6 +148,7 @@ class TestAwarenessAPI:
     def test_awareness_e2e(self, auth_client: TestClient, tmp_path: object) -> None:
         """End-to-end: scan → device → health → environment."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "main.py").write_text("print('hello')")
 

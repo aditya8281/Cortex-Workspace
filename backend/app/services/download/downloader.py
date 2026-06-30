@@ -442,8 +442,7 @@ class DownloadManager:
         """
         # Collect IDs that are still in the queue (QUEUED or PAUSED)
         queued_ids = [
-            r.download_id for r in self._records.values()
-            if r.status in (DownloadStatus.QUEUED, DownloadStatus.PAUSED)
+            r.download_id for r in self._records.values() if r.status in (DownloadStatus.QUEUED, DownloadStatus.PAUSED)
         ]
         queued_set = set(queued_ids)
 
@@ -467,10 +466,7 @@ class DownloadManager:
             DownloadStatus.FAILED,
             DownloadStatus.CANCELLED,
         }
-        to_remove = [
-            did for did, rec in self._records.items()
-            if rec.status in terminal_statuses
-        ]
+        to_remove = [did for did, rec in self._records.items() if rec.status in terminal_statuses]
         for did in to_remove:
             del self._records[did]
         if to_remove:

@@ -1,4 +1,5 @@
 """WebSocket security tests — expired tokens and non-existent users."""
+
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -37,9 +38,7 @@ def _valid_token(user_id: int = 1) -> str:
 def test_ws_rejects_expired_token(client, path: str):
     """Expired JWT is rejected by all WS endpoints."""
     token = _expired_token()
-    with client.websocket_connect(
-        path, headers={"sec-websocket-protocol": token}
-    ) as ws:
+    with client.websocket_connect(path, headers={"sec-websocket-protocol": token}) as ws:
         msg = ws.receive_json()
     assert msg.get("type") == "error"
     assert "message" in msg
@@ -65,9 +64,7 @@ def test_ws_rejects_nonexistent_user(client, path: str):
     returns None → Exception raised.
     """
     token = _valid_token(user_id=99999)
-    with client.websocket_connect(
-        path, headers={"sec-websocket-protocol": token}
-    ) as ws:
+    with client.websocket_connect(path, headers={"sec-websocket-protocol": token}) as ws:
         msg = ws.receive_json()
     assert msg.get("type") == "error"
     assert "message" in msg

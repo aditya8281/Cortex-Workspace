@@ -194,9 +194,7 @@ class CatalogueManager:
                     architecture=model.get("architecture"),
                     embedding_dim=model.get("embedding_dim"),
                     pooling_type=model.get("pooling_type"),
-                    recommended_use_cases=self._compute_recommended_use_cases(
-                        capabilities or ["chat"]
-                    ),
+                    recommended_use_cases=self._compute_recommended_use_cases(capabilities or ["chat"]),
                 )
                 self.db.add(catalog)
                 self.db.flush()

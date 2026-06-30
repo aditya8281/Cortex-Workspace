@@ -51,9 +51,7 @@ class SystemMonitorService:
         logger.info("System snapshot taken (cpu=%.1f%%, mem=%.1f%%)", snap.cpu_percent, snap.memory_percent)
         return snap
 
-    def get_recent_snapshots(
-        self, user_id: int | None = None, limit: int = 20
-    ) -> list[SystemSnapshot]:
+    def get_recent_snapshots(self, user_id: int | None = None, limit: int = 20) -> list[SystemSnapshot]:
         """Get recent snapshots, optionally filtered by user."""
         q = self.db.query(SystemSnapshot)
         if user_id:

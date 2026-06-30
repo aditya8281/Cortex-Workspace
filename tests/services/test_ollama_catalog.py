@@ -65,7 +65,7 @@ class TestEmbeddingDetection:
         model = {
             "name": "nomic-embed-text:latest",
             "capabilities": ["completion"],
-            "parameters": "num_ctx=8192\nembedding_dim=768\n"
+            "parameters": "num_ctx=8192\nembedding_dim=768\n",
         }
         OllamaCatalogService._normalize_model(model)
         assert "embedding" in model["capabilities"]

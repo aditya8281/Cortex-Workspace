@@ -59,9 +59,7 @@ def list_plans(
 ) -> Any:
     """List task plans for the current user."""
     service = TaskPlanningService(db)
-    plans = service.get_user_plans(
-        current_user.id, status=status, limit=limit, offset=offset
-    )
+    plans = service.get_user_plans(current_user.id, status=status, limit=limit, offset=offset)
     return TaskPlanListResponse(
         items=[TaskPlanResponse.model_validate(p) for p in plans],
         total=len(plans),

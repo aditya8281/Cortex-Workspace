@@ -29,7 +29,8 @@ class TestCatalogIngestionUnit:
     def test_ingest_sets_license(self, db_session):
         """License from enrichment dict should be stored."""
         entry = self._make_entry(
-            db_session, model_id="test-license-model",
+            db_session,
+            model_id="test-license-model",
             display_name="Test License Model",
         )
         db_session.flush()
@@ -39,17 +40,14 @@ class TestCatalogIngestionUnit:
         entry.recommended_use_cases = ["general chat", "Q&A"]
         db_session.commit()
 
-        loaded = (
-            db_session.query(ModelCatalog)
-            .filter_by(model_id="test-license-model")
-            .first()
-        )
+        loaded = db_session.query(ModelCatalog).filter_by(model_id="test-license-model").first()
         assert loaded.license == "Apache-2.0"
 
     def test_ingest_sets_context_length(self, db_session):
         """context_length from enrichment should populate context_length_default."""
         entry = self._make_entry(
-            db_session, model_id="test-ctx-model",
+            db_session,
+            model_id="test-ctx-model",
             display_name="Test Ctx Model",
             context_length_default=4096,
         )
@@ -59,17 +57,14 @@ class TestCatalogIngestionUnit:
         entry.context_length_default = 8192
         db_session.commit()
 
-        loaded = (
-            db_session.query(ModelCatalog)
-            .filter_by(model_id="test-ctx-model")
-            .first()
-        )
+        loaded = db_session.query(ModelCatalog).filter_by(model_id="test-ctx-model").first()
         assert loaded.context_length_default == 8192
 
     def test_ingest_sets_embedding_fields(self, db_session):
         """embedding_dim and pooling_type should be stored."""
         entry = self._make_entry(
-            db_session, model_id="test-embed-model",
+            db_session,
+            model_id="test-embed-model",
             display_name="Test Embed Model",
         )
         db_session.flush()
@@ -78,18 +73,15 @@ class TestCatalogIngestionUnit:
         entry.pooling_type = "mean"
         db_session.commit()
 
-        loaded = (
-            db_session.query(ModelCatalog)
-            .filter_by(model_id="test-embed-model")
-            .first()
-        )
+        loaded = db_session.query(ModelCatalog).filter_by(model_id="test-embed-model").first()
         assert loaded.embedding_dim == 768
         assert loaded.pooling_type == "mean"
 
     def test_ingest_embedding_use_cases(self, db_session):
         """Embedding models get embedding-specific use cases."""
         entry = self._make_entry(
-            db_session, model_id="test-embed-caps",
+            db_session,
+            model_id="test-embed-caps",
             display_name="Test Embed Caps",
         )
         db_session.flush()
@@ -97,17 +89,14 @@ class TestCatalogIngestionUnit:
         entry.recommended_use_cases = ["semantic search", "RAG", "text embeddings"]
         db_session.commit()
 
-        loaded = (
-            db_session.query(ModelCatalog)
-            .filter_by(model_id="test-embed-caps")
-            .first()
-        )
+        loaded = db_session.query(ModelCatalog).filter_by(model_id="test-embed-caps").first()
         assert "semantic search" in loaded.recommended_use_cases
 
     def test_ingest_sets_architecture(self, db_session):
         """Architecture from enrichment dict should be stored."""
         entry = self._make_entry(
-            db_session, model_id="test-arch-model",
+            db_session,
+            model_id="test-arch-model",
             display_name="Test Arch Model",
         )
         db_session.flush()
@@ -115,11 +104,7 @@ class TestCatalogIngestionUnit:
         entry.architecture = "llama"
         db_session.commit()
 
-        loaded = (
-            db_session.query(ModelCatalog)
-            .filter_by(model_id="test-arch-model")
-            .first()
-        )
+        loaded = db_session.query(ModelCatalog).filter_by(model_id="test-arch-model").first()
         assert loaded.architecture == "llama"
 
 
@@ -149,9 +134,7 @@ class TestComputeRecommendedUseCases:
 
     def test_mixed_capabilities_embedding_priority(self):
         """Embedding capability takes priority over others."""
-        result = CatalogueManager._compute_recommended_use_cases(
-            ["embedding", "chat"]
-        )
+        result = CatalogueManager._compute_recommended_use_cases(["embedding", "chat"])
         assert result == ["semantic search", "RAG", "text embeddings"]
 
     def test_empty_capabilities(self):
@@ -178,12 +161,8 @@ class TestComputeRecommendedUseCases:
 class TestCatalogIngestionEndToEnd:
     """Test the actual CatalogueManager.ingest_from_catalog with mock catalog data."""
 
-    @patch(
-        "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync"
-    )
-    def test_ingest_pipes_all_enrichment_fields(
-        self, mock_get_catalog, db_session
-    ):
+    @patch("backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync")
+    def test_ingest_pipes_all_enrichment_fields(self, mock_get_catalog, db_session):
         """ingest_from_catalog should pipe license, architecture, context_length,
         embedding_dim, pooling_type, and recommended_use_cases to DB."""
         mock_get_catalog.return_value = (
@@ -246,11 +225,7 @@ class TestCatalogIngestionEndToEnd:
         assert count == 3
 
         # Verify llama3:8b was ingested with correct fields
-        llama3 = (
-            db_session.query(ModelCatalog)
-            .filter_by(model_id="llama3")
-            .first()
-        )
+        llama3 = db_session.query(ModelCatalog).filter_by(model_id="llama3").first()
         assert llama3 is not None
         assert llama3.license == "Llama 3 Community"
         assert llama3.architecture == "llama"
@@ -258,11 +233,7 @@ class TestCatalogIngestionEndToEnd:
         assert llama3.recommended_use_cases == ["general chat", "Q&A"]
 
         # Verify nomic-embed-text was ingested with all enrichment fields
-        nomic = (
-            db_session.query(ModelCatalog)
-            .filter_by(model_id="nomic-embed-text")
-            .first()
-        )
+        nomic = db_session.query(ModelCatalog).filter_by(model_id="nomic-embed-text").first()
         assert nomic is not None
         assert nomic.license == "Apache-2.0"
         assert nomic.architecture == "bert"
@@ -276,11 +247,7 @@ class TestCatalogIngestionEndToEnd:
         ]
 
         # Verify codellama:7b use cases reflect code capability
-        codellama = (
-            db_session.query(ModelCatalog)
-            .filter_by(model_id="codellama")
-            .first()
-        )
+        codellama = db_session.query(ModelCatalog).filter_by(model_id="codellama").first()
         assert codellama is not None
         assert codellama.license == "Llama 2"
         assert codellama.architecture == "llama"
@@ -290,12 +257,8 @@ class TestCatalogIngestionEndToEnd:
             "programming assistance",
         ]
 
-    @patch(
-        "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync"
-    )
-    def test_ingest_updates_existing_entries(
-        self, mock_get_catalog, db_session
-    ):
+    @patch("backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync")
+    def test_ingest_updates_existing_entries(self, mock_get_catalog, db_session):
         """Ingestion should update enrichment fields on existing records."""
         # Pre-seed an existing entry with default values
         existing = ModelCatalog(
@@ -345,12 +308,8 @@ class TestCatalogIngestionEndToEnd:
         assert existing.context_length_default == 8192
         assert existing.recommended_use_cases == ["general chat", "Q&A"]
 
-    @patch(
-        "backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync"
-    )
-    def test_ingest_does_not_overwrite_existing_fields(
-        self, mock_get_catalog, db_session
-    ):
+    @patch("backend.app.services.intelligence.ollama_catalog.get_ollama_catalog_sync")
+    def test_ingest_does_not_overwrite_existing_fields(self, mock_get_catalog, db_session):
         """Ingestion should not overwrite existing fields with empty values."""
         existing = ModelCatalog(
             model_id="existing-model",

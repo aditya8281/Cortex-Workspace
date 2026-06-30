@@ -163,7 +163,9 @@ async def _stream_chat_response(
         conv = svc.get(conversation_id, user_id) if user_id else None
         repo_id = conv.repo_id if conv else None
         rag_context = rag.retrieve_context(user_content, repo_id=repo_id)
-        sources = [{"file_path": r.file_path, "score": r.score, "content": r.content[:300]} for r in rag_context.results]
+        sources = [
+            {"file_path": r.file_path, "score": r.score, "content": r.content[:300]} for r in rag_context.results
+        ]
     except Exception as exc:
         logger.error("RAG pipeline failed: %s", exc, exc_info=True)
         rag_context = None
@@ -229,7 +231,9 @@ async def send_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    logger.info("send_message called: conv=%s user=%s content_len=%d", conversation_id, current_user.id, len(payload.content))
+    logger.info(
+        "send_message called: conv=%s user=%s content_len=%d", conversation_id, current_user.id, len(payload.content)
+    )
     try:
         svc = ConversationService(db)
         conv = svc.get(conversation_id, current_user.id)

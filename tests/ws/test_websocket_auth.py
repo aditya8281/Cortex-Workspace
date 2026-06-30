@@ -41,9 +41,7 @@ def test_ws_rejects_no_token(client, path: str):
 )
 def test_ws_rejects_bad_token(client, path: str):
     """Every WS endpoint must send an error for a garbage token."""
-    with client.websocket_connect(
-        path, headers={"sec-websocket-protocol": "garbage-token"}
-    ) as ws:
+    with client.websocket_connect(path, headers={"sec-websocket-protocol": "garbage-token"}) as ws:
         msg = ws.receive_json()
     assert msg.get("type") == "error"
     assert "message" in msg
@@ -52,9 +50,7 @@ def test_ws_rejects_bad_token(client, path: str):
 def test_ws_demo_echo(client):
     """Demo echo action responds with the same text."""
     token = _make_token()
-    with client.websocket_connect(
-        "/ws/demo", headers={"sec-websocket-protocol": token}
-    ) as ws:
+    with client.websocket_connect("/ws/demo", headers={"sec-websocket-protocol": token}) as ws:
         ws.send_json({"action": "echo", "text": "hello world"})
         resp = ws.receive_json()
         assert resp == {"action": "echo", "data": "hello world"}
@@ -63,9 +59,7 @@ def test_ws_demo_echo(client):
 def test_ws_demo_stream(client):
     """Demo stream action emits chunks ending with done=True."""
     token = _make_token()
-    with client.websocket_connect(
-        "/ws/demo", headers={"sec-websocket-protocol": token}
-    ) as ws:
+    with client.websocket_connect("/ws/demo", headers={"sec-websocket-protocol": token}) as ws:
         ws.send_json({"action": "stream", "text": "a b c"})
         chunks = []
         while True:
@@ -81,9 +75,7 @@ def test_ws_demo_stream(client):
 def test_ws_demo_unknown_action(client):
     """Demo responds with error for unknown actions."""
     token = _make_token()
-    with client.websocket_connect(
-        "/ws/demo", headers={"sec-websocket-protocol": token}
-    ) as ws:
+    with client.websocket_connect("/ws/demo", headers={"sec-websocket-protocol": token}) as ws:
         ws.send_json({"action": "nonexistent"})
         resp = ws.receive_json()
         assert resp["action"] == "error"

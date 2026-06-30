@@ -110,7 +110,9 @@ class TestHypothesisResolutionFlow:
 
         # Verify auto-reject fired (confidence ≤ 0.10 → status "rejected")
         fetched = svc.get_hypothesis(hypo.id)
-        assert fetched.status == "rejected", f"Expected rejected, got {fetched.status} at confidence={fetched.confidence}"
+        assert fetched.status == "rejected", (
+            f"Expected rejected, got {fetched.status} at confidence={fetched.confidence}"
+        )
 
 
 class TestErrorPatternDetection:

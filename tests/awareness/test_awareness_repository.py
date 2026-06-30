@@ -13,6 +13,7 @@ class TestRepositoryScannerService:
     def test_scan_python_repo(self, db_session: Session, tmp_path: object) -> None:
         """Scanning a Python repo detects language and framework."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "requirements.txt").write_text("fastapi==0.100.0\nuvicorn==0.23.0")
         (p / "main.py").write_text("from fastapi import FastAPI")
@@ -29,11 +30,13 @@ class TestRepositoryScannerService:
     def test_scan_node_repo(self, db_session: Session, tmp_path: object) -> None:
         """Scanning a Node.js repo detects TypeScript and next.js."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
-        (p / "package.json").write_text(json.dumps({
-            "dependencies": {"react": "^18.0.0", "next": "^14.0.0"},
-            "devDependencies": {"typescript": "^5.0.0"}
-        }))
+        (p / "package.json").write_text(
+            json.dumps(
+                {"dependencies": {"react": "^18.0.0", "next": "^14.0.0"}, "devDependencies": {"typescript": "^5.0.0"}}
+            )
+        )
         (p / "next.config.js").write_text("module.exports = {}")
         (p / "app.tsx").write_text("export default function App() {}")
 
@@ -47,6 +50,7 @@ class TestRepositoryScannerService:
     def test_scan_rust_repo(self, db_session: Session, tmp_path: object) -> None:
         """Scanning a Rust repo detects Cargo dependencies."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "Cargo.toml").write_text(
             '[dependencies]\nserde = { version = "1.0", features = ["derive"] }\ntokio = { version = "1" }'
@@ -63,6 +67,7 @@ class TestRepositoryScannerService:
     def test_upsert_scan(self, db_session: Session, tmp_path: object) -> None:
         """Re-scanning updates the existing record (upsert)."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "main.py").write_text("print('v1')")
 
@@ -80,6 +85,7 @@ class TestRepositoryScannerService:
         """Git branch and commit are detected when .git exists."""
         import pathlib
         import subprocess
+
         p = pathlib.Path(str(tmp_path))
         subprocess.run(["git", "init"], cwd=str(p), capture_output=True, check=True)
         subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=str(p), capture_output=True, check=True)
@@ -98,6 +104,7 @@ class TestRepositoryScannerService:
     def test_empty_repo(self, db_session: Session, tmp_path: object) -> None:
         """Scanning an empty directory creates a valid record."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
 
         service = RepositoryScannerService(db_session)

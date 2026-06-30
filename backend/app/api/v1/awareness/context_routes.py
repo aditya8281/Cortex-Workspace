@@ -144,9 +144,7 @@ def set_state(
 ):
     """Set or update a context state entry."""
     svc = ContextEngineService(db)
-    return svc.set_state(
-        current_user.id, state_key, state_value, source, confidence
-    )
+    return svc.set_state(current_user.id, state_key, state_value, source, confidence)
 
 
 # ── Events ─────────────────────────────────────────────────────────────────

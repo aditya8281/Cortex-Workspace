@@ -97,9 +97,7 @@ class ContextEngineService:
         """Check if rule conditions are satisfied by the context."""
         if not conditions:
             return True
-        return all(
-            context.get(key) == value for key, value in conditions.items()
-        )
+        return all(context.get(key) == value for key, value in conditions.items())
 
     # ------------------------------------------------------------------
     # State management
@@ -171,9 +169,7 @@ class ContextEngineService:
         self.db.refresh(event)
         return event
 
-    def get_events(
-        self, user_id: int, event_type: str | None = None, limit: int = 50
-    ) -> list[ContextEvent]:
+    def get_events(self, user_id: int, event_type: str | None = None, limit: int = 50) -> list[ContextEvent]:
         """Get recent events for a user, optionally filtered by type."""
         q = self.db.query(ContextEvent).filter(ContextEvent.user_id == user_id)
         if event_type:

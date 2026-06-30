@@ -19,6 +19,7 @@ from backend.app.schemas.awareness.repo_analyzer import RepositoryIndexResponse
 # Model creation tests
 # ---------------------------------------------------------------------------
 
+
 class TestFileIndexModel:
     def test_create(self, db_session: Session) -> None:
         f = FileIndex(
@@ -138,17 +139,24 @@ class TestSystemHealthModel:
 # Schema validation tests
 # ---------------------------------------------------------------------------
 
+
 class TestSchemas:
     def test_file_index_response(self) -> None:
         s = FileIndexResponse(
-            id=1, user_id=1, file_path="/test.py", file_name="test.py",
+            id=1,
+            user_id=1,
+            file_path="/test.py",
+            file_name="test.py",
             indexed_at=datetime.now(timezone.utc),
         )
         assert s.file_name == "test.py"
 
     def test_file_index_list(self) -> None:
         item = FileIndexResponse(
-            id=1, user_id=1, file_path="/a.py", file_name="a.py",
+            id=1,
+            user_id=1,
+            file_path="/a.py",
+            file_name="a.py",
             indexed_at=datetime.now(timezone.utc),
         )
         s = FileIndexList(files=[item], total=1)
@@ -160,41 +168,58 @@ class TestSchemas:
 
     def test_repository_index_response(self) -> None:
         s = RepositoryIndexResponse(
-            id=1, user_id=1, repo_path="/repo", repo_name="repo",
-            total_files=10, total_lines=500,
+            id=1,
+            user_id=1,
+            repo_path="/repo",
+            repo_name="repo",
+            total_files=10,
+            total_lines=500,
             last_indexed=datetime.now(timezone.utc),
         )
         assert s.total_files == 10
 
     def test_project_index_response(self) -> None:
         s = ProjectIndexResponse(
-            id=1, user_id=1, project_path="/p", project_name="p",
-            has_tests=0, has_ci=0, has_docker=0,
+            id=1,
+            user_id=1,
+            project_path="/p",
+            project_name="p",
+            has_tests=0,
+            has_ci=0,
+            has_docker=0,
             last_scanned=datetime.now(timezone.utc),
         )
         assert s.project_path == "/p"
 
     def test_device_info_response(self) -> None:
         s = DeviceInfoResponse(
-            id=1, user_id=1, hostname="dev", os_type="linux",
+            id=1,
+            user_id=1,
+            hostname="dev",
+            os_type="linux",
             last_checked=datetime.now(timezone.utc),
         )
         assert s.os_type == "linux"
 
     def test_health_check_response(self) -> None:
         s = HealthCheckResponse(
-            id=1, service_name="db", status="healthy",
+            id=1,
+            service_name="db",
+            status="healthy",
             last_check=datetime.now(timezone.utc),
         )
         assert s.status == "healthy"
 
     def test_system_health_response(self) -> None:
         item = HealthCheckResponse(
-            id=1, service_name="db", status="healthy",
+            id=1,
+            service_name="db",
+            status="healthy",
             last_check=datetime.now(timezone.utc),
         )
         s = SystemHealthResponse(
-            services=[item], overall_status="healthy",
+            services=[item],
+            overall_status="healthy",
             checked_at=datetime.now(timezone.utc),
         )
         assert s.overall_status == "healthy"

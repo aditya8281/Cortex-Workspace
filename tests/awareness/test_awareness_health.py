@@ -10,6 +10,7 @@ from backend.app.services.awareness.health_monitor import SystemHealthService
 class TestSystemHealthService:
     def test_check_healthy_service(self, db_session: Session) -> None:
         """A service that doesn't raise is healthy."""
+
         def healthy_check() -> None:
             pass
 
@@ -22,6 +23,7 @@ class TestSystemHealthService:
 
     def test_check_down_service(self, db_session: Session) -> None:
         """A service that raises is down."""
+
         def failing_check() -> None:
             raise ConnectionError("Cannot connect to database")
 
@@ -33,6 +35,7 @@ class TestSystemHealthService:
 
     def test_health_upsert(self, db_session: Session) -> None:
         """Re-checking updates existing record (upsert)."""
+
         def check() -> None:
             pass
 
@@ -45,6 +48,7 @@ class TestSystemHealthService:
 
     def test_get_all_health(self, db_session: Session) -> None:
         """Get all health records returns list."""
+
         def check() -> None:
             pass
 
@@ -57,6 +61,7 @@ class TestSystemHealthService:
 
     def test_get_service_health(self, db_session: Session) -> None:
         """Get specific service health returns correct record."""
+
         def check() -> None:
             pass
 
@@ -76,6 +81,7 @@ class TestSystemHealthService:
 
     def test_get_overall_status_healthy(self, db_session: Session) -> None:
         """Overall status is healthy when all services are healthy."""
+
         def check() -> None:
             pass
 
@@ -90,6 +96,7 @@ class TestSystemHealthService:
 
     def test_get_overall_status_down(self, db_session: Session) -> None:
         """Overall status is down when any service is down."""
+
         def check() -> None:
             pass
 

@@ -1,4 +1,5 @@
 """Tests for the unified model catalog API."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from backend.app.models.intelligence.model_catalog import ModelCatalog, ModelVariant

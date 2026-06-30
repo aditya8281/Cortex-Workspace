@@ -56,10 +56,14 @@ class TestAttentionService:
         svc = AttentionService(db_session)
         tracker = svc.start_session(user_id=1)
 
-        mock_dt = type("MockDT", (), {
-            "now": staticmethod(lambda *a, **kw: _naive_now()),
-            "timezone": type("tz", (), {"utc": None})(),
-        })()
+        mock_dt = type(
+            "MockDT",
+            (),
+            {
+                "now": staticmethod(lambda *a, **kw: _naive_now()),
+                "timezone": type("tz", (), {"utc": None})(),
+            },
+        )()
         with pytest.MonkeyPatch.context() as m:
             m.setattr(
                 "backend.app.services.awareness.attention_service.datetime",
@@ -80,10 +84,14 @@ class TestAttentionService:
         svc = AttentionService(db_session)
         tracker = svc.start_session(user_id=1)
 
-        mock_dt = type("MockDT", (), {
-            "now": staticmethod(lambda *a, **kw: _naive_now()),
-            "timezone": type("tz", (), {"utc": None})(),
-        })()
+        mock_dt = type(
+            "MockDT",
+            (),
+            {
+                "now": staticmethod(lambda *a, **kw: _naive_now()),
+                "timezone": type("tz", (), {"utc": None})(),
+            },
+        )()
         with pytest.MonkeyPatch.context() as m:
             m.setattr(
                 "backend.app.services.awareness.attention_service.datetime",

@@ -46,13 +46,9 @@ class Settings(BaseSettings):
 
         # Deprecation warnings for renamed env vars
         if os.environ.get("CORTEX_STORAGE_ROOT"):
-            logger.warning(
-                "CORTEX_STORAGE_ROOT is deprecated. Use CORTEX_ROOT instead."
-            )
+            logger.warning("CORTEX_STORAGE_ROOT is deprecated. Use CORTEX_ROOT instead.")
         if os.environ.get("CORTEX_NEW_AGENT"):
-            logger.warning(
-                "CORTEX_NEW_AGENT is deprecated. Use CORTEX_NEW_AGENT_LOOP instead."
-            )
+            logger.warning("CORTEX_NEW_AGENT is deprecated. Use CORTEX_NEW_AGENT_LOOP instead.")
 
         if self.CORS_ORIGINS:
             self.ALLOWED_ORIGINS = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

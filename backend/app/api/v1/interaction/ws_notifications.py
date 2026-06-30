@@ -15,7 +15,6 @@ from backend.app.models.interaction.notification import Notification
 router = APIRouter()
 
 
-
 def _fetch_notifications(user_id: str) -> dict:
     """Fetch unread notifications for a user."""
     db = SessionLocal()

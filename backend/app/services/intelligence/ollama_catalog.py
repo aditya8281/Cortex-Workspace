@@ -489,21 +489,44 @@ class OllamaCatalogService:
     # Model names that indicate code-specialized models.
     # Used to infer "code" capability when the source didn't provide it.
     _CODE_NAME_PATTERNS: list[str] = [
-        "code", "coder", "codellama", "codestral", "deepcoder",
-        "phind", "wizardcoder", "starcoder", "granite-code",
-        "codebooga", "dolphincoder", "sqlcoder", "codeqwen",
-        "deepseek-coder", "qwen-coder", "magicoder", "codegeex",
-        "codegemma", "codeup", "opencoder", "stable-code",
+        "code",
+        "coder",
+        "codellama",
+        "codestral",
+        "deepcoder",
+        "phind",
+        "wizardcoder",
+        "starcoder",
+        "granite-code",
+        "codebooga",
+        "dolphincoder",
+        "sqlcoder",
+        "codeqwen",
+        "deepseek-coder",
+        "qwen-coder",
+        "magicoder",
+        "codegeex",
+        "codegemma",
+        "codeup",
+        "opencoder",
+        "stable-code",
     ]
 
     # Embedding model detection patterns — checked against model name
     EMBEDDING_NAME_PATTERNS = ["embed", "bert", "bge", "gte", "e5", "instructor", "minilm", "mxbai", "snowflake-arctic"]
 
     KNOWN_EMBEDDING_DIMS = {
-        "nomic-bert": 768, "nomic-bert-moe": 768, "nomic-embed": 768,
-        "bge-m3": 1024, "bge-large": 1024, "bge-base": 768, "bge-small": 384,
-        "qwen3-embedding": 1024, "all-minilm": 384,
-        "mxbai-embed": 1024, "snowflake-arctic": 1024,
+        "nomic-bert": 768,
+        "nomic-bert-moe": 768,
+        "nomic-embed": 768,
+        "bge-m3": 1024,
+        "bge-large": 1024,
+        "bge-base": 768,
+        "bge-small": 384,
+        "qwen3-embedding": 1024,
+        "all-minilm": 384,
+        "mxbai-embed": 1024,
+        "snowflake-arctic": 1024,
     }
 
     @staticmethod
@@ -566,7 +589,11 @@ class OllamaCatalogService:
             caps.append("code")
 
         # Detect embedding capability from model name
-        if "embedding" not in caps and any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS) and ("embed" in name_lower or "bert" in name_lower or "bge" in name_lower):
+        if (
+            "embedding" not in caps
+            and any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS)
+            and ("embed" in name_lower or "bert" in name_lower or "bge" in name_lower)
+        ):
             caps.append("embedding")
 
         model["capabilities"] = caps
@@ -631,7 +658,9 @@ class OllamaCatalogService:
         # Detect embedding from model name
         if model_name:
             name_lower = model_name.lower()
-            if any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS) and ("embed" in name_lower or "bert" in name_lower or "bge" in name_lower):
+            if any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS) and (
+                "embed" in name_lower or "bert" in name_lower or "bge" in name_lower
+            ):
                 capabilities.append("embedding")
 
         return capabilities
@@ -648,7 +677,7 @@ class OllamaCatalogService:
         """
         if not parameters:
             return None
-        match = re.search(r'num_ctx[=\s]+(\d+)', parameters)
+        match = re.search(r"num_ctx[=\s]+(\d+)", parameters)
         return int(match.group(1)) if match else None
 
     @staticmethod
@@ -663,7 +692,7 @@ class OllamaCatalogService:
         """
         if not parameters:
             return None
-        for pattern in [r'embedding_dim[=\s]+(\d+)', r'hidden_size[=\s]+(\d+)', r'n_embd[=\s]+(\d+)']:
+        for pattern in [r"embedding_dim[=\s]+(\d+)", r"hidden_size[=\s]+(\d+)", r"n_embd[=\s]+(\d+)"]:
             match = re.search(pattern, parameters)
             if match:
                 return int(match.group(1))

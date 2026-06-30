@@ -14,6 +14,7 @@ class TestProjectScannerService:
     def test_scan_python_project(self, db_session: Session, tmp_path: object) -> None:
         """Scanning a Python project detects type and features."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "requirements.txt").write_text("fastapi==0.100.0")
         (p / "pyproject.toml").write_text("[tool.pytest]\nasyncio_mode = 'auto'")
@@ -31,6 +32,7 @@ class TestProjectScannerService:
     def test_scan_node_project(self, db_session: Session, tmp_path: object) -> None:
         """Scanning a Node.js project detects frameworks and features."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "package.json").write_text(json.dumps({"name": "my-app", "version": "1.0.0"}))
         (p / "next.config.js").write_text("module.exports = {}")
@@ -50,6 +52,7 @@ class TestProjectScannerService:
     def test_scan_rust_project(self, db_session: Session, tmp_path: object) -> None:
         """Scanning a Rust project detects type."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "Cargo.toml").write_text('[package]\nname = "myapp"\nversion = "0.1.0"')
         (p / "src").mkdir()
@@ -63,6 +66,7 @@ class TestProjectScannerService:
     def test_scan_unknown_project(self, db_session: Session, tmp_path: object) -> None:
         """Scanning a project with no known indicators returns unknown."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "mystery.file").write_text("unknown")
 
@@ -74,6 +78,7 @@ class TestProjectScannerService:
     def test_upsert_project(self, db_session: Session, tmp_path: object) -> None:
         """Re-scanning updates the existing record."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "requirements.txt").write_text("fastapi")
 
@@ -90,6 +95,7 @@ class TestProjectScannerService:
     def test_detect_ci_indicators(self, db_session: Session, tmp_path: object) -> None:
         """CI detection finds GitHub Actions workflows."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "requirements.txt").write_text("flask")
         (p / ".github").mkdir()
@@ -104,6 +110,7 @@ class TestProjectScannerService:
     def test_user_isolation(self, db_session: Session, tmp_path: object) -> None:
         """Project indices are isolated by user_id."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "requirements.txt").write_text("flask")
 
@@ -120,6 +127,7 @@ class TestProjectScannerService:
     def test_empty_project(self, db_session: Session, tmp_path: object) -> None:
         """Scanning an empty directory creates a valid record."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
 
         service = ProjectScannerService(db_session)

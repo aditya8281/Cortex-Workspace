@@ -25,8 +25,7 @@ class TestContextEngineServiceRules:
         """Creating a rule stores conditions and actions."""
         svc = ContextEngineService(db_session)
         rule = svc.create_rule(
-            user_id=1, name="work_hours", rule_type="time",
-            conditions={"hour": 9}, actions={"mode": "focus"}
+            user_id=1, name="work_hours", rule_type="time", conditions={"hour": 9}, actions={"mode": "focus"}
         )
         assert rule.conditions == {"hour": 9}
         assert rule.actions == {"mode": "focus"}
@@ -255,9 +254,12 @@ class TestContextEngineServiceEvents:
         """Logging an event with full metadata stores all fields."""
         svc = ContextEngineService(db_session)
         event = svc.log_event(
-            user_id=1, event_type="app_switch",
-            event_data={"app": "code"}, source="tracker",
-            relevance_score=0.9, related_rule_id=42
+            user_id=1,
+            event_type="app_switch",
+            event_data={"app": "code"},
+            source="tracker",
+            relevance_score=0.9,
+            related_rule_id=42,
         )
         assert event.source == "tracker"
         assert event.relevance_score == 0.9

@@ -182,10 +182,14 @@ async def refresh_tokens(db: Session, refresh_token: str, ip: str | None = None)
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     # Check user exists and is not deleted
-    user = db.query(User).filter(
-        User.id == int(info["user_id"]),
-        User.deleted_at.is_(None),
-    ).first()
+    user = (
+        db.query(User)
+        .filter(
+            User.id == int(info["user_id"]),
+            User.deleted_at.is_(None),
+        )
+        .first()
+    )
     if not user:
         raise HTTPException(status_code=401, detail="User not found or account deleted")
 

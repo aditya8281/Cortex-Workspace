@@ -114,10 +114,14 @@ async def verify_ws_token(token: str) -> int:
     # Check user exists and is not deleted
     db = SessionLocal()
     try:
-        user = db.query(User).filter(
-            User.id == int(user_id),
-            User.deleted_at.is_(None),
-        ).first()
+        user = (
+            db.query(User)
+            .filter(
+                User.id == int(user_id),
+                User.deleted_at.is_(None),
+            )
+            .first()
+        )
         if not user:
             raise Exception("User not found or account deleted")
     finally:

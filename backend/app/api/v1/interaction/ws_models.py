@@ -30,30 +30,34 @@ def _build_download_payload() -> dict:
             DownloadStatus.QUEUED,
             DownloadStatus.PAUSED,
         ):
-            models.append({
-                "name": rec.model_name,
-                "progress": rec.progress,
-                "status": rec.status.value,
-                "speed_bytes_sec": rec.speed_bytes_sec,
-                "eta_seconds": rec.eta_seconds,
-                "bytes_downloaded": rec.bytes_downloaded,
-                "total_bytes": rec.total_bytes,
-                "queue_position": queued_positions.get(rec.download_id),
-                "download_id": rec.download_id,
-            })
+            models.append(
+                {
+                    "name": rec.model_name,
+                    "progress": rec.progress,
+                    "status": rec.status.value,
+                    "speed_bytes_sec": rec.speed_bytes_sec,
+                    "eta_seconds": rec.eta_seconds,
+                    "bytes_downloaded": rec.bytes_downloaded,
+                    "total_bytes": rec.total_bytes,
+                    "queue_position": queued_positions.get(rec.download_id),
+                    "download_id": rec.download_id,
+                }
+            )
         elif rec.status in (DownloadStatus.COMPLETED, DownloadStatus.FAILED, DownloadStatus.CANCELLED):
-            models.append({
-                "name": rec.model_name,
-                "progress": rec.progress,
-                "status": rec.status.value,
-                "speed_bytes_sec": 0,
-                "eta_seconds": None,
-                "bytes_downloaded": rec.bytes_downloaded,
-                "total_bytes": rec.total_bytes,
-                "queue_position": None,
-                "download_id": rec.download_id,
-                "error": rec.error_message,
-            })
+            models.append(
+                {
+                    "name": rec.model_name,
+                    "progress": rec.progress,
+                    "status": rec.status.value,
+                    "speed_bytes_sec": 0,
+                    "eta_seconds": None,
+                    "bytes_downloaded": rec.bytes_downloaded,
+                    "total_bytes": rec.total_bytes,
+                    "queue_position": None,
+                    "download_id": rec.download_id,
+                    "error": rec.error_message,
+                }
+            )
 
     return {"type": "model_progress", "models": models}
 

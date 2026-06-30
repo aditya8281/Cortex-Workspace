@@ -31,9 +31,7 @@ def create_workflow(
     """Create a workflow."""
     orchestrator = _get_orchestrator(db)
     try:
-        return orchestrator.create_workflow(
-            current_user.id, body.name, body.steps, body.description
-        )
+        return orchestrator.create_workflow(current_user.id, body.name, body.steps, body.description)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

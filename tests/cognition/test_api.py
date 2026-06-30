@@ -45,11 +45,15 @@ class TestPlanningAPI:
 @pytest.mark.usefixtures("client", "mock_auth")
 class TestErrorAnalysisAPI:
     def test_analyze_error(self, client):
-        response = client.post("/api/v1/errors/analyze", json={
-            "error_type": "ValueError",
-            "error_message": "test error message",
-            "context": {},
-        }, headers=HEADERS)
+        response = client.post(
+            "/api/v1/errors/analyze",
+            json={
+                "error_type": "ValueError",
+                "error_message": "test error message",
+                "context": {},
+            },
+            headers=HEADERS,
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["error_type"] == "ValueError"
@@ -57,27 +61,39 @@ class TestErrorAnalysisAPI:
 
     def test_get_error_patterns(self, client):
         for i in range(3):
-            client.post("/api/v1/errors/analyze", json={
-                "error_type": "RuntimeError",
-                "error_message": f"error {i}",
-            }, headers=HEADERS)
+            client.post(
+                "/api/v1/errors/analyze",
+                json={
+                    "error_type": "RuntimeError",
+                    "error_message": f"error {i}",
+                },
+                headers=HEADERS,
+            )
         response = client.get("/api/v1/errors/patterns?days=30", headers=HEADERS)
         assert response.status_code == 200
 
     def test_list_analyses(self, client):
-        client.post("/api/v1/errors/analyze", json={
-            "error_type": "TypeError",
-            "error_message": "list test",
-        }, headers=HEADERS)
+        client.post(
+            "/api/v1/errors/analyze",
+            json={
+                "error_type": "TypeError",
+                "error_message": "list test",
+            },
+            headers=HEADERS,
+        )
         response = client.get("/api/v1/errors/analyses", headers=HEADERS)
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
     def test_resolve_error(self, client):
-        r = client.post("/api/v1/errors/analyze", json={
-            "error_type": "KeyError",
-            "error_message": "resolve test",
-        }, headers=HEADERS)
+        r = client.post(
+            "/api/v1/errors/analyze",
+            json={
+                "error_type": "KeyError",
+                "error_message": "resolve test",
+            },
+            headers=HEADERS,
+        )
         analysis_id = r.json()["id"]
         response = client.post(f"/api/v1/errors/analysis/{analysis_id}/resolve", headers=HEADERS)
         assert response.status_code == 200
@@ -87,10 +103,14 @@ class TestErrorAnalysisAPI:
 @pytest.mark.usefixtures("client", "mock_auth")
 class TestHypothesisAPI:
     def test_generate_hypothesis(self, client):
-        response = client.post("/api/v1/hypothesis/generate", json={
-            "hypothesis": "Test hypothesis",
-            "source": "test",
-        }, headers=HEADERS)
+        response = client.post(
+            "/api/v1/hypothesis/generate",
+            json={
+                "hypothesis": "Test hypothesis",
+                "source": "test",
+            },
+            headers=HEADERS,
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["hypothesis"] == "Test hypothesis"
@@ -98,26 +118,38 @@ class TestHypothesisAPI:
         assert data["confidence"] > 0
 
     def test_list_active(self, client):
-        client.post("/api/v1/hypothesis/generate", json={
-            "hypothesis": "Active test",
-        }, headers=HEADERS)
+        client.post(
+            "/api/v1/hypothesis/generate",
+            json={
+                "hypothesis": "Active test",
+            },
+            headers=HEADERS,
+        )
         response = client.get("/api/v1/hypothesis/active", headers=HEADERS)
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
     def test_get_hypothesis(self, client):
-        r = client.post("/api/v1/hypothesis/generate", json={
-            "hypothesis": "Get test",
-        }, headers=HEADERS)
+        r = client.post(
+            "/api/v1/hypothesis/generate",
+            json={
+                "hypothesis": "Get test",
+            },
+            headers=HEADERS,
+        )
         hypo_id = r.json()["id"]
         response = client.get(f"/api/v1/hypothesis/{hypo_id}", headers=HEADERS)
         assert response.status_code == 200
         assert response.json()["id"] == hypo_id
 
     def test_add_evidence(self, client):
-        r = client.post("/api/v1/hypothesis/generate", json={
-            "hypothesis": "Evidence test",
-        }, headers=HEADERS)
+        r = client.post(
+            "/api/v1/hypothesis/generate",
+            json={
+                "hypothesis": "Evidence test",
+            },
+            headers=HEADERS,
+        )
         hypo_id = r.json()["id"]
         response = client.post(
             f"/api/v1/hypothesis/{hypo_id}/evidence",
@@ -128,9 +160,13 @@ class TestHypothesisAPI:
         assert len(response.json()["evidence_for"]) == 1
 
     def test_resolve_hypothesis(self, client):
-        r = client.post("/api/v1/hypothesis/generate", json={
-            "hypothesis": "Resolve test",
-        }, headers=HEADERS)
+        r = client.post(
+            "/api/v1/hypothesis/generate",
+            json={
+                "hypothesis": "Resolve test",
+            },
+            headers=HEADERS,
+        )
         hypo_id = r.json()["id"]
         response = client.post(
             f"/api/v1/hypothesis/{hypo_id}/resolve",
@@ -141,10 +177,14 @@ class TestHypothesisAPI:
         assert response.json()["status"] == "confirmed"
 
     def test_high_confidence_filter(self, client):
-        client.post("/api/v1/hypothesis/generate", json={
-            "hypothesis": "Strong hypothesis",
-            "evidence_for": [{"text": "e1", "weight": 1.0}, {"text": "e2", "weight": 1.0}],
-        }, headers=HEADERS)
+        client.post(
+            "/api/v1/hypothesis/generate",
+            json={
+                "hypothesis": "Strong hypothesis",
+                "evidence_for": [{"text": "e1", "weight": 1.0}, {"text": "e2", "weight": 1.0}],
+            },
+            headers=HEADERS,
+        )
         response = client.get("/api/v1/hypothesis/high-confidence?threshold=0.5", headers=HEADERS)
         assert response.status_code == 200
         assert isinstance(response.json(), list)
@@ -153,10 +193,14 @@ class TestHypothesisAPI:
 @pytest.mark.usefixtures("client", "mock_auth")
 class TestConfidenceAPI:
     def test_estimate_confidence(self, client):
-        response = client.post("/api/v1/confidence/estimate", json={
-            "task_type": "planning",
-            "context": {},
-        }, headers=HEADERS)
+        response = client.post(
+            "/api/v1/confidence/estimate",
+            json={
+                "task_type": "planning",
+                "context": {},
+            },
+            headers=HEADERS,
+        )
         assert response.status_code == 200
         result = response.json()
         assert 1 <= result["confidence"] <= 99

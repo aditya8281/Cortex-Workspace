@@ -158,6 +158,7 @@ async def refresh_catalog(
         try:
             # Step 1: Re-scrape library.json (latest model families + tags)
             from backend.app.services.intelligence.library_scraper import scrape_library_background
+
             await scrape_library_background()
             logger.info("Library scrape complete")
         except Exception as e:
@@ -172,6 +173,7 @@ async def refresh_catalog(
             logger.error("Catalog refresh failed: %s", e)
 
     import asyncio
+
     asyncio.create_task(_do_refresh())
 
     return {
@@ -409,10 +411,7 @@ async def get_model_families(
 
             # If no DB variants, create a synthetic one from the catalog entry
             if not variants:
-                downloaded = (
-                    entry.model_id in available_names
-                    or entry.model_id.split(":")[0] in available_names
-                )
+                downloaded = entry.model_id in available_names or entry.model_id.split(":")[0] in available_names
                 family_variants.append(
                     FamilyVariant(
                         model_id=entry.model_id,
@@ -432,12 +431,8 @@ async def get_model_families(
             default_variant = FamilyVariant(model_id="")
 
         # Compute context_range and param_range
-        context_vals = [
-            v.context_length for v in family_variants if v.context_length is not None
-        ]
-        param_vals = [
-            v.parameter_count for v in family_variants if v.parameter_count is not None
-        ]
+        context_vals = [v.context_length for v in family_variants if v.context_length is not None]
+        param_vals = [v.parameter_count for v in family_variants if v.parameter_count is not None]
         context_range = [min(context_vals), max(context_vals)] if context_vals else []
         param_range = [min(param_vals), max(param_vals)] if param_vals else []
 
@@ -456,12 +451,8 @@ async def get_model_families(
         )
 
     # Separate embedding families
-    embedding_families = [
-        f for f in family_summaries if "embedding" in f.capabilities
-    ]
-    text_families = [
-        f for f in family_summaries if "embedding" not in f.capabilities
-    ]
+    embedding_families = [f for f in family_summaries if "embedding" in f.capabilities]
+    text_families = [f for f in family_summaries if "embedding" not in f.capabilities]
 
     return ModelFamiliesResponse(
         families=text_families,
@@ -482,17 +473,13 @@ async def get_family_variants(
     current_user: User = Depends(get_current_user),
 ):
     """Get all variants for a specific model family."""
-    entries = db.execute(
-        select(ModelCatalog).where(ModelCatalog.family == family)
-    ).scalars().all()
+    entries = db.execute(select(ModelCatalog).where(ModelCatalog.family == family)).scalars().all()
 
     if not entries:
         raise HTTPException(status_code=404, detail=f"Family '{family}' not found")
 
     catalog_ids = [e.id for e in entries]
-    variants = db.execute(
-        select(ModelVariant).where(ModelVariant.model_catalog_id.in_(catalog_ids))
-    ).scalars().all()
+    variants = db.execute(select(ModelVariant).where(ModelVariant.model_catalog_id.in_(catalog_ids))).scalars().all()
 
     catalog_by_id = {e.id: e for e in entries}
 
@@ -548,6 +535,7 @@ async def get_model_detail(
     catalog_info: dict[str, Any] | None = None
     if not model:
         from backend.app.services.intelligence.ollama_catalog import get_ollama_catalog
+
         catalog_models, _ = await get_ollama_catalog()
         for cm in catalog_models:
             if cm.get("name") == model_id or cm.get("name") == base:

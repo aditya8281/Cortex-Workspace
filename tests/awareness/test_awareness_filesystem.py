@@ -12,6 +12,7 @@ class TestFilesystemIndexerService:
     def test_scan_directory(self, db_session: Session, tmp_path: object) -> None:
         """Scanning a directory indexes all files."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "test.py").write_text("print('hello')")
         (p / "test.js").write_text("console.log('hello')")
@@ -25,6 +26,7 @@ class TestFilesystemIndexerService:
     def test_scan_skips_git_directory(self, db_session: Session, tmp_path: object) -> None:
         """The .git directory is skipped during scanning."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / ".git").mkdir()
         (p / ".git" / "config").write_text("git config")
@@ -39,6 +41,7 @@ class TestFilesystemIndexerService:
     def test_scan_skips_common_dirs(self, db_session: Session, tmp_path: object) -> None:
         """node_modules, __pycache__, venv, .venv are skipped."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "node_modules").mkdir()
         (p / "node_modules" / "dep.js").write_text("module.exports={}")
@@ -56,6 +59,7 @@ class TestFilesystemIndexerService:
     def test_content_hash(self, db_session: Session, tmp_path: object) -> None:
         """File index includes SHA-256 content hash."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "a.txt").write_text("content A")
 
@@ -69,6 +73,7 @@ class TestFilesystemIndexerService:
     def test_detect_changes_created(self, db_session: Session, tmp_path: object) -> None:
         """New files are detected as created."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "existing.py").write_text("original")
 
@@ -84,6 +89,7 @@ class TestFilesystemIndexerService:
     def test_detect_changes_modified(self, db_session: Session, tmp_path: object) -> None:
         """Content changes are detected as modified."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         filepath = p / "a.py"
         filepath.write_text("version 1")
@@ -100,6 +106,7 @@ class TestFilesystemIndexerService:
     def test_detect_changes_deleted(self, db_session: Session, tmp_path: object) -> None:
         """Deleted files are detected."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "keep.py").write_text("keep")
         (p / "remove.py").write_text("remove")
@@ -115,6 +122,7 @@ class TestFilesystemIndexerService:
     def test_idempotent_scan(self, db_session: Session, tmp_path: object) -> None:
         """Scanning the same file twice does not duplicate entries."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "test.py").write_text("print('hello')")
 
@@ -129,6 +137,7 @@ class TestFilesystemIndexerService:
     def test_user_isolation(self, db_session: Session, tmp_path: object) -> None:
         """File indices are isolated by user_id."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "shared.py").write_text("shared content")
 
@@ -145,6 +154,7 @@ class TestFilesystemIndexerService:
     def test_directory_summary(self, db_session: Session, tmp_path: object) -> None:
         """Directory summary returns file counts and extensions."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
         (p / "a.py").write_text("print('a')")
         (p / "b.py").write_text("print('b')")
@@ -161,6 +171,7 @@ class TestFilesystemIndexerService:
     def test_empty_directory(self, db_session: Session, tmp_path: object) -> None:
         """Scanning an empty directory returns no files."""
         import pathlib
+
         p = pathlib.Path(str(tmp_path))
 
         service = FilesystemIndexerService(db_session)

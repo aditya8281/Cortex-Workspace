@@ -12,7 +12,6 @@ from backend.app.core.websocket import manager
 router = APIRouter()
 
 
-
 @router.websocket("/ws/chat")
 async def chat_ws(ws: WebSocket, token: str = Query(None)):
     """Chat WebSocket — receives typing events, broadcasts to conversation channel.

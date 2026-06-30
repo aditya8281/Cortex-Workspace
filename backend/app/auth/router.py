@@ -180,10 +180,14 @@ async def get_ws_token(
         raise HTTPException(status_code=401, detail="Invalid token")
 
     # Check user exists and is not deleted
-    user = db.query(User).filter(
-        User.id == int(user_id),
-        User.deleted_at.is_(None),
-    ).first()
+    user = (
+        db.query(User)
+        .filter(
+            User.id == int(user_id),
+            User.deleted_at.is_(None),
+        )
+        .first()
+    )
     if not user:
         raise HTTPException(status_code=401, detail="User not found or account deleted")
 

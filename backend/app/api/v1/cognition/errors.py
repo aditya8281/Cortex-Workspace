@@ -53,9 +53,7 @@ def list_analyses(
 ) -> Any:
     """List error analyses for the current user."""
     service = ErrorAnalysisService(db)
-    return service.get_user_analyses(
-        current_user.id, severity=severity, limit=limit
-    )
+    return service.get_user_analyses(current_user.id, severity=severity, limit=limit)
 
 
 @router.get("/analysis/{analysis_id}", response_model=ErrorAnalysisResponse)

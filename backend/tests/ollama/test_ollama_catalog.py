@@ -238,12 +238,12 @@ class TestNormalization:
         assert result["quantization"] == "Q4_KM"
 
     def test_quantization_empty_when_missing(self) -> None:
-        model = {}
+        model: dict[str, object] = {}
         result = OllamaCatalogService._normalize_model(model)
         assert result["quantization"] == ""
 
     def test_size_zero_stays_zero(self) -> None:
-        model = {"size": 0}
+        model: dict[str, object] = {"size": 0}
         result = OllamaCatalogService._normalize_model(model)
         assert result["size"] == 0
         assert result["size_bytes"] == 0
@@ -260,7 +260,7 @@ class TestNormalization:
         assert result["capabilities"] == ["chat"]
 
     def test_capabilities_empty_becomes_chat(self) -> None:
-        model = {"capabilities": []}
+        model: dict[str, object] = {"capabilities": []}
         result = OllamaCatalogService._normalize_model(model)
         assert result["capabilities"] == ["chat"]
 

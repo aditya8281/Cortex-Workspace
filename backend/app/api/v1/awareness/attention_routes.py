@@ -26,9 +26,7 @@ def start_session(
 ):
     """Start a new attention tracking session."""
     svc = AttentionService(db)
-    return svc.start_session(
-        current_user.id, body.session_type, body.task_description
-    )
+    return svc.start_session(current_user.id, body.session_type, body.task_description)
 
 
 @router.post("/session/{session_id}/end", response_model=AttentionTrackerResponse)
@@ -57,9 +55,7 @@ def update_focus(
     """Update focus metrics for an attention tracking session."""
     svc = AttentionService(db)
     try:
-        return svc.update_focus(
-            session_id, focus_score, distraction_count, switch_count
-        )
+        return svc.update_focus(session_id, focus_score, distraction_count, switch_count)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

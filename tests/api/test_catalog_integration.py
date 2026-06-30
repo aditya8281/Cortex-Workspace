@@ -1,7 +1,7 @@
 """Integration tests for catalog family grouping endpoints."""
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -43,15 +43,11 @@ class TestCatalogIntegration:
         db_session.commit()
         return entry, variant
 
-    def test_families_endpoint_returns_grouped_data(
-        self, db_session, client, mock_auth
-    ):
+    def test_families_endpoint_returns_grouped_data(self, db_session, client, mock_auth):
         """GET /models/families returns properly structured grouped data."""
         self._setup_test_data(db_session)
 
-        with patch(
-            "backend.app.api.v1.developer.catalog.llm_manager"
-        ) as mock_llm:
+        with patch("backend.app.api.v1.developer.catalog.llm_manager") as mock_llm:
             mock_llm.list_all_models = AsyncMock(return_value=[])
             response = client.get("/api/v1/models/families")
 
@@ -63,15 +59,11 @@ class TestCatalogIntegration:
         assert isinstance(data["families"], list)
         assert isinstance(data["embedding_families"], list)
 
-    def test_family_variants_returns_list(
-        self, db_session, client, mock_auth
-    ):
+    def test_family_variants_returns_list(self, db_session, client, mock_auth):
         """GET /models/families/{family}/variants returns variant list."""
         self._setup_test_data(db_session)
 
-        with patch(
-            "backend.app.api.v1.developer.catalog.llm_manager"
-        ) as mock_llm:
+        with patch("backend.app.api.v1.developer.catalog.llm_manager") as mock_llm:
             mock_llm.list_all_models = AsyncMock(return_value=[])
             response = client.get(
                 "/api/v1/models/families/test-family/variants",
@@ -82,13 +74,9 @@ class TestCatalogIntegration:
         assert data["family"] == "test-family"
         assert "variants" in data
 
-    def test_family_variants_404_for_unknown(
-        self, db_session, client, mock_auth
-    ):
+    def test_family_variants_404_for_unknown(self, db_session, client, mock_auth):
         """Unknown family returns 404."""
-        with patch(
-            "backend.app.api.v1.developer.catalog.llm_manager"
-        ) as mock_llm:
+        with patch("backend.app.api.v1.developer.catalog.llm_manager") as mock_llm:
             mock_llm.list_all_models = AsyncMock(return_value=[])
             response = client.get(
                 "/api/v1/models/families/nonexistent-family/variants",
@@ -96,9 +84,7 @@ class TestCatalogIntegration:
 
         assert response.status_code == 404
 
-    def test_list_models_includes_new_fields(
-        self, db_session, client, mock_auth
-    ):
+    def test_list_models_includes_new_fields(self, db_session, client, mock_auth):
         """List endpoint returns family, embedding_dim fields."""
         mock_model = {
             "name": "qwen3:8b",
@@ -119,9 +105,7 @@ class TestCatalogIntegration:
                 new_callable=AsyncMock,
                 return_value=([mock_model], MagicMock()),
             ),
-            patch(
-                "backend.app.api.v1.developer.catalog.llm_manager"
-            ) as mock_llm,
+            patch("backend.app.api.v1.developer.catalog.llm_manager") as mock_llm,
         ):
             mock_llm.list_all_models = AsyncMock(return_value=[])
             response = client.get("/api/v1/models")
@@ -133,9 +117,7 @@ class TestCatalogIntegration:
             assert "family" in model
             assert "embedding_dim" in model
 
-    def test_quality_score_is_normalized(
-        self, db_session, client, mock_auth
-    ):
+    def test_quality_score_is_normalized(self, db_session, client, mock_auth):
         """quality_score should be 0-1 scale."""
         entry, variant = self._setup_test_data(db_session)
 
@@ -158,9 +140,7 @@ class TestCatalogIntegration:
                 new_callable=AsyncMock,
                 return_value=([mock_model], MagicMock()),
             ),
-            patch(
-                "backend.app.api.v1.developer.catalog.llm_manager"
-            ) as mock_llm,
+            patch("backend.app.api.v1.developer.catalog.llm_manager") as mock_llm,
         ):
             mock_llm.list_all_models = AsyncMock(return_value=[])
             list_resp = client.get("/api/v1/models")

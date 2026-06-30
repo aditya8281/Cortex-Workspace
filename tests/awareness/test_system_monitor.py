@@ -111,6 +111,7 @@ class TestSystemMonitorService:
         svc = SystemMonitorService(db_session)
         snap = svc.take_snapshot(user_id=1)
         from backend.app.models.awareness.system_snapshot import SystemSnapshot
+
         found = db_session.query(SystemSnapshot).filter(SystemSnapshot.id == snap.id).first()
         assert found is not None
         assert found.cpu_percent == snap.cpu_percent

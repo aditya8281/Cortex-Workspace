@@ -35,6 +35,7 @@ class _ReorderRequest(BaseModel):
 class _BulkCancelRequest(BaseModel):
     job_ids: list[str]
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -181,12 +182,15 @@ async def delete_model_local(
     # Cancel if currently downloading/queued
     for rec in dm._records.values():
         if rec.model_name == model_name and rec.status in (
-            DownloadStatus.QUEUED, DownloadStatus.DOWNLOADING, DownloadStatus.PAUSED
+            DownloadStatus.QUEUED,
+            DownloadStatus.DOWNLOADING,
+            DownloadStatus.PAUSED,
         ):
             await dm.cancel(rec.download_id)
 
     # Delete from Ollama
     import httpx
+
     async with httpx.AsyncClient(base_url=settings.OLLAMA_BASE_URL, timeout=30.0) as client:
         resp = await client.request("DELETE", "/api/delete", json={"name": model_name})
         resp.raise_for_status()
