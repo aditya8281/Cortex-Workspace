@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from backend.app.core.db import verify_ws_token
 from backend.app.core.websocket import manager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -88,7 +91,7 @@ async def chat_ws(ws: WebSocket, token: str = Query(None)):
     except WebSocketDisconnect:
         pass
     except Exception:
-        pass
+        logger.exception("WebSocket chat error")
     finally:
         # Clean up from all joined channels
         for channel in joined_channels:
