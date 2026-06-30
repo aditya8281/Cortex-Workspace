@@ -74,18 +74,19 @@ async def model_download_progress_ws(ws: WebSocket, token: str = Query(None)):
         await ws.close(code=4001)
         return
     try:
-        _user_id = await verify_ws_token(token)
+        user_id = await verify_ws_token(token)
     except Exception:
         await ws.send_json({"type": "error", "message": "Invalid token or account deleted"})
         await ws.close(code=4001)
         return
+
+    uid = int(user_id)
+    await manager.register(ws, channel=f"models:{uid}", user_id=uid)
     try:
         while True:
             payload = _build_download_payload()
-
             if payload["models"]:
-                await ws.send_text(json.dumps(payload))
-
+                await manager.send(ws, payload)
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         pass
@@ -94,3 +95,5 @@ async def model_download_progress_ws(ws: WebSocket, token: str = Query(None)):
             await ws.close()
         except Exception:
             pass
+    finally:
+        manager.disconnect(ws, channel=f"models:{uid}", user_id=uid)
