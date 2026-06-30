@@ -16,6 +16,7 @@ import { DockedDownloadPanel } from "./components/DockedDownloadPanel";
 import { Card } from "@/shared/ui/Card";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import type { HardwareInfo, TabKey } from "./api";
+import type { FamilySummary } from "@/features/developer/api";
 
 // ── Tab definitions ──────────────────────────────────────────────────────────
 
@@ -43,7 +44,8 @@ export default function ModelsPage() {
   const [compareSelectedIds, setCompareSelectedIds] = useState<string[]>([]);
 
   // Detail modal
-  const [detailModalModelId, setDetailModalModelId] = useState<string | null>(null);
+  const [detailFamily, setDetailFamily] = useState<FamilySummary | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // ── Auth redirect ───────────────────────────────────────────────────────
 
@@ -120,12 +122,22 @@ export default function ModelsPage() {
     setCompareSelectedIds([]);
   }, []);
 
-  const handleViewDetail = useCallback((modelId: string) => {
-    setDetailModalModelId(modelId);
+  const handleViewDetail = useCallback(async (familyName: string) => {
+    try {
+      const data = await catalog.families();
+      const fam = data.families.find((f) => f.family === familyName) ||
+                  data.embedding_families.find((f) => f.family === familyName);
+      if (fam) {
+        setDetailFamily(fam);
+        setDetailOpen(true);
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
   const handleCloseDetail = useCallback(() => {
-    setDetailModalModelId(null);
+    setDetailOpen(false);
   }, []);
 
   const handleDownloadFromBrowse = useCallback(
@@ -295,10 +307,14 @@ export default function ModelsPage() {
 
       {/* Detail modal */}
       <ModelDetailModal
-        open={!!detailModalModelId}
+        family={detailFamily}
+        open={detailOpen}
         onClose={handleCloseDetail}
-        modelId={detailModalModelId ?? ""}
         onDownload={handleDownloadFromModal}
+        onUseInChat={handleOpenChat}
+        onSetDefault={handleSetDefaultModel}
+        hardware={hardware}
+        defaultModel={defaultModel}
       />
         <DockedDownloadPanel />
       </DownloadProvider>
