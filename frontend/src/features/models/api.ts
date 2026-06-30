@@ -33,6 +33,7 @@ export interface ModelWithFit {
   capabilities: string[];
   description: string;
   downloaded: boolean;
+  embedding_dim: number | null;
   variants: {
     variant_id: string;
     quantization: string;

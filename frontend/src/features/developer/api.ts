@@ -34,6 +34,8 @@ export interface ModelCatalogEntry {
   capabilities: string[];
   description: string;
   downloaded: boolean;
+  family: string | null;
+  embedding_dim: number | null;
   variants: string[];
   hardware_requirements: Record<string, any>;
 }
@@ -170,6 +172,8 @@ export interface ModelDetail {
   recommended_use_cases: string[];
   description: string | null;
   tags: string[];
+  downloaded: boolean;
+  embedding_dim: number | null;
   benchmarks: Record<string, any> | null;
   variants: ModelVariantInfo[];
 }
@@ -197,6 +201,45 @@ export interface RefreshCatalogResponse {
   message: string;
   total_models: number | null;
   source_status: CatalogSourceStatus | null;
+}
+
+// ── Family grouping ─────────────────────────────────────────────────────────
+
+export interface FamilyVariant {
+  model_id: string;
+  parameter_count: number | null;
+  size_gb: number | null;
+  size_bytes: number | null;
+  quantization: string | null;
+  context_length: number | null;
+  downloaded: boolean;
+  license: string | null;
+  embedding_dim: number | null;
+}
+
+export interface FamilySummary {
+  family: string;
+  display_name: string;
+  model_count: number;
+  capabilities: string[];
+  default_variant: FamilyVariant;
+  context_range: [number, number];
+  param_range: [number, number];
+  license: string | null;
+  embedding_dim: number | null;
+}
+
+export interface ModelFamiliesResponse {
+  families: FamilySummary[];
+  embedding_families: FamilySummary[];
+  total_families: number;
+  total_models: number;
+}
+
+export interface FamilyVariantsResponse {
+  family: string;
+  display_name: string;
+  variants: FamilyVariant[];
 }
 
 // ── GitHub ─────────────────────────────────────────────────────────────────
@@ -262,4 +305,10 @@ export const catalog = {
 
   refresh: () =>
     apiFetch<RefreshCatalogResponse>("/models/refresh", { method: "POST" }),
+
+  families: (): Promise<ModelFamiliesResponse> =>
+    apiFetch<ModelFamiliesResponse>("/models/families"),
+
+  familyVariants: (family: string): Promise<FamilyVariantsResponse> =>
+    apiFetch<FamilyVariantsResponse>(`/models/families/${encodeURIComponent(family)}/variants`),
 };
