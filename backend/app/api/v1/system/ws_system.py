@@ -100,24 +100,23 @@ async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
         await ws.send_json({"type": "error", "message": "Invalid token or account deleted"})
         await ws.close(code=4001)
         return
-    logger.info("[ws/system] User %s connected", _user_id)
+    uid = int(_user_id)
+    logger.info("[ws/system] User %s connected", uid)
+    await manager.register(ws, channel=f"system:{uid}", user_id=uid)
     tick = 0
     try:
         while True:
             tick += 1
-            # Metrics: every iteration (500ms)
             metrics = collect_metrics()
-            await ws.send_text(json.dumps(metrics))
+            await manager.send(ws, metrics)
 
-            # Logs: every ~3 seconds (every 6th tick)
             if tick % 6 == 1:
                 logs = collect_logs(15)
-                await ws.send_text(json.dumps(logs))
+                await manager.send(ws, logs)
 
-            # Processes: every ~5 seconds (every 10th tick) - heavier operation
             if tick % 10 == 0:
                 processes = collect_processes()
-                await ws.send_text(json.dumps({"type": "processes", "processes": processes}))
+                await manager.send(ws, {"type": "processes", "processes": processes})
 
             await asyncio.sleep(0.5)
     except WebSocketDisconnect:
@@ -127,3 +126,5 @@ async def system_metrics_ws(ws: WebSocket, token: str = Query(None)):
             await ws.close()
         except Exception:
             pass
+    finally:
+        manager.disconnect(ws, channel=f"system:{uid}", user_id=uid)
