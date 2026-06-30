@@ -444,7 +444,7 @@ class OllamaCatalogService:
                 if blob:
                     license_text = blob
 
-        capabilities = self._detect_capabilities(template_text)
+        capabilities = self._detect_capabilities(template_text, f"{model}:{tag}")
 
         has_model_layer = any(layer.get("mediaType") == LAYER_MODEL for layer in layers)
 
@@ -495,6 +495,16 @@ class OllamaCatalogService:
         "deepseek-coder", "qwen-coder", "magicoder", "codegeex",
         "codegemma", "codeup", "opencoder", "stable-code",
     ]
+
+    # Embedding model detection patterns — checked against model name
+    EMBEDDING_NAME_PATTERNS = ["embed", "bert", "bge", "gte", "e5", "instructor", "minilm", "mxbai", "snowflake-arctic"]
+
+    KNOWN_EMBEDDING_DIMS = {
+        "nomic-bert": 768, "nomic-bert-moe": 768, "nomic-embed": 768,
+        "bge-m3": 1024, "bge-large": 1024, "bge-base": 768, "bge-small": 384,
+        "qwen3-embedding": 1024, "all-minilm": 384,
+        "mxbai-embed": 1024, "snowflake-arctic": 1024,
+    }
 
     @staticmethod
     def _normalize_model(model: dict[str, Any]) -> dict[str, Any]:
@@ -555,7 +565,22 @@ class OllamaCatalogService:
         if any(pat in name_lower for pat in OllamaCatalogService._CODE_NAME_PATTERNS) and "code" not in caps:
             caps.append("code")
 
+        # Detect embedding capability from model name
+        if "embedding" not in caps and any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS):
+            if "embed" in name_lower or "bert" in name_lower or "bge" in name_lower:
+                caps.append("embedding")
+
         model["capabilities"] = caps
+
+        # Parse embedding dimension if model supports embeddings
+        if "embedding" in caps:
+            dim = OllamaCatalogService._parse_embedding_dim(model.get("parameters"))
+            if not dim:
+                dim = OllamaCatalogService._get_embedding_dim_fallback(model.get("name", ""))
+            model["embedding_dim"] = dim
+            model["capabilities"] = [c for c in caps if c != "chat"]
+        else:
+            model["embedding_dim"] = None
 
         # Parse context length from parameters if available
         if "parameters" in model:
@@ -582,33 +607,39 @@ class OllamaCatalogService:
         return normalized
 
     @staticmethod
-    def _detect_capabilities(template: str) -> list[str]:
-        """Detect capabilities from a template blob via pattern matching.
+    def _detect_capabilities(template: str, model_name: str = "") -> list[str]:
+        """Detect capabilities from a template blob and model name.
 
         Args:
             template: The template text content.
+            model_name: The model name for name-based capability inference.
 
         Returns:
-            List of capability strings ("tools", "vision", "thinking").
+            List of capability strings ("tools", "vision", "thinking", "embedding").
         """
-        if not template:
-            return []
-
         capabilities: list[str] = []
 
-        if any(marker in template for marker in TOOL_MARKERS):
-            capabilities.append("tools")
+        if template:
+            if any(marker in template for marker in TOOL_MARKERS):
+                capabilities.append("tools")
 
-        if any(marker in template for marker in VISION_MARKERS):
-            capabilities.append("vision")
+            if any(marker in template for marker in VISION_MARKERS):
+                capabilities.append("vision")
 
-        if any(marker in template for marker in THINKING_MARKERS):
-            capabilities.append("thinking")
+            if any(marker in template for marker in THINKING_MARKERS):
+                capabilities.append("thinking")
+
+        # Detect embedding from model name
+        if model_name:
+            name_lower = model_name.lower()
+            if any(p in name_lower for p in OllamaCatalogService.EMBEDDING_NAME_PATTERNS):
+                if "embed" in name_lower or "bert" in name_lower or "bge" in name_lower:
+                    capabilities.append("embedding")
 
         return capabilities
 
     @staticmethod
-    def _parse_num_ctx(parameters: str) -> int | None:
+    def _parse_num_ctx(parameters: str | None) -> int | None:
         """Parse num_ctx from Ollama parameters blob.
 
         Args:
@@ -621,6 +652,40 @@ class OllamaCatalogService:
             return None
         match = re.search(r'num_ctx[=\s]+(\d+)', parameters)
         return int(match.group(1)) if match else None
+
+    @staticmethod
+    def _parse_embedding_dim(parameters: str | None) -> int | None:
+        """Parse embedding dimension from Ollama parameters blob.
+
+        Args:
+            parameters: The parameters blob text.
+
+        Returns:
+            The embedding dimension as int, or None if not found.
+        """
+        if not parameters:
+            return None
+        for pattern in [r'embedding_dim[=\s]+(\d+)', r'hidden_size[=\s]+(\d+)', r'n_embd[=\s]+(\d+)']:
+            match = re.search(pattern, parameters)
+            if match:
+                return int(match.group(1))
+        return None
+
+    @staticmethod
+    def _get_embedding_dim_fallback(model_name: str) -> int | None:
+        """Get known embedding dimension for a model by name lookup.
+
+        Args:
+            model_name: The model name to look up.
+
+        Returns:
+            Known embedding dimension, or None if not found.
+        """
+        name_lower = model_name.lower()
+        for key, dim in OllamaCatalogService.KNOWN_EMBEDDING_DIMS.items():
+            if key in name_lower:
+                return dim
+        return None
 
     @staticmethod
     def _build_api_entry(
@@ -661,7 +726,7 @@ class OllamaCatalogService:
             entry["template"] = template
             entry["parameters"] = parameters
             entry["license"] = license_text
-            entry["capabilities"] = OllamaCatalogService._detect_capabilities(template)
+            entry["capabilities"] = OllamaCatalogService._detect_capabilities(template, name)
 
             details_from_show = show_info.get("details", {})
             if details_from_show:
