@@ -112,6 +112,19 @@ class CatalogueManager:
         """
         return self.ingest_from_catalog()
 
+    @staticmethod
+    def _compute_recommended_use_cases(capabilities: list) -> list[str]:
+        """Auto-assign recommended_use_cases based on capabilities."""
+        if "embedding" in capabilities:
+            return ["semantic search", "RAG", "text embeddings"]
+        if "code" in capabilities:
+            return ["code generation", "programming assistance"]
+        if "vision" in capabilities:
+            return ["image understanding", "visual Q&A"]
+        if not capabilities or "chat" in capabilities:
+            return ["general chat", "Q&A"]
+        return ["general chat", "Q&A"]
+
     def ingest_from_catalog(self, force_refresh: bool = False) -> int:
         """Ingest models from the unified Ollama catalog into the database.
 
@@ -152,6 +165,16 @@ class CatalogueManager:
                 # Update capabilities if we have better data from new source
                 if capabilities and not existing.capabilities:
                     existing.capabilities = capabilities
+                # Pipe enrichment fields that were previously ignored
+                existing.license = model.get("license") or existing.license
+                if model.get("context_length"):
+                    existing.context_length_default = model["context_length"]
+                existing.architecture = model.get("architecture") or existing.architecture
+                existing.embedding_dim = model.get("embedding_dim") or existing.embedding_dim
+                existing.pooling_type = model.get("pooling_type") or existing.pooling_type
+                existing.recommended_use_cases = self._compute_recommended_use_cases(
+                    model.get("capabilities", existing.capabilities or [])
+                )
                 existing.last_updated = now
                 catalog_id = existing.id
             else:
@@ -161,11 +184,19 @@ class CatalogueManager:
                     display_name=base_name.replace("-", " ").title(),
                     provider="ollama",
                     parameter_count=param_count,
-                    context_length_default=4096,
+                    context_length_default=model.get("context_length", 4096),
                     capabilities=capabilities or ["chat"],
                     description=model.get("description", f"Ollama model: {base_name}"),
                     tags=[family] if family else [],
                     last_updated=now,
+                    # Pipe enrichment fields that were previously ignored
+                    license=model.get("license"),
+                    architecture=model.get("architecture"),
+                    embedding_dim=model.get("embedding_dim"),
+                    pooling_type=model.get("pooling_type"),
+                    recommended_use_cases=self._compute_recommended_use_cases(
+                        capabilities or ["chat"]
+                    ),
                 )
                 self.db.add(catalog)
                 self.db.flush()

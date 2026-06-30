@@ -26,6 +26,19 @@ class SyncService:
     def __init__(self, db: Session) -> None:
         self.db = db
 
+    @staticmethod
+    def _compute_recommended_use_cases(capabilities: list) -> list[str]:
+        """Auto-assign recommended_use_cases based on capabilities."""
+        if "embedding" in capabilities:
+            return ["semantic search", "RAG", "text embeddings"]
+        if "code" in capabilities:
+            return ["code generation", "programming assistance"]
+        if "vision" in capabilities:
+            return ["image understanding", "visual Q&A"]
+        if not capabilities or "chat" in capabilities:
+            return ["general chat", "Q&A"]
+        return ["general chat", "Q&A"]
+
     async def sync_library(self, provider_name: str | None = None) -> SyncJob:
         """Run a full sync: discover models from providers and upsert into catalog.
 
@@ -169,6 +182,9 @@ class SyncService:
             existing.description = model_info.description or existing.description
             existing.tags = model_info.tags or existing.tags
             existing.source_url = model_info.source_url or existing.source_url
+            existing.recommended_use_cases = self._compute_recommended_use_cases(
+                model_info.capabilities or existing.capabilities or []
+            )
             existing.last_updated = now
             return True
 
@@ -185,6 +201,7 @@ class SyncService:
             description=model_info.description or "",
             tags=model_info.tags or [],
             source_url=model_info.source_url,
+            recommended_use_cases=self._compute_recommended_use_cases(model_info.capabilities or []),
             last_updated=now,
         )
         self.db.add(catalog_entry)
