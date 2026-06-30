@@ -109,6 +109,7 @@ async def list_models(
                 "parameter_count": param_count,
                 "parameter_size": param_size,
                 "quantization": quantization,
+                "embedding_dim": model.get("embedding_dim"),
                 "size_bytes": size_bytes,
                 "context_length": model.get("context_length", 4096),
                 "capabilities": cap,
@@ -453,7 +454,7 @@ async def get_model_detail(
                 "size_bytes": v.size_bytes,
                 "size_gb": round(v.size_gb, 1) if v.size_gb else None,
                 "vram_required_gb": round(v.vram_required_gb, 1) if v.vram_required_gb else None,
-                "quality_score": round(v.quality_score, 1) if v.quality_score else None,
+                "quality_score": (v.quality_score / 100.0) if v.quality_score else None,
                 "downloaded": v.downloaded,
                 "ollama_tag": v.ollama_tag,
             }
@@ -606,7 +607,7 @@ def _format_recommendations(recs: list) -> list[dict]:
                     "quantization": variant.quantization if variant else None,
                     "size_gb": round(variant.size_gb, 1) if variant else None,
                     "vram_required_gb": round(variant.vram_required_gb, 1) if variant else None,
-                    "quality_score": round(variant.quality_score, 1) if variant else None,
+                    "quality_score": (variant.quality_score / 100.0) if variant else None,
                 }
                 if variant
                 else None,

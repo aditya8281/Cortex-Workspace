@@ -17,9 +17,11 @@ class ModelCatalogEntry(BaseModel):
     display_name: str
     provider: str
     model_type: str
+    family: str | None = None
     parameter_count: float | None = None
     parameter_size: str | None = None
     quantization: str | None = None
+    embedding_dim: int | None = None
     size_bytes: int | None = None
     context_length: int | None = None
     capabilities: list[str]
