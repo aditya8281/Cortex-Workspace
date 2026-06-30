@@ -569,7 +569,7 @@ class OllamaCatalogService:
         for model in models:
             name = model.get("name", "")
             # Skip cloud-only models — they can't be downloaded locally
-            if name.endswith("-cloud"):
+            if name.endswith("-cloud") or name.endswith(":cloud"):
                 continue
             normalized.append(OllamaCatalogService._normalize_model(model))
         return normalized

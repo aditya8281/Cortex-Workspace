@@ -56,15 +56,27 @@ async def list_models(
         name = model.get("name", "")
         base = name.split(":")[0]
 
+        size_bytes = model.get("size", model.get("size_bytes", 0)) or 0
+
+        # Skip models with no downloadable size (cloud-only without local variant)
+        if size_bytes <= 0:
+            continue
+
+        # Pull family, parameter_size, quantization from seed/live data
+        family = model.get("family", "")
+        param_size = model.get("parameter_size", "")
+
+        # Skip models with no parameter count (cloud-only or incomplete data)
+        param_count = _guess_param_count(param_size or base)
+        if param_count is None:
+            continue
+
         inferred_type = _infer_model_type(model)
         if model_type and inferred_type != model_type:
             continue
 
         downloaded = name in available_names or base in available_names
 
-        # Pull family, parameter_size, quantization from seed/live data
-        family = model.get("family", "")
-        param_size = model.get("parameter_size", "")
         quantization = model.get("quantization", model.get("quantization_level", ""))
         cap = model.get("capabilities", [])
         if not cap:
@@ -73,8 +85,13 @@ async def list_models(
         if cap == ["completion"]:
             cap = ["chat"]
 
-        # Prefer parameter_size from model data, fallback to name heuristic
-        param_count = _guess_param_count(param_size or base)
+        # Build meaningful description
+        desc = model.get("description", "")
+        if not desc or desc.startswith("Ollama model:"):
+            size_gb = size_bytes / (1024**3)
+            desc = f"{param_size or '?'} parameter model ({size_gb:.1f} GB)"
+            if family:
+                desc += f" from {family} family"
 
         catalog.append(
             {
@@ -86,12 +103,12 @@ async def list_models(
                 "parameter_count": param_count,
                 "parameter_size": param_size,
                 "quantization": quantization,
-                "size_bytes": model.get("size", model.get("size_bytes", 0)),
+                "size_bytes": size_bytes,
                 "context_length": model.get("context_length", 4096),
                 "capabilities": cap,
-                "description": model.get("description", f"Ollama model: {name}"),
+                "description": desc,
                 "downloaded": downloaded,
-                "hardware_requirements": _estimate_hardware(model.get("size", model.get("size_bytes", 0))),
+                "hardware_requirements": _estimate_hardware(size_bytes),
             }
         )
 
