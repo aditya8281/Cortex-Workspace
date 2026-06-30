@@ -15,10 +15,14 @@ from backend.app.models.interaction.user import User
 from backend.app.schemas.intelligence.model import (
     AutocompleteResponse,
     CatalogSourceStatusResponse,
+    FamilySummary,
+    FamilyVariant,
+    FamilyVariantsResponse,
     HardwareInfoResponse,
     InferenceConfigResponse,
     ModelComparisonResponse,
     ModelDetailResponse,
+    ModelFamiliesResponse,
     ModelListResponse,
     ModelSearchResponse,
     RecommendedModelsAllResponse,
@@ -343,6 +347,188 @@ async def autocomplete_models(
     except Exception as e:
         logger.error("autocomplete_failed: %s", str(e))
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get(
+    "/models/families",
+    response_model=ModelFamiliesResponse,
+    summary="Get models grouped by family",
+)
+async def get_model_families(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all model families with their default variants."""
+    catalog_entries = db.execute(select(ModelCatalog)).scalars().all()
+
+    # Get all variants, grouped by model_catalog_id
+    all_variants = db.execute(select(ModelVariant)).scalars().all()
+    variants_by_catalog: dict[int, list[ModelVariant]] = {}
+    for v in all_variants:
+        variants_by_catalog.setdefault(v.model_catalog_id, []).append(v)
+
+    # Get downloaded model names
+    try:
+        available = await llm_manager.list_all_models()
+        available_names = {m.name for m in available}
+    except Exception:
+        available_names = set()
+
+    # Group catalog entries by family
+    families: dict[str, list[ModelCatalog]] = {}
+    for entry in catalog_entries:
+        families.setdefault(entry.family or "unknown", []).append(entry)
+
+    family_summaries: list[FamilySummary] = []
+    for family_name, entries in families.items():
+        # Collect all capabilities across entries
+        all_caps: set[str] = set()
+        for e in entries:
+            if e.capabilities:
+                all_caps.update(e.capabilities)
+
+        # Build variants for this family from DB variants
+        family_variants: list[FamilyVariant] = []
+        for entry in entries:
+            variants = variants_by_catalog.get(entry.id, [])
+            for v in variants:
+                downloaded = v.downloaded or v.variant_id in available_names
+                family_variants.append(
+                    FamilyVariant(
+                        model_id=v.variant_id,
+                        parameter_count=v.parameter_count,
+                        size_gb=round(v.size_gb, 1) if v.size_gb else None,
+                        size_bytes=v.size_bytes,
+                        quantization=v.quantization,
+                        context_length=entry.context_length_default,
+                        downloaded=downloaded,
+                        license=entry.license,
+                        embedding_dim=entry.embedding_dim,
+                    )
+                )
+
+            # If no DB variants, create a synthetic one from the catalog entry
+            if not variants:
+                downloaded = (
+                    entry.model_id in available_names
+                    or entry.model_id.split(":")[0] in available_names
+                )
+                family_variants.append(
+                    FamilyVariant(
+                        model_id=entry.model_id,
+                        parameter_count=entry.parameter_count,
+                        context_length=entry.context_length_default,
+                        downloaded=downloaded,
+                        license=entry.license,
+                        embedding_dim=entry.embedding_dim,
+                    )
+                )
+
+        # Pick default variant: highest param_count, then smallest size_bytes
+        if family_variants:
+            family_variants.sort(key=lambda v: (-(v.parameter_count or 0), v.size_bytes or 0))
+            default_variant = family_variants[0]
+        else:
+            default_variant = FamilyVariant(model_id="")
+
+        # Compute context_range and param_range
+        context_vals = [
+            v.context_length for v in family_variants if v.context_length is not None
+        ]
+        param_vals = [
+            v.parameter_count for v in family_variants if v.parameter_count is not None
+        ]
+        context_range = [min(context_vals), max(context_vals)] if context_vals else []
+        param_range = [min(param_vals), max(param_vals)] if param_vals else []
+
+        family_summaries.append(
+            FamilySummary(
+                family=family_name,
+                display_name=entries[0].display_name,
+                model_count=len(entries),
+                capabilities=list(all_caps),
+                default_variant=default_variant,
+                context_range=context_range,
+                param_range=param_range,
+                license=entries[0].license,
+                embedding_dim=entries[0].embedding_dim,
+            )
+        )
+
+    # Separate embedding families
+    embedding_families = [
+        f for f in family_summaries if "embedding" in f.capabilities
+    ]
+    text_families = [
+        f for f in family_summaries if "embedding" not in f.capabilities
+    ]
+
+    return ModelFamiliesResponse(
+        families=text_families,
+        embedding_families=embedding_families,
+        total_families=len(family_summaries),
+        total_models=len(catalog_entries),
+    )
+
+
+@router.get(
+    "/models/families/{family}/variants",
+    response_model=FamilyVariantsResponse,
+    summary="Get all variants for a family",
+)
+async def get_family_variants(
+    family: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all variants for a specific model family."""
+    entries = db.execute(
+        select(ModelCatalog).where(ModelCatalog.family == family)
+    ).scalars().all()
+
+    if not entries:
+        raise HTTPException(status_code=404, detail=f"Family '{family}' not found")
+
+    catalog_ids = [e.id for e in entries]
+    variants = db.execute(
+        select(ModelVariant).where(ModelVariant.model_catalog_id.in_(catalog_ids))
+    ).scalars().all()
+
+    catalog_by_id = {e.id: e for e in entries}
+
+    # Get downloaded model names
+    try:
+        available = await llm_manager.list_all_models()
+        available_names = {m.name for m in available}
+    except Exception:
+        available_names = set()
+
+    family_variants: list[FamilyVariant] = []
+    for v in variants:
+        cat = catalog_by_id.get(v.model_catalog_id)
+        downloaded = v.downloaded or v.variant_id in available_names
+        family_variants.append(
+            FamilyVariant(
+                model_id=v.variant_id,
+                parameter_count=v.parameter_count,
+                size_gb=round(v.size_gb, 1) if v.size_gb else None,
+                size_bytes=v.size_bytes,
+                quantization=v.quantization,
+                context_length=cat.context_length_default if cat else None,
+                downloaded=downloaded,
+                license=cat.license if cat else None,
+                embedding_dim=cat.embedding_dim if cat else None,
+            )
+        )
+
+    # Sort by param_count desc, size_bytes asc
+    family_variants.sort(key=lambda v: (-(v.parameter_count or 0), v.size_bytes or 0))
+
+    return FamilyVariantsResponse(
+        family=family,
+        display_name=entries[0].display_name,
+        variants=family_variants,
+    )
 
 
 @router.get("/models/{model_id}", response_model=ModelDetailResponse)

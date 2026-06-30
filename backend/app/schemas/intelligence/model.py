@@ -391,3 +391,40 @@ class BulkCancelResponse(BaseModel):
 
 class ClearCompletedResponse(BaseModel):
     cleared: int
+
+
+class FamilyVariant(BaseModel):
+    model_id: str
+    parameter_count: float | None = None
+    size_gb: float | None = None
+    size_bytes: int | None = None
+    quantization: str | None = None
+    context_length: int | None = None
+    downloaded: bool = False
+    license: str | None = None
+    embedding_dim: int | None = None
+
+
+class FamilySummary(BaseModel):
+    family: str
+    display_name: str
+    model_count: int
+    capabilities: list[str]
+    default_variant: FamilyVariant
+    context_range: list[int] = []
+    param_range: list[float] = []
+    license: str | None = None
+    embedding_dim: int | None = None
+
+
+class ModelFamiliesResponse(BaseModel):
+    families: list[FamilySummary]
+    embedding_families: list[FamilySummary]
+    total_families: int
+    total_models: int
+
+
+class FamilyVariantsResponse(BaseModel):
+    family: str
+    display_name: str
+    variants: list[FamilyVariant]
