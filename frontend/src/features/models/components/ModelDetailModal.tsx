@@ -1,330 +1,203 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import type { ModelCatalogEntry, ModelDetail as ModelDetailResponse } from "../api";
-import { catalog, getDefaultModel, setDefaultModel, formatBytes, formatParamCount } from "../api";
+import { useState, useEffect } from "react";
 import { Modal } from "@/shared/ui/Modal";
 import { Badge } from "@/shared/ui/Badge";
 import { Button } from "@/shared/ui/Button";
-import { cn } from "@/shared/lib/utils";
-import { VariantPicker } from "./VariantPicker";
-import { useDownloadContext } from "@/shared/downloads/DownloadProvider";
-
-// ── Use ModelDetail from API (developer/api.ts) ──────────────────────────────
-
-interface InferenceConfig {
-  model_id: string;
-  context_length?: number;
-  temperature: number;
-  top_p: number;
-  top_k: number;
-  repeat_penalty: number;
-  seed: number;
-  num_predict: number;
-  num_ctx?: number;
-  image_resolution?: number;
-}
-
-// ── Props ────────────────────────────────────────────────────────────────
+import { Skeleton } from "@/shared/ui/Skeleton";
+import type { FamilySummary, FamilyVariant, FamilyVariantsResponse, HardwareInfo } from "@/features/developer/api";
+import { catalog } from "@/features/developer/api";
+import { formatParamCount, calculateRamFit } from "@/features/models/api";
+import { VariantRow } from "./VariantRow";
 
 interface ModelDetailModalProps {
+  family: FamilySummary | null;
   open: boolean;
   onClose: () => void;
-  modelId: string;
-  onDownload?: (modelName: string) => void;
-  onSetDefault?: (modelId: string) => void;
+  onDownload: (modelId: string) => void;
+  onUseInChat: (modelId: string) => void;
+  onSetDefault: (modelId: string) => void;
+  hardware: HardwareInfo | null;
+  defaultModel: string | null;
 }
 
-// ── Inference config entry ───────────────────────────────────────────────
-
-interface ConfigField {
-  label: string;
-  value: string | number;
-}
-
-function inferenceConfigFields(config: InferenceConfig): ConfigField[] {
-  return [
-    { label: "Temperature", value: config.temperature.toFixed(2) },
-    { label: "Top-P", value: config.top_p.toFixed(2) },
-    { label: "Top-K", value: config.top_k },
-    { label: "Repeat Penalty", value: config.repeat_penalty.toFixed(2) },
-    { label: "Num Predict", value: config.num_predict },
-    { label: "Seed", value: config.seed },
-    { label: "Context Length", value: config.num_ctx ?? config.context_length ?? "—" },
-  ];
-}
-
-// ── Component ────────────────────────────────────────────────────────────
+type SortKey = "size" | "params";
 
 export function ModelDetailModal({
+  family: initialFamily,
   open,
   onClose,
-  modelId,
   onDownload,
+  onUseInChat,
   onSetDefault,
+  hardware,
+  defaultModel,
 }: ModelDetailModalProps) {
-  const { actions } = useDownloadContext();
-
-  // Data state
-  const [detail, setDetail] = useState<ModelDetailResponse | null>(null);
-  const [inferenceConfig, setInferenceConfig] = useState<InferenceConfig | null>(null);
+  const [variantsData, setVariantsData] = useState<FamilyVariantsResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortKey>("size");
+  const ram_gb = hardware?.ram_gb ?? 32;
 
-  // Interaction state
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
-  const [defaultModelId, setDefaultModelId] = useState<string | null>(null);
-
-  // Derived
-  const defaultModel = defaultModelId;
-  const isDefaultModel = detail ? detail.model_id === defaultModel : false;
-
-  // Fetch data when modal opens
-  const fetchData = useCallback(async () => {
-    if (!modelId) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [detailData, configData] = await Promise.all([
-        catalog.detail(modelId),
-        catalog.inferenceConfig(modelId).catch(() => null),
-      ]);
-      setDetail(detailData);
-      setInferenceConfig(configData);
-
-      // Auto-select first downloaded variant, or first variant
-      if (detailData.variants.length > 0) {
-        const downloaded = detailData.variants.find((v) => v.downloaded === true);
-        setSelectedVariantId(downloaded?.variant_id ?? detailData.variants[0].variant_id);
-      }
-    } catch (e: any) {
-      setError(e.message ?? "Failed to load model details");
-    } finally {
-      setLoading(false);
-    }
-  }, [modelId]);
-
-  // Reset state when modal opens/closes
   useEffect(() => {
-    if (open) {
-      setDefaultModelId(getDefaultModel());
-      fetchData();
-    } else {
-      setDetail(null);
-      setInferenceConfig(null);
-      setSelectedVariantId(null);
-      setDownloading(false);
-      setError(null);
-    }
-  }, [open, fetchData]);
+    if (!open || !initialFamily) return;
+    setLoading(true);
+    catalog
+      .familyVariants(initialFamily.family)
+      .then(setVariantsData)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [open, initialFamily]);
 
-  // Handlers
-  const handleVariantSelect = useCallback((variantId: string) => {
-    setSelectedVariantId(variantId);
-  }, []);
+  if (!initialFamily) return null;
 
-  const handleDownload = useCallback(async () => {
-    if (!detail || !selectedVariantId) return;
-    setDownloading(true);
-    try {
-      await actions.download(detail.model_id, selectedVariantId);
-      onDownload?.(detail.model_id);
-      onClose();
-    } catch (e: any) {
-      setError(e.message ?? "Download failed");
-    } finally {
-      setDownloading(false);
-    }
-  }, [detail, selectedVariantId, actions, onDownload, onClose]);
+  const variants = variantsData?.variants ?? [];
+  const isEmbedding = initialFamily.embedding_dim !== null;
 
-  const handleUseInChat = useCallback(() => {
-    if (!detail) return;
-    setDefaultModel(detail.model_id);
-    setDefaultModelId(detail.model_id);
-    onSetDefault?.(detail.model_id);
-    onClose();
-  }, [detail, onSetDefault, onClose]);
-
-  // ── Loading state ────────────────────────────────────────────────────
-
-  if (open && loading) {
-    return (
-      <Modal open={open} onClose={onClose} title="Loading..." className="max-w-xl">
-        <div className="flex items-center justify-center py-12">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-        </div>
-      </Modal>
-    );
-  }
-
-  // ── Error state ──────────────────────────────────────────────────────
-
-  if (!loading && error) {
-    return (
-      <Modal open={open} onClose={onClose} title="Error" className="max-w-xl">
-        <div className="rounded-lg bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-danger">
-          {error}
-        </div>
-      </Modal>
-    );
-  }
-
-  // ── Main content ─────────────────────────────────────────────────────
+  const sortedVariants = [...variants].sort((a, b) => {
+    if (sortBy === "size") return (a.size_bytes ?? 0) - (b.size_bytes ?? 0);
+    return (b.parameter_count ?? 0) - (a.parameter_count ?? 0);
+  });
 
   return (
-    <Modal open={open} onClose={onClose} title={detail?.display_name ?? ""} className="max-w-xl">
-      {detail && (
-        <div className="space-y-5">
-          {/* Family */}
-          <div className="flex items-center gap-2 text-xs text-text-secondary">
-            <span className="font-medium">{detail.family}</span>
-          </div>
-
-          {/* Meta row: params, context, license */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 font-mono text-xs text-text-primary">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-muted">
-                <rect x="1" y="4" width="2" height="6" rx="0.5" fill="currentColor" />
-                <rect x="4.5" y="1" width="2" height="9" rx="0.5" fill="currentColor" />
-                <rect x="8" y="2.5" width="2" height="7.5" rx="0.5" fill="currentColor" />
-              </svg>
-              {formatParamCount(detail.parameter_count)}
-            </span>
-
-            {detail.context_length_default != null && (
-              <span className="inline-flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1 font-mono text-xs text-text-primary">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-text-muted">
-                  <rect x="1" y="3" width="2" height="6" rx="0.5" fill="currentColor" />
-                  <rect x="4.5" y="1" width="2" height="8" rx="0.5" fill="currentColor" />
-                  <rect x="8" y="0" width="2" height="9" rx="0.5" fill="currentColor" />
-                </svg>
-                {(detail.context_length_default >= 1000
-                  ? `${(detail.context_length_default / 1000).toFixed(0)}K`
-                  : String(detail.context_length_default)
-                )}{" "}
-                ctx
-              </span>
-            )}
-
-            {detail.license && (
-              <Badge variant="default">{detail.license}</Badge>
-            )}
-
-            {/* Default model badge */}
-            {isDefaultModel && <Badge variant="success">Default</Badge>}
-          </div>
-
-          {/* Capabilities */}
-          {detail.capabilities.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {detail.capabilities.map((cap) => (
-                <Badge key={cap} variant="default">
-                  {cap}
-                </Badge>
-              ))}
+    <Modal open={open} onClose={onClose}>
+      <div className="max-h-[80vh] overflow-y-auto">
+        {/* Header */}
+        <div className="p-6 border-b border-border-default/50">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold text-text-primary">
+              {initialFamily.display_name}
+            </h2>
+            <div className="flex items-center gap-2">
+              {initialFamily.license && (
+                <Badge variant="default">{initialFamily.license}</Badge>
+              )}
             </div>
-          )}
-
-          {/* Description */}
-          {detail.description && (
-            <p className="text-sm text-text-secondary leading-relaxed">
-              {detail.description}
-            </p>
-          )}
-
-          {/* Architecture */}
-          {detail.architecture && (
-            <div className="flex items-center gap-2 text-xs text-text-muted">
-              <span className="font-medium text-text-secondary">Architecture:</span>
-              <span className="font-mono">{detail.architecture}</span>
-            </div>
-          )}
-
-          {/* Tags */}
-          {detail.tags.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {detail.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center rounded-full bg-bg-surface px-2.5 py-0.5 font-mono text-[0.625rem] text-text-muted"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Divider */}
-          <div className="border-t border-border-subtle" />
-
-          {/* Variants */}
-          <div>
-            <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Variants
-            </h4>
-            {detail.variants.length > 0 ? (
-              <VariantPicker
-                variants={detail.variants}
-                selectedVariantId={selectedVariantId}
-                onSelect={handleVariantSelect}
-                disabled={downloading}
-              />
-            ) : (
-              <p className="text-xs text-text-muted">No variants available</p>
-            )}
           </div>
+          <p className="text-xs text-text-muted">
+            {initialFamily.model_count} variants
+          </p>
+        </div>
 
-          {/* Inference config */}
-          {inferenceConfig && (
-            <>
-              <div className="border-t border-border-subtle" />
-              <div>
-                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
-                  Inference Config
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {inferenceConfigFields(inferenceConfig).map((field) => (
-                    <div key={field.label} className="space-y-0.5">
-                      <p className="text-[0.625rem] text-text-muted uppercase tracking-wider">
-                        {field.label}
-                      </p>
-                      <p className="font-mono text-xs text-text-primary tabular-nums">
-                        {field.value}
-                      </p>
-                    </div>
-                  ))}
+        {/* Overview */}
+        <div className="p-6 border-b border-border-default/50">
+          <h3 className="text-sm font-semibold text-text-primary mb-3">Overview</h3>
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            {isEmbedding ? (
+              <>
+                <div>
+                  <span className="text-text-muted">Dimensions:</span>{" "}
+                  <span className="text-text-primary">{initialFamily.embedding_dim}</span>
                 </div>
+                <div>
+                  <span className="text-text-muted">Context:</span>{" "}
+                  <span className="text-text-primary">
+                    {initialFamily.context_range[0] >= 1000
+                      ? `${Math.round(initialFamily.context_range[0] / 1000)}K`
+                      : initialFamily.context_range[0]}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span className="text-text-muted">Parameters:</span>{" "}
+                  <span className="text-text-primary">
+                    {formatParamCount(initialFamily.param_range[0])}–
+                    {formatParamCount(initialFamily.param_range[1])}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-text-muted">Context:</span>{" "}
+                  <span className="text-text-primary">
+                    {initialFamily.context_range[0] >= 1000
+                      ? `${Math.round(initialFamily.context_range[0] / 1000)}K`
+                      : initialFamily.context_range[0]}–
+                    {initialFamily.context_range[1] >= 1000
+                      ? `${Math.round(initialFamily.context_range[1] / 1000)}K`
+                      : initialFamily.context_range[1]}
+                  </span>
+                </div>
+              </>
+            )}
+            <div className="col-span-2">
+              <span className="text-text-muted">Capabilities:</span>{" "}
+              <div className="flex gap-1 mt-1">
+                {initialFamily.capabilities.map((cap) => (
+                  <Badge key={cap} variant="default">{cap}</Badge>
+                ))}
               </div>
-            </>
-          )}
-
-          {/* Actions */}
-          <div className="border-t border-border-subtle" />
-          <div className="flex items-center gap-2 pt-1">
-            <Button
-              onClick={handleDownload}
-              disabled={!selectedVariantId || downloading}
-              loading={downloading}
-            >
-              {downloading
-                ? "Downloading..."
-                : selectedVariantId
-                  ? `Download ${detail.variants.find((v) => v.variant_id === selectedVariantId)?.quantization ?? "Variant"}`
-                  : "Download"}
-            </Button>
-
-            <Button
-              variant="ghost"
-              onClick={handleUseInChat}
-              disabled={isDefaultModel}
-            >
-              {isDefaultModel ? "Default Model" : "Use in Chat"}
-            </Button>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Variants table */}
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-text-primary">
+              Variants ({variants.length})
+            </h3>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setSortBy("size")}
+                className={`px-2 py-1 rounded text-xs transition-colors ${
+                  sortBy === "size" ? "bg-accent/12 text-accent" : "text-text-muted hover:text-text-secondary"
+                }`}
+              >
+                Size
+              </button>
+              <button
+                onClick={() => setSortBy("params")}
+                className={`px-2 py-1 rounded text-xs transition-colors ${
+                  sortBy === "params" ? "bg-accent/12 text-accent" : "text-text-muted hover:text-text-secondary"
+                }`}
+              >
+                Params
+              </button>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : sortedVariants.length > 0 ? (
+            <div className="border border-border-default/50 rounded-lg overflow-hidden">
+              {sortedVariants.map((v) => {
+                const minRam = v.size_gb ? v.size_gb * 1.2 : 0;
+                const fit = calculateRamFit(ram_gb, minRam);
+                return (
+                  <VariantRow
+                    key={v.model_id}
+                    variant={v}
+                    ramFitPercent={fit.percent}
+                    ramFitStatus={fit.status}
+                    onDownload={onDownload}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-text-muted">No variants available</p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="p-6 border-t border-border-default/50 flex items-center gap-3">
+          <Button onClick={() => onUseInChat(initialFamily.default_variant.model_id)}>
+            Use in Chat
+          </Button>
+          {initialFamily.default_variant.model_id !== defaultModel && (
+            <Button
+              variant="ghost"
+              onClick={() => onSetDefault(initialFamily.default_variant.model_id)}
+            >
+              Set as Default
+            </Button>
+          )}
+        </div>
+      </div>
     </Modal>
   );
 }
