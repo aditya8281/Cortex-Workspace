@@ -15,10 +15,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""  # Must be set via environment variable
     REDIS_URL: str = "redis://localhost:6379/0"
     ENV: str = "development"
-    CORTEX_ROOT: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("CORTEX_ROOT"),
-    )
+    CORTEX_ROOT: str | None = Field(default=None)
     MEMORY_PATH: str | None = Field(
         default=None,
         validation_alias=AliasChoices("MEMORY_PATH", "CORTEX_MEMORY_PATH"),
@@ -80,10 +77,7 @@ class Settings(BaseSettings):
     # When True, run_manager.py dispatches to the new single-streaming loop
     # instead of the legacy Planner→Executor path. Currently False — the
     # streaming loop is not yet built (next Phase 2 component).
-    CORTEX_NEW_AGENT_LOOP: bool = Field(
-        default=False,
-        validation_alias=AliasChoices("CORTEX_NEW_AGENT_LOOP"),
-    )
+    CORTEX_NEW_AGENT_LOOP: bool = Field(default=False)
 
     # HTTPS redirect
     HTTPS_REDIRECT_ENABLED: bool = False
