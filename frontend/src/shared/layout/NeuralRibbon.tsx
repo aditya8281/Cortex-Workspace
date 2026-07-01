@@ -48,7 +48,7 @@ export function NeuralRibbon() {
   // Fetch system health
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/system/health");
+      const res = await fetch("/api/v1/health/deep");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!mounted.current) return;
@@ -60,8 +60,12 @@ export function NeuralRibbon() {
       }));
 
       // Track individual services if available
-      if (data.services) {
-        setServices(data.services);
+      if (data.checks) {
+        const svcs: ServiceHealth[] = [];
+        for (const [name, ok] of Object.entries(data.checks)) {
+          svcs.push({ name, status: ok ? "healthy" : "down" });
+        }
+        setServices(svcs);
       }
     } catch {
       if (mounted.current) {
@@ -73,7 +77,7 @@ export function NeuralRibbon() {
   // Fetch active model info
   const fetchModel = useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/models/ollama/catalog");
+      const res = await fetch("/api/v1/models");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!mounted.current) return;
