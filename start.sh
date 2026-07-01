@@ -168,7 +168,7 @@ ensure_qdrant() {
     echo -e "\n${BOLD}${CYAN}[Phase 0b/5] Setting up Qdrant vector database...${RESET}"
 
     # Check if Qdrant is already running
-    if curl -sf http://127.0.0.1:6333/health >/dev/null 2>&1; then
+    if curl -sf http://127.0.0.1:6333/healthz >/dev/null 2>&1; then
         echo -e "${GREEN}[✓] Qdrant already running on port 6333.${RESET}"
         return 0
     fi
@@ -185,16 +185,17 @@ ensure_qdrant() {
                 -p 127.0.0.1:6333:6333 \
                 -p 127.0.0.1:6334:6334 \
                 -v cortex-qdrant:/qdrant/storage \
-                qdrant/qdrant:v1.18.0 >/dev/null 2>&1 || {
-                echo -e "${YELLOW}[!] Qdrant Docker start failed (non-critical).${RESET}"
-                echo -e "${YELLOW}    Vector search will be degraded until Qdrant is available.${RESET}"
+                qdrant/qdrant:v1.18.0 2>&1 || {
+                echo -e "${YELLOW}[!] Qdrant Docker start failed.${RESET}"
+                echo -e "${YELLOW}    Ensure Docker is running: docker info${RESET}"
+                echo -e "${YELLOW}    Vector search degraded until Qdrant available.${RESET}"
                 return 1
             }
         fi
 
         # Wait for Qdrant to be ready (up to 10 seconds)
         for i in $(seq 1 20); do
-            if curl -sf http://127.0.0.1:6333/health >/dev/null 2>&1; then
+            if curl -sf http://127.0.0.1:6333/healthz >/dev/null 2>&1; then
                 echo -e "${GREEN}[✓] Qdrant running on port 6333 (Docker).${RESET}"
                 return 0
             fi
@@ -209,11 +210,11 @@ ensure_qdrant() {
         echo -e "${YELLOW}[+] Starting Qdrant binary...${RESET}"
         QDRANT_DIR="$ROOT_DIR/CortexMemory/qdrant"
         mkdir -p "$QDRANT_DIR"
-        qdrant --storage "$QDRANT_DIR" > /dev/null 2>&1 &
+        QDRANT__STORAGE__STORAGE_PATH="$QDRANT_DIR" qdrant > /dev/null 2>&1 &
         disown
 
         for i in $(seq 1 20); do
-            if curl -sf http://127.0.0.1:6333/health >/dev/null 2>&1; then
+            if curl -sf http://127.0.0.1:6333/healthz >/dev/null 2>&1; then
                 echo -e "${GREEN}[✓] Qdrant running on port 6333 (native).${RESET}"
                 return 0
             fi
@@ -226,7 +227,7 @@ ensure_qdrant() {
     return 1
 }
 
-ensure_qdrant
+ensure_qdrant || true
 
 
 # 1. Check and copy environment variables
