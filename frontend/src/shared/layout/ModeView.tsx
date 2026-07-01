@@ -1,15 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useModeStack } from "./ModeStack";
 import { Dock } from "./Dock";
 import { NeuralRibbon } from "./NeuralRibbon";
+import HubPage from "@/features/hub/page";
 import { cn } from "@/shared/lib/utils";
-
-// ── Mode page imports (lazy-friendly, direct for now) ────────────────
-// P03+ will replace these with real implementations.
-// Using placeholders that resolve to the existing app pages via redirect.
-import dynamic from "next/dynamic";
 
 interface ModeEntry {
   icon: string;
@@ -30,24 +26,7 @@ const MODE_REGISTRY: Record<string, ModeEntry> = {
   profile: { icon: "👤", name: "Profile", Component: null },
 };
 
-// ── Hub placeholder (will be built in P03) ───────────────────────────
-function HubPlaceholder() {
-  return (
-    <div className="flex h-full items-center justify-center">
-      <div className="text-center max-w-md px-4">
-        <h1 className="text-display font-semibold text-text-primary">
-          Welcome to Cortex
-        </h1>
-        <p className="mt-2 text-sm text-text-secondary">
-          Your machine intelligence layer. Click a dock icon to begin.
-        </p>
-        <p className="mt-1 text-xs text-text-muted font-mono">
-          Press ⌘K to open the command bar
-        </p>
-      </div>
-    </div>
-  );
-}
+// ── Hub entry point (replaced placeholder from P03+) ─────────────────
 
 // ── Placeholder mode page ────────────────────────────────────────────
 function PlaceholderMode({ icon, name }: { icon: string; name: string }) {
@@ -108,6 +87,15 @@ export function ModeView() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [isHub]);
 
+  // Listen for hub:navigate custom event (dispatched by HubPage widgets)
+  useEffect(() => {
+    function onHubNavigate(e: CustomEvent<{ modeId: string }>) {
+      pushMode(e.detail.modeId);
+    }
+    window.addEventListener("hub:navigate", onHubNavigate as EventListener);
+    return () => window.removeEventListener("hub:navigate", onHubNavigate as EventListener);
+  }, [pushMode]);
+
   const handleModeChange = (modeId: string) => {
     if (modeId === currentMode) return;
     setTransitioning(true);
@@ -128,14 +116,14 @@ export function ModeView() {
     });
   };
 
-  // ── Render hub or mode ────────────────────────────────────────────
+  // ── Render hub ────────────────────────────────────────────────────
   if (isHub) {
     return (
       <div className="relative h-dvh overflow-hidden bg-bg-base">
         <NeuralRibbon />
         <div className="absolute inset-0 top-6 flex flex-col overflow-y-auto">
           <CrossfadeView id="hub">
-            <HubPlaceholder />
+            <HubPage />
           </CrossfadeView>
         </div>
         <Dock

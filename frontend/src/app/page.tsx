@@ -1,1 +1,5 @@
-export { default } from "@/features/dashboard/page";
+import { ModeView } from "@/shared/layout/ModeView";
+
+export default function HomePage() {
+  return <ModeView />;
+}
