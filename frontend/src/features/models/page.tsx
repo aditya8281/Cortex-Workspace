@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/shared/auth/AuthProvider";
-import { AppShell } from "@/shared/layout/AppShell";
+
 import { HardwareBar } from "./components/HardwareBar";
 import { BrowseView } from "./components/BrowseView";
 import { CompareView } from "./components/CompareView";
@@ -161,7 +161,7 @@ export default function ModelsPage() {
 
   if (authLoading) {
     return (
-      <AppShell>
+      <div className="h-full overflow-y-auto p-6">
         <div className="mx-auto max-w-6xl space-y-6">
           <div className="space-y-1">
             <Skeleton className="h-6 w-20" />
@@ -186,7 +186,7 @@ export default function ModelsPage() {
             ))}
           </div>
         </div>
-      </AppShell>
+      </div>
     );
   }
 
@@ -201,7 +201,7 @@ export default function ModelsPage() {
   // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <AppShell>
+    <div className="h-full overflow-y-auto p-6">
       <DownloadProvider>
         <div className="mx-auto max-w-6xl space-y-6 animate-fade-in">
         {/* Page header */}
@@ -318,6 +318,6 @@ export default function ModelsPage() {
       />
         <DockedDownloadPanel />
       </DownloadProvider>
-    </AppShell>
+    </div>
   );
 }

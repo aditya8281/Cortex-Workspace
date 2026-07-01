@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/shared/layout/AppShell";
+
 import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
@@ -72,7 +72,7 @@ export default function SettingsPage() {
   };
 
   if (loading || !user) return (
-    <AppShell>
+    <div className="h-full overflow-y-auto p-6">
       <div className="max-w-3xl space-y-6">
         <Skeleton className="h-6 w-20" />
         <Skeleton className="h-4 w-48" />
@@ -92,7 +92,7 @@ export default function SettingsPage() {
           </div>
         </Card>
       </div>
-    </AppShell>
+    </div>
   );
 
   const tabs = [
@@ -103,7 +103,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <AppShell>
+    <div className="h-full overflow-y-auto p-6">
       <div className="max-w-3xl animate-fade-in">
         {/* Header */}
         <div className="mb-6">
@@ -317,6 +317,6 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </div>
   );
 }
