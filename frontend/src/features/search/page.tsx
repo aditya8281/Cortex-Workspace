@@ -342,6 +342,8 @@ export default function SearchPage() {
                 onClick={() => p.available && handlePrefixChange(p.key)}
                 disabled={!p.available}
                 title={p.tooltip}
+                aria-pressed={isActive}
+                aria-label={`${p.label} search${!p.available ? ` (${p.availableIn})` : ""}`}
                 className={cn(
                   "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium",
                   "motion-safe:transition-all motion-safe:duration-150",
@@ -424,6 +426,7 @@ export default function SearchPage() {
                 <button
                   key={f.key}
                   onClick={() => handleFilterChange(f.key)}
+                  aria-pressed={activeFilter === f.key}
                   className={cn(
                     "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150",
                     activeFilter === f.key

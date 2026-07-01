@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { cn } from "@/shared/lib/utils";
-import { DocumentIcon, SearchIcon, BrainIcon, LightningIcon } from "@/shared/ui/icons";
+import { DocumentIcon, SearchIcon, BrainIcon, BoltIcon, MenuIcon } from "@/shared/ui/icons";
 import { MessageBubble } from "./components/MessageBubble";
 import { ChatInput } from "./components/ChatInput";
 import { StreamingIndicator } from "./components/StreamingIndicator";
@@ -161,9 +161,7 @@ export default function ChatPage() {
             className="flex items-center justify-center h-8 w-8 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150"
             aria-label="Open conversations"
           >
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <path d="M2 3h12M2 8h12M2 13h8" />
-            </svg>
+            <MenuIcon />
           </button>
           <span className="text-border-default text-sm">·</span>
           {activeConv && (
@@ -180,6 +178,7 @@ export default function ChatPage() {
               setSelectedModel(val);
               if (val) setDefaultModel(val);
             }}
+            aria-label="Select model"
             className="rounded-md border border-border-subtle bg-bg-surface px-2 py-1 text-xs text-text-secondary font-mono outline-none focus:border-accent-red/50 motion-safe:transition-colors motion-safe:duration-150"
           >
             <option value="">Default model</option>
@@ -208,6 +207,7 @@ export default function ChatPage() {
                   <button
                     key={p.label}
                     onClick={() => handleSend(p.prompt)}
+                    aria-label={`Suggested prompt: ${p.label}`}
                     className={cn(
                       "rounded-xl border border-border-subtle p-3 text-left text-xs",
                       "bg-bg-widget backdrop-blur-xl",
@@ -240,7 +240,7 @@ export default function ChatPage() {
         {/* Sources */}
         {sources.length > 0 && (
           <div className="border-t border-border-subtle px-4 sm:px-6 py-2">
-            <details className="group">
+            <details className="group" aria-label={`Sources panel with ${sources.length} items`}>
               <summary className="text-xs text-text-muted font-medium cursor-pointer hover:text-text-secondary motion-safe:transition-colors motion-safe:duration-150">
                 Sources ({sources.length})
               </summary>
@@ -295,5 +295,5 @@ const suggestedPrompts = [
   { icon: <DocumentIcon size={16} />, label: "Summarize this", prompt: "Can you help me summarize the key concepts of this project?" },
   { icon: <SearchIcon size={16} />, label: "Find in codebase", prompt: "Search the codebase for anything related to authentication and WebSocket connections" },
   { icon: <BrainIcon size={16} />, label: "Memory stats", prompt: "Show me the current memory and knowledge graph statistics" },
-  { icon: <LightningIcon size={16} />, label: "Quick answer", prompt: "What is the architecture of this system?" },
+  { icon: <BoltIcon size={16} />, label: "Quick answer", prompt: "What is the architecture of this system?" },
 ];
