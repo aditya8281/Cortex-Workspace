@@ -1,3 +1,27 @@
+"""
+Configuration module for CORTEX.
+
+Key design notes:
+
+- ALLOWED_ORIGINS: In development/test mode, the Settings.model_post_init()
+  strips individually-listed localhost origins and sets a runtime flag
+  (_dev_accept_any_localhost) so that any http://localhost:PORT or
+  http://127.0.0.1:PORT is accepted. This is necessary because start.sh
+  dynamically selects ports for the backend and frontend dev servers.
+  In production, set CORS_ORIGINS as a comma-separated list of explicit origins.
+
+- QDRANT_HOST / QDRANT_PORT: Default to "localhost" / 6333, but these are
+  overridden by .env at runtime. start.sh writes QDRANT_HOST=127.0.0.1 and
+  QDRANT_PORT=<dynamically-found-port> into .env before launching the backend,
+  so the vector database port matches whatever port Qdrant was started on.
+
+- Dynamic port setup via start.sh: The startup script (start.sh) discovers
+  free ports for PostgreSQL (starting at 5435), Qdrant (starting at 6333),
+  the backend (starting at 8000), and the frontend (starting at 3000). It
+  writes DATABASE_URL, QDRANT_HOST, and QDRANT_PORT into .env so the config
+  picks up the correct values automatically.
+"""
+
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,7 +39,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""  # Must be set via environment variable
     REDIS_URL: str = "redis://localhost:6379/0"
     ENV: str = "development"
-    CORTEX_ROOT: str | None = Field(default=None)
+    CORTEX_ROOT: str | None = None
     MEMORY_PATH: str | None = Field(
         default=None,
         validation_alias=AliasChoices("MEMORY_PATH", "CORTEX_MEMORY_PATH"),
@@ -30,6 +54,8 @@ class Settings(BaseSettings):
         "http://localhost:3001",
         "http://localhost:3002",
         "http://localhost:3003",
+        "http://localhost:3004",
+        "http://localhost:3005",
         "http://localhost:8000",
         "http://localhost:8080",
     ]
@@ -38,6 +64,7 @@ class Settings(BaseSettings):
     def model_post_init(self, __context) -> None:
         import logging
         import os
+        import re
 
         logger = logging.getLogger(__name__)
 
@@ -49,6 +76,19 @@ class Settings(BaseSettings):
 
         if self.CORS_ORIGINS:
             self.ALLOWED_ORIGINS = [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+        # In dev mode, accept any localhost origin (ports are dynamic)
+        if self.ENV in ("development", "test"):
+            # Match http://localhost:PORT or http://127.0.0.1:PORT
+            localhost_pattern = re.compile(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$")
+            self.ALLOWED_ORIGINS = [
+                o for o in self.ALLOWED_ORIGINS
+                if not localhost_pattern.match(o)
+            ]
+            # Add a wildcard-accepting origin matcher at runtime via middleware
+            self._dev_accept_any_localhost = True
+        else:
+            self._dev_accept_any_localhost = False
 
         if not self.SECRET_KEY:
             import secrets

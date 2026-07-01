@@ -21,13 +21,14 @@ gsap.registerPlugin(useGSAP);
 // ── Types ─────────────────────────────────────────────────────────────
 interface HealthData {
   status: string;
-  version: string;
-  services?: Record<string, string>;
+  checks?: Record<string, boolean>;
 }
 
 interface ModelCatalog {
-  active_model?: string;
-  models?: Array<{ name: string }>;
+  models?: Array<{ name: string; display_name?: string }>;
+  total_count?: number;
+  downloaded_count?: number;
+  available_from_providers?: Array<{ name: string }>;
 }
 
 interface BrainStats {
@@ -192,7 +193,7 @@ export default function HubPage() {
 
 // ── Widget grid configuration ────────────────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = "";
 
 const WIDGETS: WidgetConfig[] = [
   {
@@ -221,10 +222,14 @@ const WIDGETS: WidgetConfig[] = [
     label: "Systems",
     glowColor: "red",
     spanFull: true,
-    fetchUrl: `${API_BASE}/api/v1/system/health`,
+    fetchUrl: `${API_BASE}/api/v1/health/deep`,
     renderLive: (data) => {
       const d = data as HealthData | undefined;
       if (!d) return <p>Checking system…</p>;
+
+      const serviceList = d.checks
+        ? Object.entries(d.checks).map(([s, ok]) => `${s}=${ok ? "✓" : "✗"}`).join(" ")
+        : "";
       return (
         <>
           <p>
@@ -233,27 +238,27 @@ const WIDGETS: WidgetConfig[] = [
               {d.status}
             </span>
           </p>
-          <p><span className="text-text-secondary">Version:</span> {d.version ?? "—"}</p>
+          <p className="text-[11px] text-text-muted font-mono">{serviceList}</p>
         </>
       );
     },
-    fallback: <p>System health unavailable</p>,
+    fallback: <p>Deep health check unavailable</p>,
   },
   {
     id: "models",
     icon: <ModelsIcon size={20} />,
     label: "Models",
     glowColor: "cyan",
-    fetchUrl: `${API_BASE}/api/v1/models/ollama/catalog`,
+    fetchUrl: `${API_BASE}/api/v1/models`,
     renderLive: (data) => {
       const d = data as ModelCatalog | undefined;
       if (!d) return <p>Loading models…</p>;
-      const active = d.active_model ?? d.models?.[0]?.name;
-      const count = d.models?.length ?? 0;
+      const count = d.total_count ?? d.models?.length ?? 0;
+      const dl = d.downloaded_count ?? 0;
       return (
         <>
-          <p><span className="text-text-secondary">Active:</span> {active ?? "None"}</p>
-          <p><span className="text-text-secondary">Available:</span> {count} model{count !== 1 ? "s" : ""}</p>
+          <p><span className="text-text-secondary">Total:</span> {count} model{count !== 1 ? "s" : ""}</p>
+          <p><span className="text-text-secondary">Downloaded:</span> {dl}</p>
         </>
       );
     },

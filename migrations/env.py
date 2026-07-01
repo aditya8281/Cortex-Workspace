@@ -30,7 +30,9 @@ if not _db_url:
         pass
 
 if _db_url:
-    config.set_main_option("sqlalchemy.url", _db_url)
+    # Alembic uses sync connections — strip async driver for sync fallback
+    _sync_url = _db_url.replace("+asyncpg", "+psycopg2")
+    config.set_main_option("sqlalchemy.url", _sync_url)
 
 # Import models so Alembic autogenerate can detect them.
 from backend.app.db.base import Base  # noqa: E402
@@ -57,11 +59,16 @@ from backend.app.models.intelligence.model_catalog import (  # noqa: F401, E402
 from backend.app.models.interaction.conversation import Conversation, ConversationMessage  # noqa: F401, E402
 from backend.app.models.interaction.notification import Notification  # noqa: F401, E402
 from backend.app.models.interaction.user import User  # noqa: F401, E402
+from backend.app.models.awareness.system_snapshot import SystemSnapshot  # noqa: F401, E402
 from backend.app.models.memory.document import Document, DocumentChunk  # noqa: F401, E402
+from backend.app.models.memory.episodic import EpisodicMemory  # noqa: F401, E402
 from backend.app.models.memory.graph import GraphEdge, GraphNode  # noqa: F401, E402
 from backend.app.models.memory.long_term_memory import LongTermMemory  # noqa: F401, E402
+from backend.app.models.memory.memory_graph import MemoryEdge, MemoryNode  # noqa: F401, E402
 from backend.app.models.memory.path_index import PathIndex  # noqa: F401, E402
+from backend.app.models.memory.semantic import SemanticMemory  # noqa: F401, E402
 from backend.app.models.memory.storage_registry import StorageRegistry  # noqa: F401, E402
+from backend.app.models.memory.working import WorkingMemory  # noqa: F401, E402
 from backend.app.models.privacy.auth_event import AuthEvent  # noqa: F401, E402
 from backend.app.models.privacy.user_settings import UserModelSettings  # noqa: F401, E402
 from backend.app.models.system.agent_run_event import AgentRunEvent, AgentRunToolCall  # noqa: F401, E402

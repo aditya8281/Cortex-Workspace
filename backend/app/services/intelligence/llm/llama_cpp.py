@@ -130,7 +130,9 @@ class LlamaCppProvider(LLMProvider):
             ct = usage.get("completion_tokens", 0)
             logger.info(
                 "llama.cpp inference: prompt_tokens=%d, completion_tokens=%d, finish=%s",
-                pt, ct, choice.get("finish_reason", "stop"),
+                pt,
+                ct,
+                choice.get("finish_reason", "stop"),
             )
             return {
                 "content": choice["message"]["content"],

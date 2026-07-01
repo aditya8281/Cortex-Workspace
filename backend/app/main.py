@@ -87,7 +87,8 @@ async def lifespan(app: FastAPI):
     else:
         logger.info(
             "Qdrant not available at %s:%s — vector search will degrade gracefully",
-            settings.QDRANT_HOST, settings.QDRANT_PORT,
+            settings.QDRANT_HOST,
+            settings.QDRANT_PORT,
         )
 
     # Start event bus for cross-domain communication

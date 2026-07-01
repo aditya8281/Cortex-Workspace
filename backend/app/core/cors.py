@@ -7,11 +7,15 @@ handshakes then block the connection.
 
 This subclass intercepts WebSocket scopes, checks Origin against the allowed
 list, and wraps `send` to inject CORS headers into the websocket.accept message.
+
+In dev mode (ENV=development), any localhost:PORT origin is accepted since
+start.sh assigns ports dynamically.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import MutableMapping
 from typing import Any
 
@@ -21,13 +25,33 @@ from starlette.types import Receive, Scope, Send
 
 logger = logging.getLogger(__name__)
 
+# Match http://localhost:PORT or http://127.0.0.1:PORT
+_LOCALHOST_PATTERN = re.compile(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$")
+
 
 class CORSMiddlewareWithWS(CORSMiddleware):
-    """Extends Starlette CORSMiddleware to handle WebSocket CORS."""
+    """Extends Starlette CORSMiddleware to handle WebSocket CORS.
+
+    In dev mode, accepts any localhost origin (ports are dynamic).
+    """
+
+    def __init__(self, app: Any, **kwargs: Any) -> None:
+        super().__init__(app, **kwargs)
+        # Capture dev-mode flag from settings
+        from backend.app.core.config import settings
+
+        self.dev_accept_any_localhost: bool = getattr(settings, "_dev_accept_any_localhost", False)
+
+    def is_allowed_origin(self, origin: str) -> bool:
+        """Check if origin is allowed — also match any localhost in dev."""
+        if super().is_allowed_origin(origin):
+            return True
+        if self.dev_accept_any_localhost and _LOCALHOST_PATTERN.match(origin):
+            return True
+        return False
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "websocket":
-            # Normal HTTP path — delegate to Starlette's CORSMiddleware
             await super().__call__(scope, receive, send)
             return
 
@@ -44,7 +68,6 @@ class CORSMiddlewareWithWS(CORSMiddleware):
         # Check if origin is allowed
         if not self.allow_all_origins and not self.is_allowed_origin(origin=origin):
             logger.warning("[cors-ws] REJECTED origin=%s allowed=%s", origin, self.allow_origins)
-            # Origin not allowed — reject the WebSocket connection
             await self.app(scope, receive, send)
             return
 
@@ -59,12 +82,10 @@ class CORSMiddlewareWithWS(CORSMiddleware):
             if message["type"] in ("websocket.accept", "websocket.close"):
                 raw_headers: list[tuple[bytes, bytes]] = message.get("headers") or []
 
-                # If credentials allowed, echo the specific origin (not *)
-                if self.allow_all_origins and self.allow_credentials:
-                    raw_headers.append((b"access-control-allow-origin", origin.encode()))
+                origin_header = origin.encode()
+                raw_headers.append((b"access-control-allow-origin", origin_header))
+                if self.allow_credentials:
                     raw_headers.append((b"access-control-allow-credentials", b"true"))
-                elif not self.allow_all_origins:
-                    raw_headers.append((b"access-control-allow-origin", origin.encode()))
 
                 message["headers"] = raw_headers
 

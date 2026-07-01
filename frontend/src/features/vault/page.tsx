@@ -72,7 +72,7 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API_BASE = "";
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -290,7 +290,7 @@ function UploadModal({ open, onClose, onUploaded }: { open: boolean; onClose: ()
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API_BASE = "";
 
   const handleUpload = useCallback(async () => {
     if (!file) return;
@@ -388,7 +388,7 @@ function UploadModal({ open, onClose, onUploaded }: { open: boolean; onClose: ()
 
 // ── Main Page ─────────────────────────────────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = "";
 
 export default function VaultPage() {
   const { user, loading: authLoading } = useAuth();

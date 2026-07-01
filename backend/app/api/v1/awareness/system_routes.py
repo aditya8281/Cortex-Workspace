@@ -39,7 +39,7 @@ def get_recent(
     return {"snapshots": snaps, "total": len(snaps)}
 
 
-@router.get("/anomalies")
+@router.get("/anomalies", response_model=dict)
 def get_anomalies(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

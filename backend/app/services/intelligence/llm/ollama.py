@@ -64,7 +64,9 @@ class OllamaProvider(LLMProvider):
         ct = data.get("eval_count", 0)
         logger.info(
             "Ollama inference: model=%s, prompt_tokens=%d, completion_tokens=%d",
-            model, pt, ct,
+            model,
+            pt,
+            ct,
         )
         return {
             "content": data["message"]["content"],

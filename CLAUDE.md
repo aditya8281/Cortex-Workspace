@@ -331,12 +331,18 @@ Every command reads `.claude/ecosystem/feedback.json` on entry (last 10 entries 
 - `migrations/env.py` imports all models for Alembic autogenerate.
 - Route order: specific routes before parameterized (e.g., `/models/installed` before `/models/{id}`).
 - `cortexCode` Rust crate: `cargo build --release` in `crates/code-intel/` before Python use.
+- **Dynamic ports**: `start.sh` assigns ports dynamically (e.g., `:7000` if `:8000` busy). CORS auto-accepts any `localhost:PORT` in dev mode. `.env.local` must stay in sync with actual backend port — `start.sh` handles this.
+- **CORS for dev**: ANY `localhost:PORT` origin is accepted when `ENV=development`. No need to add specific ports.
+- **WS protocol**: CORS middleware must echo `sec-websocket-protocol` back for browser WS connections. The `CORSMiddlewareWithWS` class handles this.
+- **`.env.local` determines proxy destination**: Next.js reads `CORTEX_BACKEND_URL` from `.env.local` to rewrite `/api/*` to the backend. If `.env.local` points to wrong port, all API calls return 404.
 
 ## Testing
 
 Tests at project root in `tests/`. SQLite in-memory, mocked external services. No real Postgres/Redis/Qdrant needed.
 
 Frontend: Vitest + jsdom + React Testing Library.
+
+> **Note:** Frontend pages make API calls through Next.js proxy (`/api/*` → backend). Direct `fetch("http://localhost:PORT/...")` bypasses proxy — always use relative URLs. See `start.sh` for dynamic port assignment logic.
 
 ## Codebase Metrics
 
@@ -354,7 +360,8 @@ Frontend: Vitest + jsdom + React Testing Library.
 | Frontend components | 72 feature + 12 shared UI |
 | Database migrations | 13 active |
 | Documentation files | 32 |
-| Git commits | 738 |
+| Git commits | 740+ |
+| OpenAPI routes | 218 registered
 
 ## Environment
 

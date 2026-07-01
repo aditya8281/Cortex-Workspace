@@ -80,7 +80,7 @@ def update_rule(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.delete("/rules/{rule_id}")
+@router.delete("/rules/{rule_id}", response_model=dict)
 def delete_rule(
     rule_id: int,
     db: Session = Depends(get_db),

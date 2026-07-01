@@ -184,7 +184,7 @@ function EmptyState({ query, prefix }: { query: string; prefix: PrefixConfig }) 
 
 // ── Main page ─────────────────────────────────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = "";
 
 export default function SearchPage() {
   const { user, loading: authLoading } = useAuth();

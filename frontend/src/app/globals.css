@@ -7,10 +7,10 @@
     --font-geist: "Geist", system-ui, sans-serif;
     --font-jetbrains-mono: "JetBrains Mono", monospace;
 
-    /* Backgrounds */
+    /* Backgrounds (match tailwind.config.ts / DESIGN.md naming) */
     --bg-base: #0d0d0d;
-    --bg-surface: #1c1c1c;
-    --bg-elevated: #2a2a2a;
+    --bg-elevated: #1c1c1c;  /* One step above void — cards, panels, modals */
+    --bg-surface: #2a2a2a;   /* Interactive surfaces — inputs, hover zones */
     --bg-glass: rgba(26, 26, 26, 0.85);
     --bg-widget: rgba(26, 26, 26, 0.75);
 
@@ -46,6 +46,7 @@
     /* Z-index scale */
     --z-base: 0;
     --z-dock: 50;
+    --z-commandbar: 80;
     --z-dropdown: 100;
     --z-sticky: 200;
     --z-modal-backdrop: 300;
@@ -57,7 +58,8 @@
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-in: cubic-bezier(0.4, 0, 1, 1);
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* Ease-out-expo is the same as ease-out; kept for semantic clarity.
+       Spring/overshoot easings are NOT used — product register bans bounce/elastic. */
 
     --duration-instant: 0ms;
     --duration-fast: 150ms;

@@ -7,16 +7,25 @@ from unittest.mock import MagicMock, patch
 from backend.app.core.vector_db import VectorDB
 
 
+@patch("backend.app.core.vector_db.settings")
 @patch("backend.app.core.vector_db.QdrantClient")
-def test_init_defaults(mock_qdrant_cls):
+def test_init_defaults(mock_qdrant_cls, mock_settings):
+    mock_settings.QDRANT_HOST = "localhost"
+    mock_settings.QDRANT_PORT = 6333
+    mock_settings.QDRANT_PREFER_GRPC = False
     VectorDB()
-    mock_qdrant_cls.assert_called_once_with(host="localhost", port=6333, prefer_grpc=False)
+    mock_qdrant_cls.assert_called_once_with(
+        host="localhost", port=6333, prefer_grpc=False, check_compatibility=False, timeout=5
+    )
+
 
 
 @patch("backend.app.core.vector_db.QdrantClient")
 def test_init_custom(mock_qdrant_cls):
     VectorDB(host="10.0.0.1", port=9999)
-    mock_qdrant_cls.assert_called_once_with(host="10.0.0.1", port=9999, prefer_grpc=False)
+    mock_qdrant_cls.assert_called_once_with(
+        host="10.0.0.1", port=9999, prefer_grpc=False, check_compatibility=False, timeout=5
+    )
 
 
 @patch("backend.app.core.vector_db.QdrantClient")
@@ -145,7 +154,8 @@ def test_list_collections(mock_qdrant_cls):
     result = db.list_collections()
 
     assert result == ["articles", "embeddings"]
-    mock_client.get_collections.assert_called_once()
+    # called once in _connect() + once in list_collections()
+    assert mock_client.get_collections.call_count >= 2
 
 
 @patch("backend.app.core.vector_db.QdrantClient")
@@ -170,4 +180,5 @@ def test_health_check(mock_qdrant_cls):
     # list_collections() doubles as a connectivity check — if Qdrant is
     # unreachable it will raise, so a successful return proves health.
     assert db.list_collections() == []
-    mock_client.get_collections.assert_called_once()
+    # called once in _connect() + once in list_collections()
+    assert mock_client.get_collections.call_count >= 2

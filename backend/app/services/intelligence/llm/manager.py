@@ -105,7 +105,10 @@ class LLMManager:
         provider_name = getattr(provider, "provider_name", lambda: "unknown")()
         logger.info(
             "Inference via %s: model=%s, messages=%d, max_tokens=%d",
-            provider_name, model or "default", len(messages), max_tokens,
+            provider_name,
+            model or "default",
+            len(messages),
+            max_tokens,
         )
         max_retries = 3
         last_error = None
@@ -184,7 +187,10 @@ class LLMManager:
         provider_name = getattr(provider, "provider_name", lambda: "unknown")()
         logger.info(
             "Inference stream via %s: model=%s, messages=%d, max_tokens=%d",
-            provider_name, model or "default", len(messages), max_tokens,
+            provider_name,
+            model or "default",
+            len(messages),
+            max_tokens,
         )
         max_retries = 3
         last_error = None

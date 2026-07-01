@@ -52,7 +52,7 @@ class AttentionService:
         tracker.ended_at = _utcnow_naive()
         if tracker.started_at:
             delta = (tracker.ended_at - tracker.started_at).total_seconds()
-            tracker.duration_seconds = delta
+            tracker.duration_seconds = max(0.0, delta)
             tracker.productive_seconds = delta * (tracker.focus_score / 100.0) if tracker.focus_score else 0
 
         self.db.commit()

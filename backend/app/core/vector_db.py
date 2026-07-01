@@ -3,6 +3,7 @@
 Uses circuit breaker for resilience — if Qdrant is down, operations silently
 fall back to no-op / empty results instead of crashing.
 """
+
 from __future__ import annotations
 
 import logging
@@ -12,8 +13,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Distance, FieldCondition, Filter, MatchValue, VectorParams
 
-from backend.app.core.config import settings
 from backend.app.core.circuit_breaker import qdrant_circuit_breaker
+from backend.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,8 @@ class VectorDB:
                 host=self._host,
                 port=self._port,
                 prefer_grpc=self._prefer_grpc,
-                timeout=5.0,  # Fast fail — don't hang startup
+                timeout=5,  # Fast fail — don't hang startup
+                check_compatibility=False,
             )
             # Probe the connection
             self._client.get_collections()
@@ -70,7 +72,9 @@ class VectorDB:
             qdrant_circuit_breaker.record_failure()
             logger.warning(
                 "Qdrant not available at %s:%s — vector search disabled (%s)",
-                self._host, self._port, e,
+                self._host,
+                self._port,
+                e,
             )
             return False
 
@@ -91,13 +95,20 @@ class VectorDB:
 
     # ── Operations ─────────────────────────────────────────────────────────
 
-    def upsert(self, collection: str, points: list[dict]) -> None:
+    def _require_client(self) -> QdrantClient | None:
+        """Return client or None — used to narrow type for mypy."""
         if not self._ensure_connected():
+            return None
+        return self._client
+
+    def upsert(self, collection: str, points: list[dict]) -> None:
+        client = self._require_client()
+        if client is None:
             logger.debug("Qdrant unavailable — skipping upsert to '%s'", collection)
             return
         try:
-            if not self._client.collection_exists(collection):
-                self._client.create_collection(
+            if not client.collection_exists(collection):
+                client.create_collection(
                     collection_name=collection,
                     vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
                 )
@@ -109,7 +120,7 @@ class VectorDB:
                 )
                 for p in points
             ]
-            self._client.upsert(collection_name=collection, points=qdrant_points)
+            client.upsert(collection_name=collection, points=qdrant_points)
             qdrant_circuit_breaker.record_success()
         except Exception as e:
             logger.error("Qdrant upsert failed: %s", e)
@@ -123,22 +134,20 @@ class VectorDB:
         limit: int = 10,
         filter_payload: dict | None = None,
     ) -> list[dict]:
-        if not self._ensure_connected():
+        client = self._require_client()
+        if client is None:
             return []
 
         try:
-            if not self._client.collection_exists(collection):
+            if not client.collection_exists(collection):
                 return []
 
             query_filter = None
             if filter_payload:
-                conditions = [
-                    FieldCondition(key=k, match=MatchValue(value=v))
-                    for k, v in filter_payload.items()
-                ]
+                conditions = [FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filter_payload.items()]
                 query_filter = Filter(must=list(conditions))
 
-            result = self._client.query_points(
+            result = client.query_points(
                 collection_name=collection,
                 query=query,
                 limit=limit,
@@ -153,11 +162,12 @@ class VectorDB:
             return []
 
     def delete(self, collection: str, point_ids: list[str]) -> None:
-        if not self._ensure_connected():
+        client = self._require_client()
+        if client is None:
             return
         try:
-            if self._client.collection_exists(collection):
-                self._client.delete(
+            if client.collection_exists(collection):
+                client.delete(
                     collection_name=collection,
                     points_selector=models.PointIdsList(points=list(point_ids)),
                 )
@@ -168,10 +178,11 @@ class VectorDB:
             qdrant_circuit_breaker.record_failure()
 
     def list_collections(self) -> list[str]:
-        if not self._ensure_connected():
+        client = self._require_client()
+        if client is None:
             return []
         try:
-            cols = [c.name for c in self._client.get_collections().collections]
+            cols = [c.name for c in client.get_collections().collections]
             qdrant_circuit_breaker.record_success()
             return cols
         except Exception as e:

@@ -83,6 +83,8 @@ make migrate
 
 **Port note:** Docker exposes PostgreSQL on **5432**. `.env.example` defaults to **5435** for use with `./start.sh` (embedded PostgreSQL).
 
+**Dynamic ports:** `./start.sh` discovers free ports for all services — backend, frontend, PostgreSQL, Qdrant. CORS auto-accepts any `localhost:PORT` in dev mode. The frontend proxy reads `CORTEX_BACKEND_URL` from `.env.local` (written by `start.sh`) to forward `/api/*` requests to the correct backend port.
+
 ### Running
 
 | Option | Command | What it does |

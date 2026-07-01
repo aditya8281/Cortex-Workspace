@@ -77,6 +77,7 @@ const config: Config = {
       zIndex: {
         base: "0",
         dock: "50",
+        commandbar: "80",
         dropdown: "100",
         sticky: "200",
         "modal-backdrop": "300",

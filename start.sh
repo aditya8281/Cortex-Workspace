@@ -52,7 +52,9 @@ esac
 
 # Find an available port starting from $1
 find_port() {
-    local start=$1 port=$start
+    local start="${1:-}"
+    [ -z "$start" ] && { echo "5432"; return 1; }
+    local port="$start"
     while [ "$port" -lt $((start + 100)) ]; do
         if ! ss -tlnp 2>/dev/null | grep -qF ":$port " && \
            ! lsof -ti ":$port" >/dev/null 2>&1; then
@@ -155,6 +157,22 @@ _start_pg_native() {
         warn "Initializing database cluster..."
         "$PG_BIN_DIR/initdb" -D "$CORTEX_PG_DATA" --username=postgres --auth=trust --no-instructions > "$CORTEX_PG_LOG" 2>&1
         ok "Database cluster initialized."
+    fi
+
+    # Stop any stale PG owning our data dir (e.g. leftover from prior run on diff port)
+    if [ -f "$CORTEX_PG_DATA/postmaster.pid" ]; then
+        local old_pid
+        old_pid=$(head -1 "$CORTEX_PG_DATA/postmaster.pid" 2>/dev/null || echo "")
+        if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+            warn "Stopping stale PostgreSQL (PID $old_pid) owning our data dir..."
+            "$PG_BIN_DIR/pg_ctl" -D "$CORTEX_PG_DATA" stop -m fast > /dev/null 2>&1 || true
+            # Wait for actual stop
+            for i in $(seq 1 10); do
+                kill -0 "$old_pid" 2>/dev/null || break
+                sleep 0.3
+            done
+            ok "Stopped."
+        fi
     fi
 
     # Check if already running on our port
@@ -331,7 +349,7 @@ if [ ! -f .env ]; then
     update_env "SECRET_KEY" "$sk"
 fi
 
-update_env "DATABASE_URL" "postgresql+asyncpg://${CORTEX_PG_USER}:${CORTEX_PG_PASS}@127.0.0.1:${CORTEX_PG_PORT}/${CORTEX_PG_DB}"
+update_env "DATABASE_URL" "postgresql+psycopg2://${CORTEX_PG_USER}:${CORTEX_PG_PASS}@127.0.0.1:${CORTEX_PG_PORT}/${CORTEX_PG_DB}"
 update_env "QDRANT_HOST" "127.0.0.1"
 update_env "QDRANT_PORT" "$QDRANT_PORT"
 update_env "QDRANT_PREFER_GRPC" "false"
