@@ -137,6 +137,7 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
     <div
       ref={containerRef}
       className="fixed bottom-3 left-1/2 z-dock -translate-x-1/2"
+      style={{ willChange: "transform, opacity" }}
       role="navigation"
       aria-label="Mode dock"
     >

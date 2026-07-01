@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import { BrainIcon } from "@/shared/ui/icons";
+import gsap from "gsap";
 
 // ── Types ─────────────────────────────────────────────────────────────
 type SystemStatus = "online" | "degraded" | "offline";
@@ -39,6 +40,7 @@ export function NeuralRibbon() {
     tps: 0,
     vram: "—",
   });
+  const [displayTps, setDisplayTps] = useState(0);
   const [services, setServices] = useState<ServiceHealth[]>([]);
   const [expanded, setExpanded] = useState(false);
   const mounted = useRef(true);
@@ -106,6 +108,26 @@ export function NeuralRibbon() {
     };
   }, [fetchStatus, fetchModel]);
 
+  // Smooth TPS counter using gsap.utils.interpolate
+  const tpsRef = useRef(0);
+  useEffect(() => {
+    if (status.tps === tpsRef.current) return;
+    tpsRef.current = status.tps;
+
+    const target = status.tps;
+    const start = displayTps;
+    const duration = 30; // ticks
+    let frame = 0;
+    const interp = gsap.utils.interpolate(start, target);
+
+    function tick() {
+      frame++;
+      setDisplayTps(interp(frame / duration));
+      if (frame < duration) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }, [status.tps]);
+
   // ── Render ──────────────────────────────────────────────────────────
   const isDegraded = status.status === "degraded";
   const isOffline = status.status === "offline";
@@ -159,7 +181,7 @@ export function NeuralRibbon() {
           <>
             <span className="text-border-default text-[10px]">·</span>
             <span className="text-[11px] text-text-muted font-mono">
-              📡 {status.tps.toFixed(1)} t/s
+              📡 {displayTps.toFixed(1)} t/s
             </span>
           </>
         )}

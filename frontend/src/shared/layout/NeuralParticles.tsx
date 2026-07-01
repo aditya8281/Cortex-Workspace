@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import gsap from "gsap";
 
 // ── Constants ─────────────────────────────────────────────────────────
 const PARTICLE_COUNT = 35;
@@ -23,7 +24,6 @@ interface Particle {
 export function NeuralParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particlesRef = useRef<Particle[]>([]);
-  const animRef = useRef<number>(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -125,14 +125,15 @@ export function NeuralParticles() {
       }
 
       ctx!.globalAlpha = 1;
-      animRef.current = requestAnimationFrame(draw);
     }
 
-    animRef.current = requestAnimationFrame(draw);
+    // Use GSAP ticker instead of rAF for aligned frame scheduling
+    gsap.ticker.add(draw);
+    gsap.ticker.lagSmoothing(0); // no lag smoothing for canvas
 
     return () => {
       mountedRef.current = false;
-      cancelAnimationFrame(animRef.current);
+      gsap.ticker.remove(draw);
       window.removeEventListener("resize", resize);
     };
   }, []);
