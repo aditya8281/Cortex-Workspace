@@ -4,10 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/shared/auth/AuthProvider";
-import { Button } from "@/shared/ui/Button";
-import { Input } from "@/shared/ui/Input";
-import { Card } from "@/shared/ui/Card";
 import { apiFetch } from "@/shared/api/client";
+import { cn } from "@/shared/lib/utils";
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
@@ -16,8 +14,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [shakeKey, setShakeKey] = useState(0);
 
-  // Already logged in — redirect to dashboard immediately
+  // Already logged in
   useEffect(() => {
     if (!loading && user) router.replace("/");
   }, [user, loading, router]);
@@ -33,22 +32,32 @@ export default function LoginPage() {
         method: "POST",
         body: { username, password },
       });
-      // Full reload so AuthProvider re-mounts and fetches /me with new cookie.
-      // router.push keeps the React tree — AuthProvider won't re-run its useEffect.
+      // Full reload so AuthProvider re-mounts
       window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
+      setShakeKey((k) => k + 1); // trigger shake
     } finally {
       setSubmitting(false);
     }
   };
 
+  const redFocusRing = "focus:border-accent-red/50 focus:outline-none focus:ring-1 focus:ring-accent-red/25";
+
   return (
-    <Card className="p-6">
+    <div
+      key={shakeKey}
+      className={cn(
+        "rounded-2xl border border-border-subtle p-6",
+        "bg-bg-widget backdrop-blur-2xl",
+        error && "motion-safe:animate-shake",
+      )}
+    >
+      {/* Header */}
       <div className="mb-6 text-center">
         <div className="mb-4 flex justify-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/12 text-accent">
-            <svg width="24" height="24" viewBox="0 0 16 16" fill="currentColor">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-red-muted text-accent-red">
+            <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 0L16 8L8 16L0 8L8 0Z" />
             </svg>
           </div>
@@ -57,49 +66,89 @@ export default function LoginPage() {
         <p className="mt-1.5 text-sm text-text-secondary">Sign in to CORTEX</p>
       </div>
 
+      {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-          autoComplete="username"
-          placeholder="your-name"
-        />
-        <Input
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          autoComplete="current-password"
-          placeholder="Enter your password"
-        />
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">Username</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            autoComplete="username"
+            placeholder="your-name"
+            className={cn(
+              "w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary",
+              "placeholder:text-text-muted",
+              "motion-safe:transition-colors motion-safe:duration-200",
+              redFocusRing,
+              error && "border-accent-red/50",
+            )}
+          />
+        </div>
 
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            className={cn(
+              "w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary",
+              "placeholder:text-text-muted",
+              "motion-safe:transition-colors motion-safe:duration-200",
+              redFocusRing,
+              error && "border-accent-red/50",
+            )}
+          />
+        </div>
+
+        {/* Error */}
         {error && (
-          <div className="rounded-lg bg-danger/8 border border-danger/20 px-3 py-2">
-            <p className="text-xs text-danger">{error}</p>
+          <div className="rounded-lg border border-accent-red/20 bg-accent-red/5 px-3 py-2">
+            <p className="text-xs text-accent-red">{error}</p>
           </div>
         )}
 
-        <Button
+        {/* Submit — silk red with pulse */}
+        <button
           type="submit"
-          variant="primary"
-          className="w-full"
-          loading={submitting}
+          disabled={submitting}
+          className={cn(
+            "w-full rounded-lg py-2 px-4 text-sm font-semibold text-white",
+            "bg-accent-red shadow-red",
+            "hover:bg-accent-red/90 motion-safe:transition-colors motion-safe:duration-200",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-red",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            "motion-safe:animate-glow-pulse-red",
+          )}
         >
-          Sign in
-        </Button>
+          {submitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Signing in…
+            </span>
+          ) : (
+            "Sign in"
+          )}
+        </button>
       </form>
 
+      {/* Register link */}
       <div className="mt-5 pt-4 border-t border-border-subtle">
         <p className="text-center text-sm text-text-muted">
           No account?{" "}
-          <Link href="/auth/register" className="text-accent hover:text-accent/80 font-medium transition-colors duration-150">
+          <Link
+            href="/auth/register"
+            className="text-accent-red hover:text-accent-red/80 font-medium motion-safe:transition-colors motion-safe:duration-150"
+          >
             Create one
           </Link>
         </p>
       </div>
-    </Card>
+    </div>
   );
 }
