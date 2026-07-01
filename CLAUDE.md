@@ -81,10 +81,10 @@ CORTEX is built across 14 executable versions (v1.01–v1.14), preceded by a bas
 | **v1.06** | The Developer | Skills, hooks, commands, developer ecosystem | ✅ |
 | **v1.07** | The Interaction | SSE streaming UI, chat interface, agent dashboard | ✅ |
 | **v1.08** | The Planning | Autonomous planning, version management, progress tracking | Next |
-| **v1.09** | The Knowledge | Knowledge management (directory ingestion, sync, search, graph) + Learning (preferences, workflows, habits, feedback, personalization, patterns, anomaly detection) | In planning — 11 phases, 72 tasks |
+| **v1.09** | The Knowledge | Knowledge management (directory ingestion, sync, search, graph) + Learning (preferences, workflows, habits, feedback, personalization, patterns, anomaly detection) + Cross-conversation memory (archive, semantic search, date purge) + Memory upgrades (SM-2 forgetting, consolidation, compression, dynamic budget, semantic scoring, prospective memory) | In planning — 18 phases, 108 tasks |
 | **v1.10** | The Scheduler | Cron-based task scheduling, recurring agent actions | — |
 | **v1.11** | The Researcher | Web search, deep research, citation management | — |
-| **v1.12** | The Integrator | External service connectors, API gateway | — |
+| **v1.12** | The Developer | Multi-language AST engine (17 languages), LSP integration (diagnostics, completion, hover, goto-def, find-refs), code-aware agent tools (rename, extract, find-refs, format, lint, edit), agent-in-the-loop coding protocol (write→review→test→rewrite cycles), subagent delegation system (decompose, dispatch, parallel fan-out, result synthesis), code understanding & review, doc/test generation, refactoring with blast radius, debug analysis, security/performance/dependency analysis, git intelligence, CI/CD integration | In planning — 11 phases, 23 capabilities |
 | **v1.13** | The Optimizer | Performance tuning, caching strategy, monitoring | — |
 | **v1.14** | The Polished | UI polish, accessibility, documentation completeness | — |
 
@@ -98,7 +98,7 @@ CORTEX is built across 14 executable versions (v1.01–v1.14), preceded by a bas
 | **v5** | The Workspace | Email, calendar, tasks, notes, documents, contacts |
 | **v6** | The Ecosystem | Marketplace, graph intelligence, cross-encoder, polish |
 
-**Current state:** v1.01–v1.07 complete. v1.09 (The Knowledge) in planning — 6 phases, 41 tasks. Backend production-ready. Frontend fully built — 30 pages (20 real + 10 Coming Soon), 84 components. Next: v1.08 (The Planning).
+**Current state:** v1.01–v1.07 complete. v1.09 (The Knowledge) in planning — 18 phases, 108 tasks, 28 capabilities. Backend production-ready. Frontend fully built — 30 pages (20 real + 10 Coming Soon), 84 components. Next: v1.08 (The Planning).
 
 ## Execution Contract
 

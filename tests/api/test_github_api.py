@@ -1,4 +1,5 @@
 """Tests for GitHub API — repository sync and webhook integration."""
+
 import pytest
 
 HEADERS = {"Authorization": "Bearer fake-token"}

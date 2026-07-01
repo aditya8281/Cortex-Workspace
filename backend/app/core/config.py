@@ -59,12 +59,23 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL_PATH: str = ""
     EMBEDDING_MODEL_NAME: str = "nomic-embed-text"
 
+    # Qdrant vector DB settings
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = 6333
+    QDRANT_PREFER_GRPC: bool = False
+
     # LLM Settings
     LLM_PROVIDER: str = "auto"  # "auto", "llama_cpp", "ollama", "none"
     LLM_MODEL_PATH: str = ""  # Path to GGUF model file
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    LLM_CONTEXT_SIZE: int = 4096
-    LLM_GPU_LAYERS: int = 0
+    LLM_CONTEXT_SIZE: int = 8192  # Increased from 4096 for longer chat context
+    LLM_GPU_LAYERS: int = 0  # GPU offloading for llama.cpp (0 = CPU only)
+    LLM_THREADS: int = 8  # CPU threads for llama.cpp (Ryzen 7840HS = 16 cores, use 8)
+    LLM_BATCH_SIZE: int = 2048  # Prompt processing batch size (default 512, 2048 = faster)
+    LLM_MAX_TOKENS: int = 2048  # Max tokens per generation
+    LLM_TEMPERATURE: float = 0.7  # Default generation temperature
+    LLM_CONCURRENCY: int = 4  # Max concurrent LLM requests
+    LLM_USE_MMAP: bool = True  # Memory-map model file (fast for NVMe, disable for network drives)
     LLM_TIMEOUT: float = 120.0
 
     # Rate limiting

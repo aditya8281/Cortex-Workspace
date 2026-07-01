@@ -1,4 +1,6 @@
 """Tests for metrics API — system metrics and health data."""
+
+
 def test_prometheus_metrics(client, mock_auth):
     resp = client.get("/api/v1/metrics")
     assert resp.status_code == 200

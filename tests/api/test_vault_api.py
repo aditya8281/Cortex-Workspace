@@ -1,4 +1,5 @@
 """Tests for vault API — encrypted file storage operations."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest

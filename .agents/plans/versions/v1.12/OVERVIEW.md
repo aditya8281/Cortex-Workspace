@@ -1,8 +1,8 @@
-# v1.12: Developer Intelligence — CORTEX
+# v1.12: Developer Intelligence (Expanded) — CORTEX
 
-**Document:** Version 1.12 Overview
+**Document:** Version 1.12 Overview (Expanded)
 **Authority:** Stage 6 — Master Versioned Implementation Roadmap
-**Date:** 2026-06-27
+**Date:** 2026-06-30
 **Type:** Capability Delivery
 **reference architecture Feature ID:** ODY-DEV-900
 
@@ -10,13 +10,15 @@
 
 ## Objective
 
-Build developer-focused intelligence: code understanding with AST analysis and symbol resolution, repository intelligence with health scoring, code review with pattern matching and best practice suggestions, documentation generation, test generation, refactoring with dependency graph analysis and impact assessment, debugging assistance, architecture guidance, dependency analysis, performance analysis, security analysis, migration support, skills runtime system with skill invocation and composition, git intelligence, and CI/CD integration.
+Build a complete **IDE-grade developer intelligence** system: multi-language AST parsing via tree-sitter, LSP integration for live diagnostics/completion/navigation, code-aware agent tools (rename, extract, find-references, format, lint), an agent-in-the-loop coding protocol that cycles write→review→test→rewrite, repository intelligence, code review, documentation & test generation, refactoring with impact assessment, debugging assistance, architecture guidance, dependency/security/performance analysis, migration support, git intelligence, CI/CD integration, and a skills runtime.
+
+This is not an external service layer. This is the agent operating on code **as an IDE does** — with language understanding, live diagnostics, surgical edits, and self-correcting iteration. It also includes a **subagent delegation system** where the main agent can decompose complex tasks, dispatch subagents with isolated contexts, run them in parallel, and synthesize results — exactly like Claude Code's agent→subagent→sub-subagent hierarchy.
 
 ---
 
 ## Question
 
-"Can Cortex serve developers?"
+"Can Cortex serve as an intelligent IDE agent?"
 
 ---
 
@@ -24,127 +26,198 @@ Build developer-focused intelligence: code understanding with AST analysis and s
 
 After completing v1.12, Cortex can:
 
-- Understand code structure through AST parsing, symbol resolution, and cross-file dependency mapping
-- Provide repository-level intelligence with health scoring, complexity metrics, and architectural analysis
-- Review code for quality issues, security vulnerabilities, and best practice adherence using pattern matching
-- Generate comprehensive documentation including docstring coverage reports, module docs, and README content
-- Generate test scaffolds with Arrange-Act-Assert patterns, edge case detection, and fixture suggestions
-- Suggest refactoring opportunities using dependency graph analysis with blast radius and impact assessment
-- Assist with debugging through error pattern recognition and stack trace analysis
-- Guide architecture decisions using pattern matching against established architectural principles
-- Analyze dependencies for version pinning, security advisories, and outdated packages
-- Analyze performance with cyclomatic complexity, N+1 detection, and resource usage patterns
-- Analyze security with hardcoded secret detection, injection pattern recognition, and insecure practice identification
-- Support database migrations with schema diff analysis and rollback safety assessment
-- Run a skills runtime system with skill invocation, usage tracking, skill composition, and dependency resolution
-- Provide git intelligence with commit analysis, branch management, diff analysis, and blame tracking
-- Integrate with CI/CD pipelines for health monitoring, workflow analysis, and run status tracking
+### Core Intelligence
+- Parse 13+ languages via tree-sitter AST (Python, JS, TS, JSX, TSX, Rust, Go, Java, C++, Kotlin, Swift, Ruby, PHP, C#, Scala)
+- Index symbols across files: definitions, references, types, callers, callees
+- Serve live LSP diagnostics, completions, hover info, go-to-definition, find-references (for any LSP-supported language)
+- Provide file-level and project-level code understanding with cross-file dependency resolution
+
+### Agent Coding Tools
+- **Rename symbol** across all files with usage validation
+- **Extract function/method** from selected lines
+- **Find all references** to any symbol
+- **Format code** per language formatter
+- **Lint & auto-fix** diagnostics
+- **Suggest edits** with diff preview
+- **Multi-file refactoring** with dependency graph blast radius
+
+### Agent-in-the-Loop Protocol
+- Dedicated coding sessions with file context + LSP diagnostics
+- Autonomous write→review→test→rewrite cycles
+- User-in-the-loop checkpoints for approval before destructive edits
+- Error-driven iteration: test fail → diagnose → fix → re-run
+- Diff display for every proposed change
+
+### Developer Services (from original scope)
+- Repository intelligence with health scoring, complexity metrics, architectural analysis
+- Code review with pattern matching, security vulnerability detection, best practices
+- Documentation generation with docstring coverage, module docs, README generation
+- Test scaffold generation with Arrange-Act-Assert, edge case detection, fixture suggestions
+- Refactoring suggestions with dependency graph blast radius and impact assessment
+- Debugging assistance with error pattern recognition and stack trace analysis
+- Architecture guidance with pattern matching against established principles
+- Dependency analysis for version pinning, security advisories, outdated packages
+- Performance analysis: cyclomatic complexity, N+1 detection, resource usage patterns
+- Security analysis: hardcoded secrets, injection patterns, insecure practices
+- Migration support: schema diff analysis, rollback safety assessment
+- Git intelligence: log, blame, diff, branch management, commit analysis
+- CI/CD integration: pipeline detection, health monitoring, workflow analysis
+
+### Agent Delegation & Subagent System
+- **Decompose** complex tasks into subtasks via LLM planning
+- **Dispatch subagents** with isolated context windows — each subagent starts fresh, doesn't inherit parent history
+- **Parallel fan-out** — multiple subagents run concurrently for independent subtasks
+- **Hierarchical delegation** — subagents can spawn their own sub-subagents (tree hierarchy)
+- **Status reporting** — subagents report DONE, BLOCKED, NEEDS_CONTEXT, DONE_WITH_CONCERNS
+- **Scoped tool access** — each subagent gets only the tools it needs (restricted context)
+- **Result synthesis** — parent collects subagent results, synthesizes into final answer
+- **Context isolation** — parent context never polluted by subagent internals; only final results flow back
 
 ---
 
-## Capabilities Delivered
+## New Capabilities (Added in Expansion)
 
-| ID | Name | Domain | Priority | Architecture Principle |
-|----|------|--------|----------|----------------------|
-| D1 | Code Understanding | Developer | Core | 3.6 Evidence Over Opinion |
-| D2 | Repository Intelligence | Developer | Core | 3.6 Evidence Over Opinion |
-| D3 | Code Review | Developer | Core | 3.4 Separation of Concerns |
-| D4 | Documentation Generation | Developer | Core | 3.4 Separation of Concerns |
-| D5 | Test Generation | Developer | Core | 3.7 Incremental Safety |
-| D6 | Refactoring Suggestions | Developer | Core | 3.4 Separation of Concerns |
-| D7 | Debugging Assistance | Developer | Core | 3.4 Separation of Concerns |
-| D8 | Architecture Guidance | Developer | Core | 3.6 Evidence Over Opinion |
-| D9 | Dependency Analysis | Developer | Core | 3.6 Evidence Over Opinion |
-| D10 | Performance Analysis | Developer | Core | 3.4 Separation of Concerns |
-| D11 | Security Analysis | Developer | Core | 3.2 Graceful Degradation |
-| D12 | Migration Support | Developer | Core | 3.7 Incremental Safety |
-| D13 | Code Generation | Developer | Core | 3.5 Plugin Boundaries Early |
-| D14 | Git Intelligence | Developer | Core | 3.3 Daemon-First |
-| D15 | CI/CD Integration | Developer | Core | 3.3 Daemon-First |
-| D16 | Skills Runtime | Developer | Core | 3.5 Plugin Boundaries Early |
+| ID | Name | Domain | Priority |
+|----|------|--------|----------|
+| D16 | Multi-Language AST Engine | Developer | Core |
+| D17 | LSP Client & Diagnostics | Developer | Core |
+| D18 | Symbol Index & Cross-Reference | Developer | Core |
+| D19 | Code-Aware Agent Tools | Developer | Core |
+| D20 | Agent-in-the-Loop Coding | Developer | Core |
+| D21 | Debugger Integration | Developer | Core |
+| D22 | Subagent Delegation System | Developer | Core |
 
-**Total: 16 capabilities**
+**Total: 23 capabilities (16 original + 7 new)**
 
 ---
 
-## reference architecture Feature Traceability
+## Phases (Expanded)
 
-| reference architecture Feature | v1.12 Capability | Traceability |
-|------------------|-----------------|--------------|
-| ODY-DEV-900 | D1-D16 (all) | Primary delivery |
-| ODY-COGN-200 | D1, D3, D6, D7, D8 | Code intelligence extends cognition core |
-| ODY-EXEC-300 | D14, D15 | Git/CI-CD integration extends execution engine |
-| ODY-PLAN-100 | D2, D12 | Repository intelligence feeds into planning |
-| ODY-MEM-400 | D9, D16 | Dependency maps and skill graphs stored in knowledge graph |
-
----
-
-## Capability Mapping to Services
-
-| Capability | Primary Service | Supporting Services | DB Tables |
-|------------|----------------|---------------------|-----------|
-| D1 Code Understanding | `CodeUnderstandingService` | AST parser, symbol resolver | `code_analyses` |
-| D2 Repository Intelligence | `RepositoryIntelligenceService` | `CodeUnderstandingService`, `DependencyAnalysisService` | `repo_intelligence` |
-| D3 Code Review | `CodeReviewService` | `SecurityAnalysisService`, `PerformanceAnalysisService` | `code_reviews` |
-| D4 Documentation Generation | `DocumentationGenerationService` | `CodeUnderstandingService` | `doc_generation_logs` |
-| D5 Test Generation | `TestGenerationService` | `CodeUnderstandingService` | `test_generation_logs` |
-| D6 Refactoring Suggestions | `RefactoringService` | `CodeUnderstandingService`, `DependencyAnalysisService` | `refactoring_suggestions` |
-| D7 Debugging Assistance | `DebuggingService` | `CodeUnderstandingService` | `debug_sessions` |
-| D8 Architecture Guidance | `ArchitectureGuidanceService` | `RepositoryIntelligenceService` | `architecture_assessments` |
-| D9 Dependency Analysis | `DependencyAnalysisService` | — | `dependency_analyses` |
-| D10 Performance Analysis | `PerformanceAnalysisService` | `CodeUnderstandingService` | `performance_reports` |
-| D11 Security Analysis | `SecurityAnalysisService` | — | `security_scans` |
-| D12 Migration Support | `MigrationSupportService` | `CodeUnderstandingService` | `migration_analyses` |
-| D13 Code Generation | `CodeGenerationService` | `CodeUnderstandingService` | `generation_logs` |
-| D14 Git Intelligence | `GitIntelligenceService` | — | `git_analyses` |
-| D15 CI/CD Integration | `CICDIntegrationService` | — | `cicd_configurations` |
-| D16 Skills Runtime | `SkillsRuntimeService` | `CodeUnderstandingService` | `skill_invocations`, `skill_registry` |
-
----
-
-## Phases
-
-| Phase | Name | Focus | Complexity | Duration | reference architecture Trace |
-|-------|------|-------|------------|----------|---------------|
-| P01 | Developer Models & Schema | Database models, Pydantic schemas, migration, skills models | Medium | 3-4h | ODY-DEV-900 |
-| P02 | Code Understanding & Review | AST analysis, symbol resolution, dependency mapping, code review | High | 6-7h | ODY-COGN-200 |
-| P03 | Generation & Refactoring | Documentation gen, test gen, refactoring with impact assessment | High | 5-6h | ODY-DEV-900 |
-| P04 | Analysis & Intelligence | Dependency analysis, security scanning, performance profiling | High | 5-6h | ODY-DEV-900 |
-| P05 | Git & CI/CD | Git intelligence, CI/CD pipeline integration | Medium | 4-5h | ODY-EXEC-300 |
-| P06 | API & Skills Runtime | REST endpoints, frontend dashboard, skills runtime system | Medium | 4-5h | ODY-DEV-900 |
+| Phase | Name | Focus | Complexity | Duration |
+|-------|------|-------|------------|----------|
+| P01 | Developer Models & Schema | Database models, Pydantic schemas, migration — expanded with LSP/debug/agent-coding models | Medium | 3-4h |
+| P02 | Multi-Language AST Engine | tree-sitter for 13+ languages, unified AST schema, symbol index | High | 6-8h |
+| P03 | LSP Integration | LSP client manager, diagnostics, completion, hover, goto-def, find-refs | High | 6-8h |
+| P04 | Code-Aware Agent Tools | Rename, extract, find-refs, format, lint, structured-edit agent tools | High | 5-7h |
+| P05 | Agent-in-the-Loop Protocol | Coding session manager, review→test→rewrite cycles, user checkpoints | High | 5-7h |
+| P06 | Code Understanding & Review (Enhanced) | Cross-file analysis, dependency mapping, code review, security detection | High | 6-7h |
+| P07 | Generation, Refactoring & Debugging | Docs, tests, refactoring with impact, debug | High | 5-6h |
+| P08 | Analysis Suite | Dependency, security, performance analysis | High | 5-6h |
+| P09 | Git & CI/CD | Git intelligence, CI/CD integration | Medium | 4-5h |
+| P10 | API, Frontend & Skills Runtime | REST endpoints, frontend dashboard, skills runtime | Medium | 4-5h |
+| P11 | Subagent Delegation System | Task decomposition, subagent dispatch, parallel fan-out, status reporting, result synthesis | High | 5-7h |
 
 ---
 
 ## Dependencies
 
 **Depends on:**
-- v1.02 (Backend Architecture) — developer services use established service patterns, middleware, and DB infrastructure
-- v1.06 (Cognition Core) — code understanding builds on reasoning chain, review uses pattern matching from cognition
-- v1.10 (Planning & Orchestration) — skills runtime uses orchestration engine for skill composition
+- v1.02 (Backend Architecture) — service patterns, middleware, DB infrastructure
+- v1.03 (Memory Foundation) — symbol graphs stored in memory graph
+- v1.04 (Awareness Foundation) — file watching triggers re-index on file change
+- v1.06 (Cognition Core) — agent loop, tool infrastructure, intent classification
+- v1.09 (The Knowledge) — File parsing, semantic search for code
 
 **Blocks:**
-- None (final developer-focused version)
-
-**Downstream Impact:**
-- v1.13 can leverage developer intelligence for automated code quality in utility features
-- v1.14 can compose developer intelligence with advanced reasoning for autonomous code modification
-- Skills runtime provides foundation for plugin architecture
+- None (terminal version)
 
 ---
 
-## Risk Matrix
+## Language Support Matrix
+
+| Language | AST | LSP | Agent Tools | Status |
+|----------|-----|-----|-------------|--------|
+| Python | tree-sitter-python | pylsp / ruff | Full | P02-P04 |
+| JavaScript | tree-sitter-js | typescript-language-server | Full | P02-P04 |
+| TypeScript | tree-sitter-ts | typescript-language-server | Full | P02-P04 |
+| TSX | tree-sitter-tsx | typescript-language-server | Full | P02-P04 |
+| JSX | tree-sitter-jsx | typescript-language-server | Full | P02-P04 |
+| Rust | tree-sitter-rust | rust-analyzer | Full | P02-P04 |
+| Go | tree-sitter-go | gopls | Full | P02-P04 |
+| Java | tree-sitter-java | eclipse-jdtls | Full | P02-P04 |
+| C++ | tree-sitter-cpp | clangd | Full | P02-P04 |
+| Kotlin | tree-sitter-kotlin | kotlin-language-server | Full | P02-P04 |
+| Swift | tree-sitter-swift | sourcekit-lsp | Full | P02-P04 |
+| Ruby | tree-sitter-ruby | solargraph | Full | P02-P04 |
+| PHP | tree-sitter-php | intelephense | Full | P02-P04 |
+| C# | tree-sitter-c-sharp | omnisharp | Full | P02-P04 |
+| Scala | tree-sitter-scala | metals | Full | P02-P04 |
+| Elixir | tree-sitter-elixir | elixir-ls | Basic | P02-P04 |
+| Lua | tree-sitter-lua | lua-language-server | Basic | P02-P04 |
+| SQL | tree-sitter-sql | sqls | Basic | P02-P04 |
+| YAML/TOML/JSON | tree-sitter-* | schema-based | Config | P02-P04 |
+
+---
+
+## Agent Tool Registry (New Code-Aware Tools)
+
+| Tool Name | Category | Description | Approval |
+|-----------|----------|-------------|----------|
+| `read_file` | files | Read file with line limit | Auto |
+| `write_file` | files | Write full file content | Required |
+| `edit_file` | code | Surgical edit (slice replace) | Auto |
+| `search_code` | code | Semantic code search across project | Auto |
+| `find_symbol` | code | Find symbol definition and references | Auto |
+| `rename_symbol` | code | Rename symbol across all files | Required |
+| `extract_function` | code | Extract lines into new function | Required |
+| `format_file` | code | Format file per language formatter | Auto |
+| `lint_file` | code | Lint file and show diagnostics | Auto |
+| `fix_diagnostic` | code | Auto-fix specific diagnostic | Auto |
+| `get_diagnostics` | code | Get LSP diagnostics for file | Auto |
+| `get_completions` | code | Get completion suggestions at point | Auto |
+| `get_hover_info` | code | Get hover/signature info at point | Auto |
+| `go_to_definition` | code | Navigate to symbol definition | Auto |
+| `find_references` | code | Find all references to symbol | Auto |
+| `review_diff` | review | Review a diff for issues | Auto |
+| `suggest_test` | test | Generate test for selected function | Auto |
+| `debug_analyze` | debug | Analyze error/stack trace | Auto |
+| `git_commit` | git | Create commit | Required |
+| `git_branch` | git | Create/switch branch | Auto |
+
+---
+
+## Rust Crate Expansion
+
+Existing `crates/code-intel/` (Python-only tree-sitter) expands to:
+
+```
+crates/code-intel/
+├── src/
+│   ├── lib.rs                # Python AST parse (existing)
+│   ├── ast_engine.rs         # Multi-language AST dispatcher
+│   ├── tree_sitter/           # tree-sitter FFI per language
+│   │   ├── python.rs
+│   │   ├── javascript.rs
+│   │   ├── typescript.rs
+│   │   ├── rust.rs
+│   │   ├── go.rs
+│   │   ├── java.rs
+│   │   ├── cpp.rs
+│   │   ├── kotlin.rs
+│   │   ├── swift.rs
+│   │   ├── ruby.rs
+│   │   ├── php.rs
+│   │   ├── csharp.rs
+│   │   └── scala.rs
+│   ├── symbol_index.rs        # Symbol extraction and cross-file index
+│   ├── query.rs               # tree-sitter query patterns
+│   └── ffi.rs                 # PyO3 FFI exports
+├── Cargo.toml                 # Expanded dependencies
+└── build.rs                   # Language grammar compilation
+```
+
+---
+
+## Risk Matrix (Expanded)
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| AST parsing failures on malformed code | High | Low | Graceful error handling, return partial results, never crash on invalid syntax |
-| Large repository analysis causing OOM | Medium | High | File size limits, streaming analysis, lazy loading of ASTs, configurable depth limits |
-| Git subprocess calls hanging on large repos | Medium | Medium | Timeout enforcement (10s default), async subprocess with cancellation, result caching |
-| CI/CD detection producing false positives | Medium | Low | Multiple detection strategies, confidence scoring, user confirmation for ambiguous results |
-| Security scanner false positives reducing trust | Medium | High | Tunable sensitivity levels, whitelisting, context-aware analysis, user feedback loop |
-| Skills runtime circular dependencies | Medium | High | Dependency graph cycle detection, topological sort validation, timeout for skill execution |
-| Test generation producing non-idiomatic code | High | Medium | Template-based generation with configurable style, language-specific patterns |
-| Refactoring suggestions breaking existing code | Medium | High | Impact assessment with blast radius calculation, dry-run mode, confidence scoring |
-| Performance analysis missing language-specific patterns | Medium | Medium | Extensible pattern registry, community-contributed rules, per-language analyzers |
+| LSP process crashes | Medium | Medium | Auto-restart with backoff, graceful degradation (no diagnostics = no LSP tools) |
+| tree-sitter grammar missing for edge syntax | High | Low | Partial parse, never crash on malformed code |
+| Rename symbol breaks imports across files | Medium | High | Dry-run first, diff preview, user must approve multi-file changes |
+| Agent-in-loop infinite write-test cycles | Low | High | Max iteration limit (default 5), user interrupt always available |
+| LSP memory usage with many files open | Medium | Medium | Cap active LSP sessions (max 5), close idle sessions after 15min |
+| Formatter tool modifies too many files | Medium | Medium | Only format files explicitly requested, not entire projects |
 
 ---
 
@@ -152,55 +225,39 @@ After completing v1.12, Cortex can:
 
 | Principle | How v1.12 Satisfies It |
 |-----------|----------------------|
-| 3.1 Local-First | All code analysis, git operations, and CI/CD detection run locally. No code sent to external services. AST parsing happens in-process. |
-| 3.2 Graceful Degradation | Code analysis works without full AST (regex fallback). Git intelligence works without `gh` CLI (basic git only). Security scanning works offline with pattern-based rules. |
-| 3.3 Daemon-First | Git intelligence and CI/CD integration accessible via daemon API. Skills runtime operates as background service. All analysis results queryable through API. |
-| 3.4 Separation of Concerns | Code understanding ≠ Code review ≠ Refactoring ≠ Security ≠ Performance. Each service has distinct responsibility and pattern set. |
-| 3.5 Plugin Boundaries Early | Skills runtime defines `SkillProtocol` interface. Code analyzers use `AnalyzerProtocol`. Language support via `LanguageAnalyzerProtocol`. |
-| 3.6 Evidence Over Opinion | Code review scores based on measurable metrics. Security analysis uses pattern matching against known vulnerability classes. Performance analysis uses cyclomatic complexity. |
-| 3.7 Incremental Safety | Test generation provides scaffolds that always pass (placeholder assertions). Refactoring includes impact assessment. Migration support checks rollback safety. |
-
----
-
-## Cross-Domain Integration
-
-| Integration Point | Target System | Integration Pattern |
-|-------------------|---------------|-------------------|
-| Code analysis results | Knowledge Graph (v1.03) | File symbols, dependencies, and metrics indexed as graph entities |
-| Security scans | Privacy (v1.05) | Security findings integrated with privacy compliance checks |
-| Git intelligence | Planning (v1.10) | Commit history informs project timeline and progress tracking |
-| CI/CD status | Awareness (v1.08) | Pipeline status feeds into awareness engine for proactive notifications |
-| Skills registry | Orchestration (v1.10) | Skills registered as invocable units in orchestration engine |
-| Dependency maps | Memory (v1.03) | Project dependency graphs stored for cross-session intelligence |
-| Code review findings | Learning (v1.09) | Review patterns inform code generation quality improvements |
+| 3.1 Local-First | All AST parsing, LSP connections, symbol indexing run locally. No code sent externally. |
+| 3.2 Graceful Degradation | No LSP → regex fallback. No tree-sitter → ILIKE text search. Any language gets basic file ops. |
+| 3.3 Daemon-First | LSP session manager runs as daemon. Agent tools call via daemon API. Watchdog triggers re-index. |
+| 3.6 Evidence Over Opinion | Refactoring based on actual dependency graphs. Rename validated against symbol index. |
+| 3.7 Incremental Safety | Rename dry-run. Extract preserves imports. Edit_file validates syntax before applying. |
 
 ---
 
 ## Estimated Duration
 
-9-10 days.
+14-18 days (expanded from 9-10).
 
 ---
 
 ## Definition of Done
 
-- [ ] All 16 developer capabilities implemented and tested
-- [ ] Code understanding supports Python, JavaScript/TypeScript AST analysis
-- [ ] Symbol resolution works across files within a project
-- [ ] Dependency mapping produces accurate call graphs
-- [ ] Code review detects common quality issues and security patterns
-- [ ] Documentation generation produces coverage reports and module docs
-- [ ] Test generation creates scaffold files with Arrange-Act-Assert patterns
-- [ ] Refactoring service calculates blast radius for proposed changes
-- [ ] Security scanner detects hardcoded secrets, injection patterns, insecure practices
-- [ ] Performance analysis calculates cyclomatic complexity and detects N+1 queries
-- [ ] Git intelligence provides log, blame, branch, and diff analysis
-- [ ] CI/CD detection identifies major CI platforms with health analysis
-- [ ] Skills runtime supports skill invocation, composition, and dependency resolution
-- [ ] All unit tests passing (`make test`)
-- [ ] Lint clean (`make lint`)
-- [ ] All API endpoints documented with `response_model=`
-- [ ] Frontend developer intelligence dashboard
+- [ ] All 23 developer capabilities implemented and tested
+- [ ] 13+ languages parseable via tree-sitter AST
+- [ ] Symbol index works cross-file for at least Python, JS/TS, Rust, Go
+- [ ] LSP integration provides diagnostics, completion, hover, goto-def for 8+ languages
+- [ ] All code-aware agent tools functional (rename, extract, find-refs, format, lint)
+- [ ] Agent-in-the-loop coding protocol cycles write→review→test→rewrite with max-iteration guard
+- [ ] code-review tool detects common quality/security issues
+- [ ] Test / doc generation produces correct scaffolds
+- [ ] Refactoring service calculates blast radius
+- [ ] Security scanner detects hardcoded secrets, injection patterns
+- [ ] Git intelligence provides log, blame, branch, diff
+- [ ] Skills runtime supports composition
+- [ ] Subagent delegation system decomposes, dispatches, and synthesizes parallel subtasks
+- [ ] Subagent status reporting (DONE, BLOCKED, NEEDS_CONTEXT, DONE_WITH_CONCERNS)
+- [ ] All unit tests passing
+- [ ] Lint clean
+- [ ] Frontend developer dashboard
 
 ---
 
@@ -208,13 +265,11 @@ After completing v1.12, Cortex can:
 
 | Metric | Target |
 |--------|--------|
-| Code analysis latency (single file) | < 500ms |
-| Repository analysis (100 files) | < 10 seconds |
-| Code review scoring accuracy | > 90% agreement with manual review |
+| AST parse latency (single file) | < 100ms |
+| Symbol index build (100 files) | < 5 seconds |
+| LSP diagnostic response | < 500ms |
+| Rename symbol (single file, 50 refs) | < 2 seconds |
+| Agent loop cycle (write→test→rewrite) | < 15 seconds |
+| Code review scoring accuracy | > 90% agreement |
 | Security scan false positive rate | < 10% |
-| Test scaffold generation | < 200ms per file |
-| Git log retrieval | < 1 second for 100 commits |
-| CI/CD detection accuracy | > 95% for supported platforms |
-| Skills runtime invocation latency | < 100ms overhead |
-| Skills composition depth | Up to 5 nested skills |
-| Test coverage | > 85% for developer services |
+| Test generation | < 500ms per file |

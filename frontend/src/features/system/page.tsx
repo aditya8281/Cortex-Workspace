@@ -9,6 +9,7 @@ import { Card } from "@/shared/ui/Card";
 import { Badge } from "@/shared/ui/Badge";
 import { LogViewer } from "./components/LogViewer";
 import { systemApi, type LLMHealth } from "./api";
+import type { SystemLog } from "./components/LogViewer";
 import { useMetrics } from "@/shared/ws/MetricsProvider";
 import { Skeleton } from "@/shared/ui/Skeleton";
 
@@ -18,6 +19,7 @@ export default function SystemPage() {
   const { metrics, processes, logs, connected } = useMetrics();
 
   const [llm, setLlm] = useState<LLMHealth | null>(null);
+  const [restLogs, setRestLogs] = useState<SystemLog[]>([]);
 
   useEffect(() => {
     if (!loading && !user) router.push("/auth");
@@ -33,11 +35,24 @@ export default function SystemPage() {
     }
   }, []);
 
+  // REST fallback for logs — polls every 5s if WS not connected
+  // WS pushes logs every ~3s, but may not be connected or may miss initial data
+  const loadLogs = useCallback(async () => {
+    try {
+      const data = await systemApi.getLogs(50);
+      if (data?.logs) setRestLogs(data.logs);
+    } catch {
+      // ignore — WS will provide logs when connected
+    }
+  }, []);
+
   useEffect(() => {
     loadLLM();
-    const interval = setInterval(loadLLM, 30000);
-    return () => clearInterval(interval);
-  }, [loadLLM]);
+    loadLogs();
+    const llmInterval = setInterval(loadLLM, 30000);
+    const logsInterval = setInterval(loadLogs, 5000);
+    return () => { clearInterval(llmInterval); clearInterval(logsInterval); };
+  }, [loadLLM, loadLogs]);
 
   if (loading || !user) return (
     <AppShell>
@@ -173,8 +188,8 @@ export default function SystemPage() {
           </Card>
         )}
 
-        {/* Logs — live from shared MetricsProvider */}
-        <LogViewer logs={logs} />
+        {/* Logs — live from WS + REST fallback */}
+        <LogViewer logs={connected ? logs : restLogs} />
       </div>
     </AppShell>
   );

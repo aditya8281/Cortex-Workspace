@@ -62,10 +62,10 @@ The current repository contains:
 | Version | Name | Phases | Status |
 |---------|------|--------|--------|
 | v1.08 | The Planning | — | Next — autonomous planning, version management |
-| v1.09 | The Knowledge | — | In planning — 6 phases, 41 tasks |
+| v1.09 | The Knowledge | — | In planning — 18 phases, 108 tasks |
 | v1.10 | The Scheduler | — | Not started |
 | v1.11 | The Researcher | — | Not started |
-| v1.12 | The Integrator | — | Not started |
+| v1.12 | The Developer | — | In planning — 11 phases, 23 capabilities |
 | v1.13 | The Optimizer | — | Not started |
 | v1.14 | The Polished | — | Not started |
 
@@ -236,13 +236,13 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 | v1.06 | Cognition & Execution Core | Capability | 5 | 8 | 6-7 days |
 | v1.07 | Memory Evolution | Capability | 4 | 6 | 5-6 days |
 | v1.08 | Awareness Expansion | Capability | 5 | 10 | 6-7 days |
-| v1.09 | The Knowledge | Capability | 11 | 20 | 18-24 days |
+| v1.09 | The Knowledge | Capability | 18 | 28 | 30-40 days |
 | v1.10 | Planning & Orchestration | Capability | 5 | 13 | 7-8 days |
 | v1.11 | Interaction & Communication | Capability | 5 | 12 | 7-8 days |
-| v1.12 | Developer Intelligence | Capability | 6 | 15 | 8-9 days |
+| v1.12 | Developer Intelligence | Capability | 11 | 23 | 14-18 days |
 | v1.13 | Utility & Integration | Capability | 6 | 19 | 10-12 days |
 | v1.14 | Advanced Intelligence | Capability | 4 | 4 | 5-6 days |
-| **Total** | | | **82** | **130** | **~115-154 days** |
+| **Total** | | | **94** | **146** | **~133-176 days** |
 
 ### Phase Counts by Version
 
@@ -256,10 +256,10 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 | v1.06 | 5 | P01-P05 |
 | v1.07 | 4 | P01-P04 |
 | v1.08 | 5 | P01-P05 |
-| v1.09 | 11 | P01-P11 |
+| v1.09 | 18 | P01-P18 |
 | v1.10 | 5 | P01-P05 |
 | v1.11 | 5 | P01-P05 |
-| v1.12 | 6 | P01-P06 |
+| v1.12 | 11 | P01-P11 |
 | v1.13 | 6 | P01-P06 |
 | v1.14 | 4 | P01-P04 |
 
@@ -350,10 +350,10 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 #### v1.09: The Knowledge — Knowledge Management
 **Question:** Can Cortex understand and remember what's in my files?
 **Type:** Capability delivery
-**What it does:** Directory-based knowledge ingestion, 13+ file type parsing, content chunking and embedding, semantic search, filesystem watchdog auto-sync, per-conversation memory toggle for RAG in chat, knowledge graph with force-directed visualization, per-source embedding model selection, incremental hash-based sync
-**Capabilities:** K1 (Knowledge Source Management), K2 (Content Parsing & Chunking), K3 (File Embedding & Vector Storage), K4 (Watchdog Auto-Sync), K5 (Incremental Re-Indexing), K6 (Chat Memory Integration), K7 (Knowledge Graph Relationships), K8 (Hybrid Semantic Search), K9 (Per-Source Embedding Config), K10 (Knowledge Graph Visualization) — 10 capabilities
-**Phases:** 6
-**Duration:** 10-14 days
+**What it does:** Directory-based knowledge ingestion, 13+ file type parsing, content chunking and embedding, semantic search, filesystem watchdog auto-sync, per-conversation memory toggle for RAG in chat, knowledge graph with force-directed visualization, per-source embedding model selection, incremental hash-based sync, learning from behavior (preferences, workflows, habits), feedback learning, personalization, pattern recognition, anomaly detection, cross-conversation memory with semantic archive search, SM-2 spaced repetition forgetting, episodic→semantic consolidation, memory compression, dynamic context budget, semantic hybrid search scoring, prospective memory (intentions & reminders)
+**Capabilities:** K1 (Knowledge Source Management), K2 (Content Parsing & Chunking), K3 (File Embedding & Vector Storage), K4 (Watchdog Auto-Sync), K5 (Incremental Re-Indexing), K6 (Chat Memory Integration), K7 (Knowledge Graph Relationships), K8 (Hybrid Semantic Search), K9 (Per-Source Embedding Config), K10 (Knowledge Graph Visualization), K11 (Cross-Conversation Memory), K12 (SM-2 Spaced Repetition), K13 (Episodic→Semantic Consolidation), K14 (Memory Compression), K15 (Dynamic Context Budget), K16 (Semantic Search Scoring), K17 (Prospective Memory), L1 (Preference Learning), L2 (Workflow Learning), L3 (Habit Detection), L4 (Behavior Adaptation), L5 (Feedback Learning), L6 (Personalization), L7 (Knowledge Refinement), L8 (Pattern Recognition), L9 (Continuous Improvement), L10 (Anomaly Detection) — 28 capabilities
+**Phases:** 18
+**Duration:** 30-40 days
 **Location:** `.agents/plans/versions/v1.09/`
 
 #### v1.10: Planning & Orchestration
@@ -375,12 +375,12 @@ TRACK G (Utility):    v1.13 (after v1.08, v1.09)
 **Location:** `.agents/plans/versions/v1.11/`
 
 #### v1.12: Developer Intelligence
-**Question:** Does Cortex understand code deeply?
-**Type:** Capability delivery
-**What it does:** Code understanding, repository intelligence, code review, test generation, documentation generation, refactoring, debugging, performance analysis, architecture guidance, dependency analysis, security analysis, migration assistance, code generation, CI/CD understanding, git intelligence
-**Capabilities:** D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14, D15 (15)
-**Phases:** 6
-**Duration:** 8-9 days
+**Question:** Does Cortex understand code deeply and serve as an intelligent IDE agent?
+**Type:** Capability delivery (expanded)
+**What it does:** Multi-language AST parsing (17 languages), LSP integration (diagnostics/completion/hover/navigation), symbol index & cross-file references, code-aware agent tools (rename, extract, find-refs, format, lint, edit), agent-in-the-loop coding protocol (write→review→test→rewrite cycles), subagent delegation system (task decomposition, parallel fan-out, context isolation, result synthesis), code understanding & review, generation (docs, tests), refactoring with impact assessment, debugging assistance, analysis suite (dependency, security, performance), git intelligence, CI/CD integration, REST endpoints, frontend developer dashboard, skills runtime
+**Capabilities:** D1-D15 (15 original) + D16-D22 (7 new) = 22
+**Phases:** 11 (P01-P11)
+**Duration:** 14-18 days
 **Location:** `.agents/plans/versions/v1.12/`
 
 #### v1.13: Utility & Integration
@@ -424,7 +424,7 @@ This matrix maps every reference architecture feature to its implementing versio
 | Stall Detection (loop-breaker) | 5.Observability.3 | v1.02 | P03 (Agent System Hardening) | Planned |
 | Observability Metrics (TPS, tokens, context %) | 5.Observability.1 | v1.02 | P07 (Observability Foundation) | Planned |
 | Session Search (conversation embedding) | 6.Features.1 | v1.03 | P04 or P05 | Planned |
-| Skills Runtime System | 7.1.Tier3.1 | v1.12 | TBD | Not Planned |
+| Skills Runtime System | 7.1.Tier3.1 | v1.12 | P10 (API, Frontend & Skills Runtime) | Planned |
 | Webhook System (CRUD + HMAC) | 4.5.Daily.1 | v1.13 | TBD | Not Planned |
 | Agent-to-Agent Sessions | 4.5.Daily.2 | v1.10 | TBD | Not Planned |
 | Housekeeping Tasks (7 built-in) | 7.1.Tier3.2 | v1.10 | TBD | Not Planned |
@@ -564,7 +564,7 @@ Build thinking, deepen memory, extend awareness. v1.06 requires both v1.03 and v
 ### Stage 4: Knowledge Management (v1.09)
 Build file knowledge understanding, semantic search, and knowledge graph. Depends on v1.02 + v1.06 (architecture + cognition).
 
-**v1.09 (10-14 days):** Directory ingestion, file parsing & chunking, embedding & vector storage, watchdog auto-sync, chat memory toggle, knowledge graph, hybrid search.
+**v1.09 (30-40 days):** Directory ingestion, file parsing & chunking, embedding & vector storage, watchdog auto-sync, chat memory toggle, knowledge graph, hybrid search, cross-conversation memory, behavioral learning (preferences, workflows, habits, feedback, patterns, anomalies), SM-2 forgetting, consolidation, compression, dynamic context budget, semantic scoring, prospective memory.
 
 ### Stage 5: Planning + Orchestration (v1.10)
 Build task decomposition, scheduling, and autonomous operation. Depends on v1.09 (knowledge) + v1.06 (cognition).
@@ -575,7 +575,7 @@ Build task decomposition, scheduling, and autonomous operation. Depends on v1.09
 Build the interaction layer, developer platform, and utility platform. All three can run in parallel.
 
 **v1.11 (7-8 days):** Voice, command palette, proactive assistance, multi-modal, ambient intelligence.
-**v1.12 (8-9 days):** Code understanding, review, generation, debugging, architecture guidance, security analysis.
+**v1.12 (14-18 days):** Multi-language AST parsing, LSP integration, code-aware agent tools, agent-in-the-loop coding protocol, subagent delegation system, code understanding & review, generation (doc/test), refactoring, debugging, analysis suite (dependency/security/performance), git/CI/CD, frontend dashboard.
 **v1.13 (10-12 days):** Calendar, email, tasks, notes, contacts, dashboard, extensions, sync.
 
 ### Stage 7: Advanced Intelligence (v1.14)
@@ -724,13 +724,13 @@ Each subsystem gets its own spec → plan → implement cycle. Never implement m
 | v1.06 | Cognition Core | 6-7 days | 6-7 days | — | No change |
 | v1.07 | Memory Evolution | 5-6 days | 5-6 days | — | No change |
 | v1.08 | Awareness Expansion | 6-7 days | 6-7 days | — | No change |
-| v1.09 | The Knowledge | 7-8 days | 18-24 days | +11-16d | Merged with original learning capabilities — 11 phases, 20 caps total |
+| v1.09 | The Knowledge | 7-8 days | 22-30 days | +15-22d | Merged with original learning capabilities — 18 phases, 28 caps total. Extended with SM-2 forgetting, consolidation, compression, dynamic budget, semantic scoring, prospective memory.
 | v1.10 | Planning & Orchestration | 7-8 days | 7-8 days | — | No change |
 | v1.11 | Interaction | 7-8 days | 7-8 days | — | No change |
-| v1.12 | Developer Intelligence | 8-9 days | 8-9 days | — | No change |
+| v1.12 | Developer Intelligence | 8-9 days | 14-18 days | +6-9d | Expanded with multi-language AST (17 langs), LSP integration, code-aware agent tools, agent-in-the-loop protocol, subagent delegation system — 11 phases, 23 caps |
 | v1.13 | Utility & Integration | 10-12 days | 10-12 days | — | No change (split recommended if quality degrades) |
 | v1.14 | Advanced Intelligence | 5-6 days | 5-6 days | — | No change |
-| **Total** | | **~90-102 days** | **~104-135 days** | **+14-33d** | Front-loaded investment in v1.01/v1.02 |
+| **Total** | | **~90-102 days** | **~110-144 days** | **+20-42d** | Front-loaded investment in v1.01/v1.02 + expanded v1.12 IDE capabilities |
 
 **Key insight:** The Red Team's changes are front-loaded. v1.01 and v1.02 absorb the additional work (~10-12 days extra). This investment pays off by ensuring every subsequent version builds on a solid foundation. The critical path grows from ~78 days to ~88 days, but the risk of agent system failure drops dramatically.
 
@@ -811,7 +811,7 @@ v1.08  Awareness Expansion        (14-22 days) -- unchanged
 v1.09  Knowledge Management    (10-14 days) -- expanded from Learning to Knowledge
 v1.10  Planning and Orchestration (16-24 days) -- unchanged
 v1.11  Interaction                (14-22 days) -- unchanged
-v1.12  Developer Intelligence     (16-24 days) -- unchanged
+v1.12  Developer Intelligence     (14-18 days) -- expanded: IDE capabilities, subagent delegation
 v1.13  Utility and Integration    (20-30 days) -- SLIMMED from 19 to 12 capabilities
 v1.14  Advanced Intelligence      (10-16 days) -- unchanged
 ```
@@ -834,7 +834,7 @@ v1.08  Awareness + Basic Utility  (18-28 days) -- merge Calendar/Tasks from v1.1
 v1.09  Knowledge Management    (10-14 days)
 v1.10  Planning and Orchestration (16-24 days)
 v1.11  Interaction                (14-22 days)
-v1.12  Developer Intelligence     (16-24 days)
+v1.12  Developer Intelligence     (14-18 days) -- expanded: AST, LSP, agent tools, agent-in-loop, subagent
 v1.13  Integration Platform       (14-22 days) -- slimmed to Integration only
 v1.14  Advanced Intelligence      (10-16 days)
 ```

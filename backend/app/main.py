@@ -78,6 +78,18 @@ async def lifespan(app: FastAPI):
 
     await redis_cache.ping()
 
+    # Test Qdrant connectivity (optional — fails open, circuit breaker handles)
+    from backend.app.core.vector_db import get_vector_db
+
+    vdb = get_vector_db()
+    if vdb.is_available:
+        logger.info("Qdrant connected at %s:%s", settings.QDRANT_HOST, settings.QDRANT_PORT)
+    else:
+        logger.info(
+            "Qdrant not available at %s:%s — vector search will degrade gracefully",
+            settings.QDRANT_HOST, settings.QDRANT_PORT,
+        )
+
     # Start event bus for cross-domain communication
     from backend.app.core.event_bus import event_bus
     from backend.app.core.event_handlers import on_download_completed  # noqa: F401
@@ -93,6 +105,12 @@ async def lifespan(app: FastAPI):
         ollama_url=settings.OLLAMA_BASE_URL if settings.LLM_PROVIDER in ("auto", "ollama") else None,
         n_ctx=settings.LLM_CONTEXT_SIZE,
         n_gpu_layers=settings.LLM_GPU_LAYERS,
+        n_threads=settings.LLM_THREADS,
+        n_batch=settings.LLM_BATCH_SIZE,
+        max_tokens=settings.LLM_MAX_TOKENS,
+        temperature=settings.LLM_TEMPERATURE,
+        concurrency=settings.LLM_CONCURRENCY,
+        use_mmap=settings.LLM_USE_MMAP,
     )
     llm_status = await llm_manager.health_check()
     logger.info("LLM providers: %s", llm_status)

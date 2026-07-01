@@ -1,4 +1,5 @@
 """Tests for profile API — user profile update and retrieval."""
+
 from unittest.mock import patch
 
 import pytest

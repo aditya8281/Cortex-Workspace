@@ -1,4 +1,5 @@
 """Tests for Ollama catalog service — model parsing, embedding detection, family grouping."""
+
 from backend.app.services.intelligence.ollama_catalog import OllamaCatalogService
 
 

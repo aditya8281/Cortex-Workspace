@@ -1,4 +1,5 @@
 """Tests for models API — model catalog listing and detail endpoints."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 HEADERS = {"Authorization": "Bearer fake-token"}

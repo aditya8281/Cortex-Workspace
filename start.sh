@@ -7,7 +7,8 @@
 # local development environment.
 #
 # PostgreSQL is managed automatically in user-space under CortexMemory/postgres/.
-# No Docker, no sudo, no manual database creation required.
+# Qdrant vector DB is started via Docker (or skipped gracefully if unavailable).
+# No sudo, no manual database creation required.
 # ==============================================================================
 
 set -euo pipefail
@@ -75,7 +76,7 @@ find_pg_bin() {
 
 # ── PostgreSQL Lifecycle ─────────────────────────────────────────────────────
 ensure_postgres() {
-    echo -e "\n${BOLD}${CYAN}[Phase 0/4] Setting up local PostgreSQL...${RESET}"
+    echo -e "\n${BOLD}${CYAN}[Phase 0a/5] Setting up local PostgreSQL...${RESET}"
 
     if ! find_pg_bin; then
         echo -e "${RED}[!] PostgreSQL binaries not found.${RESET}"
@@ -162,6 +163,72 @@ stop_postgres() {
 ensure_postgres
 
 
+# ── Qdrant Vector Database ───────────────────────────────────────────────────
+ensure_qdrant() {
+    echo -e "\n${BOLD}${CYAN}[Phase 0b/5] Setting up Qdrant vector database...${RESET}"
+
+    # Check if Qdrant is already running
+    if curl -sf http://127.0.0.1:6333/health >/dev/null 2>&1; then
+        echo -e "${GREEN}[✓] Qdrant already running on port 6333.${RESET}"
+        return 0
+    fi
+
+    # Try Docker first (easiest)
+    if command -v docker >/dev/null 2>&1; then
+        if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^cortex-qdrant$'; then
+            echo -e "${YELLOW}[+] Starting existing Qdrant container...${RESET}"
+            docker start cortex-qdrant >/dev/null 2>&1
+        else
+            echo -e "${YELLOW}[+] Starting Qdrant via Docker...${RESET}"
+            docker run -d --name cortex-qdrant \
+                --restart unless-stopped \
+                -p 127.0.0.1:6333:6333 \
+                -p 127.0.0.1:6334:6334 \
+                -v cortex-qdrant:/qdrant/storage \
+                qdrant/qdrant:v1.18.0 >/dev/null 2>&1 || {
+                echo -e "${YELLOW}[!] Qdrant Docker start failed (non-critical).${RESET}"
+                echo -e "${YELLOW}    Vector search will be degraded until Qdrant is available.${RESET}"
+                return 1
+            }
+        fi
+
+        # Wait for Qdrant to be ready (up to 10 seconds)
+        for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:6333/health >/dev/null 2>&1; then
+                echo -e "${GREEN}[✓] Qdrant running on port 6333 (Docker).${RESET}"
+                return 0
+            fi
+            sleep 0.5
+        done
+        echo -e "${YELLOW}[!] Qdrant not ready yet (non-critical).${RESET}"
+        return 1
+    fi
+
+    # No Docker — try native Qdrant binary
+    if command -v qdrant >/dev/null 2>&1; then
+        echo -e "${YELLOW}[+] Starting Qdrant binary...${RESET}"
+        QDRANT_DIR="$ROOT_DIR/CortexMemory/qdrant"
+        mkdir -p "$QDRANT_DIR"
+        qdrant --storage "$QDRANT_DIR" > /dev/null 2>&1 &
+        disown
+
+        for i in $(seq 1 20); do
+            if curl -sf http://127.0.0.1:6333/health >/dev/null 2>&1; then
+                echo -e "${GREEN}[✓] Qdrant running on port 6333 (native).${RESET}"
+                return 0
+            fi
+            sleep 0.5
+        done
+    fi
+
+    echo -e "${YELLOW}[!] Qdrant not available — install with: docker pull qdrant/qdrant${RESET}"
+    echo -e "${YELLOW}    Vector search will be degraded. The app will still work.${RESET}"
+    return 1
+}
+
+ensure_qdrant
+
+
 # 1. Check and copy environment variables
 if [ ! -f .env ]; then
     echo -e "${YELLOW}[+] .env file not found. Copying from .env.example...${RESET}"
@@ -187,7 +254,7 @@ fi
 
 
 # 2. Verify backend dependencies
-echo -e "\n${BOLD}${CYAN}[Phase 1/4] Checking python dependencies (uv)...${RESET}"
+echo -e "\n${BOLD}${CYAN}[Phase 1/5] Checking python dependencies (uv)...${RESET}"
 if command -v uv >/dev/null 2>&1; then
     if [ ! -f "$UV_SYNC_STAMP" ] || [ pyproject.toml -nt "$UV_SYNC_STAMP" ] || [ uv.lock -nt "$UV_SYNC_STAMP" ]; then
         uv sync
@@ -203,13 +270,13 @@ fi
 
 
 # 3. Apply database migrations
-echo -e "\n${BOLD}${CYAN}[Phase 2/4] Applying database migrations...${RESET}"
+echo -e "\n${BOLD}${CYAN}[Phase 2/5] Applying database migrations...${RESET}"
 uv run alembic upgrade head
 echo -e "${GREEN}[✓] Database migrations applied successfully.${RESET}"
 
 
 # 4. Check and configure frontend dependencies
-echo -e "\n${BOLD}${CYAN}[Phase 3/4] Setting up frontend dependencies...${RESET}"
+echo -e "\n${BOLD}${CYAN}[Phase 3/5] Setting up frontend dependencies...${RESET}"
 if [ -d "frontend" ]; then
     if [ ! -d "frontend/node_modules" ] || [ ! -f "frontend/node_modules/.package-lock.json" ] || [ "frontend/package-lock.json" -nt "frontend/node_modules/.package-lock.json" ]; then
         echo -e "${YELLOW}[+] node_modules not found in frontend. Running npm install...${RESET}"
@@ -224,7 +291,7 @@ fi
 
 
 # 5. Find available ports
-echo -e "\n${BOLD}${CYAN}[Phase 4/4] Finding available ports...${RESET}"
+echo -e "\n${BOLD}${CYAN}[Phase 4/5] Finding available ports...${RESET}"
 
 find_available_port() {
     local start=$1
@@ -264,6 +331,10 @@ cleanup() {
     fi
     if [ -n "${FRONTEND_PID:-}" ]; then
         kill "$FRONTEND_PID" 2>/dev/null || true
+    fi
+    # Stop Qdrant (Docker container)
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^cortex-qdrant$'; then
+        docker stop cortex-qdrant >/dev/null 2>&1 || true
     fi
     # Stop PostgreSQL
     stop_postgres

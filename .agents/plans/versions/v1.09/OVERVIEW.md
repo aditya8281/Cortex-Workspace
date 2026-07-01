@@ -29,6 +29,7 @@ After completing v1.09, Cortex can:
 - **Semantic search across all knowledge** — Dedicated search endpoint with hybrid retrieval (vector + fulltext + graph via RRF). Filter by source, file type, date range. Results show content snippets, file paths, relevance scores.
 - **Per-conversation memory toggle** — Each chat session has a memory on/off switch. When on, every message triggers RAG retrieval across knowledge sources. Ask "find the file about CNNs" or "what did I write about transformers?" — Cortex answers from its knowledge base.
 - **Knowledge graph of file relationships** — Files connected by shared topics, cross-references, import relationships, and embedding proximity. Interactive graph visualization like Obsidian.
+- **Cross-conversation memory** — Every message is automatically archived and embedded in a searchable vector store. The current chat loads the recent 32K token active window. If memory mode is on and the active window doesn't have an answer, Cortex semantically searches ALL past conversations transparently. Users can also explicitly search their full conversation history. Date-based purge lets users prune old messages.
 - **Choose embedding model per source** — Select which embedding model to use: ONNX BGE-M3 (default), Ollama nomic-embed, or lightweight mock mode. Per-source configuration.
 - **Incremental sync only** — Content-hash based change detection. Unchanged files are skipped entirely. Batch operations for efficiency.
 - **Learn user preferences** — Observes and records preferences for response style, UI layout, notification frequency, tool choices. Preferences strengthen with repeated observation, weaken when contradicted.
@@ -39,6 +40,12 @@ After completing v1.09, Cortex can:
 - **Recognize patterns** — Detects temporal, behavioral, and preference patterns. Patterns strengthen with occurrences.
 - **Detect anomalies** — Identifies unusual behavior (activity at 3 AM, 10× normal command frequency). Flags anomalies for review; never auto-acts. Adaptive baselines.
 - **Continuously improve** — Tracks improvement metrics: accuracy, response quality, suggestion acceptance rates.
+- **SM-2 spaced repetition forgetting** — Memory decay uses the proven SM-2 algorithm. Every memory has an easiness factor, interval, and repetition count. Successful recall stretches intervals exponentially. Failed recall resets to shorter intervals. Optimizes long-term retention for each memory individually.
+- **Automatic episodic→semantic consolidation** — Background pipeline turns raw conversation episodes into extracted facts, preference updates, and pattern reinforcements. Runs automatically after N messages per conversation. Builds an abstraction hierarchy: Event → Episode → Pattern → Rule.
+- **Memory compression for old conversations** — Conversations older than 14 days are LLM-summarized to dense paragraphs. Original messages move to Qdrant cold archive. Context window loading uses the compressed version. Full text still searchable via archive.
+- **Dynamic context budget** — Instead of rigid 32K history + 4K RAG, each message and source is scored for relevance to the current query. High-relevance content gets more token budget. Low-relevance is trimmed first. Response quality improves without increasing total tokens.
+- **Semantic search scoring** — MemorySearchService now uses embedding cosine similarity as its primary text relevance signal instead of ILIKE substring matching. Blended with recency, importance, access frequency, and graph centrality via the same multi-signal formula — but the text signal is now semantic.
+- **Prospective memory** — Cortex remembers intentions: "remind me to deploy when tests pass," "ask about project X next time user mentions it." Stores trigger conditions (time, event, context match) and alerts when triggered.
 
 ---
 
@@ -56,6 +63,7 @@ After completing v1.09, Cortex can:
 | K8 | Hybrid Semantic Search | Knowledge | Core | 4.3 (RRF + MMR) — vector + fulltext + graph |
 | K9 | Per-Source Embedding Config | Knowledge | Core | 1.4 (Separation of Concerns) — per-source model choice |
 | K10 | Knowledge Graph Visualization | Knowledge | Nice | — force-directed graph for UI |
+| K11 | Cross-Conversation Memory | Knowledge | Core | 4.3 (Memory Architecture) — always-on archival, semantic search across past conversations |
 | L1 | Preference Learning | Learning | Core | 1.6 (Evidence Over Opinion) — observations ground all preferences |
 | L2 | Workflow Learning | Learning | Core | 4.7 (Workflow Architecture) — workflow as first-class pattern |
 | L3 | Habit Detection | Learning | Core | 1.6 (Evidence Over Opinion) — ≥5 occurrences for classification |
@@ -66,8 +74,14 @@ After completing v1.09, Cortex can:
 | L8 | Pattern Recognition | Learning | Core | 1.6 (Evidence Over Opinion) — minimum evidence threshold |
 | L9 | Continuous Improvement | Learning | Core | 3.7 (Incremental Safety) — bounded improvement rates |
 | L10 | Anomaly Detection | Learning | Core | 1.7 (Incremental Safety) — never auto-acts on anomalies |
+| K12 | SM-2 Spaced Repetition Forgetting | Memory | Core | 4.2 (Memory Persistence) — SM-2 algorithm for optimal recall timing |
+| K13 | Episodic→Semantic Consolidation | Memory | Core | 4.3 (Memory Architecture) — automatic abstraction hierarchy |
+| K14 | Memory Compression | Memory | Core | 3.3 (Storage Efficiency) — compressed summaries for old conversations |
+| K15 | Dynamic Context Budget | Interaction | Core | 1.7 (Streaming-Native) — relevance-weighted token allocation |
+| K16 | Semantic Search Scoring | Memory | Core | 4.3 (Memory Architecture) — embedding similarity for multi-signal scoring |
+| K17 | Prospective Memory | Memory | Core | 4.2 (Memory Persistence) — intentions with trigger conditions |
 
-**Total: 20 capabilities**
+**Total: 28 capabilities**
 
 ---
 
@@ -100,7 +114,14 @@ All four dependencies are ✅ complete.
 | P09 | Habits & Adaptation | HabitDetectionService, BehaviorAdaptationService, FeedbackLearningService | 6 |
 | P10 | Personalization & Refinement | PersonalizationService, KnowledgeRefinementService, PatternRecognitionService, AnomalyDetectionService, ContinuousImprovementService | 7 |
 | P11 | Learning API & Integration | REST API endpoints for all learning capabilities, frontend API client, learning dashboard, integration tests | 6 |
-| **Total** | | | **72** |
+| P12 | Cross-Conversation Memory & Archive | Always-on message archival in Qdrant, semantic search across all conversations, memory-enabled auto-injection in chat, date-based purge, archive search UI | 8 |
+| P13 | SM-2 Spaced Repetition Forgetting | SM-2 algorithm replacing uniform Ebbinghaus decay — each memory tracked with easiness_factor, interval, repetitions, next_review_at. Scheduled review queue for optimal recall. Retains graph cleanup on GC. | 6 |
+| P14 | Episodic→Semantic Consolidation Pipeline | Automatic background consolidation: raw events → extracted facts → preference updates → pattern reinforcement. Runs after N messages per conversation. Handles abstraction hierarchy (Event→Episode→Pattern→Rule). | 6 |
+| P15 | Memory Compression for Old Conversations | Conversations >14 days old → LLM-summarized to dense paragraph. Original messages moved to Qdrant cold archive. Compressed version used for context window loading. Full text retrievable via archive search. | 5 |
+| P16 | Dynamic Relevance-Weighted Context Budget | Replace static 32K history + 4K RAG with relevance-weighted token allocation. Each message/source scored for relevance to current query. High-relevance gets more budget; low-relevance truncated first. | 6 |
+| P17 | Semantic Hybrid Scoring in MemorySearchServices | Replace ILIKE-based text relevance with embedding cosine similarity as primary signal. Multi-signal scoring (0.30 semantic + 0.25 recency + 0.20 importance + 0.15 access + 0.10 graph). ILIKE fallback for exact matches. | 5 |
+| P18 | Prospective Memory (Intentions & Reminders) | New ProspectiveMemory model tracking user intentions with trigger conditions (time, event, context). On trigger match → inject into LLM context or push notification. Supports "remind me when..." type scenarios. | 6 |
+| **Total** | | | **108** |
 
 ---
 
@@ -443,6 +464,17 @@ class Pattern(Base):
 - Modify: `backend/app/models/interaction/conversation.py` — add memory_enabled
 - Modify: `backend/app/api/v1/interaction/conversations.py` — memory toggle endpoint
 - Modify: `backend/app/api/v1/interaction/ws_chat.py` — RAG injection
+
+### Cross-Conversation Memory (P12)
+- Create: `backend/app/services/interaction/conversation_memory.py` — ConversationMemoryService (archive, search, purge)
+- Create: `backend/app/services/interaction/archive_intent.py` — intent detection for archive search
+- Create: `backend/app/api/v1/interaction/conversation_memory.py` — archive search + purge API
+- Modify: `backend/app/services/interaction/conversation.py` — wire archival into add_message()
+- Modify: `backend/app/api/v1/interaction/conversations.py` — archive context injection in chat stream
+- Create: `frontend/src/features/chat/components/ArchiveSearch.tsx`
+- Create: `frontend/src/features/chat/components/ArchiveResultItem.tsx`
+- Create: `frontend/src/features/chat/components/PurgeMemoryDialog.tsx`
+- Modify: `frontend/src/features/chat/components/ChatSidebar.tsx` — add archive search + purge button
 
 ### Alembic Migrations
 - `migrations/versions/c00000000006_add_knowledge_models.py`

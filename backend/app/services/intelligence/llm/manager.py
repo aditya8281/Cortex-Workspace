@@ -17,7 +17,7 @@ class LLMManager:
     def __init__(self) -> None:
         self._providers: list[LLMProvider] = []
         self._active: LLMProvider | None = None
-        self._semaphore = asyncio.Semaphore(4)
+        self._semaphore = asyncio.Semaphore(1)  # reset in configure()
 
         self._total_prompt_tokens: int = 0
         self._total_completion_tokens: int = 0
@@ -28,10 +28,18 @@ class LLMManager:
         self,
         llama_model_path: str | None = None,
         ollama_url: str | None = None,
-        n_ctx: int = 4096,
+        n_ctx: int = 8192,
         n_gpu_layers: int = 0,
+        n_threads: int = 8,
+        n_batch: int = 2048,
+        max_tokens: int = 2048,
+        temperature: float = 0.7,
+        concurrency: int = 4,
+        use_mmap: bool = True,
     ) -> None:
         self._providers = []
+        # Recreate semaphore with configured concurrency
+        self._semaphore = asyncio.Semaphore(concurrency)
 
         if ollama_url:
             self._providers.append(OllamaProvider(base_url=ollama_url))
@@ -42,6 +50,12 @@ class LLMManager:
                     model_path=llama_model_path,
                     n_ctx=n_ctx,
                     n_gpu_layers=n_gpu_layers,
+                    n_threads=n_threads,
+                    n_batch=n_batch,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    concurrency=concurrency,
+                    use_mmap=use_mmap,
                 )
             )
 
@@ -88,6 +102,11 @@ class LLMManager:
     ) -> LLMResponse:
         async with self._semaphore:
             provider = await self._get_active()
+        provider_name = getattr(provider, "provider_name", lambda: "unknown")()
+        logger.info(
+            "Inference via %s: model=%s, messages=%d, max_tokens=%d",
+            provider_name, model or "default", len(messages), max_tokens,
+        )
         max_retries = 3
         last_error = None
 
@@ -162,6 +181,11 @@ class LLMManager:
     ):
         async with self._semaphore:
             provider = await self._get_active()
+        provider_name = getattr(provider, "provider_name", lambda: "unknown")()
+        logger.info(
+            "Inference stream via %s: model=%s, messages=%d, max_tokens=%d",
+            provider_name, model or "default", len(messages), max_tokens,
+        )
         max_retries = 3
         last_error = None
 

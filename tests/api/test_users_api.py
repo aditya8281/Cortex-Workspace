@@ -1,4 +1,5 @@
 """Tests for users API — user management and permissions."""
+
 import pytest
 
 HEADERS = {"Authorization": "Bearer fake-token"}

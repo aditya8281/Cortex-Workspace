@@ -60,11 +60,17 @@ class OllamaProvider(LLMProvider):
         )
         resp.raise_for_status()
         data = resp.json()
+        pt = data.get("prompt_eval_count", 0)
+        ct = data.get("eval_count", 0)
+        logger.info(
+            "Ollama inference: model=%s, prompt_tokens=%d, completion_tokens=%d",
+            model, pt, ct,
+        )
         return {
             "content": data["message"]["content"],
             "model": model,
-            "tokens_prompt": data.get("prompt_eval_count", 0),
-            "tokens_completion": data.get("eval_count", 0),
+            "tokens_prompt": pt,
+            "tokens_completion": ct,
             "finish_reason": "stop",
         }
 

@@ -1,4 +1,5 @@
 """Tests for indexing API — document indexing and search operations."""
+
 from unittest.mock import MagicMock, patch
 
 HEADERS = {"Authorization": "Bearer fake-token"}
