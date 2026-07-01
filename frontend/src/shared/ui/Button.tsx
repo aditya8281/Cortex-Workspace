@@ -3,7 +3,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/shared/lib/utils";
 
-type ButtonVariant = "primary" | "ghost" | "danger";
+type ButtonVariant = "primary" | "ghost" | "danger" | "neural";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -14,11 +14,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-accent text-white hover:bg-accent-hover active:scale-[0.97] shadow-subtle",
+    "bg-accent-red text-white shadow-sm hover:bg-accent-red/90 active:scale-[0.97] shadow-[0_1px_6px_-1px] shadow-accent-red/20",
   ghost:
     "bg-transparent text-text-secondary hover:bg-bg-surface hover:text-text-primary active:scale-[0.97]",
   danger:
     "bg-danger/10 text-danger hover:bg-danger/20 active:scale-[0.97]",
+  neural:
+    "bg-bg-surface text-accent hover:bg-accent/10 active:scale-[0.97] border border-accent/20",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
