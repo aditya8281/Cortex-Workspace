@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { cn } from "@/shared/lib/utils";
 import { PaperclipIcon, MicIcon, SendIcon } from "@/shared/ui/icons";
 
@@ -9,10 +9,21 @@ interface ChatInputProps {
   onTyping?: () => void;
   disabled?: boolean;
   onStop?: () => void;
+  initialValue?: string;
+  onValueChange?: (value: string) => void;
 }
 
-export function ChatInput({ onSend, onTyping, disabled, onStop }: ChatInputProps) {
-  const [value, setValue] = useState("");
+export function ChatInput({ onSend, onTyping, disabled, onStop, initialValue = "", onValueChange }: ChatInputProps) {
+  const [value, setValue] = useState(initialValue);
+
+  // Sync external initialValue changes (e.g. draft restore on conversation switch)
+  useEffect(() => {
+    if (initialValue !== value) {
+      setValue(initialValue);
+    }
+    // Only sync when initialValue changes externally
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValue]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = useCallback(() => {
@@ -68,7 +79,7 @@ export function ChatInput({ onSend, onTyping, disabled, onStop }: ChatInputProps
         <textarea
           ref={textareaRef}
           value={value}
-          onChange={(e) => { setValue(e.target.value); onTyping?.(); }}
+          onChange={(e) => { setValue(e.target.value); onTyping?.(); onValueChange?.(e.target.value); }}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           placeholder="Ask Cortex anything…"

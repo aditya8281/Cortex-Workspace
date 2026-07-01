@@ -128,7 +128,7 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
               "w-full rounded-xl border px-4 py-2.5 text-sm",
               "bg-bg-surface text-text-primary placeholder:text-text-muted",
               "border-border-default focus:border-accent-red/50 focus:outline-none focus:ring-1 focus:ring-accent-red/25",
-              "transition-colors duration-150",
+              "motion-safe:transition-colors motion-safe:duration-150",
             )}
           />
 
@@ -243,7 +243,7 @@ function FileRow({
         {!file.is_dir && (
           <button
             onClick={() => onDownload(file.path, file.name)}
-            className="min-h-[44px] min-w-[44px] rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated flex items-center justify-center transition-colors duration-150"
+            className="min-h-[44px] min-w-[44px] rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated flex items-center justify-center motion-safe:transition-colors motion-safe:duration-150"
             title="Download"
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -253,7 +253,7 @@ function FileRow({
         )}
         <button
           onClick={() => { setNewName(file.name); setRenaming(true); }}
-          className="min-h-[44px] min-w-[44px] rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated flex items-center justify-center transition-colors duration-150"
+          className="min-h-[44px] min-w-[44px] rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated flex items-center justify-center motion-safe:transition-colors motion-safe:duration-150"
           title="Rename"
         >
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -262,7 +262,7 @@ function FileRow({
         </button>
         <button
           onClick={() => onDelete(file.path)}
-          className="min-h-[44px] min-w-[44px] rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 flex items-center justify-center transition-colors duration-150"
+          className="min-h-[44px] min-w-[44px] rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 flex items-center justify-center motion-safe:transition-colors motion-safe:duration-150"
           title="Delete"
         >
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -321,7 +321,7 @@ function UploadModal({ open, onClose, onUploaded }: { open: boolean; onClose: ()
           className={cn(
             "flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 mb-4 cursor-pointer",
             "border-border-subtle hover:border-accent-red/50 hover:bg-accent-red/5",
-            "transition-colors duration-150",
+            "motion-safe:transition-colors motion-safe:duration-150",
             file && "border-accent-red/50 bg-accent-red/5",
           )}
           aria-label="Click to select a file for upload"
@@ -354,7 +354,7 @@ function UploadModal({ open, onClose, onUploaded }: { open: boolean; onClose: ()
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 rounded-xl py-2 text-sm font-medium text-text-muted hover:text-text-primary hover:bg-bg-hover transition-colors duration-150"
+            className="flex-1 rounded-xl py-2 text-sm font-medium text-text-muted hover:text-text-primary hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150"
           >
             Cancel
           </button>
@@ -365,7 +365,7 @@ function UploadModal({ open, onClose, onUploaded }: { open: boolean; onClose: ()
               "flex-1 rounded-xl py-2 text-sm font-semibold text-white",
               "bg-accent-red hover:bg-accent-red/90",
               "disabled:opacity-50 disabled:cursor-not-allowed",
-              "transition-colors duration-150",
+              "motion-safe:transition-colors motion-safe:duration-150",
             )}
           >
             {uploading ? "Encrypting…" : "Upload & Encrypt"}
@@ -562,7 +562,7 @@ export default function VaultPage() {
               "w-full pl-8 pr-3 py-1.5 rounded-lg text-xs",
               "bg-bg-surface text-text-primary placeholder:text-text-muted",
               "border border-border-default focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25",
-              "transition-colors duration-150",
+              "motion-safe:transition-colors motion-safe:duration-150",
             )}
           />
         </div>
@@ -599,7 +599,7 @@ export default function VaultPage() {
             {!searchQuery && (
               <button
                 onClick={() => setUploadOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-accent-red text-white hover:bg-accent-red/90 transition-colors duration-150"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-accent-red text-white hover:bg-accent-red/90 motion-safe:transition-colors motion-safe:duration-150"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M8 2v12M2 8h12" />

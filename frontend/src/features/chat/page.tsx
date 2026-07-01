@@ -39,6 +39,7 @@ export default function ChatPage() {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
 
   // Typing indicators
   const { sendTyping, isOthersTyping, typingCount } = useChatTyping({
@@ -72,6 +73,12 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
+
+  const handleDraftChange = useCallback((value: string) => {
+    if (activeId) {
+      setDrafts((prev) => ({ ...prev, [activeId]: value }));
+    }
+  }, [activeId]);
 
   const handleSend = async (content: string) => {
     let convId = activeId;
@@ -286,6 +293,8 @@ export default function ChatPage() {
           onSend={handleSend}
           onTyping={sendTyping}
           disabled={streaming}
+          initialValue={drafts[activeId ?? 0] ?? ""}
+          onValueChange={handleDraftChange}
         />
       </div>
     </div>

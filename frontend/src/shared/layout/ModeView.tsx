@@ -179,7 +179,7 @@ export function ModeView() {
           <header className="flex h-11 items-center gap-2.5 border-b border-border-subtle px-4 flex-shrink-0">
             <button
               onClick={handleBack}
-              className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-150"
+              className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-text-primary motion-safe:transition-colors motion-safe:duration-150"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10 2L4 8l6 6" />

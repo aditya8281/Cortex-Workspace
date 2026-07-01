@@ -173,7 +173,7 @@ function EmptyState({ query, prefix }: { query: string; prefix: PrefixConfig }) 
       {prefix.available && query && (
         <button
           onClick={() => {/* switch to default prefix */}}
-          className="mt-4 text-xs font-medium text-accent hover:text-accent/80 transition-colors duration-150"
+          className="mt-4 text-xs font-medium text-accent hover:text-accent/80 motion-safe:transition-colors motion-safe:duration-150"
         >
           Search all sources instead
         </button>
@@ -322,7 +322,7 @@ export default function SearchPage() {
           {query && (
             <button
               onClick={() => { setQuery(""); setResults([]); setHasSearched(false); }}
-              className="text-text-muted hover:text-text-secondary transition-colors duration-150"
+              className="text-text-muted hover:text-text-secondary motion-safe:transition-colors motion-safe:duration-150"
               aria-label="Clear search"
             >
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -428,7 +428,7 @@ export default function SearchPage() {
                   onClick={() => handleFilterChange(f.key)}
                   aria-pressed={activeFilter === f.key}
                   className={cn(
-                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150",
+                    "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium motion-safe:transition-colors motion-safe:duration-150",
                     activeFilter === f.key
                       ? "bg-accent/12 text-accent"
                       : "text-text-muted hover:text-text-secondary hover:bg-bg-hover",
