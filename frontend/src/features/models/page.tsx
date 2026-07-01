@@ -241,7 +241,7 @@ export default function ModelsPage() {
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.key)}
-                className={`relative px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
+                className={`relative px-4 py-2.5 text-sm font-medium motion-safe:transition-colors motion-safe:duration-150 ${
                   isActive
                     ? "text-text-primary"
                     : "text-text-muted hover:text-text-secondary"
@@ -294,7 +294,7 @@ export default function ModelsPage() {
       {compareSelectedIds.length >= 2 && activeTab !== "compare" && (
         <button
           onClick={() => setActiveTab("compare")}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-accent/90 transition-colors duration-150"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-accent/90 motion-safe:transition-colors motion-safe:duration-150"
           aria-label={`Compare ${compareSelectedIds.length} models`}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">

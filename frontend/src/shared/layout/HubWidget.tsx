@@ -11,6 +11,7 @@ interface HubWidgetProps {
   onClick: () => void;
   isActive?: boolean;
   glowColor?: "red" | "cyan";
+  spanFull?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -23,17 +24,20 @@ export function HubWidget({
   onClick,
   isActive = false,
   glowColor = "cyan",
+  spanFull,
   className,
   style,
 }: HubWidgetProps) {
   return (
     <button
+      data-widget
       onClick={onClick}
       style={style}
       className={cn(
         // Base glass card
         "group relative flex flex-col rounded-2xl border p-4 text-left",
         "bg-bg-widget backdrop-blur-2xl",
+        spanFull && "sm:col-span-2",
         "motion-safe:animate-fade-in motion-safe:opacity-0",
         "motion-safe:[animation-delay:calc(var(--i,0)*50ms)]",
         "motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out",

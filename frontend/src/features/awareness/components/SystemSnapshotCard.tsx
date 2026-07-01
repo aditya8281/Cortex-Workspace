@@ -81,7 +81,7 @@ function ProgressBar({
   return (
     <div className="h-1.5 w-full rounded-full bg-bg-surface overflow-hidden">
       <div
-        className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+        className={`h-full rounded-full motion-safe:transition-all duration-500 ${barColor}`}
         style={{ width: `${Math.min(percent, 100)}%` }}
       />
     </div>
@@ -213,7 +213,7 @@ export function SystemSnapshotCard({
         <button
           onClick={onTakeSnapshot}
           disabled={snapshotLoading}
-          className="w-full px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-40 disabled:pointer-events-none transition-colors duration-150"
+          className="w-full px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-white hover:bg-accent-hover disabled:opacity-40 disabled:pointer-events-none motion-safe:transition-colors motion-safe:duration-150"
         >
           {snapshotLoading ? "Capturing..." : "Take Snapshot"}
         </button>

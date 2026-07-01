@@ -55,7 +55,7 @@ export function ConfidencePanel({
   result: ConfidenceResult;
 }) {
   return (
-    <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 hover:shadow-md transition-shadow">
+    <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 hover:shadow-md motion-safe:transition-shadow">
       <div className="flex items-start gap-4">
         <ScoreRing score={result.confidence} />
         <div className="min-w-0 flex-1">

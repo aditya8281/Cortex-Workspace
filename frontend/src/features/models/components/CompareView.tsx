@@ -134,7 +134,7 @@ export function CompareView({
                     </span>
                     <div className="flex-1 h-3 rounded-sm bg-bg-surface overflow-hidden">
                       <div
-                        className={`h-full rounded-sm transition-[width] duration-300 ${
+                        className={`h-full rounded-sm motion-safe:transition-[width] duration-300 ${
                           isWinner ? "bg-accent" : "bg-bg-elevated"
                         }`}
                         style={{ width: `${Math.max(4, width)}%` }}

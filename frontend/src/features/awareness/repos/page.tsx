@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/shared/layout/AppShell";
 import { Button } from "@/shared/ui/Button";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { EmptyState } from "@/shared/ui/EmptyState";
@@ -58,7 +57,6 @@ export default function AwarenessReposPage() {
   };
 
   return (
-    <AppShell>
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between">
@@ -135,6 +133,5 @@ export default function AwarenessReposPage() {
           onSuccess={handleAddSuccess}
         />
       </div>
-    </AppShell>
   );
 }

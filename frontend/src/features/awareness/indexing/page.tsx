@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/shared/layout/AppShell";
 import { IndexingConfigForm } from "../components/IndexingConfigForm";
 
 export default function IndexingPage() {
@@ -17,7 +16,6 @@ export default function IndexingPage() {
   if (loading || !user) return null;
 
   return (
-    <AppShell>
       <div className="max-w-3xl space-y-6">
         <div>
           <h1 className="text-headline font-semibold text-text-primary">Indexing Configuration</h1>
@@ -25,6 +23,5 @@ export default function IndexingPage() {
         </div>
         <IndexingConfigForm />
       </div>
-    </AppShell>
   );
 }

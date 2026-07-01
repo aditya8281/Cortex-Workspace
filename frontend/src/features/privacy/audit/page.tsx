@@ -3,7 +3,6 @@
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AppShell } from "@/shared/layout/AppShell";
 import { Badge } from "@/shared/ui/Badge";
 import { Button } from "@/shared/ui/Button";
 import { EmptyState } from "@/shared/ui/EmptyState";
@@ -124,7 +123,6 @@ export default function AuditPage() {
   if (loading || !user) return null;
 
   return (
-    <AppShell>
       <div className="max-w-4xl space-y-6">
         <div>
           <h1 className="text-headline font-semibold text-text-primary">Audit Log</h1>
@@ -180,6 +178,5 @@ export default function AuditPage() {
           </div>
         )}
       </div>
-    </AppShell>
   );
 }

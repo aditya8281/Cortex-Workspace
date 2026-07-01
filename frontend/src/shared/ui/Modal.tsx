@@ -131,7 +131,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             <h2 className="text-title font-semibold text-text-primary">{title}</h2>
             <button
               onClick={handleClose}
-              className="rounded-md p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-hover transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none"
+              className="rounded-md p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150 focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none"
               aria-label="Close"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">

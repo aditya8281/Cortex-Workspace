@@ -3,7 +3,6 @@
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { AppShell } from "@/shared/layout/AppShell";
 import { Card } from "@/shared/ui/Card";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { AccessControlCard } from "./components/AccessControlCard";
@@ -16,7 +15,6 @@ export default function PrivacyPage() {
   const router = useRouter();
   useEffect(() => { if (!loading && !user) router.push("/auth"); }, [user, loading, router]);
   if (loading || !user) return (
-    <AppShell>
       <div className="max-w-5xl space-y-6">
         <Skeleton className="h-6 w-32" />
         <Skeleton className="h-4 w-64" />
@@ -33,10 +31,8 @@ export default function PrivacyPage() {
           ))}
         </div>
       </div>
-    </AppShell>
   );
   return (
-    <AppShell>
       <div className="max-w-5xl space-y-6 animate-fade-in">
         <div>
           <h1 className="text-headline font-semibold text-text-primary">Privacy & Trust</h1>
@@ -49,6 +45,5 @@ export default function PrivacyPage() {
           <ExportCard />
         </div>
       </div>
-    </AppShell>
   );
 }

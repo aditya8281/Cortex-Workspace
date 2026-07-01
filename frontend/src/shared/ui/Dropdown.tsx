@@ -78,7 +78,7 @@ export function Dropdown({ trigger, items, align = "left" }: DropdownProps) {
               }}
               disabled={item.disabled}
               className={cn(
-                "flex w-full items-center px-3 py-2 text-sm text-left transition-colors duration-150",
+                "flex w-full items-center px-3 py-2 text-sm text-left motion-safe:transition-colors motion-safe:duration-150",
                 item.disabled
                   ? "cursor-not-allowed text-text-muted"
                   : item.destructive

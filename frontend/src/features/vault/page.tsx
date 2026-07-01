@@ -5,6 +5,11 @@ import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { VaultIcon, SearchIcon } from "@/shared/ui/icons";
 import { cn } from "@/shared/lib/utils";
+import gsap from "gsap";
+import { Draggable as DraggablePlugin } from "gsap/Draggable";
+import { Flip } from "gsap/Flip";
+
+gsap.registerPlugin(DraggablePlugin, Flip);
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -163,22 +168,27 @@ function FileRow({
   onRename,
   onDownload,
   onToggleFav,
+  isFlatFile,
 }: {
   file: VaultFileInfo;
   onDelete: (path: string) => void;
   onRename: (path: string, name: string) => void;
   onDownload: (path: string, name: string) => void;
   onToggleFav: (path: string) => void;
+  isFlatFile?: boolean;
 }) {
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(file.name);
 
   return (
-    <div className={cn(
-      "group flex items-center gap-3 px-3 py-2.5 rounded-lg",
-      "hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150",
-      file.is_dir && "text-accent",
-    )}>
+    <div
+      data-file-path={file.path}
+      className={cn(
+        "group flex items-center gap-3 px-3 py-2.5 rounded-lg",
+        "hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150",
+        file.is_dir && "text-accent",
+        isFlatFile && "cursor-grab active:cursor-grabbing",
+      )}>
       {/* Icon */}
       <span className="flex-shrink-0 text-base">{getFileIcon(file.name)}</span>
 
@@ -390,6 +400,8 @@ export default function VaultPage() {
   const [error, setError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const fileListRef = useRef<HTMLDivElement>(null);
+  const draggableInstances = useRef<DraggablePlugin[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/auth");
@@ -490,6 +502,65 @@ export default function VaultPage() {
       setFiles((prev) => prev.map((f) => f.path === path ? { ...f, favorite: !f.favorite } : f));
     } catch { /* ignore */ }
   }, [files]);
+
+  // ── Draggable + Flip for flat file reorder ──────────────────────────
+  useEffect(() => {
+    if (!fileListRef.current) return;
+    const items = fileListRef.current.querySelectorAll("[data-file-path]");
+    if (items.length < 2) return;
+
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      draggableInstances.current = DraggablePlugin.create(items, {
+        type: "y",
+        bounds: fileListRef.current,
+        edgeResistance: 0.85,
+        dragResistance: 0.1,
+        onDragStart: function () {
+          gsap.set(this.target, { transform: "none" });
+        },
+        onDragEnd: function () {
+          const container = fileListRef.current!;
+          const all = Array.from(container.querySelectorAll("[data-file-path]"));
+          const idx = all.indexOf(this.target);
+          if (idx < 0) return;
+
+          const rect = this.target.getBoundingClientRect();
+          const mid = rect.top + rect.height / 2;
+
+          let swapIdx = -1;
+          for (let i = 0; i < all.length; i++) {
+            if (i === idx) continue;
+            const ir = all[i].getBoundingClientRect();
+            if (mid >= ir.top && mid <= ir.bottom) { swapIdx = i; break; }
+          }
+          if (swapIdx < 0 || swapIdx === idx) return;
+
+          const state = Flip.getState(all);
+
+          if (swapIdx < idx) {
+            container.insertBefore(this.target, all[swapIdx]);
+          } else {
+            container.insertBefore(this.target, all[swapIdx].nextSibling);
+          }
+
+          Flip.from(state, {
+            duration: 0.35,
+            ease: "power3.inOut",
+            absolute: true,
+            scale: false,
+            target: container.querySelectorAll("[data-file-path]"),
+          });
+        },
+      });
+    });
+    return () => {
+      mm.revert();
+      draggableInstances.current.forEach((d) => d.kill());
+      draggableInstances.current = [];
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, searchQuery]);
 
   if (authLoading || !user) return null;
 
@@ -635,11 +706,12 @@ export default function VaultPage() {
                 <p className="text-xs text-text-muted font-medium mb-2 uppercase tracking-wider">
                   Files ({flatFiles.length})
                 </p>
-                <div className="rounded-xl border border-border-subtle overflow-hidden bg-bg-widget backdrop-blur-xl">
+                <div ref={fileListRef} className="rounded-xl border border-border-subtle overflow-hidden bg-bg-widget backdrop-blur-xl">
                   {flatFiles.map((f) => (
                     <FileRow
                       key={f.path}
                       file={f}
+                      isFlatFile
                       onDelete={handleDelete}
                       onRename={handleRename}
                       onDownload={handleDownload}

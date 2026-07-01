@@ -14,7 +14,7 @@ export function ErrorAnalysisCard({
 }) {
   return (
     <div
-      className={`rounded-lg border p-4 ${severityStyles[analysis.severity] ?? "bg-bg-elevated border-border-subtle"} hover:shadow-md transition-shadow`}
+      className={`rounded-lg border p-4 ${severityStyles[analysis.severity] ?? "bg-bg-elevated border-border-subtle"} hover:shadow-md motion-safe:transition-shadow`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

@@ -56,7 +56,7 @@ export function ToolRegistryPanel({ onSelectTool }: ToolRegistryPanelProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setFilter("")}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-md text-sm font-medium motion-safe:transition-colors ${
               !filter
                 ? "bg-accent text-void"
                 : "bg-bg-surface border border-border-subtle text-text-primary hover:bg-bg-hover"
@@ -68,7 +68,7 @@ export function ToolRegistryPanel({ onSelectTool }: ToolRegistryPanelProps) {
             <button
               key={cat}
               onClick={() => setFilter(cat)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-sm font-medium motion-safe:transition-colors ${
                 filter === cat
                   ? "bg-accent text-void"
                   : "bg-bg-surface border border-border-subtle text-text-primary hover:bg-bg-hover"
@@ -130,7 +130,7 @@ export function ToolRegistryPanel({ onSelectTool }: ToolRegistryPanelProps) {
           {filtered.map((tool) => (
             <div
               key={tool.name}
-              className={`bg-bg-elevated rounded-lg border border-border-subtle p-4 space-y-2 hover:shadow-md transition-shadow ${
+              className={`bg-bg-elevated rounded-lg border border-border-subtle p-4 space-y-2 hover:shadow-md motion-safe:transition-shadow ${
                 onSelectTool ? "cursor-pointer hover:border-accent/40" : ""
               }`}
               onClick={() => onSelectTool?.(tool)}

@@ -36,7 +36,7 @@ export function DockedDownloadPanel() {
       {!expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-bg-surface/50 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-bg-surface/50 motion-safe:transition-colors"
           aria-label="Expand download panel"
         >
           <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
@@ -64,7 +64,7 @@ export function DockedDownloadPanel() {
           <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border-subtle">
             <button
               onClick={() => setExpanded(false)}
-              className="text-text-muted hover:text-text-primary transition-colors"
+              className="text-text-muted hover:text-text-primary motion-safe:transition-colors"
               aria-label="Collapse download panel"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -85,7 +85,7 @@ export function DockedDownloadPanel() {
               )}
               <button
                 onClick={() => setShowHistory(!showHistory)}
-                className="text-xs text-text-muted hover:text-text-primary transition-colors"
+                className="text-xs text-text-muted hover:text-text-primary motion-safe:transition-colors"
               >
                 History
               </button>
@@ -115,7 +115,7 @@ export function DockedDownloadPanel() {
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-1.5 rounded-full bg-bg-surface overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-accent transition-[width] duration-300"
+                      className="h-full rounded-full bg-accent motion-safe:transition-[width] duration-300"
                       style={{ width: `${Math.round(job.progress * 100)}%` }}
                     />
                   </div>
@@ -123,7 +123,7 @@ export function DockedDownloadPanel() {
                     {job.status === "downloading" ? (
                       <button
                         onClick={() => actions.pause(job.job_id)}
-                        className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-surface transition-colors"
+                        className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-surface motion-safe:transition-colors"
                         aria-label={`Pause download of ${job.model_id}`}
                         title="Pause"
                       >
@@ -135,7 +135,7 @@ export function DockedDownloadPanel() {
                     ) : job.status === "paused" ? (
                       <button
                         onClick={() => actions.resume(job.job_id)}
-                        className="p-1 rounded text-text-muted hover:text-accent hover:bg-bg-surface transition-colors"
+                        className="p-1 rounded text-text-muted hover:text-accent hover:bg-bg-surface motion-safe:transition-colors"
                         aria-label={`Resume download of ${job.model_id}`}
                         title="Resume"
                       >
@@ -146,7 +146,7 @@ export function DockedDownloadPanel() {
                     ) : null}
                     <button
                       onClick={() => actions.cancel(job.model_id)}
-                      className="p-1 rounded text-text-muted hover:text-danger hover:bg-bg-surface transition-colors"
+                      className="p-1 rounded text-text-muted hover:text-danger hover:bg-bg-surface motion-safe:transition-colors"
                       aria-label={`Cancel download of ${job.model_id}`}
                       title="Cancel"
                     >
@@ -178,7 +178,7 @@ export function DockedDownloadPanel() {
                 </span>
                 <button
                   onClick={() => actions.cancel(job.model_id)}
-                  className="p-1 rounded text-text-muted hover:text-danger hover:bg-bg-surface transition-colors"
+                  className="p-1 rounded text-text-muted hover:text-danger hover:bg-bg-surface motion-safe:transition-colors"
                   aria-label={`Cancel queued download of ${job.model_id}`}
                   title="Cancel"
                 >
@@ -196,7 +196,7 @@ export function DockedDownloadPanel() {
                   <span className="text-xs text-text-muted font-medium">History</span>
                   <button
                     onClick={() => actions.clearCompleted()}
-                    className="text-xs text-text-muted hover:text-danger transition-colors"
+                    className="text-xs text-text-muted hover:text-danger motion-safe:transition-colors"
                   >
                     Clear all
                   </button>
@@ -220,7 +220,7 @@ export function DockedDownloadPanel() {
                     {item.status === "failed" && (
                       <button
                         onClick={() => actions.retry(item.model_id)}
-                        className="text-xs text-accent hover:text-accent/80 transition-colors"
+                        className="text-xs text-accent hover:text-accent/80 motion-safe:transition-colors"
                       >
                         Retry
                       </button>

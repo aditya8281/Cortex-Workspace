@@ -3,10 +3,9 @@ import type { NextRequest } from "next/server";
 
 const PUBLIC_PATHS = ["/auth", "/auth/register", "/api", "/_next", "/favicon.ico"];
 const PROTECTED_PATHS = [
-  "/", "/dashboard", "/chat", "/agents", "/models", "/system",
+  "/", "/chat", "/agents", "/models", "/system",
   "/settings", "/vault", "/privacy", "/memory", "/search",
-  "/compare", "/intelligence", "/execution", "/developer",
-  "/docs", "/apps", "/knowledge",
+  "/cognition", "/execution", "/awareness",
 ];
 
 export function middleware(request: NextRequest) {

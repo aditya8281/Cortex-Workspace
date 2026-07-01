@@ -3,7 +3,6 @@
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { AppShell } from "@/shared/layout/AppShell";
 import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { EmptyState } from "@/shared/ui/EmptyState";
@@ -88,7 +87,6 @@ export default function ConsentPage() {
   };
 
   if (loading || !user) return (
-    <AppShell>
       <div className="max-w-4xl space-y-6">
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-4 w-64" />
@@ -106,13 +104,11 @@ export default function ConsentPage() {
           ))}
         </div>
       </div>
-    </AppShell>
   );
 
   const grantedCount = entries.filter((e) => e.granted).length;
 
   return (
-    <AppShell>
       <div className="max-w-4xl space-y-6">
         <div>
           <h1 className="text-headline font-semibold text-text-primary">Consent Management</h1>
@@ -179,6 +175,5 @@ export default function ConsentPage() {
           </div>
         )}
       </div>
-    </AppShell>
   );
 }

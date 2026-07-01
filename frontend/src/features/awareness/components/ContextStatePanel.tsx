@@ -77,7 +77,7 @@ export function ContextStatePanel() {
         <p className="text-sm text-danger">{error}</p>
         <button
           onClick={() => fetchStates()}
-          className="mt-3 px-3 py-1.5 rounded-md text-xs font-medium bg-bg-surface border border-border-subtle text-text-primary hover:bg-bg-hover transition-colors duration-150"
+          className="mt-3 px-3 py-1.5 rounded-md text-xs font-medium bg-bg-surface border border-border-subtle text-text-primary hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150"
         >
           Retry
         </button>
@@ -131,7 +131,7 @@ export function ContextStatePanel() {
 
             {/* Value */}
             <pre
-              className={`font-mono text-xs text-text-secondary bg-bg-surface rounded px-2 py-1 overflow-x-auto transition-all duration-200 ${
+              className={`font-mono text-xs text-text-secondary bg-bg-surface rounded px-2 py-1 overflow-x-auto motion-safe:transition-all motion-safe:duration-200 ${
                 isExpanded || !isLong ? "max-h-none" : "max-h-16 overflow-hidden"
               }`}
             >

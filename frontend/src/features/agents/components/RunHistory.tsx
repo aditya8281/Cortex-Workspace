@@ -32,7 +32,7 @@ export function RunHistory({
         <button
           key={run.id}
           onClick={() => onSelect(run)}
-          className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-bg-hover transition-colors duration-150"
+          className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150"
         >
           <Badge variant={statusVariant[run.status] ?? "default"}>
             {run.status}

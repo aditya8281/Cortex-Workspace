@@ -45,7 +45,7 @@ export function IndexProgress({ progress, status }: IndexProgressProps) {
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-surface">
         <div
           ref={barRef}
-          className={`h-full rounded-full bg-accent transition-[width] duration-300 ease-out ${
+          className={`h-full rounded-full bg-accent motion-safe:transition-[width] duration-300 ease-out ${
             isActive ? "animate-pulse-subtle" : ""
           }`}
           style={{ width: `${normalized}%` }}

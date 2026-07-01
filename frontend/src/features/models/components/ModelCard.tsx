@@ -60,7 +60,7 @@ export function ModelCard({
   }, [downloading]);
 
   return (
-    <Card className={`p-4 flex flex-col gap-3 ${flash ? "ring-2 ring-accent/40 shadow-glow transition-shadow duration-300" : ""}`} role="article" aria-label={model.display_name}>
+    <Card className={`p-4 flex flex-col gap-3 ${flash ? "ring-2 ring-accent/40 shadow-glow motion-safe:transition-shadow duration-300" : ""}`} role="article" aria-label={model.display_name}>
       {/* Header: name + badges */}
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-title font-semibold text-text-primary leading-tight truncate min-w-0">
@@ -126,7 +126,7 @@ export function ModelCard({
           <div className="flex items-center justify-between">
             <div className="flex-1 h-2 rounded-full bg-bg-surface overflow-hidden relative">
               <div
-                className="h-full rounded-full transition-[width] duration-500 ease-out"
+                className="h-full rounded-full motion-safe:transition-[width] duration-500 ease-out"
                 style={{
                   width: `${Math.round(downloadProgress * 100)}%`,
                   background: job.status === "paused"
@@ -162,7 +162,7 @@ export function ModelCard({
               {job.status === "downloading" ? (
                 <button
                   onClick={() => actions.pause(job.job_id)}
-                  className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-surface transition-colors"
+                  className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-surface motion-safe:transition-colors"
                   aria-label={`Pause download of ${model.display_name}`}
                   title="Pause"
                 >
@@ -174,7 +174,7 @@ export function ModelCard({
               ) : job.status === "paused" ? (
                 <button
                   onClick={() => actions.resume(job.job_id)}
-                  className="p-1 rounded text-text-muted hover:text-accent hover:bg-bg-surface transition-colors"
+                  className="p-1 rounded text-text-muted hover:text-accent hover:bg-bg-surface motion-safe:transition-colors"
                   aria-label={`Resume download of ${model.display_name}`}
                   title="Resume"
                 >
@@ -185,7 +185,7 @@ export function ModelCard({
               ) : null}
               <button
                 onClick={() => actions.cancel(model.model_id)}
-                className="p-1 rounded text-text-muted hover:text-danger hover:bg-bg-surface transition-colors"
+                className="p-1 rounded text-text-muted hover:text-danger hover:bg-bg-surface motion-safe:transition-colors"
                 aria-label={`Cancel download of ${model.display_name}`}
                 title="Cancel"
               >

@@ -49,16 +49,16 @@ function StatCard({
   color?: "accent" | "red" | "success" | "warning";
 }) {
   const colorMap = {
-    accent: "from-accent/20 to-accent/5 border-accent/20",
-    red: "from-accent-red/20 to-accent-red/5 border-accent-red/20",
-    success: "from-success/20 to-success/5 border-success/20",
-    warning: "from-warning/20 to-warning/5 border-warning/20",
+    accent: "border-accent/20",
+    red: "border-accent-red/20",
+    success: "border-success/20",
+    warning: "border-warning/20",
   };
 
   return (
     <div className={cn(
       "rounded-xl border p-4",
-      "bg-gradient-to-br",
+      "bg-bg-widget backdrop-blur-xl",
       colorMap[color],
       "motion-safe:transition-all motion-safe:duration-200",
     )}>
@@ -88,7 +88,7 @@ function MetricBar({ label, value, max, color = "accent" }: { label: string; val
       <span className="text-xs text-text-muted w-24 flex-shrink-0 truncate">{label}</span>
       <div className="flex-1 h-2 rounded-full bg-bg-surface overflow-hidden">
         <div
-          className={cn("h-full rounded-full transition-[width] duration-500 ease-out", {
+          className={cn("h-full rounded-full motion-safe:transition-[width] duration-500 ease-out", {
             "bg-accent": color === "accent",
             "bg-accent-red": color === "red",
             "bg-success": color === "success",

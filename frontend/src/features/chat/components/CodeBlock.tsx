@@ -24,7 +24,7 @@ export function CodeBlock({ language, children }: CodeBlockProps) {
         ) : <span />}
         <button
           onClick={handleCopy}
-          className="text-[10px] text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer"
+          className="text-[10px] text-text-muted hover:text-text-secondary opacity-0 group-hover:opacity-100 motion-safe:transition-opacity motion-safe:duration-150 cursor-pointer"
           aria-label="Copy code"
         >
           {copied ? "Copied!" : "Copy"}

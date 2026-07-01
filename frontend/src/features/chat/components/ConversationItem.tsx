@@ -47,7 +47,7 @@ export function ConversationItem({
 
   return (
     <div
-      className={`group flex items-center justify-between gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors duration-150 ${
+      className={`group flex items-center justify-between gap-2 px-3 py-2 rounded-lg cursor-pointer motion-safe:transition-colors motion-safe:duration-150 ${
         isActive
           ? "bg-bg-hover text-text-primary"
           : "text-text-secondary hover:bg-bg-hover/50"
@@ -67,7 +67,7 @@ export function ConversationItem({
       ) : (
         <span className="flex-1 truncate text-xs">{title}</span>
       )}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex-shrink-0">
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 motion-safe:transition-opacity motion-safe:duration-150 flex-shrink-0">
         {!editing && (
           <>
             <button

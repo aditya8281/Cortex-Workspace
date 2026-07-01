@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/shared/layout/AppShell";
 import { StatusDot } from "@/shared/ui/StatusDot";
 import { Card } from "@/shared/ui/Card";
 import { Badge } from "@/shared/ui/Badge";
@@ -55,7 +54,6 @@ export default function SystemPage() {
   }, [loadLLM, loadLogs]);
 
   if (loading || !user) return (
-    <AppShell>
       <div className="space-y-6">
         <Skeleton className="h-6 w-16" />
         <Skeleton className="h-4 w-40" />
@@ -78,11 +76,9 @@ export default function SystemPage() {
           ))}
         </div>
       </div>
-    </AppShell>
   );
 
   return (
-    <AppShell>
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
@@ -98,24 +94,22 @@ export default function SystemPage() {
           </div>
         </div>
 
-        {/* LLM Status */}
-        <Card className="p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <StatusDot
-                color={llm?.status === "healthy" ? "success" : llm?.status === "error" ? "danger" : "warning"}
-                pulse={llm?.status === "healthy"}
-              />
-              <div>
-                <p className="text-sm font-medium text-text-primary">LLM Engine</p>
-                <p className="text-xs text-text-muted">
-                  {llm?.status ?? "unknown"} {llm?.latency_ms != null ? `· ${Math.round(llm.latency_ms)}ms` : ""}
-                  {llm?.error && <span className="text-danger ml-1">· {llm.error}</span>}
-                </p>
-              </div>
+        {/* LLM Status — minimal row, no wrapper */}
+        <div className="flex items-center justify-between rounded-xl border border-border-subtle p-4">
+          <div className="flex items-center gap-3">
+            <StatusDot
+              color={llm?.status === "healthy" ? "success" : llm?.status === "error" ? "danger" : "warning"}
+              pulse={llm?.status === "healthy"}
+            />
+            <div>
+              <p className="text-sm font-medium text-text-primary">LLM Engine</p>
+              <p className="text-xs text-text-muted">
+                {llm?.status ?? "unknown"} {llm?.latency_ms != null ? `· ${Math.round(llm.latency_ms)}ms` : ""}
+                {llm?.error && <span className="text-danger ml-1">· {llm.error}</span>}
+              </p>
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Metrics — live from shared MetricsProvider (2/sec) */}
         <div>
@@ -135,7 +129,7 @@ export default function SystemPage() {
                 <p className="text-lg font-semibold text-text-primary tabular-nums mb-3">{value}</p>
                 <div className="h-1.5 rounded-full bg-bg-surface overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-[width] duration-300 ease-out ${
+                    className={`h-full rounded-full motion-safe:transition-[width] duration-300 ease-out ${
                       percent < 70 ? "bg-success" : percent < 85 ? "bg-warning" : "bg-danger"
                     }`}
                     style={{ width: `${Math.min(percent, 100)}%` }}
@@ -191,6 +185,5 @@ export default function SystemPage() {
         {/* Logs — live from WS + REST fallback */}
         <LogViewer logs={connected ? logs : restLogs} />
       </div>
-    </AppShell>
   );
 }

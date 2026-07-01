@@ -22,7 +22,7 @@ export function SourcesPanel({ sources }: SourcesPanelProps) {
     <div className="border-t border-border-subtle mt-4 pt-3">
       <button
         onClick={() => setExpanded(expanded === null ? 0 : null)}
-        className="flex items-center gap-2 text-xs text-text-muted hover:text-text-secondary transition-colors duration-150 cursor-pointer"
+        className="flex items-center gap-2 text-xs text-text-muted hover:text-text-secondary motion-safe:transition-colors motion-safe:duration-150 cursor-pointer"
       >
         <svg
           width="12"
@@ -43,7 +43,7 @@ export function SourcesPanel({ sources }: SourcesPanelProps) {
           fill="none"
           stroke="currentColor"
           strokeWidth="1.2"
-          className={`transition-transform duration-150 ${
+          className={`motion-safe:transition-transform duration-150 ${
             expanded !== null ? "rotate-180" : ""
           }`}
         >

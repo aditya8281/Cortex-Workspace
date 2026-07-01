@@ -73,7 +73,7 @@ export function DownloadsView() {
                   </div>
                   <div className="h-2 rounded-full bg-bg-surface overflow-hidden mb-2">
                     <div
-                      className={`h-full rounded-full transition-[width] duration-300 ${
+                      className={`h-full rounded-full motion-safe:transition-[width] duration-300 ${
                         job.status === "paused" ? "bg-warning" : "bg-accent"
                       }`}
                       style={{ width: `${percent}%` }}

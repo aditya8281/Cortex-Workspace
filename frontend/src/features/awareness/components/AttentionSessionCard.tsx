@@ -103,7 +103,7 @@ export function AttentionSessionCard({
             </div>
             <div className="h-1.5 w-full rounded-full bg-bg-surface overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                className={`h-full rounded-full motion-safe:transition-all duration-500 ${barColor}`}
                 style={{ width: `${session.focus_score}%` }}
               />
             </div>
@@ -132,7 +132,7 @@ export function AttentionSessionCard({
           <button
             onClick={() => onEnd(session.id)}
             disabled={ending}
-            className="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium bg-danger/10 text-danger hover:bg-danger/20 disabled:opacity-40 disabled:pointer-events-none transition-colors duration-150"
+            className="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium bg-danger/10 text-danger hover:bg-danger/20 disabled:opacity-40 disabled:pointer-events-none motion-safe:transition-colors motion-safe:duration-150"
           >
             {ending ? "Ending..." : "End"}
           </button>

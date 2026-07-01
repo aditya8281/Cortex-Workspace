@@ -2,7 +2,6 @@
 
 import { type ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
-import { AppShell } from "@/shared/layout/AppShell";
 
 interface ComingSoonProps {
   title: string;
@@ -20,7 +19,7 @@ export function ComingSoon({
   className,
 }: ComingSoonProps) {
   return (
-    <AppShell>
+    <div className="flex h-dvh items-center justify-center bg-bg-base">
       <div
         className={cn(
           "flex flex-col items-center justify-center px-6 py-24 text-center max-w-lg mx-auto",
@@ -42,6 +41,6 @@ export function ComingSoon({
           {version}
         </span>
       </div>
-    </AppShell>
+    </div>
   );
 }

@@ -149,7 +149,7 @@ export function BrowseView({
                   prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap]
                 )
               }
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-150 ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium motion-safe:transition-colors motion-safe:duration-150 ${
                 capabilityFilter.includes(cap)
                   ? "bg-accent/12 text-accent"
                   : "bg-bg-surface text-text-muted hover:text-text-secondary"
@@ -165,7 +165,7 @@ export function BrowseView({
             <button
               key={size}
               onClick={() => setSizeFilter(sizeFilter === size ? null : size)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors duration-150 ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium motion-safe:transition-colors motion-safe:duration-150 ${
                 sizeFilter === size
                   ? "bg-accent/12 text-accent"
                   : "bg-bg-surface text-text-muted hover:text-text-secondary"

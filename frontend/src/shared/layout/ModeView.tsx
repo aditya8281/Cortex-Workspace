@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import { useModeStack } from "./ModeStack";
 import { Dock } from "./Dock";
 import { NeuralRibbon } from "./NeuralRibbon";
@@ -13,13 +15,15 @@ import ModelsPage from "@/features/models/page";
 import CodePage from "@/features/code/page";
 import UtilityPage from "@/features/utility/page";
 import SettingsPage from "@/features/settings/page";
-import SystemsPage from "@/features/systems/page";
+import SystemsPage from "@/features/system/page";
 import ProfilePage from "@/features/profile/page";
 import {
   ChatIcon, SearchIcon, BrainIcon, VaultIcon, ModelsIcon,
   CodeIcon, UtilityIcon, SettingsIcon, SystemsIcon, ProfileIcon,
 } from "@/shared/ui/icons";
 import { cn } from "@/shared/lib/utils";
+
+gsap.registerPlugin(useGSAP);
 
 interface ModeEntry {
   icon: React.ReactNode;
@@ -40,8 +44,6 @@ const MODE_REGISTRY: Record<string, ModeEntry> = {
   profile:  { icon: <ProfileIcon size={18} />, name: "Profile",  Component: ProfilePage },
 };
 
-// ── Hub entry point (replaced placeholder from P03+) ─────────────────
-
 // ── Placeholder mode page ────────────────────────────────────────────
 function PlaceholderMode({ icon, name }: { icon: React.ReactNode; name: string }) {
   return (
@@ -55,29 +57,36 @@ function PlaceholderMode({ icon, name }: { icon: React.ReactNode; name: string }
   );
 }
 
-// ── Crossfade wrapper ────────────────────────────────────────────────
-function CrossfadeView({ children, id, exiting }: { children: React.ReactNode; id: string; exiting?: boolean }) {
-  return (
-    <div
-      key={id}
-      className={cn(
-        "flex h-full flex-col",
-        exiting
-          ? "animate-fade-out motion-safe:animate-fade-out"
-          : "animate-fade-in motion-safe:animate-fade-in",
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
 // ── Component ─────────────────────────────────────────────────────────
 export function ModeView() {
   const { currentMode, isHub, pushMode, popMode, goToHub } = useModeStack();
   const [dockVisible, setDockVisible] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
   const [exitingId, setExitingId] = useState<string | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const prevModeRef = useRef(currentMode);
+
+  // ── GSAP crossfade on mode change ──────────────────────────────────
+  useGSAP(() => {
+    if (!contentRef.current) return;
+    if (currentMode === prevModeRef.current) return;
+
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      gsap.set(contentRef.current, { opacity: 1 });
+      return () => {};
+    });
+
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      const tl = gsap.timeline();
+      // Fade out briefly if we were already rendered
+      tl.fromTo(contentRef.current, { opacity: 1 }, { opacity: 0, duration: 0.05, ease: "none" })
+        .to(contentRef.current, { opacity: 1, duration: 0.12, ease: "power2.out" });
+    });
+
+    prevModeRef.current = currentMode;
+    return () => mm.revert();
+  }, { dependencies: [currentMode], scope: contentRef });
 
   // Auto-hide dock after 3s in mode view
   useEffect(() => {
@@ -119,7 +128,7 @@ export function ModeView() {
     setTransitioning(true);
     requestAnimationFrame(() => {
       pushMode(modeId);
-      setTimeout(() => { setTransitioning(false); setExitingId(null); }, 150);
+      setTimeout(() => { setTransitioning(false); setExitingId(null); }, 200);
     });
   };
 
@@ -129,7 +138,7 @@ export function ModeView() {
     requestAnimationFrame(() => {
       const popped = popMode();
       if (popped) {
-        setTimeout(() => { setTransitioning(false); setExitingId(null); }, 150);
+        setTimeout(() => { setTransitioning(false); setExitingId(null); }, 200);
       }
     });
   };
@@ -140,9 +149,9 @@ export function ModeView() {
       <div className="relative h-dvh overflow-hidden bg-bg-base">
         <NeuralRibbon />
         <div className="absolute inset-0 top-6 flex flex-col overflow-y-auto">
-          <CrossfadeView id="hub" exiting={exitingId === "hub"}>
+          <div ref={contentRef} className="flex h-full flex-col">
             <HubPage />
-          </CrossfadeView>
+          </div>
         </div>
         <Dock
           activeMode={currentMode}
@@ -175,7 +184,7 @@ export function ModeView() {
     <div className="relative h-dvh overflow-hidden bg-bg-base">
       <NeuralRibbon />
       <div className="absolute inset-0 top-6 flex flex-col">
-        <CrossfadeView id={currentMode} exiting={exitingId === currentMode}>
+        <div ref={contentRef} className="flex h-full flex-col">
           <header className="flex h-11 items-center gap-2.5 border-b border-border-subtle px-4 flex-shrink-0">
             <button
               onClick={handleBack}
@@ -198,7 +207,7 @@ export function ModeView() {
               <PlaceholderMode icon={entry.icon} name={entry.name} />
             )}
           </main>
-        </CrossfadeView>
+        </div>
       </div>
       <Dock
         activeMode={currentMode}

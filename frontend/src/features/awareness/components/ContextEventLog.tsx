@@ -113,7 +113,7 @@ export function ContextEventLog({
         <p className="text-sm text-danger">{error}</p>
         <button
           onClick={() => fetchEvents()}
-          className="mt-3 px-3 py-1.5 rounded-md text-xs font-medium bg-bg-surface border border-border-subtle text-text-primary hover:bg-bg-hover transition-colors duration-150"
+          className="mt-3 px-3 py-1.5 rounded-md text-xs font-medium bg-bg-surface border border-border-subtle text-text-primary hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150"
         >
           Retry
         </button>
@@ -147,7 +147,7 @@ export function ContextEventLog({
           </span>
           <button
             onClick={() => onFilterChange(undefined)}
-            className={`px-2 py-1 rounded text-xs font-medium transition-colors duration-150 ${
+            className={`px-2 py-1 rounded text-xs font-medium motion-safe:transition-colors motion-safe:duration-150 ${
               !filterType
                 ? "bg-accent/12 text-accent"
                 : "bg-bg-surface text-text-muted hover:text-text-primary"
@@ -160,7 +160,7 @@ export function ContextEventLog({
               <button
                 key={type}
                 onClick={() => onFilterChange(type)}
-                className={`px-2 py-1 rounded text-xs font-medium transition-colors duration-150 ${
+                className={`px-2 py-1 rounded text-xs font-medium motion-safe:transition-colors motion-safe:duration-150 ${
                   filterType === type
                     ? "bg-accent/12 text-accent"
                     : "bg-bg-surface text-text-muted hover:text-text-primary"

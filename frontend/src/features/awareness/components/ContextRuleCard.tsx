@@ -88,7 +88,7 @@ export function ContextRuleCard({
           <button
             onClick={() => onToggle(rule.id, !rule.enabled)}
             disabled={toggling}
-            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none ${
+            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full motion-safe:transition-colors motion-safe:duration-150 focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none ${
               rule.enabled
                 ? "bg-accent"
                 : "bg-bg-surface border border-border-subtle"
@@ -96,7 +96,7 @@ export function ContextRuleCard({
             aria-label={`Toggle ${rule.name}`}
           >
             <span
-              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-150 ${
+              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white motion-safe:transition-transform duration-150 ${
                 rule.enabled ? "translate-x-[18px]" : "translate-x-[3px]"
               }`}
             />
@@ -149,7 +149,7 @@ export function ContextRuleCard({
         {onEdit && (
           <button
             onClick={() => onEdit(rule)}
-            className="px-3 py-1.5 rounded-md text-xs font-medium bg-bg-surface border border-border-subtle text-text-primary hover:bg-bg-hover transition-colors duration-150"
+            className="px-3 py-1.5 rounded-md text-xs font-medium bg-bg-surface border border-border-subtle text-text-primary hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150"
           >
             Edit
           </button>
@@ -164,13 +164,13 @@ export function ContextRuleCard({
                     onDelete(rule.id);
                     setConfirmDelete(false);
                   }}
-                  className="px-2 py-1 rounded text-xs font-medium bg-danger/10 text-danger hover:bg-danger/20 transition-colors duration-150"
+                  className="px-2 py-1 rounded text-xs font-medium bg-danger/10 text-danger hover:bg-danger/20 motion-safe:transition-colors motion-safe:duration-150"
                 >
                   Yes
                 </button>
                 <button
                   onClick={() => setConfirmDelete(false)}
-                  className="px-2 py-1 rounded text-xs font-medium bg-bg-surface text-text-muted hover:text-text-primary transition-colors duration-150"
+                  className="px-2 py-1 rounded text-xs font-medium bg-bg-surface text-text-muted hover:text-text-primary motion-safe:transition-colors motion-safe:duration-150"
                 >
                   No
                 </button>
@@ -178,7 +178,7 @@ export function ContextRuleCard({
             ) : (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="px-3 py-1.5 rounded-md text-xs font-medium bg-danger/10 text-danger hover:bg-danger/20 transition-colors duration-150"
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-danger/10 text-danger hover:bg-danger/20 motion-safe:transition-colors motion-safe:duration-150"
               >
                 Delete
               </button>

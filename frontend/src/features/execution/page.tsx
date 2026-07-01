@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/shared/auth/AuthProvider";
-import { AppShell } from "@/shared/layout/AppShell";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { tools, workflows, type ToolExecution, type Workflow, type ExecutionStats } from "./api";
 import { ToolRegistryPanel } from "./components/ToolRegistryPanel";
@@ -41,7 +40,6 @@ export default function ExecutionPage() {
 
   if (authLoading || !user) {
     return (
-      <AppShell>
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="space-y-1">
             <Skeleton className="h-6 w-32" />
@@ -63,12 +61,10 @@ export default function ExecutionPage() {
             ))}
           </div>
         </div>
-      </AppShell>
     );
   }
 
   return (
-    <AppShell>
       <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
         {/* Page header */}
         <div>
@@ -86,7 +82,7 @@ export default function ExecutionPage() {
               role="tab"
               aria-selected={activeTab === tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors -mb-px ${
+              className={`px-4 py-2 text-sm font-medium rounded-t-md motion-safe:transition-colors -mb-px ${
                 activeTab === tab.key
                   ? "bg-bg-elevated border border-border-subtle border-b-bg-elevated text-text-primary"
                   : "text-text-muted hover:text-text-secondary"
@@ -104,7 +100,6 @@ export default function ExecutionPage() {
           {activeTab === "workflows" && <WorkflowsTab />}
         </div>
       </div>
-    </AppShell>
   );
 }
 

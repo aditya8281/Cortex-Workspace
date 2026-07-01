@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/shared/layout/AppShell";
 import {
   planning,
   errors,
@@ -72,7 +71,7 @@ function ErrorBanner({
       <p className="text-sm text-danger">{message}</p>
       <button
         onClick={onRetry}
-        className="mt-2 px-3 py-1.5 rounded-md text-sm font-medium bg-danger/10 text-danger hover:bg-danger/20 transition-colors"
+        className="mt-2 px-3 py-1.5 rounded-md text-sm font-medium bg-danger/10 text-danger hover:bg-danger/20 motion-safe:transition-colors"
       >
         Retry
       </button>
@@ -133,12 +132,12 @@ function PlanningSection() {
           value={goal}
           onChange={(e) => setGoal(e.target.value)}
           placeholder="Enter a goal to plan..."
-          className="flex-1 px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+          className="flex-1 px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent motion-safe:transition-colors"
         />
         <button
           type="submit"
           disabled={submitting || !goal.trim()}
-          className="px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-void hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-void hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed motion-safe:transition-colors"
         >
           {submitting ? "Creating..." : "Create Plan"}
         </button>
@@ -223,21 +222,21 @@ function ErrorAnalysisSection() {
             value={errorType}
             onChange={(e) => setErrorType(e.target.value)}
             placeholder="Error type (e.g. TypeError)"
-            className="px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+            className="px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent motion-safe:transition-colors"
           />
           <input
             type="text"
             value={errorMessage}
             onChange={(e) => setErrorMessage(e.target.value)}
             placeholder="Error message"
-            className="px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+            className="px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent motion-safe:transition-colors"
           />
         </div>
         <div className="flex justify-end">
           <button
             type="submit"
             disabled={submitting || !errorType.trim() || !errorMessage.trim()}
-            className="px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-void hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-void hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed motion-safe:transition-colors"
           >
             {submitting ? "Analyzing..." : "Analyze Error"}
           </button>
@@ -320,12 +319,12 @@ function HypothesisSection() {
           value={hypothesisText}
           onChange={(e) => setHypothesisText(e.target.value)}
           placeholder="Enter a hypothesis..."
-          className="flex-1 px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+          className="flex-1 px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent motion-safe:transition-colors"
         />
         <button
           type="submit"
           disabled={submitting || !hypothesisText.trim()}
-          className="px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-void hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-void hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed motion-safe:transition-colors"
         >
           {submitting ? "Generating..." : "Generate"}
         </button>
@@ -389,12 +388,12 @@ function ConfidenceSection() {
           value={taskType}
           onChange={(e) => setTaskType(e.target.value)}
           placeholder="Task type to evaluate (e.g. code_generation, classification)..."
-          className="flex-1 px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
+          className="flex-1 px-3 py-2 rounded-md bg-bg-surface border border-border-subtle text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-accent motion-safe:transition-colors"
         />
         <button
           type="submit"
           disabled={submitting || !taskType.trim()}
-          className="px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-void hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-accent text-void hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed motion-safe:transition-colors"
         >
           {submitting ? "Estimating..." : "Estimate"}
         </button>
@@ -434,7 +433,6 @@ export default function CognitionPage() {
 
   if (loading || !user)
     return (
-      <AppShell>
         <div className="max-w-5xl mx-auto space-y-6">
           <div className="h-6 w-24 bg-bg-elevated rounded animate-pulse" />
           <div className="h-4 w-40 bg-bg-elevated rounded animate-pulse" />
@@ -448,11 +446,9 @@ export default function CognitionPage() {
           </div>
           <SectionSkeleton />
         </div>
-      </AppShell>
     );
 
   return (
-    <AppShell>
       <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
         <div>
           <h1 className="text-headline font-semibold text-text-primary">
@@ -470,7 +466,7 @@ export default function CognitionPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              className={`px-3 py-2 text-sm font-medium motion-safe:transition-colors border-b-2 -mb-px ${
                 activeTab === tab.key
                   ? "border-accent text-accent"
                   : "border-transparent text-text-muted hover:text-text-primary"
@@ -487,6 +483,5 @@ export default function CognitionPage() {
         {activeTab === "hypothesis" && <HypothesisSection />}
         {activeTab === "confidence" && <ConfidenceSection />}
       </div>
-    </AppShell>
   );
 }

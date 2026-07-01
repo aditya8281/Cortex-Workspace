@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/shared/layout/AppShell";
 import { Card } from "@/shared/ui/Card";
 import { Badge } from "@/shared/ui/Badge";
 import { Button } from "@/shared/ui/Button";
@@ -42,7 +41,6 @@ type TabId = (typeof TABS)[number]["id"];
 
 function PageSkeleton() {
   return (
-    <AppShell>
       <div className="max-w-5xl space-y-6">
         <div>
           <Skeleton className="h-6 w-48" />
@@ -63,7 +61,6 @@ function PageSkeleton() {
           ))}
         </div>
       </div>
-    </AppShell>
   );
 }
 
@@ -130,7 +127,7 @@ function CreateRuleModal({
           <select
             value={ruleType}
             onChange={(e) => setRuleType(e.target.value)}
-            className="h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary focus:border-border-accent focus:outline-none transition-colors duration-150"
+            className="h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary focus:border-border-accent focus:outline-none motion-safe:transition-colors motion-safe:duration-150"
           >
             <option value="trigger">Trigger</option>
             <option value="filter">Filter</option>
@@ -147,7 +144,7 @@ function CreateRuleModal({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What this rule does..."
             rows={3}
-            className="rounded-md border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-accent focus:outline-none transition-colors duration-150 resize-none"
+            className="rounded-md border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-accent focus:outline-none motion-safe:transition-colors motion-safe:duration-150 resize-none"
           />
         </div>
         <Input
@@ -225,7 +222,7 @@ function StartSessionModal({
           <select
             value={sessionType}
             onChange={(e) => setSessionType(e.target.value)}
-            className="h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary focus:border-border-accent focus:outline-none transition-colors duration-150"
+            className="h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary focus:border-border-accent focus:outline-none motion-safe:transition-colors motion-safe:duration-150"
           >
             <option value="deep_work">Deep Work</option>
             <option value="research">Research</option>
@@ -242,7 +239,7 @@ function StartSessionModal({
             onChange={(e) => setTaskDescription(e.target.value)}
             placeholder="What are you working on?"
             rows={3}
-            className="rounded-md border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-accent focus:outline-none transition-colors duration-150 resize-none"
+            className="rounded-md border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-accent focus:outline-none motion-safe:transition-colors motion-safe:duration-150 resize-none"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">
@@ -409,7 +406,6 @@ export default function ContextPage() {
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <AppShell>
       <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
         {/* Page Header */}
         <div>
@@ -427,7 +423,7 @@ export default function ContextPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-150 ${
+              className={`px-3 py-1.5 rounded-md text-sm font-medium motion-safe:transition-colors motion-safe:duration-150 ${
                 activeTab === tab.id
                   ? "bg-accent text-white"
                   : "text-text-muted hover:text-text-primary hover:bg-bg-hover"
@@ -500,7 +496,7 @@ export default function ContextPage() {
                     {recentSnapshots.map((snap) => (
                       <div
                         key={snap.id}
-                        className="flex items-center gap-4 p-2 rounded-md hover:bg-bg-hover transition-colors duration-150"
+                        className="flex items-center gap-4 p-2 rounded-md hover:bg-bg-hover motion-safe:transition-colors motion-safe:duration-150"
                       >
                         <span className="font-mono text-xs text-text-muted w-16 shrink-0">
                           {new Date(snap.created_at).toLocaleTimeString("en-US", {
@@ -645,7 +641,7 @@ export default function ContextPage() {
                 </span>
                 <button
                   onClick={() => setRuleFilter(undefined)}
-                  className={`px-2 py-1 rounded text-xs font-medium transition-colors duration-150 ${
+                  className={`px-2 py-1 rounded text-xs font-medium motion-safe:transition-colors motion-safe:duration-150 ${
                     !ruleFilter
                       ? "bg-accent/12 text-accent"
                       : "bg-bg-surface text-text-muted hover:text-text-primary"
@@ -657,7 +653,7 @@ export default function ContextPage() {
                   <button
                     key={type}
                     onClick={() => setRuleFilter(type)}
-                    className={`px-2 py-1 rounded text-xs font-medium transition-colors duration-150 ${
+                    className={`px-2 py-1 rounded text-xs font-medium motion-safe:transition-colors motion-safe:duration-150 ${
                       ruleFilter === type
                         ? "bg-accent/12 text-accent"
                         : "bg-bg-surface text-text-muted hover:text-text-primary"
@@ -733,6 +729,5 @@ export default function ContextPage() {
           </div>
         )}
       </div>
-    </AppShell>
   );
 }

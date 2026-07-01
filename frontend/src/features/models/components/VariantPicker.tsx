@@ -47,7 +47,7 @@ export function VariantPicker({
             onClick={() => onSelect(v.variant_id)}
             disabled={disabled}
             className={cn(
-              "flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-colors duration-150",
+              "flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm motion-safe:transition-colors motion-safe:duration-150",
               isSelected
                 ? "border-accent bg-accent/8 text-text-primary"
                 : "border-border-subtle bg-transparent text-text-secondary hover:border-border-default hover:text-text-primary",

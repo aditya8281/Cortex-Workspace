@@ -63,7 +63,7 @@ export function StorageCard() {
           {/* Disk usage bar */}
           <div className="h-2 w-full overflow-hidden rounded-full bg-bg-surface mb-3">
             <div
-              className="h-full rounded-full bg-accent transition-[width] duration-300"
+              className="h-full rounded-full bg-accent motion-safe:transition-[width] duration-300"
               style={{ width: `${Math.min(usagePct, 100)}%` }}
             />
           </div>

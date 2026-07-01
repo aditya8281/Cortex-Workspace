@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { SplitText } from "gsap/SplitText";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { apiFetch } from "@/shared/api/client";
 import { cn } from "@/shared/lib/utils";
+
+gsap.registerPlugin(useGSAP, SplitText);
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
@@ -15,6 +20,55 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // GSAP entrance + shake + SplitText heading reveal
+  useGSAP(() => {
+    if (!cardRef.current) return;
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      // Entrance: scale + fade
+      gsap.from(cardRef.current, { scale: 0.92, opacity: 0, duration: 0.4, ease: "power3.out" });
+
+      // SplitText: "Welcome back" character reveal
+      const heading = cardRef.current!.querySelector("h1");
+      if (heading) {
+        const split = new SplitText(heading, { type: "chars" });
+        gsap.set(split.chars, { opacity: 0, y: 12 });
+        gsap.to(split.chars, {
+          y: 0,
+          opacity: 1,
+          duration: 0.35,
+          stagger: { each: 0.03, from: "start" },
+          ease: "power3.out",
+          delay: 0.2,
+          onComplete: () => split.revert(),
+        });
+      }
+    });
+    return () => mm.revert();
+  }, { scope: cardRef });
+
+  // GSAP shake on error (replaces CSS keyframe)
+  useEffect(() => {
+    if (!error || !cardRef.current) return;
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.to(cardRef.current, {
+        keyframes: [
+          { x: -6, duration: 0.06 },
+          { x: 6, duration: 0.06 },
+          { x: -4, duration: 0.06 },
+          { x: 4, duration: 0.06 },
+          { x: -2, duration: 0.06 },
+          { x: 2, duration: 0.06 },
+          { x: 0, duration: 0.06 },
+        ],
+        ease: "power2.out",
+      });
+    });
+    return () => mm.revert();
+  }, [error, shakeKey]);
 
   // Already logged in
   useEffect(() => {
@@ -46,11 +100,10 @@ export default function LoginPage() {
 
   return (
     <div
-      key={shakeKey}
+      ref={cardRef}
       className={cn(
         "rounded-2xl border border-border-subtle p-6",
         "bg-bg-widget backdrop-blur-2xl",
-        error && "motion-safe:animate-shake",
       )}
     >
       {/* Header */}

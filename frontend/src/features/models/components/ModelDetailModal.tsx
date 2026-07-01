@@ -139,7 +139,7 @@ export function ModelDetailModal({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setSortBy("size")}
-                className={`px-2 py-1 rounded text-xs transition-colors ${
+                className={`px-2 py-1 rounded text-xs motion-safe:transition-colors ${
                   sortBy === "size" ? "bg-accent/12 text-accent" : "text-text-muted hover:text-text-secondary"
                 }`}
               >
@@ -147,7 +147,7 @@ export function ModelDetailModal({
               </button>
               <button
                 onClick={() => setSortBy("params")}
-                className={`px-2 py-1 rounded text-xs transition-colors ${
+                className={`px-2 py-1 rounded text-xs motion-safe:transition-colors ${
                   sortBy === "params" ? "bg-accent/12 text-accent" : "text-text-muted hover:text-text-secondary"
                 }`}
               >

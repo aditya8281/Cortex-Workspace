@@ -35,7 +35,7 @@ export function HypothesisCard({
   hypothesis: Hypothesis;
 }) {
   return (
-    <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 hover:shadow-md transition-shadow">
+    <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 hover:shadow-md motion-safe:transition-shadow">
       <div className="flex items-start justify-between gap-3">
         <p className="text-title font-medium text-text-primary min-w-0 flex-1 line-clamp-3">
           {hypothesis.hypothesis}

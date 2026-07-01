@@ -18,7 +18,7 @@ const stepStatusStyles: Record<string, string> = {
 
 export function TaskPlanCard({ plan }: { plan: TaskPlan }) {
   return (
-    <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 hover:shadow-md transition-shadow">
+    <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 hover:shadow-md motion-safe:transition-shadow">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-title font-medium text-text-primary truncate">

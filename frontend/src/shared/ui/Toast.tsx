@@ -98,7 +98,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <span className="text-text-primary flex-1">{t.message}</span>
             <button
               onClick={() => removeToast(t.id)}
-              className="flex-shrink-0 p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-hover transition-colors duration-100"
+              className="flex-shrink-0 p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-hover motion-safe:transition-colors duration-100"
               aria-label="Dismiss"
             >
               {DISMISS_ICON}

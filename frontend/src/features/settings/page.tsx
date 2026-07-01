@@ -119,7 +119,7 @@ export default function SettingsPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150 ${
+              className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md motion-safe:transition-all motion-safe:duration-150 ${
                 tab.key === activeTab
                   ? "bg-accent/12 text-accent"
                   : "text-text-muted hover:text-text-secondary hover:bg-bg-elevated"
@@ -175,7 +175,7 @@ export default function SettingsPage() {
                     rows={3}
                     maxLength={512}
                     placeholder="Tell us about yourself"
-                    className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25 transition-colors duration-150"
+                    className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25 motion-safe:transition-colors motion-safe:duration-150"
                   />
                 </div>
                 <div className="flex justify-end gap-2 pt-1">
@@ -222,7 +222,7 @@ export default function SettingsPage() {
               <div className="mt-4">
                 <a
                   href="/vault"
-                  className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent/80 transition-colors duration-150"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent/80 motion-safe:transition-colors motion-safe:duration-150"
                 >
                   Open Vault
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -269,7 +269,7 @@ export default function SettingsPage() {
             <Card className="p-5">
               <a
                 href="/privacy"
-                className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent/80 transition-colors duration-150"
+                className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent/80 motion-safe:transition-colors motion-safe:duration-150"
               >
                 Advanced Privacy Settings
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">

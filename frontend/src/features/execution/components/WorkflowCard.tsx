@@ -55,7 +55,7 @@ export function WorkflowCard({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="bg-bg-elevated rounded-lg border border-border-subtle hover:shadow-md transition-shadow">
+    <div className="bg-bg-elevated rounded-lg border border-border-subtle hover:shadow-md motion-safe:transition-shadow">
       {/* Header */}
       <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-start justify-between gap-3">
@@ -73,7 +73,7 @@ export function WorkflowCard({
             )}
           </div>
           <svg
-            className={`w-4 h-4 text-text-muted shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
+            className={`w-4 h-4 text-text-muted shrink-0 motion-safe:transition-transform ${expanded ? "rotate-180" : ""}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

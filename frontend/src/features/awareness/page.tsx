@@ -3,7 +3,6 @@
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { AppShell } from "@/shared/layout/AppShell";
 import { Card } from "@/shared/ui/Card";
 import { Skeleton } from "@/shared/ui/Skeleton";
 import { DeviceCard } from "./components/DeviceCard";
@@ -20,7 +19,6 @@ export default function AwarenessPage() {
   }, [user, loading, router]);
 
   if (loading || !user) return (
-    <AppShell>
       <div className="max-w-5xl space-y-6">
         <Skeleton className="h-6 w-24" />
         <Skeleton className="h-4 w-56" />
@@ -37,11 +35,9 @@ export default function AwarenessPage() {
           ))}
         </div>
       </div>
-    </AppShell>
   );
 
   return (
-    <AppShell>
       <div className="max-w-5xl space-y-6 animate-fade-in">
         <div>
           <h1 className="text-headline font-semibold text-text-primary">Awareness</h1>
@@ -55,6 +51,5 @@ export default function AwarenessPage() {
           <ProjectCard />
         </div>
       </div>
-    </AppShell>
   );
 }

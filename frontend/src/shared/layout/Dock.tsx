@@ -1,8 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import { cn } from "@/shared/lib/utils";
 import { ChatIcon, SearchIcon, BrainIcon, VaultIcon, ModelsIcon, CodeIcon, UtilityIcon, SettingsIcon, SystemsIcon, ProfileIcon } from "@/shared/ui/icons";
+
+gsap.registerPlugin(useGSAP);
 
 // ── Icon component map ──────────────────────────────────────────────
 const MODE_ICONS: Record<string, React.ComponentType<{className?: string; size?: number}>> = {
@@ -48,8 +52,71 @@ interface DockProps {
 // ── Component ─────────────────────────────────────────────────────────
 export function Dock({ activeMode, onModeChange, visible }: DockProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dockInnerRef = useRef<HTMLDivElement>(null);
+  const itemsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const lastVisible = useRef(visible);
 
-  // Keyboard: ⌘1-⌘0
+  // ── Entrance stagger on mount ──────────────────────────────────────
+  useGSAP(() => {
+    // Stagger items in from below
+    gsap.fromTo(
+      itemsRef.current.filter(Boolean),
+      { y: 16, opacity: 0, scale: 0.9 },
+      {
+        y: 0, opacity: 1, scale: 1,
+        duration: 0.4,
+        stagger: { from: "center", each: 0.035 },
+        ease: "power3.out",
+      },
+    );
+    // Dock glass container fade-in
+    gsap.fromTo(
+      dockInnerRef.current,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.5, delay: 0.2, ease: "power2.out" },
+    );
+  }, { scope: containerRef });
+
+  // ── Auto-hide animation (GSAP instead of CSS) ──────────────────────
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const el = containerRef.current;
+
+    if (visible) {
+      gsap.to(el, {
+        y: 0,
+        opacity: 1,
+        duration: 0.3,
+        ease: "power3.out",
+        overwrite: "auto",
+        onStart: () => el.classList.remove("pointer-events-none"),
+      });
+    } else {
+      gsap.to(el, {
+        y: 8,
+        opacity: 0,
+        duration: 0.25,
+        ease: "power2.out",
+        overwrite: "auto",
+        onComplete: () => el.classList.add("pointer-events-none"),
+      });
+    }
+
+    lastVisible.current = visible;
+  }, [visible]);
+
+  // ── Active-mode pulse ──────────────────────────────────────────────
+  useEffect(() => {
+    const idx = DOCK_ITEMS.findIndex((i) => i.id === activeMode);
+    if (idx < 0) return;
+    const btn = itemsRef.current[idx];
+    if (!btn) return;
+    // Brief scale pulse on active change
+    gsap.fromTo(btn, { scale: 1 }, { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1, ease: "power2.out" });
+  }, [activeMode]);
+
+  // ── Keyboard: ⌘1-⌘0 ────────────────────────────────────────────────
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (!e.metaKey || e.altKey || e.ctrlKey) return;
@@ -68,17 +135,13 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
 
   return (
     <div
-      className={cn(
-        "fixed bottom-3 left-1/2 z-dock -translate-x-1/2",
-        "motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-out",
-        visible
-          ? "translate-y-0 opacity-100"
-          : "translate-y-4 opacity-0 pointer-events-none",
-      )}
+      ref={containerRef}
+      className="fixed bottom-3 left-1/2 z-dock -translate-x-1/2"
       role="navigation"
       aria-label="Mode dock"
     >
       <div
+        ref={dockInnerRef}
         className={cn(
           "flex items-center gap-0.5",
           "rounded-2xl border border-border-default",
@@ -87,7 +150,7 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
           "shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
         )}
       >
-        {DOCK_ITEMS.map((item) => {
+        {DOCK_ITEMS.map((item, i) => {
           const isActive = activeMode === item.id;
           const isHovered = hoveredItem === item.id;
           const Icon = MODE_ICONS[item.id];
@@ -95,12 +158,12 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
           return (
             <button
               key={item.id}
+              ref={(el) => { itemsRef.current[i] = el; }}
               onClick={() => onModeChange(item.id)}
               onMouseEnter={() => setHoveredItem(item.id)}
               onMouseLeave={() => setHoveredItem(null)}
               className={cn(
                 "relative flex h-10 w-10 items-center justify-center rounded-xl",
-                "motion-safe:transition-all motion-safe:duration-150 motion-safe:ease-out",
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-input-focus",
                 isActive
                   ? [
@@ -112,12 +175,12 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
                   : [
                       "text-text-secondary",
                       "hover:bg-accent-red-muted/50 hover:text-text-primary",
-                      "hover:shadow-cyan/30",
                     ],
               )}
               title={`${item.label} (⌘${item.shortcut})`}
               aria-current={isActive ? "page" : undefined}
               aria-label={`${item.label} mode — ⌘${item.shortcut}`}
+              style={{ opacity: 0 }}
             >
               {Icon && (
                 <Icon
@@ -137,7 +200,6 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
                   "whitespace-nowrap rounded-md px-2 py-1",
                   "bg-bg-elevated border border-border-default",
                   "text-xs font-medium text-text-primary",
-                  "motion-safe:transition-all motion-safe:duration-100",
                   isHovered
                     ? "opacity-100 translate-y-0"
                     : "opacity-0 translate-y-1 pointer-events-none",

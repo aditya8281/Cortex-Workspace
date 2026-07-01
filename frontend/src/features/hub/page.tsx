@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { HubWidget } from "@/shared/layout/HubWidget";
@@ -13,6 +15,8 @@ import {
   LightningIcon,
 } from "@/shared/ui/icons";
 import { cn } from "@/shared/lib/utils";
+
+gsap.registerPlugin(useGSAP);
 
 // ── Types ─────────────────────────────────────────────────────────────
 interface HealthData {
@@ -43,6 +47,7 @@ interface WidgetConfig {
   icon: React.ReactNode;
   label: string;
   glowColor: "red" | "cyan";
+  spanFull?: boolean;
   /** API endpoint to fetch preview data (returns JSON) */
   fetchUrl?: string;
   /** Render live data from API */
@@ -59,13 +64,37 @@ export default function HubPage() {
   const router = useRouter();
   const [widgetData, setWidgetData] = useState<WidgetDataMap>({});
   const [widgetErrors, setWidgetErrors] = useState<Record<string, boolean>>({});
+  const greetingRef = useRef<HTMLDivElement>(null);
+  const searchBarRef = useRef<HTMLButtonElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // ── GSAP entrance stagger ──────────────────────────────────────────
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+      // Greeting fade-down
+      if (greetingRef.current) {
+        tl.from(greetingRef.current, { y: -12, opacity: 0, duration: 0.35 });
+      }
+
+      // Search bar
+      if (searchBarRef.current) {
+        tl.from(searchBarRef.current, { y: -8, opacity: 0, duration: 0.3 }, "-=0.1");
+      }
+
+      // Widgets stagger
+      if (gridRef.current) {
+        const widgets = gridRef.current.querySelectorAll("[data-widget]");
+        tl.from(widgets, { y: 16, opacity: 0, scale: 0.96, stagger: { from: "start", each: 0.04 }, duration: 0.35 }, "-=0.05");
+      }
+    });
+    return () => mm.revert();
+  }, { scope: gridRef.current ? undefined : undefined });
 
   // ── Navigate handler — routes mode via router or window ────────
   const handleNavigate = useCallback((modeId: string) => {
-    // For now, modes are navigated via the dock (ModeView handles it).
-    // The HubPage lives inside ModeView, so we dispatch a custom event
-    // that the ModeView's Dock listens to for mode changes.
-    // In P04+, this uses the ModeStack directly.
     window.dispatchEvent(new CustomEvent("hub:navigate", { detail: { modeId } }));
   }, []);
 
@@ -111,13 +140,16 @@ export default function HubPage() {
 
       <div className="relative z-10 flex h-full flex-col px-4 sm:px-8 py-6 overflow-y-auto">
         {/* ── Greeting ────────────────────────────────────────────── */}
-        <HubGreeting />
+        <div ref={greetingRef}>
+          <HubGreeting />
+        </div>
 
         {/* ── Quick-jump input — ⌘K trigger area ─────────────────── */}
         <button
+          ref={searchBarRef}
           onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { metaKey: true, key: "k" }))}
           className={cn(
-            "mx-auto mb-8 w-full max-w-md",
+            "mx-auto mb-6 w-full max-w-md",
             "flex items-center gap-3 rounded-xl border border-border-subtle px-4 py-2.5",
             "bg-bg-widget backdrop-blur-xl",
             "text-sm text-text-muted text-left",
@@ -133,16 +165,16 @@ export default function HubPage() {
           </span>
         </button>
 
-        {/* ── Widget grid (2×5) ──────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto w-full">
-          {WIDGETS.map((widget, i) => (
+        {/* ── Widget grid ─────────────────────────────────────────── */}
+        <div ref={gridRef} className="grid grid-cols-2 gap-3 max-w-2xl mx-auto w-full">
+          {WIDGETS.map((widget) => (
             <HubWidget
               key={widget.id}
               icon={widget.icon}
               label={widget.label}
               glowColor={widget.glowColor}
+              spanFull={widget.spanFull}
               onClick={() => handleNavigate(widget.id)}
-              style={{ "--i": i } as React.CSSProperties}
             >
               {widgetErrors[widget.id]
                 ? <span className="text-danger/70 italic">Offline</span>
@@ -164,30 +196,11 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const WIDGETS: WidgetConfig[] = [
   {
-    id: "chat",
-    icon: <ChatIcon size={20} />,
-    label: "Chat",
-    glowColor: "cyan",
-    renderLive: () => (
-      <p>Open a conversation to start chatting with your AI</p>
-    ),
-    fallback: <p>Open a conversation to start chatting with your AI</p>,
-  },
-  {
-    id: "search",
-    icon: <SearchIcon size={20} />,
-    label: "Search",
-    glowColor: "cyan",
-    renderLive: () => (
-      <p>Search your knowledge base, files, and conversations</p>
-    ),
-    fallback: <p>Search your knowledge base, files, and conversations</p>,
-  },
-  {
     id: "brain",
     icon: <BrainIcon size={20} />,
     label: "Brain",
     glowColor: "cyan",
+    spanFull: true,
     fetchUrl: `${API_BASE}/api/v1/memory/knowledge/stats`,
     renderLive: (data) => {
       const d = data as BrainStats | undefined;
@@ -203,22 +216,28 @@ const WIDGETS: WidgetConfig[] = [
     fallback: <p>Index stats unavailable</p>,
   },
   {
-    id: "vault",
-    icon: <VaultIcon size={20} />,
-    label: "Vault",
+    id: "systems",
+    icon: <SystemsIcon size={20} />,
+    label: "Systems",
     glowColor: "red",
-    fetchUrl: `${API_BASE}/api/v1/privacy/vault/status`,
+    spanFull: true,
+    fetchUrl: `${API_BASE}/api/v1/system/health`,
     renderLive: (data) => {
-      const d = data as VaultStatus | undefined;
-      if (!d) return <p>Checking vault…</p>;
+      const d = data as HealthData | undefined;
+      if (!d) return <p>Checking system…</p>;
       return (
         <>
-          <p><span className="text-text-secondary">Status:</span> {d.locked ? "Locked" : "Unlocked"}</p>
-          <p><span className="text-text-secondary">Files:</span> {d.file_count ?? "—"}</p>
+          <p>
+            <span className="text-text-secondary">Status:</span>{" "}
+            <span className={d.status === "healthy" ? "text-success" : "text-warning"}>
+              {d.status}
+            </span>
+          </p>
+          <p><span className="text-text-secondary">Version:</span> {d.version ?? "—"}</p>
         </>
       );
     },
-    fallback: <p>Vault status unavailable</p>,
+    fallback: <p>System health unavailable</p>,
   },
   {
     id: "models",
@@ -239,6 +258,44 @@ const WIDGETS: WidgetConfig[] = [
       );
     },
     fallback: <p>Model info unavailable</p>,
+  },
+  {
+    id: "vault",
+    icon: <VaultIcon size={20} />,
+    label: "Vault",
+    glowColor: "red",
+    fetchUrl: `${API_BASE}/api/v1/privacy/vault/status`,
+    renderLive: (data) => {
+      const d = data as VaultStatus | undefined;
+      if (!d) return <p>Checking vault…</p>;
+      return (
+        <>
+          <p><span className="text-text-secondary">Status:</span> {d.locked ? "Locked" : "Unlocked"}</p>
+          <p><span className="text-text-secondary">Files:</span> {d.file_count ?? "—"}</p>
+        </>
+      );
+    },
+    fallback: <p>Vault status unavailable</p>,
+  },
+  {
+    id: "chat",
+    icon: <ChatIcon size={20} />,
+    label: "Chat",
+    glowColor: "cyan",
+    renderLive: () => (
+      <p>Open a conversation to start chatting with your AI</p>
+    ),
+    fallback: <p>Open a conversation to start chatting with your AI</p>,
+  },
+  {
+    id: "search",
+    icon: <SearchIcon size={20} />,
+    label: "Search",
+    glowColor: "cyan",
+    renderLive: () => (
+      <p>Search your knowledge base, files, and conversations</p>
+    ),
+    fallback: <p>Search your knowledge base, files, and conversations</p>,
   },
   {
     id: "code",
@@ -272,29 +329,6 @@ const WIDGETS: WidgetConfig[] = [
       <p>Configure your Cortex experience</p>
     ),
     fallback: <p>Configure your Cortex experience</p>,
-  },
-  {
-    id: "systems",
-    icon: <SystemsIcon size={20} />,
-    label: "Systems",
-    glowColor: "red",
-    fetchUrl: `${API_BASE}/api/v1/system/health`,
-    renderLive: (data) => {
-      const d = data as HealthData | undefined;
-      if (!d) return <p>Checking system…</p>;
-      return (
-        <>
-          <p>
-            <span className="text-text-secondary">Status:</span>{" "}
-            <span className={d.status === "healthy" ? "text-success" : "text-warning"}>
-              {d.status}
-            </span>
-          </p>
-          <p><span className="text-text-secondary">Version:</span> {d.version ?? "—"}</p>
-        </>
-      );
-    },
-    fallback: <p>System health unavailable</p>,
   },
   {
     id: "profile",

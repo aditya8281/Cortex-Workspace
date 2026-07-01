@@ -74,7 +74,7 @@ export function FamilyCard({
         {/* Summary line — clickable to expand */}
         <button
           onClick={handleExpand}
-          className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+          className="text-xs text-text-muted hover:text-text-secondary motion-safe:transition-colors"
         >
           {expanded ? "▾" : "▸"} {family.model_count} variants ·{" "}
           {formatParamCount(family.param_range[0])}–{formatParamCount(family.param_range[1])} ·{" "}

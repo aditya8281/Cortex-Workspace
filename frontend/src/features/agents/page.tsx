@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { AppShell } from "@/shared/layout/AppShell";
 import { Card } from "@/shared/ui/Card";
 import { Button } from "@/shared/ui/Button";
 import { StatusDot } from "@/shared/ui/StatusDot";
@@ -146,7 +145,6 @@ export default function AgentsPage() {
   };
 
   if (loading || !user) return (
-    <AppShell>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -175,11 +173,10 @@ export default function AgentsPage() {
           ))}
         </Card>
       </div>
-    </AppShell>
   );
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -258,7 +255,7 @@ export default function AgentsPage() {
               rows={4}
               maxLength={8192}
               placeholder="You are a helpful agent that..."
-              className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25 transition-colors duration-150"
+              className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25 motion-safe:transition-colors motion-safe:duration-150"
             />
           </div>
           <Input
@@ -299,7 +296,7 @@ export default function AgentsPage() {
               }
               rows={3}
               placeholder="What should the agent do?"
-              className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25 transition-colors duration-150"
+              className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25 motion-safe:transition-colors motion-safe:duration-150"
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -316,6 +313,6 @@ export default function AgentsPage() {
           </div>
         </div>
       </Modal>
-    </AppShell>
+    </>
   );
 }

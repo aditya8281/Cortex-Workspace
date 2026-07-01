@@ -49,7 +49,7 @@ interface ToolExecutionCardProps {
 
 export function ToolExecutionCard({ execution }: ToolExecutionCardProps) {
   return (
-    <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 space-y-3 hover:shadow-md transition-shadow">
+    <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 space-y-3 hover:shadow-md motion-safe:transition-shadow">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
