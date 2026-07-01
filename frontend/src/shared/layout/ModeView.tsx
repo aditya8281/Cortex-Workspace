@@ -5,25 +5,35 @@ import { useModeStack } from "./ModeStack";
 import { Dock } from "./Dock";
 import { NeuralRibbon } from "./NeuralRibbon";
 import HubPage from "@/features/hub/page";
+import ChatPage from "@/features/chat/page";
+import SearchPage from "@/features/search/page";
+import BrainPage from "@/features/brain/page";
+import VaultPage from "@/features/vault/page";
+import ModelsPage from "@/features/models/page";
+import CodePage from "@/features/code/page";
+import UtilityPage from "@/features/utility/page";
+import SettingsPage from "@/features/settings/page";
+import SystemsPage from "@/features/systems/page";
+import ProfilePage from "@/features/profile/page";
 import { cn } from "@/shared/lib/utils";
 
 interface ModeEntry {
   icon: string;
   name: string;
-  Component: React.ComponentType | null; // null = coming soon
+  Component: React.ComponentType<any> | null; // null = coming soon
 }
 
 const MODE_REGISTRY: Record<string, ModeEntry> = {
-  chat:    { icon: "💬", name: "Chat",    Component: null },
-  search:  { icon: "🔍", name: "Search",  Component: null },
-  brain:   { icon: "🧠", name: "Brain",   Component: null },
-  vault:   { icon: "🔐", name: "Vault",   Component: null },
-  models:  { icon: "📚", name: "Models",  Component: null },
-  code:    { icon: "📐", name: "Code",    Component: null },
-  utility: { icon: "🛠️", name: "Utility", Component: null },
-  settings: { icon: "⚙️", name: "Settings", Component: null },
-  systems: { icon: "🖥️", name: "Systems", Component: null },
-  profile: { icon: "👤", name: "Profile", Component: null },
+  chat:     { icon: "💬", name: "Chat",     Component: ChatPage },
+  search:   { icon: "🔍", name: "Search",   Component: SearchPage },
+  brain:    { icon: "🧠", name: "Brain",    Component: BrainPage },
+  vault:    { icon: "🔐", name: "Vault",    Component: VaultPage },
+  models:   { icon: "📚", name: "Models",   Component: ModelsPage },
+  code:     { icon: "📐", name: "Code",     Component: CodePage },
+  utility:  { icon: "🛠️", name: "Utility",  Component: UtilityPage },
+  settings: { icon: "⚙️", name: "Settings", Component: SettingsPage },
+  systems:  { icon: "🖥️", name: "Systems",  Component: SystemsPage },
+  profile:  { icon: "👤", name: "Profile",  Component: ProfilePage },
 };
 
 // ── Hub entry point (replaced placeholder from P03+) ─────────────────
