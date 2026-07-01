@@ -9,6 +9,7 @@
 # Dependencies handled (no Docker required):
 #   - uv (Python pkg mgr)   → auto-downloads if missing
 #   - Qdrant (vector DB)    → auto-downloads native binary if missing
+#   - Redis (cache/queue)   → auto-compiles from source if missing
 #   - PostgreSQL            → finds system binary, falls back to Docker
 #   - Node.js               → checks, gives install instructions if missing
 #
@@ -340,6 +341,142 @@ _start_qdrant_docker() {
 
 ensure_qdrant || true
 
+# ── Phase 0d: Redis ──────────────────────────────────────────────────
+
+REDIS_PORT=$(find_port 6379)
+REDIS_DIR="$ROOT_DIR/CortexMemory/redis"
+REDIS_PID=""
+
+ensure_redis() {
+    header "[Phase 0d/5] Setting up Redis..."
+
+    # Already running on our port?
+    if redis-cli -p "$REDIS_PORT" ping 2>/dev/null | grep -q PONG; then
+        ok "Redis already running on port $REDIS_PORT."
+        return 0
+    fi
+
+    # Try native binary
+    if command -v redis-server >/dev/null 2>&1; then
+        ok "Redis binary found: $(which redis-server)"
+        _start_redis_native && return 0
+    fi
+
+    # Try Docker (fast — no compile needed)
+    if command -v docker >/dev/null 2>&1; then
+        warn "Trying Docker for Redis..."
+        _start_redis_docker && return 0
+    fi
+
+    # Fall back to compiling from source
+    warn "Redis not found — compiling from source..."
+    _download_redis && _start_redis_native && return 0
+
+    warn "Redis unavailable — caching/rate-limiting degraded. App will still work."
+    return 1
+}
+
+_download_redis() {
+    local arch
+    arch=$(uname -m)
+    local os
+    os=$(uname -s | tr '[:upper:]' '[:lower:]')
+
+    # Map arch to GitHub release naming
+    local gh_arch
+    case "$arch" in
+        x86_64|amd64)  gh_arch="x86_64" ;;
+        aarch64|arm64) gh_arch="aarch64" ;;
+        *) fail "Unsupported arch: $arch (try Docker instead)"; return 1 ;;
+    esac
+
+    # Detect glibc vs musl (Alpine uses musl)
+    local libc_tag=""
+    if ldd --version 2>&1 | grep -q musl; then
+        libc_tag="-musl"
+    fi
+
+    local version="7.2.7"
+    local url="https://github.com/redis/redis/archive/refs/tags/${version}.tar.gz"
+
+    warn "Downloading Redis ${version} (${gh_arch})..."
+    if curl -sL -o /tmp/redis-src.tar.gz "$url"; then
+        # Extract, compile (fast — single file) and install to local bin
+        local build_dir="/tmp/redis-build-$$"
+        mkdir -p "$build_dir"
+        tar xzf /tmp/redis-src.tar.gz -C "$build_dir" --strip-components=1 2>/dev/null
+        if make -C "$build_dir" -j"$(nproc)" BUILD_TLS=no 2>/dev/null; then
+            cp "$build_dir/src/redis-server" "$LOCAL_BIN/redis-server" 2>/dev/null
+            chmod +x "$LOCAL_BIN/redis-server" 2>/dev/null
+            cp "$build_dir/src/redis-cli" "$LOCAL_BIN/redis-cli" 2>/dev/null
+            chmod +x "$LOCAL_BIN/redis-cli" 2>/dev/null
+            rm -rf "$build_dir" /tmp/redis-src.tar.gz
+            if command -v redis-server >/dev/null 2>&1; then
+                ok "Redis $(redis-server --version | grep -oP 'v=\K[0-9.]+') compiled and installed."
+                return 0
+            fi
+        fi
+        rm -rf "$build_dir" /tmp/redis-src.tar.gz
+    fi
+
+    fail "Redis download/compile failed."
+    return 1
+}
+
+_start_redis_native() {
+    mkdir -p "$REDIS_DIR"
+
+    # Check if already running on our port
+    if redis-cli -p "$REDIS_PORT" ping 2>/dev/null | grep -q PONG; then
+        ok "Redis already running on port $REDIS_PORT."
+        return 0
+    fi
+
+    warn "Starting Redis on port $REDIS_PORT..."
+    nohup redis-server --port "$REDIS_PORT" --daemonize no \
+        --dir "$REDIS_DIR" --logfile "$REDIS_DIR/redis.log" \
+        --save "" --appendonly no \
+        --bind 127.0.0.1 \
+        > "$REDIS_DIR/redis.log" 2>&1 &
+    REDIS_PID=$!
+
+    for i in $(seq 1 20); do
+        if redis-cli -p "$REDIS_PORT" ping 2>/dev/null | grep -q PONG; then
+            ok "Redis running on port $REDIS_PORT (PID $REDIS_PID)."
+            return 0
+        fi
+        sleep 0.3
+    done
+    fail "Redis failed to start. Log: $REDIS_DIR/redis.log"
+    tail -5 "$REDIS_DIR/redis.log"
+    REDIS_PID=""
+    return 1
+}
+
+_start_redis_docker() {
+    local dport="$REDIS_PORT"
+    docker run -d --name cortex-redis \
+        --restart unless-stopped \
+        -p "127.0.0.1:${dport}:6379" \
+        -v cortex-redis:/data \
+        redis:7-alpine redis-server --port 6379 --save "" --appendonly no \
+        2>/dev/null || {
+        docker start cortex-redis 2>/dev/null || true
+    }
+
+    for i in $(seq 1 20); do
+        if redis-cli -p "$dport" ping 2>/dev/null | grep -q PONG; then
+            ok "Redis running on port $dport (Docker)."
+            REDIS_PORT="$dport"
+            return 0
+        fi
+        sleep 0.3
+    done
+    return 1
+}
+
+ensure_redis || true
+
 # ── Write .env with dynamic ports ──────────────────────────────────────
 header "[Phase 0d/5] Configuring environment..."
 if [ ! -f .env ]; then
@@ -353,6 +490,7 @@ update_env "DATABASE_URL" "postgresql+psycopg2://${CORTEX_PG_USER}:${CORTEX_PG_P
 update_env "QDRANT_HOST" "127.0.0.1"
 update_env "QDRANT_PORT" "$QDRANT_PORT"
 update_env "QDRANT_PREFER_GRPC" "false"
+update_env "REDIS_URL" "redis://127.0.0.1:${REDIS_PORT}/0"
 ok "Environment configured."
 
 # ── Phase 1: Python dependencies ───────────────────────────────────────
@@ -417,8 +555,12 @@ cleanup() {
     kill "${BACKEND_PID:-}" 2>/dev/null || true
     kill "${FRONTEND_PID:-}" 2>/dev/null || true
     [ -n "$QDRANT_PID" ] && kill "$QDRANT_PID" 2>/dev/null || true
+    [ -n "$REDIS_PID" ] && kill "$REDIS_PID" 2>/dev/null || true
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^cortex-qdrant$'; then
         docker stop cortex-qdrant >/dev/null 2>&1 || true
+    fi
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^cortex-redis$'; then
+        docker stop cortex-redis >/dev/null 2>&1 || true
     fi
     stop_postgres
     echo -e "${GREEN}[✓] All services stopped. Goodbye!${RESET}"
