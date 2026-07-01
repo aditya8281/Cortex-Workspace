@@ -56,13 +56,15 @@ function PlaceholderMode({ icon, name }: { icon: React.ReactNode; name: string }
 }
 
 // ── Crossfade wrapper ────────────────────────────────────────────────
-function CrossfadeView({ children, id }: { children: React.ReactNode; id: string }) {
+function CrossfadeView({ children, id, exiting }: { children: React.ReactNode; id: string; exiting?: boolean }) {
   return (
     <div
       key={id}
       className={cn(
         "flex h-full flex-col",
-        "animate-fade-in motion-safe:animate-fade-in",
+        exiting
+          ? "animate-fade-out motion-safe:animate-fade-out"
+          : "animate-fade-in motion-safe:animate-fade-in",
       )}
     >
       {children}
@@ -75,6 +77,7 @@ export function ModeView() {
   const { currentMode, isHub, pushMode, popMode, goToHub } = useModeStack();
   const [dockVisible, setDockVisible] = useState(true);
   const [transitioning, setTransitioning] = useState(false);
+  const [exitingId, setExitingId] = useState<string | null>(null);
 
   // Auto-hide dock after 3s in mode view
   useEffect(() => {
@@ -112,20 +115,21 @@ export function ModeView() {
 
   const handleModeChange = (modeId: string) => {
     if (modeId === currentMode) return;
+    setExitingId(currentMode);
     setTransitioning(true);
-    // Small delay to let exit animation start, then navigate
     requestAnimationFrame(() => {
       pushMode(modeId);
-      setTimeout(() => setTransitioning(false), 150);
+      setTimeout(() => { setTransitioning(false); setExitingId(null); }, 150);
     });
   };
 
   const handleBack = () => {
+    setExitingId(currentMode);
     setTransitioning(true);
     requestAnimationFrame(() => {
       const popped = popMode();
       if (popped) {
-        setTimeout(() => setTransitioning(false), 150);
+        setTimeout(() => { setTransitioning(false); setExitingId(null); }, 150);
       }
     });
   };
@@ -136,7 +140,7 @@ export function ModeView() {
       <div className="relative h-dvh overflow-hidden bg-bg-base">
         <NeuralRibbon />
         <div className="absolute inset-0 top-6 flex flex-col overflow-y-auto">
-          <CrossfadeView id="hub">
+          <CrossfadeView id="hub" exiting={exitingId === "hub"}>
             <HubPage />
           </CrossfadeView>
         </div>
@@ -171,7 +175,7 @@ export function ModeView() {
     <div className="relative h-dvh overflow-hidden bg-bg-base">
       <NeuralRibbon />
       <div className="absolute inset-0 top-6 flex flex-col">
-        <CrossfadeView id={currentMode}>
+        <CrossfadeView id={currentMode} exiting={exitingId === currentMode}>
           <header className="flex h-11 items-center gap-2.5 border-b border-border-subtle px-4 flex-shrink-0">
             <button
               onClick={handleBack}

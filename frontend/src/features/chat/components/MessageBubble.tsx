@@ -9,6 +9,7 @@ interface MessageBubbleProps {
   role: "user" | "assistant";
   content: string;
   timestamp?: string;
+  style?: React.CSSProperties;
 }
 
 // ── Time helper ───────────────────────────────────────────────────────
@@ -44,15 +45,17 @@ function parseContent(content: string): Array<{ type: "text" | "code"; content: 
 }
 
 // ── Component ─────────────────────────────────────────────────────────
-export function MessageBubble({ role, content, timestamp }: MessageBubbleProps) {
+export function MessageBubble({ role, content, timestamp, style }: MessageBubbleProps) {
   const parts = useMemo(() => parseContent(content), [content]);
 
   return (
     <div
+      style={style}
       className={cn(
         "flex flex-col",
         role === "user" ? "items-end" : "items-start",
-        "animate-fade-in motion-safe:animate-fade-in",
+        "animate-fade-in motion-safe:animate-fade-in motion-safe:opacity-0",
+        "motion-safe:[animation-delay:calc(var(--i,0)*30ms)]",
       )}
       role="article"
       aria-label={`${role} message`}

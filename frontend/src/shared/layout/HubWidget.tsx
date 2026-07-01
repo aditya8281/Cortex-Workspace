@@ -12,6 +12,7 @@ interface HubWidgetProps {
   isActive?: boolean;
   glowColor?: "red" | "cyan";
   className?: string;
+  style?: React.CSSProperties;
 }
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -23,14 +24,18 @@ export function HubWidget({
   isActive = false,
   glowColor = "cyan",
   className,
+  style,
 }: HubWidgetProps) {
   return (
     <button
       onClick={onClick}
+      style={style}
       className={cn(
         // Base glass card
         "group relative flex flex-col rounded-2xl border p-4 text-left",
         "bg-bg-widget backdrop-blur-2xl",
+        "motion-safe:animate-fade-in motion-safe:opacity-0",
+        "motion-safe:[animation-delay:calc(var(--i,0)*50ms)]",
         "motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out",
         // Default border
         "border-border-subtle",
@@ -77,7 +82,9 @@ export function HubWidget({
           "motion-safe:transition-opacity motion-safe:duration-200",
         )}
       >
-        ⌘{/* shortcut placeholder — filled by parent */}→
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       </span>
     </button>
   );

@@ -135,7 +135,14 @@ export function NeuralRibbon() {
           )}
           aria-label={`System status: ${STATUS_LABEL[status.status]}`}
         >
-          <span className="text-xs">{STATUS_DOT[status.status]}</span>
+          <span className="text-xs">
+            <span className={cn(
+              "inline-block w-1.5 h-1.5 rounded-full mr-0.5 align-middle motion-safe:animate-pulse-dot",
+              status.status === "online" && "bg-success",
+              status.status === "degraded" && "bg-warning",
+              status.status === "offline" && "bg-danger",
+            )} />
+          </span>
           <span>{STATUS_LABEL[status.status]}</span>
         </button>
 

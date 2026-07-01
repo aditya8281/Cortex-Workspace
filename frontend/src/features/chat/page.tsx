@@ -229,6 +229,7 @@ export default function ChatPage() {
                   role={msg.role === "system" ? "assistant" : msg.role}
                   content={msg.content}
                   timestamp={msg.created_at}
+                  style={{ "--i": i } as React.CSSProperties}
                 />
               ))}
               {streaming && <StreamingIndicator />}

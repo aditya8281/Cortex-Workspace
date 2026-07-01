@@ -135,13 +135,14 @@ export default function HubPage() {
 
         {/* ── Widget grid (2×5) ──────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto w-full">
-          {WIDGETS.map((widget) => (
+          {WIDGETS.map((widget, i) => (
             <HubWidget
               key={widget.id}
               icon={widget.icon}
               label={widget.label}
               glowColor={widget.glowColor}
               onClick={() => handleNavigate(widget.id)}
+              style={{ "--i": i } as React.CSSProperties}
             >
               {widgetErrors[widget.id]
                 ? <span className="text-danger/70 italic">Offline</span>

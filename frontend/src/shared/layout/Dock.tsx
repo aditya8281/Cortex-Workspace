@@ -105,7 +105,7 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
                 isActive
                   ? [
                       "bg-accent-red-muted text-accent-red",
-                      "shadow-red",
+                      "shadow-red motion-safe:animate-glow-pulse-red",
                       "after:absolute after:bottom-0.5 after:left-1/2 after:-translate-x-1/2",
                       "after:h-0.5 after:w-4 after:rounded-full after:bg-accent-red",
                     ]
