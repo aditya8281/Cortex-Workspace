@@ -16,7 +16,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
           "rounded-lg border border-border-subtle bg-bg-elevated p-4",
           "shadow-card",
           hover
-            ? "transition-all duration-200 ease-out hover:border-accent/20 hover:shadow-elevated hover:-translate-y-px"
+            ? "transition-all duration-200 ease-out hover:border-border-input-focus/50 hover:shadow-elevated hover:-translate-y-px"
             : "transition-colors duration-150",
           className,
         )}

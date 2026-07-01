@@ -1,38 +1,50 @@
+// Design tokens reference — kept in sync with tailwind.config.ts and DESIGN.md
+// Not directly imported at runtime; values come via Tailwind utility classes
+
 export const tokens = {
   colors: {
-    void: "#0a0a0f",
-    elevated: "#111118",
-    surface: "#16161f",
-    hover: "#1c1c28",
-    accent: {
-      DEFAULT: "#0ea5c9",
-      hover: "#38bdf8",
-      muted: "rgba(14,165,201,0.25)",
-      faint: "rgba(14,165,201,0.08)",
-      glow: "rgba(14,165,201,0.12)",
+    void: "#0d0d0d",
+    "bg-base": "#0d0d0d",
+    elevated: "#1c1c1c",
+    surface: "#2a2a2a",
+    hover: "#363636",
+    "bg-glass": "rgba(26,26,26,0.85)",
+    "bg-widget": "rgba(26,26,26,0.75)",
+    "accent-red": {
+      DEFAULT: "#d32f2f",
+      bright: "#e53935",
+      muted: "rgba(211,47,47,0.20)",
+    },
+    "accent-cyan": {
+      DEFAULT: "#00acc1",
+      bright: "#26c6da",
+      muted: "rgba(0,172,193,0.18)",
     },
     border: {
-      subtle: "rgba(255,255,255,0.08)",
+      subtle: "rgba(255,255,255,0.06)",
       DEFAULT: "rgba(255,255,255,0.12)",
-      accent: "rgba(14,165,201,0.3)",
+      red: "rgba(211,47,47,0.35)",
+      cyan: "rgba(0,172,193,0.35)",
+      "input-focus": "rgba(211,47,47,0.40)",
     },
     text: {
-      DEFAULT: "#e8e8ed",
-      secondary: "#7a7a8a",
-      muted: "#555566",
+      DEFAULT: "#f0f0f0",
+      secondary: "#a0a0a0",
+      muted: "#7a7a7a",
+      inverse: "#0d0d0d",
     },
-    danger: "#ef4444",
-    success: "#22c55e",
-    warning: "#f59e0b",
+    danger: "#e74c3c",
+    success: "#2ecc71",
+    warning: "#f39c12",
   },
   shadows: {
     subtle: "0 1px 2px rgba(0,0,0,0.4)",
     card: "0 2px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04)",
-    elevated:
-      "0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)",
-    modal:
-      "0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
-    glow: "0 0 20px rgba(6,182,212,0.12)",
-    "glow-strong": "0 0 40px rgba(6,182,212,0.2)",
+    elevated: "0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)",
+    modal: "0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
+    "shadow-red": "0 0 24px rgba(211,47,47,0.18)",
+    "shadow-cyan": "0 0 24px rgba(0,172,193,0.14)",
+    "shadow-red-strong": "0 0 40px rgba(211,47,47,0.25)",
+    "shadow-cyan-strong": "0 0 40px rgba(0,172,193,0.20)",
   },
 } as const;

@@ -45,7 +45,7 @@ export function ChatInput({ onSend, onTyping, disabled, model }: ChatInputProps)
   return (
     <div className="border-t border-border-subtle bg-void p-4">
       <div className="flex items-end gap-2">
-        <div className="flex-1 rounded-xl border border-border-default bg-bg-surface focus-within:border-accent/50 focus-within:shadow-[0_0_20px_rgba(14,165,201,0.1)] transition-all duration-200">
+        <div className="flex-1 rounded-xl border border-border-default bg-bg-surface focus-within:border-border-input-focus focus-within:shadow-[0_0_20px_rgba(211,47,47,0.1)] transition-all duration-200">
           <textarea
             ref={textareaRef}
             value={value}

@@ -10,7 +10,7 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        "shimmer-bg rounded-md",
+        "skeleton-shimmer rounded-md",
         className,
       )}
       aria-hidden="true"

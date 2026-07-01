@@ -83,7 +83,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               t.closing ? "animate-slide-out-to-right" : "animate-slide-in-from-right",
               t.variant === "success" && "border-success/20",
               t.variant === "error" && "border-danger/20",
-              t.variant === "info" && "border-accent/20",
+              t.variant === "info" && "border-accent-cyan/20",
             )}
             role="alert"
           >

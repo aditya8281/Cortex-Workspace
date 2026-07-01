@@ -208,7 +208,7 @@ export function IndexingConfigForm() {
         </p>
         <div className="flex gap-3">
           <input
-            className="flex-1 h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-border-accent focus:shadow-[0_0_0_2px_rgba(14,165,201,0.12)] focus:outline-none"
+            className="flex-1 h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-border-input-focus focus:shadow-[0_0_0_2px_rgba(211,47,47,0.12)] focus:outline-none"
             type="text"
             placeholder="/path/to/directory"
             value={previewDir}
