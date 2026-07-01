@@ -7,6 +7,11 @@ import { HubWidget } from "@/shared/layout/HubWidget";
 import { HubGreeting } from "@/shared/layout/HubGreeting";
 import { NeuralParticles } from "@/shared/layout/NeuralParticles";
 import { CommandBar } from "@/shared/layout/CommandBar";
+import {
+  ChatIcon, SearchIcon, BrainIcon, VaultIcon, ModelsIcon,
+  CodeIcon, UtilityIcon, SettingsIcon, SystemsIcon, ProfileIcon,
+  LightningIcon,
+} from "@/shared/ui/icons";
 import { cn } from "@/shared/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -35,7 +40,7 @@ interface VaultStatus {
 // ── Widget configuration ──────────────────────────────────────────────
 interface WidgetConfig {
   id: string;
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   glowColor: "red" | "cyan";
   /** API endpoint to fetch preview data (returns JSON) */
@@ -121,7 +126,7 @@ export default function HubPage() {
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-input-focus",
           )}
         >
-          <span className="text-lg leading-none">⚡</span>
+          <LightningIcon size={20} />
           <span className="flex-1">Ask Cortex anything…</span>
           <span className="text-[10px] font-mono text-text-muted bg-bg-elevated px-1.5 py-0.5 rounded">
             ⌘K
@@ -159,7 +164,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const WIDGETS: WidgetConfig[] = [
   {
     id: "chat",
-    icon: "💬",
+    icon: <ChatIcon size={20} />,
     label: "Chat",
     glowColor: "cyan",
     renderLive: () => (
@@ -169,7 +174,7 @@ const WIDGETS: WidgetConfig[] = [
   },
   {
     id: "search",
-    icon: "🔍",
+    icon: <SearchIcon size={20} />,
     label: "Search",
     glowColor: "cyan",
     renderLive: () => (
@@ -179,7 +184,7 @@ const WIDGETS: WidgetConfig[] = [
   },
   {
     id: "brain",
-    icon: "🧠",
+    icon: <BrainIcon size={20} />,
     label: "Brain",
     glowColor: "cyan",
     fetchUrl: `${API_BASE}/api/v1/memory/knowledge/stats`,
@@ -198,7 +203,7 @@ const WIDGETS: WidgetConfig[] = [
   },
   {
     id: "vault",
-    icon: "🔐",
+    icon: <VaultIcon size={20} />,
     label: "Vault",
     glowColor: "red",
     fetchUrl: `${API_BASE}/api/v1/privacy/vault/status`,
@@ -207,7 +212,7 @@ const WIDGETS: WidgetConfig[] = [
       if (!d) return <p>Checking vault…</p>;
       return (
         <>
-          <p><span className="text-text-secondary">Status:</span> {d.locked ? "🔒 Locked" : "🔓 Unlocked"}</p>
+          <p><span className="text-text-secondary">Status:</span> {d.locked ? "Locked" : "Unlocked"}</p>
           <p><span className="text-text-secondary">Files:</span> {d.file_count ?? "—"}</p>
         </>
       );
@@ -216,7 +221,7 @@ const WIDGETS: WidgetConfig[] = [
   },
   {
     id: "models",
-    icon: "📚",
+    icon: <ModelsIcon size={20} />,
     label: "Models",
     glowColor: "cyan",
     fetchUrl: `${API_BASE}/api/v1/models/ollama/catalog`,
@@ -236,7 +241,7 @@ const WIDGETS: WidgetConfig[] = [
   },
   {
     id: "code",
-    icon: "📐",
+    icon: <CodeIcon size={20} />,
     label: "Code",
     glowColor: "cyan",
     renderLive: () => (
@@ -249,7 +254,7 @@ const WIDGETS: WidgetConfig[] = [
   },
   {
     id: "utility",
-    icon: "🛠️",
+    icon: <UtilityIcon size={20} />,
     label: "Utility",
     glowColor: "cyan",
     renderLive: () => (
@@ -259,7 +264,7 @@ const WIDGETS: WidgetConfig[] = [
   },
   {
     id: "settings",
-    icon: "⚙️",
+    icon: <SettingsIcon size={20} />,
     label: "Settings",
     glowColor: "cyan",
     renderLive: () => (
@@ -269,7 +274,7 @@ const WIDGETS: WidgetConfig[] = [
   },
   {
     id: "systems",
-    icon: "🖥️",
+    icon: <SystemsIcon size={20} />,
     label: "Systems",
     glowColor: "red",
     fetchUrl: `${API_BASE}/api/v1/system/health`,
@@ -292,7 +297,7 @@ const WIDGETS: WidgetConfig[] = [
   },
   {
     id: "profile",
-    icon: "👤",
+    icon: <ProfileIcon size={20} />,
     label: "Profile",
     glowColor: "red",
     renderLive: () => (

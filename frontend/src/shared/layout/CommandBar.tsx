@@ -6,8 +6,25 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { cn } from "@/shared/lib/utils";
+
+import {
+  BrainIcon,
+  ChatIcon,
+  CloseIcon,
+  CodeIcon,
+  HomeIcon,
+  LightningIcon,
+  ModelsIcon,
+  ProfileIcon,
+  SearchIcon,
+  SettingsIcon,
+  SystemsIcon,
+  UtilityIcon,
+  VaultIcon,
+} from "@/shared/ui/icons";
 
 // ── Command types ────────────────────────────────────────────────────
 interface CommandGroup {
@@ -17,7 +34,7 @@ interface CommandGroup {
 
 interface CommandItem {
   id: string;
-  icon: string;
+  icon: ReactNode;
   label: string;
   description?: string;
   shortcut?: string;
@@ -43,21 +60,21 @@ export function CommandBar({ onNavigate, goToHub, currentMode }: CommandBarProps
   // ── Build command groups from context ─────────────────────────────
   const groups: CommandGroup[] = useMemo(() => {
     const modeCommands: CommandItem[] = [
-      { id: "chat",    icon: "💬", label: "Chat",    description: "Conversation mode", shortcut: "⌘1", action: () => { onNavigate("chat"); setOpen(false); } },
-      { id: "search",  icon: "🔍", label: "Search",  description: "Search knowledge base", shortcut: "⌘2", action: () => { onNavigate("search"); setOpen(false); } },
-      { id: "brain",   icon: "🧠", label: "Brain",   description: "Memory & knowledge graph", shortcut: "⌘3", action: () => { onNavigate("brain"); setOpen(false); } },
-      { id: "vault",   icon: "🔐", label: "Vault",   description: "Encrypted storage", shortcut: "⌘4", action: () => { onNavigate("vault"); setOpen(false); } },
-      { id: "models",  icon: "📚", label: "Models",  description: "LLM management", shortcut: "⌘5", action: () => { onNavigate("models"); setOpen(false); } },
-      { id: "code",    icon: "📐", label: "Code",    description: "Code intelligence", shortcut: "⌘6", action: () => { onNavigate("code"); setOpen(false); } },
-      { id: "utility", icon: "🛠️", label: "Utility", description: "Tools & utilities", shortcut: "⌘7", action: () => { onNavigate("utility"); setOpen(false); } },
-      { id: "settings",icon: "⚙️", label: "Settings",description: "App configuration", shortcut: "⌘8", action: () => { onNavigate("settings"); setOpen(false); } },
-      { id: "systems", icon: "🖥️", label: "Systems", description: "System overview", shortcut: "⌘9", action: () => { onNavigate("systems"); setOpen(false); } },
-      { id: "profile", icon: "👤", label: "Profile", description: "Your account", shortcut: "⌘0", action: () => { onNavigate("profile"); setOpen(false); } },
+      { id: "chat",    icon: <ChatIcon />,    label: "Chat",    description: "Conversation mode", shortcut: "⌘1", action: () => { onNavigate("chat"); setOpen(false); } },
+      { id: "search",  icon: <SearchIcon />,  label: "Search",  description: "Search knowledge base", shortcut: "⌘2", action: () => { onNavigate("search"); setOpen(false); } },
+      { id: "brain",   icon: <BrainIcon />,   label: "Brain",   description: "Memory & knowledge graph", shortcut: "⌘3", action: () => { onNavigate("brain"); setOpen(false); } },
+      { id: "vault",   icon: <VaultIcon />,   label: "Vault",   description: "Encrypted storage", shortcut: "⌘4", action: () => { onNavigate("vault"); setOpen(false); } },
+      { id: "models",  icon: <ModelsIcon />,  label: "Models",  description: "LLM management", shortcut: "⌘5", action: () => { onNavigate("models"); setOpen(false); } },
+      { id: "code",    icon: <CodeIcon />,    label: "Code",    description: "Code intelligence", shortcut: "⌘6", action: () => { onNavigate("code"); setOpen(false); } },
+      { id: "utility", icon: <UtilityIcon />, label: "Utility", description: "Tools & utilities", shortcut: "⌘7", action: () => { onNavigate("utility"); setOpen(false); } },
+      { id: "settings",icon: <SettingsIcon />,label: "Settings",description: "App configuration", shortcut: "⌘8", action: () => { onNavigate("settings"); setOpen(false); } },
+      { id: "systems", icon: <SystemsIcon />, label: "Systems", description: "System overview", shortcut: "⌘9", action: () => { onNavigate("systems"); setOpen(false); } },
+      { id: "profile", icon: <ProfileIcon />, label: "Profile", description: "Your account", shortcut: "⌘0", action: () => { onNavigate("profile"); setOpen(false); } },
     ];
 
     const navCommands: CommandItem[] = [
-      { id: "ask",      icon: "⚡", label: "Ask Cortex anything…", description: "Open chat with query", action: () => { onNavigate("chat"); setOpen(false); } },
-      { id: "go-home",  icon: "⌂", label: "Go to Hub",           description: "Return to home", action: () => { goToHub(); setOpen(false); } },
+      { id: "ask",      icon: <LightningIcon />, label: "Ask Cortex anything…", description: "Open chat with query", action: () => { onNavigate("chat"); setOpen(false); } },
+      { id: "go-home",  icon: <HomeIcon />,     label: "Go to Hub",           description: "Return to home", action: () => { goToHub(); setOpen(false); } },
     ];
 
     const result: CommandGroup[] = [
@@ -70,7 +87,7 @@ export function CommandBar({ onNavigate, goToHub, currentMode }: CommandBarProps
       result.push({
         label: "Context",
         items: [
-          { id: "close-mode", icon: "✕", label: "Close Mode", description: "Go back to previous mode", shortcut: "⎋", action: () => { onNavigate("hub"); setOpen(false); } },
+          { id: "close-mode", icon: <CloseIcon />, label: "Close Mode", description: "Go back to previous mode", shortcut: "⎋", action: () => { onNavigate("hub"); setOpen(false); } },
         ],
       });
     }
@@ -208,7 +225,7 @@ export function CommandBar({ onNavigate, goToHub, currentMode }: CommandBarProps
       >
         {/* ── Input ───────────────────────────────────────────── */}
         <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-3">
-          <span className="text-lg leading-none">⚡</span>
+          <LightningIcon className="text-text-muted" size={16} />
           <input
             ref={inputRef}
             type="text"
@@ -257,7 +274,7 @@ export function CommandBar({ onNavigate, goToHub, currentMode }: CommandBarProps
                   role="option"
                   aria-selected={idx === selectedIdx}
                 >
-                  <span className="text-base leading-none w-5 text-center">{item.icon}</span>
+                  <span className="flex items-center justify-center w-5 flex-shrink-0 text-text-secondary">{item.icon}</span>
                   <div className="flex-1 min-w-0">
                     <span className="text-sm font-medium text-text-primary block truncate">
                       {item.label}
@@ -299,7 +316,7 @@ export function CommandBar({ onNavigate, goToHub, currentMode }: CommandBarProps
                           role="option"
                           aria-selected={globalIdx === selectedIdx}
                         >
-                          <span className="text-base leading-none w-5 text-center">{item.icon}</span>
+                          <span className="flex items-center justify-center w-5 flex-shrink-0 text-text-secondary">{item.icon}</span>
                           <div className="flex-1 min-w-0">
                             <span className="text-sm font-medium text-text-primary block truncate">
                               {item.label}

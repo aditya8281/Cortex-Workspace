@@ -5,7 +5,7 @@ import { cn } from "@/shared/lib/utils";
 
 // ── Props ─────────────────────────────────────────────────────────────
 interface HubWidgetProps {
-  icon: string;
+  icon: ReactNode;
   label: string;
   children: ReactNode;
   onClick: () => void;

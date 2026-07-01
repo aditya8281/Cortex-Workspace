@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/shared/lib/utils";
+import { BrainIcon } from "@/shared/ui/icons";
 
 // ── Types ─────────────────────────────────────────────────────────────
 type SystemStatus = "online" | "degraded" | "offline";
@@ -143,7 +144,7 @@ export function NeuralRibbon() {
 
         {/* Active model */}
         <span className="flex items-center gap-1 text-[11px] text-text-muted font-mono">
-          🧠 {status.model}
+          <BrainIcon size={12} /> {status.model}
         </span>
 
         {/* TPS — only when data exists */}

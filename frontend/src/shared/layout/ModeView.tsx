@@ -15,31 +15,35 @@ import UtilityPage from "@/features/utility/page";
 import SettingsPage from "@/features/settings/page";
 import SystemsPage from "@/features/systems/page";
 import ProfilePage from "@/features/profile/page";
+import {
+  ChatIcon, SearchIcon, BrainIcon, VaultIcon, ModelsIcon,
+  CodeIcon, UtilityIcon, SettingsIcon, SystemsIcon, ProfileIcon,
+} from "@/shared/ui/icons";
 import { cn } from "@/shared/lib/utils";
 
 interface ModeEntry {
-  icon: string;
+  icon: React.ReactNode;
   name: string;
-  Component: React.ComponentType<any> | null; // null = coming soon
+  Component: React.ComponentType<any> | null;
 }
 
 const MODE_REGISTRY: Record<string, ModeEntry> = {
-  chat:     { icon: "💬", name: "Chat",     Component: ChatPage },
-  search:   { icon: "🔍", name: "Search",   Component: SearchPage },
-  brain:    { icon: "🧠", name: "Brain",    Component: BrainPage },
-  vault:    { icon: "🔐", name: "Vault",    Component: VaultPage },
-  models:   { icon: "📚", name: "Models",   Component: ModelsPage },
-  code:     { icon: "📐", name: "Code",     Component: CodePage },
-  utility:  { icon: "🛠️", name: "Utility",  Component: UtilityPage },
-  settings: { icon: "⚙️", name: "Settings", Component: SettingsPage },
-  systems:  { icon: "🖥️", name: "Systems",  Component: SystemsPage },
-  profile:  { icon: "👤", name: "Profile",  Component: ProfilePage },
+  chat:     { icon: <ChatIcon size={18} />, name: "Chat",     Component: ChatPage },
+  search:   { icon: <SearchIcon size={18} />, name: "Search",   Component: SearchPage },
+  brain:    { icon: <BrainIcon size={18} />, name: "Brain",    Component: BrainPage },
+  vault:    { icon: <VaultIcon size={18} />, name: "Vault",    Component: VaultPage },
+  models:   { icon: <ModelsIcon size={18} />, name: "Models",   Component: ModelsPage },
+  code:     { icon: <CodeIcon size={18} />, name: "Code",     Component: CodePage },
+  utility:  { icon: <UtilityIcon size={18} />, name: "Utility",  Component: UtilityPage },
+  settings: { icon: <SettingsIcon size={18} />, name: "Settings", Component: SettingsPage },
+  systems:  { icon: <SystemsIcon size={18} />, name: "Systems",  Component: SystemsPage },
+  profile:  { icon: <ProfileIcon size={18} />, name: "Profile",  Component: ProfilePage },
 };
 
 // ── Hub entry point (replaced placeholder from P03+) ─────────────────
 
 // ── Placeholder mode page ────────────────────────────────────────────
-function PlaceholderMode({ icon, name }: { icon: string; name: string }) {
+function PlaceholderMode({ icon, name }: { icon: React.ReactNode; name: string }) {
   return (
     <div className="flex h-full items-center justify-center">
       <div className="text-center">
