@@ -362,6 +362,16 @@ ensure_redis() {
         _start_redis_native && return 0
     fi
 
+    # Try package manager (fastest on Ubuntu/Debian)
+    if command -v apt-get >/dev/null 2>&1; then
+        warn "Trying apt install for Redis..."
+        if sudo apt-get update -qq >/dev/null 2>&1 && \
+           sudo apt-get install -y -qq redis-server >/dev/null 2>&1; then
+            ok "Redis installed via apt."
+            _start_redis_native && return 0
+        fi
+    fi
+
     # Try Docker (fast — no compile needed)
     if command -v docker >/dev/null 2>&1; then
         warn "Trying Docker for Redis..."
@@ -369,8 +379,10 @@ ensure_redis() {
     fi
 
     # Fall back to compiling from source
-    warn "Redis not found — compiling from source..."
-    _download_redis && _start_redis_native && return 0
+    if command -v gcc >/dev/null 2>&1; then
+        warn "Redis not found — compiling from source..."
+        _download_redis && _start_redis_native && return 0
+    fi
 
     warn "Redis unavailable — caching/rate-limiting degraded. App will still work."
     return 1
@@ -455,13 +467,19 @@ _start_redis_native() {
 
 _start_redis_docker() {
     local dport="$REDIS_PORT"
-    docker run -d --name cortex-redis \
+    # Try without sudo first, then with sudo
+    local docker_cmd="docker"
+    if ! docker info >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
+        docker_cmd="sudo docker"
+    fi
+
+    $docker_cmd run -d --name cortex-redis \
         --restart unless-stopped \
         -p "127.0.0.1:${dport}:6379" \
         -v cortex-redis:/data \
         redis:7-alpine redis-server --port 6379 --save "" --appendonly no \
         2>/dev/null || {
-        docker start cortex-redis 2>/dev/null || true
+        $docker_cmd start cortex-redis 2>/dev/null || true
     }
 
     for i in $(seq 1 20); do
