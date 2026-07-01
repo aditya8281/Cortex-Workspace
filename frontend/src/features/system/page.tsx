@@ -40,7 +40,7 @@ export default function SystemPage() {
   const loadLogs = useCallback(async () => {
     try {
       const data = await systemApi.getLogs(50);
-      if (data?.logs) setRestLogs(data.logs);
+      if (data?.logs) setRestLogs(data.logs as SystemLog[]);
     } catch {
       // ignore — WS will provide logs when connected
     }

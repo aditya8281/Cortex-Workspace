@@ -166,7 +166,7 @@ export function ConversationSidebar({
                           }}
                           className={cn(
                             "w-full rounded-lg border border-accent-red/50 bg-bg-surface px-3 py-2",
-                            "text-sm text-text-primary outline-none",
+                            "text-sm text-text-primary outline-none focus-visible:outline-2 focus-visible:outline-border-input-focus",
                           )}
                           autoFocus
                         />

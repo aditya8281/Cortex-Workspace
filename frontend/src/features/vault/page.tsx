@@ -123,6 +123,7 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
             onKeyDown={(e) => { if (e.key === "Enter") handleUnlock(); }}
             placeholder="Vault password"
             autoComplete="current-password"
+            aria-label="Vault password"
             className={cn(
               "w-full rounded-xl border px-4 py-2.5 text-sm",
               "bg-bg-surface text-text-primary placeholder:text-text-muted",
@@ -228,6 +229,7 @@ function FileRow({
       <button
         onClick={() => onToggleFav(file.path)}
         className={cn(
+          "min-h-[44px] min-w-[44px] flex items-center justify-center",
           "text-base opacity-0 group-hover:opacity-100 motion-safe:transition-all motion-safe:duration-150",
           file.favorite ? "text-warning opacity-100" : "text-text-muted hover:text-warning",
         )}
@@ -241,7 +243,7 @@ function FileRow({
         {!file.is_dir && (
           <button
             onClick={() => onDownload(file.path, file.name)}
-            className="h-7 w-7 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated flex items-center justify-center transition-colors duration-150"
+            className="min-h-[44px] min-w-[44px] rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated flex items-center justify-center transition-colors duration-150"
             title="Download"
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -251,7 +253,7 @@ function FileRow({
         )}
         <button
           onClick={() => { setNewName(file.name); setRenaming(true); }}
-          className="h-7 w-7 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated flex items-center justify-center transition-colors duration-150"
+          className="min-h-[44px] min-w-[44px] rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-elevated flex items-center justify-center transition-colors duration-150"
           title="Rename"
         >
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -260,7 +262,7 @@ function FileRow({
         </button>
         <button
           onClick={() => onDelete(file.path)}
-          className="h-7 w-7 rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 flex items-center justify-center transition-colors duration-150"
+          className="min-h-[44px] min-w-[44px] rounded-lg text-text-muted hover:text-danger hover:bg-danger/10 flex items-center justify-center transition-colors duration-150"
           title="Delete"
         >
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -314,12 +316,16 @@ function UploadModal({ open, onClose, onUploaded }: { open: boolean; onClose: ()
         <h3 className="text-title font-semibold text-text-primary mb-1">Upload to Vault</h3>
         <p className="text-sm text-text-muted mb-4">Encrypt and store a file in your vault.</p>
 
-        <label className={cn(
-          "flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 mb-4 cursor-pointer",
-          "border-border-subtle hover:border-accent-red/50 hover:bg-accent-red/5",
-          "transition-colors duration-150",
-          file && "border-accent-red/50 bg-accent-red/5",
-        )}>
+        <label
+          id="vault-upload-label"
+          className={cn(
+            "flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 mb-4 cursor-pointer",
+            "border-border-subtle hover:border-accent-red/50 hover:bg-accent-red/5",
+            "transition-colors duration-150",
+            file && "border-accent-red/50 bg-accent-red/5",
+          )}
+          aria-label="Click to select a file for upload"
+        >
           {file ? (
             <div className="text-center">
               <p className="text-sm text-text-primary font-medium">{file.name}</p>

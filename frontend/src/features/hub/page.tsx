@@ -286,7 +286,7 @@ const WIDGETS: WidgetConfig[] = [
         <>
           <p>
             <span className="text-text-secondary">Status:</span>{" "}
-            <span className={d.status === "healthy" ? "text-green-400" : "text-yellow-400"}>
+            <span className={d.status === "healthy" ? "text-success" : "text-warning"}>
               {d.status}
             </span>
           </p>

@@ -235,7 +235,7 @@ export function CommandBar({ onNavigate, goToHub, currentMode }: CommandBarProps
             className={cn(
               "flex-1 bg-transparent text-sm font-medium text-text-primary",
               "placeholder:text-text-muted",
-              "outline-none border-none",
+              "outline-none border-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-input-focus",
             )}
             aria-label="Command search"
           />

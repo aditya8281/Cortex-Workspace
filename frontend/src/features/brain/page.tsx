@@ -210,6 +210,7 @@ export default function BrainPage() {
           <button
             onClick={handleSync}
             disabled={syncing}
+            aria-label={isEmpty ? "Index knowledge base" : "Re-sync knowledge base"}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium",
               "bg-accent-red text-white",
@@ -262,6 +263,7 @@ export default function BrainPage() {
               <button
                 onClick={handleSync}
                 disabled={syncing}
+                aria-label="Scan repository for indexing"
                 className={cn(
                   "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium",
                   "bg-accent-red text-white hover:bg-accent-red/90",
