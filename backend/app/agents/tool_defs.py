@@ -474,6 +474,93 @@ async def list_available_tools() -> str:
     return "\n".join(lines)
 
 
+@tool(description="Search the web using DuckDuckGo (no API key needed)", category="web")
+async def web_search(query: str, max_results: int = 5) -> str:
+    """Search the web and return results with titles, URLs, and snippets.
+
+    Args:
+        query: The search query
+        max_results: Maximum number of results to return (default 5)
+    """
+    import urllib.parse
+    import urllib.request
+    from html.parser import HTMLParser
+
+    class DDGParser(HTMLParser):
+        """Minimal parser for DuckDuckGo HTML search results."""
+
+        def __init__(self):
+            super().__init__()
+            self.results: list[dict[str, str]] = []
+            self._current: dict[str, str] = {}
+            self._in_result = False
+            self._in_snippet = False
+            self._capture = False
+            self._text_buf: list[str] = []
+
+        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
+            attr_dict = dict(attrs)
+            cls = attr_dict.get("class", "")
+            # Result container
+            if tag == "a" and "result__a" in cls:
+                href = attr_dict.get("href", "")
+                if href:
+                    self._current["url"] = href
+                self._capture = True
+                self._text_buf = []
+                self._in_result = True
+            # Snippet
+            if tag == "a" and "result__snippet" in cls:
+                self._in_snippet = True
+                self._capture = True
+                self._text_buf = []
+
+        def handle_endtag(self, tag: str):
+            if tag == "a" and self._capture and self._in_result:
+                self._current["title"] = "".join(self._text_buf).strip()
+                self._in_result = False
+                self._capture = False
+            if tag == "a" and self._capture and self._in_snippet:
+                self._current["snippet"] = "".join(self._text_buf).strip()
+                self._in_snippet = False
+                self._capture = False
+                # Snippet comes after title — save result
+                if self._current.get("title") and self._current.get("url"):
+                    self.results.append(dict(self._current))
+                self._current = {}
+
+        def handle_data(self, data):
+            if self._capture:
+                self._text_buf.append(data)
+
+    try:
+        encoded = urllib.parse.quote_plus(query)
+        url = f"https://html.duckduckgo.com/html/?q={encoded}"
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            html = resp.read(200 * 1024).decode("utf-8", errors="replace")
+
+        parser = DDGParser()
+        parser.feed(html)
+
+        results = parser.results[:max_results]
+        if not results:
+            return f"No results found for: {query}"
+
+        lines = [f"Search results for: {query}\n"]
+        for i, r in enumerate(results, 1):
+            title = r.get("title", "")
+            url = r.get("url", "")
+            snippet = r.get("snippet", "")
+            lines.append(f"{i}. {title}\n   {url}\n   {snippet}\n")
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"Search error: {e}"
+
+
 @tool(description="Get repository information", category="code")
 async def get_repo_info() -> str:
     """Get information about the current git repository: name, branch, remote URL."""
@@ -539,4 +626,5 @@ register_tool("git_show", git_show, "Show git commit details or file content fro
 register_tool("search_knowledge", search_knowledge, "Search knowledge base entries")
 register_tool("current_datetime", current_datetime, "Get the current date and time")
 register_tool("list_available_tools", list_available_tools, "List all available tools with descriptions")
+register_tool("web_search", web_search, "Search the web using DuckDuckGo")
 register_tool("get_repo_info", get_repo_info, "Get repository information")

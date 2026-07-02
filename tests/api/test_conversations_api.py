@@ -1,9 +1,24 @@
-"""Tests for conversations API — message creation, retrieval, history."""
+"""Tests for conversations API — CRUD, decoupled send/stream pattern."""
 
 import json
-from unittest.mock import MagicMock, patch
+
+import pytest
 
 HEADERS = {"Authorization": "Bearer fake-token"}
+
+
+@pytest.fixture(autouse=True)
+def _clean_stream_manager():
+    """Reset the global stream manager between tests to avoid task leaks."""
+    from backend.app.services.interaction.stream_manager import stream_manager
+    yield
+    # Cancel any lingering tasks and clear buffers
+    for cid in list(stream_manager._tasks):
+        task = stream_manager._tasks[cid]
+        if not task.done():
+            task.cancel()
+    stream_manager._buffers.clear()
+    stream_manager._tasks.clear()
 
 
 def test_list_conversations_empty(client, mock_auth):
@@ -71,9 +86,8 @@ def test_delete_conversation_not_found(client, mock_auth):
     assert resp.status_code == 404
 
 
-@patch("backend.app.services.intelligence.rag_pipeline.get_rag_pipeline")
-@patch("backend.app.services.intelligence.llm.manager.llm_manager")
-def test_send_message(mock_llm, mock_get_rag, client, mock_auth, db_session):
+def test_send_message_starts_generation(client, mock_auth, db_session):
+    """Test POST triggers background generation and returns immediately."""
     from backend.app.models.interaction.conversation import Conversation
 
     conv = Conversation(user_id=1, title="Chat Conv")
@@ -81,15 +95,29 @@ def test_send_message(mock_llm, mock_get_rag, client, mock_auth, db_session):
     db_session.commit()
     db_session.refresh(conv)
 
-    rag_mock = MagicMock()
-    rag_mock.retrieve_context.return_value = MagicMock(results=[], formatted_context="")
-    mock_get_rag.return_value = rag_mock
+    resp = client.post(
+        f"/api/v1/conversations/{conv.id}/messages",
+        json={"content": "Hi there"},
+        headers=HEADERS,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "generating"
+    assert data["conversation_id"] == conv.id
 
-    async def fake_stream(messages, **kwargs):
-        yield "Hello "
-        yield "world!"
 
-    mock_llm.chat_stream = fake_stream
+def test_send_message_already_generating(client, mock_auth, db_session):
+    """Test POST when generation is already in progress returns 'generating' without starting another."""
+    from backend.app.models.interaction.conversation import Conversation
+    from backend.app.services.interaction.stream_manager import stream_manager
+
+    conv = Conversation(user_id=1, title="Chat Conv")
+    db_session.add(conv)
+    db_session.commit()
+    db_session.refresh(conv)
+
+    # Create a buffer to simulate in-progress generation
+    stream_manager.get_or_create_buffer(conv.id)
 
     resp = client.post(
         f"/api/v1/conversations/{conv.id}/messages",
@@ -97,10 +125,52 @@ def test_send_message(mock_llm, mock_get_rag, client, mock_auth, db_session):
         headers=HEADERS,
     )
     assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "generating"
+
+
+def test_stream_no_generation(client, mock_auth, db_session):
+    """Test GET /stream returns done event when no generation is happening."""
+    from backend.app.models.interaction.conversation import Conversation
+
+    conv = Conversation(user_id=1, title="Stream Conv")
+    db_session.add(conv)
+    db_session.commit()
+    db_session.refresh(conv)
+
+    resp = client.get(f"/api/v1/conversations/{conv.id}/stream", headers=HEADERS)
+    assert resp.status_code == 200
 
     body = resp.text
     lines = [line for line in body.strip().split("\n") if line.startswith("data: ")]
-    assert len(lines) >= 2
+    assert len(lines) == 1
+
+    chunk = json.loads(lines[0].removeprefix("data: "))
+    assert chunk["type"] == "done"
+
+
+def test_stream_receives_buffered_chunks(client, mock_auth, db_session):
+    """Test GET /stream reads from an already-completed buffer."""
+    from backend.app.models.interaction.conversation import Conversation
+    from backend.app.services.interaction.stream_manager import stream_manager
+
+    conv = Conversation(user_id=1, title="Buffer Conv")
+    db_session.add(conv)
+    db_session.commit()
+    db_session.refresh(conv)
+
+    # Pre-populate a buffer with chunks and mark done
+    buf = stream_manager.get_or_create_buffer(conv.id)
+    buf.push(f'data: {json.dumps({"type": "chunk", "content": "Hello ", "tokens": 1})}\n\n')
+    buf.push(f'data: {json.dumps({"type": "chunk", "content": "world!", "tokens": 2})}\n\n')
+    buf.mark_done(final_data={"type": "done", "total_tokens": 2, "sources": []})
+
+    resp = client.get(f"/api/v1/conversations/{conv.id}/stream", headers=HEADERS)
+    assert resp.status_code == 200
+
+    body = resp.text
+    lines = [line for line in body.strip().split("\n") if line.startswith("data: ")]
+    assert len(lines) >= 3  # 2 chunks + 1 done
 
     chunks = [json.loads(line.removeprefix("data: ")) for line in lines]
     chunk_types = [c["type"] for c in chunks]
@@ -109,3 +179,13 @@ def test_send_message(mock_llm, mock_get_rag, client, mock_auth, db_session):
 
     content = "".join(c["content"] for c in chunks if c["type"] == "chunk")
     assert content == "Hello world!"
+
+
+def test_send_message_not_found(client, mock_auth):
+    """Test POST returns 404 for nonexistent conversation."""
+    resp = client.post(
+        "/api/v1/conversations/99999/messages",
+        json={"content": "Hi"},
+        headers=HEADERS,
+    )
+    assert resp.status_code == 404

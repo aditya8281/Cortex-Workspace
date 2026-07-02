@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -14,6 +13,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.interaction.conversation import Conversation
 from backend.app.models.interaction.user import User
+from backend.app.services.interaction.stream_manager import stream_manager
 
 logger = logging.getLogger(__name__)
 from backend.app.schemas.interaction.conversation import (
@@ -33,6 +33,39 @@ from backend.app.services.interaction.conversation import (
 router = APIRouter()
 
 
+def _get_svc(db: Session, user_id: int) -> ConversationService:
+    """Get a ConversationService with filesystem workspace attached.
+
+    Every endpoint that creates/reads/modifies conversations uses this.
+    The workspace enables dual-write (DB + filesystem) automatically.
+    """
+    try:
+        from backend.app.services.storage.factory import get_user_workspace
+        ws = get_user_workspace(user_id, db)
+        return ConversationService(db, workspace=ws)
+    except Exception as exc:
+        logger.debug("Workspace unavailable, DB-only mode: %s", exc)
+        return ConversationService(db)
+
+
+# Timeout for waiting on user tool approval (seconds)
+_APPROVAL_TIMEOUT = 120.0
+
+
+async def _wait_for_approval(conversation_id: int, call_id: str) -> bool:
+    """Wait for user to approve or deny a tool call.
+
+    Creates a future in the stream manager. The approval endpoint resolves it.
+    Times out after _APPROVAL_TIMEOUT seconds (denies by default).
+    """
+    future = stream_manager.create_approval_future(conversation_id, call_id)
+    try:
+        return await asyncio.wait_for(future, timeout=_APPROVAL_TIMEOUT)
+    except asyncio.TimeoutError:
+        logger.info("Tool approval timed out for %s/%s", conversation_id, call_id)
+        return False
+
+
 # ── CRUD Endpoints ──────────────────────────────────────────────────
 
 
@@ -43,7 +76,7 @@ async def list_conversations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    svc = ConversationService(db)
+    svc = _get_svc(db, current_user.id)
     convs = svc.list(current_user.id, limit, offset)
     total = db.query(func.count(Conversation.id)).filter(Conversation.user_id == current_user.id).scalar()
     return ConversationListResponse(
@@ -58,7 +91,7 @@ async def create_conversation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    svc = ConversationService(db)
+    svc = _get_svc(db, current_user.id)
     conv = svc.create(current_user.id, payload.title, payload.repo_id)
     return ConversationResponse.model_validate(conv)
 
@@ -69,7 +102,7 @@ async def get_conversation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    svc = ConversationService(db)
+    svc = _get_svc(db, current_user.id)
     conv = svc.get(conversation_id, current_user.id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -98,7 +131,7 @@ async def rename_conversation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    svc = ConversationService(db)
+    svc = _get_svc(db, current_user.id)
     conv = svc.get(conversation_id, current_user.id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -114,114 +147,359 @@ async def delete_conversation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    svc = ConversationService(db)
+    svc = _get_svc(db, current_user.id)
     deleted = svc.delete(conversation_id, current_user.id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return {"status": "deleted"}
 
 
-# ── Streaming Chat Endpoint ─────────────────────────────────────────
+# ── Background Generation Task ──────────────────────────────────────
+# Runs independently of any HTTP connection. Chunks are pushed into
+# a StreamBuffer that any number of SSE consumers can read from.
 
 
-async def _stream_chat_response(
+# Maximum tool-calling iterations for chat (prevents runaway loops)
+_MAX_CHAT_TOOL_ITERATIONS = 8
+
+
+async def _generate_response_task(
     conversation_id: int,
     user_content: str,
-    db: Session,
+    user_id: int,
     model: str | None = None,
-    user_id: int | None = None,
-) -> AsyncGenerator[str, None]:
-    """Generator that yields SSE events for the chat response."""
+) -> None:
+    """Background task: generate LLM response with tool-calling support.
+
+    Runs a loop: LLM call → parse TOOL_CALL → execute tools → repeat.
+    Final text response (no TOOL_CALL) is streamed to SSE consumers.
+    DB write always happens — even if no consumer is connected.
+    """
+    from backend.app.agents.loop import (
+        _parse_tool_calls,
+        _strip_tool_calls,
+    )
+    from backend.app.agents.tools.registry import get_tool_registry
+    from backend.app.agents.tools.policy import default_policy
+    from backend.app.db.session import SessionLocal
+    from backend.app.services.intelligence.llm.manager import llm_manager
+    from backend.app.services.intelligence.llm.provider import LLMMessage
+    from backend.app.services.intelligence.tool_router import (
+        classify_intent_tools,
+        build_tool_choice_hint,
+    )
+    buffer = stream_manager.get_or_create_buffer(conversation_id)
+    db = SessionLocal()
+
+    svc = _get_svc(db, user_id)
+
     try:
-        from backend.app.services.intelligence.llm.manager import llm_manager
-        from backend.app.services.intelligence.llm.provider import LLMMessage
-    except Exception as exc:
-        logger.error("Failed to import LLM modules: %s", exc, exc_info=True)
-        yield f"data: {json.dumps({'type': 'chunk', 'content': f'LLM import error: {exc}', 'tokens': 0})}\n\n"
-        yield f"data: {json.dumps({'type': 'done', 'total_tokens': 0, 'sources': []})}\n\n"
-        return
+        conv_before = svc.get(conversation_id, user_id)
+        is_first_message = conv_before and (conv_before.message_count or 0) == 0
+    except Exception:
+        is_first_message = False
 
-    svc = ConversationService(db)
-
-    conv_before = svc.get(conversation_id, user_id) if user_id else None
-    is_first_message = conv_before and (conv_before.message_count or 0) == 0
-
-    # Save user message with token count
+    # Save user message (dual-write: DB + filesystem)
     user_tokens = estimate_tokens(user_content)
-    svc.add_message(conversation_id, "user", user_content, tokens=user_tokens)
+    try:
+        svc.add_message(conversation_id, "user", user_content, tokens=user_tokens)
+        if model:
+            conv = svc.get(conversation_id, user_id)
+            if conv:
+                conv.model_used = model
+        db.commit()
+    except Exception as exc:
+        logger.error("Failed to save user message: %s", exc)
+        db.rollback()
 
-    # Update model_used on conversation
-    if model and user_id:
-        conv = svc.get(conversation_id, user_id)
-        if conv:
-            conv.model_used = model
-            db.commit()
-
-    # Build context using RAG pipeline (retrieves relevant knowledge + history)
+    # Build context via RAG
     try:
         rag = get_rag_pipeline(db)
-        conv = svc.get(conversation_id, user_id) if user_id else None
+        conv = svc.get(conversation_id, user_id)
         repo_id = conv.repo_id if conv else None
-        rag_context = rag.retrieve_context(user_content, repo_id=repo_id)
+        rag_context = rag.retrieve_context(user_content, repo_id=repo_id, user_id=user_id)
         sources = [
-            {"file_path": r.file_path, "score": r.score, "content": r.content[:300]} for r in rag_context.results
+            {"file_path": r.file_path, "score": r.score, "content": r.content[:300]}
+            for r in rag_context.results
         ]
     except Exception as exc:
-        logger.error("RAG pipeline failed: %s", exc, exc_info=True)
+        logger.error("RAG pipeline failed: %s", exc)
         rag_context = None
         sources = []
 
-    # Recover from any failed transaction before new queries
     try:
         db.rollback()
     except Exception:
         pass
 
     history = svc.get_context_messages(conversation_id, max_tokens=28000)
-    system_parts = ["You are Cortex, a helpful AI assistant with access to the user's codebase and knowledge."]
+
+    # Build system prompt from personality config + memories
+    from backend.app.services.personality.builder import build_system_prompt
+    system_content = build_system_prompt(db, user_id=user_id, user_message=user_content)
+
+    # Add RAG context if available
     if rag_context and rag_context.formatted_context:
         context_block = rag_context.formatted_context
-        system_parts.append(f"Relevant context from the codebase:\n\n{context_block}")
-        system_parts.append(
-            "\nUse this context to answer the user's question. "
-            "Cite sources using [1], [2], etc. when referencing specific files."
+        system_content += f"\n\nRelevant context from the codebase:\n\n{context_block}"
+        system_content += "\nCite sources using [1], [2], etc. when referencing specific files."
+
+    # Add tool descriptions to system prompt
+    registry = get_tool_registry()
+    policy = default_policy()
+    tool_lines: list[str] = []
+    for t in registry.get_all():
+        try:
+            props = t.schema.get("function", {}).get("parameters", {}).get("properties", {})
+            param_desc = ", ".join(
+                f"{name}: {prop.get('description', name)}" for name, prop in props.items()
+            ) if props else ""
+            req = " [REQUIRES APPROVAL]" if t.requires_approval else ""
+            tool_lines.append(f"  - {t.name}: {t.description} ({param_desc}){req}")
+        except Exception:
+            tool_lines.append(f"  - {t.name}: {t.description}")
+
+    if tool_lines:
+        system_content += (
+            "\n\n=== AVAILABLE TOOLS ===\n"
+            "You have access to tools. To use a tool, put this EXACTLY in your response "
+            "(on its own line or at the end):\n"
+            "TOOL_CALL: tool_name(param=value, param2=value2)\n\n"
+            "You MUST explain what you're about to do BEFORE the TOOL_CALL line.\n"
+            "After receiving tool results, synthesize them into a clear, helpful answer.\n"
+            "Do NOT call the same tool with the same arguments twice.\n"
+            "Do NOT call more tools than necessary.\n\n"
+            "Available tools:\n" + "\n".join(tool_lines)
         )
-    raw_messages = [{"role": "system", "content": "\n\n".join(system_parts)}]
+
+        # Intent-based routing: classify the user message and inject tool hints.
+        # This helps small models (3-8B) that might ignore the tool list.
+        intent = classify_intent_tools(user_content)
+        intent_hint = build_tool_choice_hint(intent)
+        if intent_hint:
+            system_content += intent_hint
+            logger.info(
+                "Intent router: %s (confidence=%.2f) — hint injected",
+                intent.tools_needed or ["none"], intent.confidence,
+            )
+
+    # Build message history for LLM
+    llm_messages = [LLMMessage(role="system", content=system_content)]
     for msg in history:  # type: ignore[attr-defined]
-        raw_messages.append({"role": msg.role, "content": msg.content})
-    raw_messages.append({"role": "user", "content": user_content})
-    messages = [LLMMessage(role=m["role"], content=m["content"]) for m in raw_messages]
+        llm_messages.append(LLMMessage(role=msg.role, content=msg.content))
 
     full_response = ""
+    thinking_content = ""
     response_tokens = 0
+    total_tool_calls = 0
+
+    # Check if active provider supports native tool calling (once, not per iteration)
+    _native_tools_checked = False
+    _supports_native_tools = False
 
     try:
-        async for chunk in llm_manager.chat_stream(messages, model=model, max_tokens=2048, temperature=0.7):
-            full_response += chunk
+        for tool_iteration in range(_MAX_CHAT_TOOL_ITERATIONS):
+            native_tool_calls = None
+            content = ""
+
+            # ── Native Ollama tool calling (only if provider supports it) ──
+            if not _native_tools_checked or _supports_native_tools:
+                try:
+                    ollama_tools = [t.schema for t in registry.get_all()]
+                    native_result = await llm_manager.chat_with_tools(
+                        llm_messages, ollama_tools, model=model,
+                    )
+                    _native_tools_checked = True
+                    if native_result is None:
+                        _supports_native_tools = False
+                    elif native_result.get("tool_calls"):
+                        _supports_native_tools = True
+                        native_tool_calls = []
+                        for tc in native_result["tool_calls"]:
+                            func = tc.get("function", tc)
+                            native_tool_calls.append({
+                                "name": func.get("name", ""),
+                                "args": func.get("arguments", func.get("args", {})),
+                            })
+                        content = native_result.get("content", "")
+                        logger.info("Native tool calling: %d calls", len(native_tool_calls))
+                    else:
+                        # Provider supports tools but model chose not to use them
+                        _supports_native_tools = True
+                        content = native_result.get("content", "").strip()
+                except Exception:
+                    _native_tools_checked = True
+                    _supports_native_tools = False  # Disable for subsequent iterations
+
+            # ── Fallback: text-based TOOL_CALL parsing ──────────────
+            if native_tool_calls is None:
+                result = await llm_manager.chat(
+                    llm_messages, model=model, max_tokens=2048, temperature=0.7
+                )
+                content = result.content.strip()
+                tool_calls = _parse_tool_calls(content)
+            else:
+                tool_calls = native_tool_calls
+
+            if not tool_calls and not content:
+                if tool_iteration == 0:
+                    content = "I don't have a response for that right now."
+                else:
+                    break
+
+            if tool_calls:
+                # Strip tool calls from user-visible text
+                visible_text = _strip_tool_calls(content)
+                if visible_text:
+                    # Stream pre-tool explanation as a thinking event (shows as "Reasoning")
+                    # This is Cortex explaining what it's about to do before calling tools
+                    buffer.push(
+                        f"data: {json.dumps({'type': 'thinking', 'content': visible_text})}\n\n"
+                    )
+
+                for tc in tool_calls:
+                    tool_name = tc["name"]
+                    tool_args = tc.get("args", {})
+
+                    # Coerce arg types
+                    tool_obj = registry.get(tool_name)
+                    if tool_obj:
+                        from backend.app.agents.loop import _coerce_args
+                        tool_args = _coerce_args(tool_args, tool_obj.schema)
+
+                    total_tool_calls += 1
+
+                    # Emit tool_call event
+                    buffer.push(
+                        f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name, 'args': tool_args})}\n\n"
+                    )
+
+                    # Check policy
+                    decision = policy.evaluate(tool_name, tool_iteration)
+                    if decision == "deny":
+                        result_text = f"Tool '{tool_name}' was denied by security policy"
+                        buffer.push(
+                            f"data: {json.dumps({'type': 'tool_result', 'tool': tool_name, 'result': result_text, 'denied': True})}\n\n"
+                        )
+                        llm_messages.append(LLMMessage(
+                            role="user",
+                            content=f"[Tool result for {tool_name}]: {result_text}",
+                        ))
+                        continue
+
+                    if decision == "ask":
+                        # Approval required — wait for user decision
+                        call_id = f"{conversation_id}_{total_tool_calls}"
+                        buffer.push(
+                            f"data: {json.dumps({'type': 'tool_approval', 'tool': tool_name, 'args': tool_args, 'call_id': call_id})}\n\n"
+                        )
+
+                        # Wait for approval/denial via the approval queue
+                        approved = await _wait_for_approval(conversation_id, call_id)
+
+                        if not approved:
+                            result_text = f"Tool '{tool_name}' was denied by user"
+                            buffer.push(
+                                f"data: {json.dumps({'type': 'tool_result', 'tool': tool_name, 'result': result_text, 'denied': True})}\n\n"
+                            )
+                            llm_messages.append(LLMMessage(
+                                role="user",
+                                content=f"[Tool result for {tool_name}]: {result_text}",
+                            ))
+                            continue
+
+                    # Execute the tool
+                    try:
+                        tool_result = await registry.execute(tool_name, **tool_args)
+                    except Exception as exc:
+                        tool_result = f"Tool '{tool_name}' execution error: {exc}"
+
+                    # Truncate very long results
+                    if len(tool_result) > 4000:
+                        tool_result = tool_result[:4000] + "\n... (truncated)"
+
+                    buffer.push(
+                        f"data: {json.dumps({'type': 'tool_result', 'tool': tool_name, 'result': tool_result[:500]})}\n\n"
+                    )
+                    llm_messages.append(LLMMessage(
+                        role="user",
+                        content=f"[Tool result for {tool_name}]: {tool_result}",
+                    ))
+
+                # Continue loop — LLM will synthesize tool results
+                continue
+
+            # No tool calls — this is the final text response
+            full_response = content
             response_tokens = estimate_tokens(full_response)
-            yield f"data: {json.dumps({'type': 'chunk', 'content': chunk, 'tokens': response_tokens})}\n\n"
+
+            # Stream the final response as text chunks
+            chunk_size = 40
+            for i in range(0, len(full_response), chunk_size):
+                chunk_text = full_response[i:i + chunk_size]
+                buffer.push(
+                    f"data: {json.dumps({'type': 'chunk', 'content': chunk_text, 'tokens': response_tokens})}\n\n"
+                )
+            break
+
+    except asyncio.CancelledError:
+        logger.info("Generation cancelled for conversation %d", conversation_id)
+        return
     except RuntimeError:
-        # LLM not available — return a fallback message
         fallback = "I need a local LLM to respond. Please download a model in Settings > Models."
         full_response = fallback
         response_tokens = estimate_tokens(fallback)
-        yield f"data: {json.dumps({'type': 'chunk', 'content': fallback, 'tokens': response_tokens})}\n\n"
+        buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': fallback, 'tokens': response_tokens})}\n\n")
     except Exception as e:
-        logger.error("Chat stream error for conversation %s: %s", conversation_id, e)
+        logger.error("Chat generation error for conversation %s: %s", conversation_id, e)
         error_msg = "An error occurred while generating a response. Please try again."
         full_response = error_msg
         response_tokens = estimate_tokens(error_msg)
-        yield f"data: {json.dumps({'type': 'chunk', 'content': error_msg, 'tokens': response_tokens})}\n\n"
+        buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': error_msg, 'tokens': response_tokens})}\n\n")
 
-    # Save assistant message with token count
-    svc.add_message(conversation_id, "assistant", full_response, tokens=response_tokens)
+    # ALWAYS write assistant message to DB
+    try:
+        svc.add_message(
+            conversation_id, "assistant", full_response, tokens=response_tokens,
+            thinking_content=thinking_content or None,
+        )
+        db.commit()
+    except Exception as exc:
+        logger.error("Failed to write assistant response to DB: %s", exc)
+        db.rollback()
 
     if is_first_message:
-        title = await svc.generate_title(user_content, model=model)
-        svc.update_title(conversation_id, title)
+        try:
+            title = await svc.generate_title(user_content, model=model)
+            svc.update_title(conversation_id, title)
+            db.commit()
+        except Exception as exc:
+            logger.error("Title generation failed: %s", exc)
+            db.rollback()
 
-    # Send completion event
-    yield f"data: {json.dumps({'type': 'done', 'total_tokens': response_tokens, 'sources': sources})}\n\n"
+    done_data = {
+        "type": "done",
+        "total_tokens": response_tokens,
+        "sources": sources,
+        "tool_calls": total_tool_calls,
+    }
+    buffer.mark_done(final_data=done_data)
+
+    # Background insight extraction
+    try:
+        await svc.extract_insights(conversation_id, user_id, model=model)
+    except Exception as exc:
+        logger.error("Background insight extraction failed for conversation %d: %s", conversation_id, exc)
+
+    try:
+        db.close()
+    except Exception:
+        pass
+
+    stream_manager.gc()
+
+
+# ── Streaming Chat Endpoints ────────────────────────────────────────
 
 
 @router.post("/conversations/{conversation_id}/messages", response_model=None)
@@ -231,51 +509,167 @@ async def send_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Start generating a response. Returns immediately — generation runs in background.
+
+    The frontend should subscribe to GET /conversations/{id}/stream after this.
+    """
     logger.info(
-        "send_message called: conv=%s user=%s content_len=%d", conversation_id, current_user.id, len(payload.content)
+        "send_message called: conv=%s user=%s content_len=%d",
+        conversation_id, current_user.id, len(payload.content),
     )
-    try:
-        svc = ConversationService(db)
-        conv = svc.get(conversation_id, current_user.id)
-        if not conv:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("send_message setup error: %s", exc, exc_info=True)
-        raise
 
-    async def _wrapped_stream():
-        try:
-            async for event in _stream_chat_response(
-                conversation_id, payload.content, db, model=payload.model, user_id=current_user.id
-            ):
-                yield event
-        except Exception as exc:
-            logger.error("_wrapped_stream error: %s", exc, exc_info=True)
-            yield f"data: {json.dumps({'type': 'chunk', 'content': f'Error: {exc}', 'tokens': 0})}\n\n"
+    # Validate conversation exists and belongs to user
+    svc = _get_svc(db, current_user.id)
+    conv = svc.get(conversation_id, current_user.id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Check if generation is already in progress for this conversation
+    existing_buf = stream_manager.get_buffer(conversation_id)
+    if existing_buf and not existing_buf.done:
+        return {"status": "generating", "conversation_id": conversation_id}
+
+    # Create buffer and start background task
+    buffer = stream_manager.get_or_create_buffer(conversation_id)
+    task = asyncio.create_task(
+        _generate_response_task(
+            conversation_id,
+            payload.content,
+            current_user.id,
+            model=payload.model,
+        )
+    )
+    stream_manager.register_task(conversation_id, task)
+
+    return {"status": "generating", "conversation_id": conversation_id}
+
+
+@router.get("/conversations/{conversation_id}/stream")
+async def stream_conversation(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Subscribe to the streaming response for a conversation.
+
+    Can be called before, during, or after generation:
+    - Before generation: waits for chunks to appear
+    - During generation: receives chunks in real-time
+    - After generation: receives buffered chunks, then done event
+
+    Multiple consumers can subscribe simultaneously (multi-tab support).
+    """
+    # Validate conversation belongs to user
+    svc = _get_svc(db, current_user.id)
+    conv = svc.get(conversation_id, current_user.id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    buffer = stream_manager.get_buffer(conversation_id)
+    if buffer is None:
+        # No generation happening — return done immediately
+        async def empty_stream():
             yield f"data: {json.dumps({'type': 'done', 'total_tokens': 0, 'sources': []})}\n\n"
-        background_svc = ConversationService(db)
-
-        async def _extract_with_logging():
-            try:
-                await background_svc.extract_insights(conversation_id, current_user.id, model=payload.model)
-            except Exception:
-                logger.error("Background insight extraction failed for conversation %d", conversation_id, exc_info=True)
-
-        task = asyncio.create_task(_extract_with_logging())
-        task.add_done_callback(
-            lambda t: (
-                None if not t.exception() else logger.error("Unhandled error in background task: %s", t.exception())
-            )
+        return StreamingResponse(
+            empty_stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
         )
 
+    async def _sse_stream():
+        """Read from the StreamBuffer and yield SSE events.
+
+        On connect, yields ALL historical events (catch-up) so resubscribing
+        consumers (e.g. after a tab switch) get the full response so far.
+        Then continues reading live events from the queue.
+
+        Includes safety timeout: if no data arrives for 5 consecutive reads
+        (150s total), emit a done event so the frontend isn't stuck forever.
+        """
+        try:
+            # Catch-up: yield everything this buffer has seen so far
+            for event in buffer.get_catch_up():
+                yield event
+            # If generation already finished, yield done and return
+            if buffer.done:
+                if buffer.final_data:
+                    yield f"data: {json.dumps(buffer.final_data)}\n\n"
+                return
+            # Live: read new events as they arrive
+            empty_streak = 0
+            while True:
+                chunk = await buffer.read(timeout=30.0)
+                if chunk is None:
+                    # Generation complete and buffer drained
+                    if buffer.final_data:
+                        yield f"data: {json.dumps(buffer.final_data)}\n\n"
+                    break
+                if chunk:
+                    empty_streak = 0
+                    yield chunk
+                else:
+                    empty_streak += 1
+                    if empty_streak >= 5:
+                        logger.warning("SSE stream timeout for conversation %d", conversation_id)
+                        if not buffer.done:
+                            buffer.mark_done(error="Stream timeout")
+                        if buffer.final_data:
+                            yield f"data: {json.dumps(buffer.final_data)}\n\n"
+                        break
+        except asyncio.CancelledError:
+            return
+        except Exception as exc:
+            logger.error("SSE stream error for conversation %d: %s", conversation_id, exc)
+
     return StreamingResponse(
-        _wrapped_stream(),
+        _sse_stream(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
     )
+
+
+@router.post("/conversations/{conversation_id}/cancel", response_model=dict)
+async def cancel_generation(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Cancel an in-progress generation."""
+    svc = _get_svc(db, current_user.id)
+    conv = svc.get(conversation_id, current_user.id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    cancelled = stream_manager.cancel_generation(conversation_id)
+    return {"status": "cancelled" if cancelled else "not_generating"}
+
+
+class ToolApprovalPayload(BaseModel):
+    call_id: str
+    approved: bool
+
+
+@router.post("/conversations/{conversation_id}/approve", response_model=dict)
+async def approve_tool_call(
+    conversation_id: int,
+    payload: ToolApprovalPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Approve or deny a pending tool call.
+
+    The generation task is awaiting this decision. Once resolved,
+    the tool executes (or is skipped) and generation continues.
+    """
+    svc = _get_svc(db, current_user.id)
+    conv = svc.get(conversation_id, current_user.id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    resolved = stream_manager.resolve_approval(
+        conversation_id, payload.call_id, payload.approved
+    )
+    if not resolved:
+        return {"status": "not_found", "message": "No pending approval with that call_id"}
+
+    return {"status": "resolved", "approved": payload.approved}

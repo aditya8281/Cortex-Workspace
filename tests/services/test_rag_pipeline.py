@@ -9,7 +9,7 @@ from backend.app.services.intelligence.rag_pipeline import RAGPipeline
 @pytest.fixture()
 def mock_retrieval():
     class Mock:
-        def retrieve(self, query, repo_id=None, limit=10, sources=None):
+        def retrieve(self, query, repo_id=None, limit=10, sources=None, **kwargs):
             from backend.app.services.intelligence.hybrid_retrieval import RetrievalResult
 
             return [

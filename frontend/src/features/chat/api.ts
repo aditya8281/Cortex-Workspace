@@ -15,8 +15,32 @@ export interface ChatMessage {
   id: number;
   role: "user" | "assistant" | "system";
   content: string;
+  thinking_content?: string | null;
   tokens: number;
   created_at: string;
+}
+
+/** Tool call event from SSE stream */
+export interface ToolCallEvent {
+  type: "tool_call";
+  tool: string;
+  args: Record<string, string>;
+}
+
+/** Tool result event from SSE stream */
+export interface ToolResultEvent {
+  type: "tool_result";
+  tool: string;
+  result: string;
+  denied?: boolean;
+}
+
+/** Tool approval request from SSE stream */
+export interface ToolApprovalEvent {
+  type: "tool_approval";
+  tool: string;
+  args: Record<string, string>;
+  call_id: string;
 }
 
 export interface ConversationDetail extends Conversation {
@@ -56,21 +80,37 @@ export const chatApi = {
     }),
 };
 
-export async function* streamChat(
+/**
+ * Step 1: Tell the backend to start generating a response.
+ * This returns immediately — generation runs as a background task.
+ */
+export async function sendMessage(
   conversationId: number,
   content: string,
   model?: string,
-): AsyncGenerator<{ type: string; content?: string; tokens?: number; sources?: Source[] }> {
+): Promise<{ status: string; conversation_id: number }> {
+  return apiFetch(`/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: { content, model },
+  });
+}
+
+/**
+ * Step 2: Subscribe to the SSE stream for a conversation's response.
+ * Can be called before, during, or after generation starts.
+ * Multiple consumers can subscribe simultaneously.
+ */
+export async function* subscribeToStream(
+  conversationId: number,
+  signal?: AbortSignal,
+): AsyncGenerator<{ type: string; content?: string; tokens?: number; sources?: Source[]; tool?: string; args?: Record<string, string>; result?: string; denied?: boolean; call_id?: string }> {
   const res = await apiFetchStream(
-    `/conversations/${conversationId}/messages`,
-    {
-      method: "POST",
-      body: { content, model },
-    },
+    `/conversations/${conversationId}/stream`,
+    { signal },
   );
 
   if (!res.ok) {
-    throw new Error(`Chat request failed: ${res.status}`);
+    throw new Error(`Stream subscription failed: ${res.status}`);
   }
 
   const reader = res.body!.getReader();
@@ -97,4 +137,31 @@ export async function* streamChat(
       }
     }
   }
+}
+
+/**
+ * Approve or deny a tool call that requires user permission.
+ */
+export async function approveToolCall(
+  conversationId: number,
+  callId: string,
+  approved: boolean,
+): Promise<{ status: string }> {
+  return apiFetch(`/conversations/${conversationId}/approve`, {
+    method: "POST",
+    body: { call_id: callId, approved },
+  });
+}
+
+/**
+ * Legacy wrapper for backward compatibility.
+ */
+export async function* streamChat(
+  conversationId: number,
+  content: string,
+  model?: string,
+  signal?: AbortSignal,
+): AsyncGenerator<{ type: string; content?: string; tokens?: number; sources?: Source[]; tool?: string; args?: Record<string, string>; result?: string; denied?: boolean; call_id?: string }> {
+  await sendMessage(conversationId, content, model);
+  yield* subscribeToStream(conversationId, signal);
 }

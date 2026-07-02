@@ -35,7 +35,7 @@ class RAGPipeline:
     ):
         self._db = db
         self._retrieval = retrieval or HybridRetrievalV2(db)
-        self._conv_service = conversation_service or ConversationService(db)
+        self._conv_service = conversation_service or ConversationService(db)  # RAG only reads, dual-write optional
 
     def retrieve_context(
         self,
@@ -43,12 +43,14 @@ class RAGPipeline:
         repo_id: int | None = None,
         max_tokens: int = MAX_CONTEXT_TOKENS,
         max_results: int = MAX_CONTEXT_RESULTS,
+        user_id: int | None = None,
     ) -> RAGContext:
         results = self._retrieval.retrieve(
             query=query,
             repo_id=repo_id,
             limit=max_results,
             sources=["vector", "fulltext"],
+            user_id=user_id,
         )
 
         formatted_parts = []

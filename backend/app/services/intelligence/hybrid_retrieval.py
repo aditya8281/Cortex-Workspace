@@ -61,6 +61,7 @@ class HybridRetrievalV2:
         diversity_penalty: float = 0.3,
         node_type: str | None = None,
         language: str | None = None,
+        user_id: int | None = None,
     ) -> list[RetrievalResult]:
         if sources is None:
             sources = ["vector", "fulltext"]
@@ -68,7 +69,7 @@ class HybridRetrievalV2:
         all_results: dict[str, list[RetrievalResult]] = {}
 
         if "vector" in sources:
-            all_results["vector"] = self._vector_search(query, repo_id, limit * 3)
+            all_results["vector"] = self._vector_search(query, repo_id, limit * 3, user_id=user_id)
         if "fulltext" in sources:
             all_results["fulltext"] = self._fulltext_search(query, repo_id, limit * 3)
         if "graph" in sources:
@@ -79,7 +80,7 @@ class HybridRetrievalV2:
         diverse = self._mmr_rerank(deduped, limit, diversity_penalty)
         return diverse
 
-    def _vector_search(self, query: str, repo_id: int | None, limit: int) -> list[RetrievalResult]:
+    def _vector_search(self, query: str, repo_id: int | None, limit: int, user_id: int | None = None) -> list[RetrievalResult]:
         if not qdrant_circuit_breaker.allow_request():
             logger.warning("Qdrant circuit breaker is OPEN — skipping vector search")
             return []
@@ -92,6 +93,8 @@ class HybridRetrievalV2:
                 filter_payload = {}
                 if repo_id and collection == CODE_COLLECTION:
                     filter_payload["repo_id"] = repo_id
+                if user_id and collection == MEMORY_COLLECTION:
+                    filter_payload["user_id"] = user_id
 
                 hits = self._vector_db.search(
                     collection,
