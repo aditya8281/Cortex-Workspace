@@ -10,6 +10,7 @@ interface ConversationSidebarProps {
   onClose: () => void;
   conversations: Conversation[];
   activeId: number | null;
+  generatingIds: Set<number>;
   onSelect: (id: number) => void;
   onDelete: (id: number) => void;
   onRename: (id: number, title: string) => void;
@@ -24,6 +25,7 @@ export function ConversationSidebar({
   onClose,
   conversations,
   activeId,
+  generatingIds,
   onSelect,
   onDelete,
   onRename,
@@ -55,19 +57,19 @@ export function ConversationSidebar({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — click outside to dismiss */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/30 backdrop-blur-sm"
+          className="fixed inset-0 z-sidebar bg-black/20 backdrop-blur-sm"
           onClick={onClose}
           aria-hidden="true"
         />
       )}
 
-      {/* Panel */}
+      {/* Panel — offset top-6 so it sits below NeuralRibbon */}
       <div
         className={cn(
-          "fixed left-0 top-0 z-40 h-dvh w-[320px] sm:w-[360px]",
+          "fixed left-0 top-6 z-sidebar bottom-0 w-[320px] sm:w-[360px]",
           "border-r border-border-default",
           "bg-bg-glass backdrop-blur-2xl",
           "flex flex-col",
@@ -181,7 +183,12 @@ export function ConversationSidebar({
                               : "text-text-secondary hover:text-text-primary hover:bg-bg-hover",
                           )}
                         >
-                          <p className="text-sm font-medium truncate leading-tight">{conv.title || "Untitled"}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate leading-tight flex-1">{conv.title || "Untitled"}</p>
+                            {generatingIds.has(conv.id) && (
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-cyan animate-pulse-dot shrink-0" aria-label="Generating" />
+                            )}
+                          </div>
                           <p className="text-xs text-text-muted mt-0.5">{conv.message_count} messages</p>
                         </button>
                       )}

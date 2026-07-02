@@ -33,6 +33,8 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const skipFetchRef = useRef(false);
+  // Track if user has manually scrolled up — suppress auto-scroll during streaming
+  const userScrolledUpRef = useRef(false);
   // Track active stream per conversation so we can abort on switch
   const abortRef = useRef<AbortController | null>(null);
   // Track which conversation the current stream belongs to
@@ -112,8 +114,32 @@ export default function ChatPage() {
   }, [activeId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (userScrolledUpRef.current) return;
+    messagesEndRef.current?.scrollIntoView({
+      behavior: isCurrentlyStreaming ? "auto" : "smooth",
+    });
   }, [messages, isCurrentlyStreaming]);
+
+  // Detect when user scrolls up — suppress auto-scroll
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    userScrolledUpRef.current = !isNearBottom;
+  }, []);
+
+  // Attach scroll listener to the messages container
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
+
+  // Reset user-scrolled-up flag when switching conversations
+  useEffect(() => {
+    userScrolledUpRef.current = false;
+  }, [activeId]);
 
   const handleDraftChange = useCallback((value: string) => {
     if (activeId) {
@@ -544,7 +570,7 @@ export default function ChatPage() {
         <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4">
           {!activeId ? (
             /* ── Empty state ── */
-            <div className="relative flex flex-col items-center justify-center min-h-full text-center max-w-lg mx-auto">
+            <div className="relative flex flex-col items-center justify-center h-full text-center max-w-lg mx-auto">
               {/* Ambient neural glow — very faint radial, centered behind content */}
               <div
                 className="pointer-events-none absolute inset-0"
@@ -673,7 +699,7 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="pb-14">
+        <div className="pb-20">
           <ChatInput
             onSend={handleSend}
             onTyping={sendTyping}

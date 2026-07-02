@@ -76,6 +76,7 @@ const config: Config = {
       },
       zIndex: {
         base: "0",
+        sidebar: "60",
         dock: "50",
         commandbar: "80",
         dropdown: "100",
