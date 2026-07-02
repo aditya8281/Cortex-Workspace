@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.vector_db import get_vector_db
 from backend.app.models.awareness.repo_index import CodeChunk, RepoIndex
-from backend.app.services.intelligence.chunker import SKIP_DIRS, Chunk, chunk_code, chunk_text, detect_language
+from backend.app.services.intelligence.chunker import CORTEXIGNORE, SKIP_DIRS, Chunk, chunk_code, chunk_text, detect_language
 from backend.app.services.intelligence.embedding_service import get_embedding_service
 
 logger = logging.getLogger(__name__)
@@ -130,7 +130,11 @@ class RepoScanner:
         """Walk repository files, skipping ignored directories."""
         files: list[Path] = []
         for root, dirs, filenames in os.walk(path):
-            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+            dirs[:] = [
+                d for d in dirs
+                if d not in SKIP_DIRS
+                and not os.path.isfile(os.path.join(root, d, CORTEXIGNORE))
+            ]
             for filename in filenames:
                 file_path = Path(root) / filename
                 if file_path.is_file():

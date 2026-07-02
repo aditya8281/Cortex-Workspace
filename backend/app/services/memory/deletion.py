@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 HARD_DELETE_AFTER_DAYS = 30
 CODE_COLLECTION = "cortex_code"
-MEMORY_COLLECTION = "cortex_memory"
+MEMORY_COLLECTION = "cortex_docs"
 
 
 class DeletionPipeline:

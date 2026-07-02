@@ -26,7 +26,7 @@ class BatchItem:
     content: str
     file_path: str
     metadata: dict[str, Any] = field(default_factory=dict)
-    collection: str = "cortex_code"  # or "cortex_memory"
+    collection: str = "cortex_code"  # or "cortex_docs"
 
 
 class BatchIndexer:

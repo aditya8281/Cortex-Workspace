@@ -43,7 +43,13 @@ SKIP_DIRS: set[str] = {
     "build",
     ".next",
     "target",
+    "CortexStorage",
+    ".cortex",
+    "cortex_data",
 }
+
+# Marker file — if a directory contains this file, the entire subtree is skipped.
+CORTEXIGNORE = ".cortexignore"
 
 _SYMBOL_RE = re.compile(
     r"^\s*"

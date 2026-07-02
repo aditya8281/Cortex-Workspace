@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from backend.app.models.awareness.file_tracker import FileIndex
 
+CORTEXIGNORE = ".cortexignore"
+
 # Directories to skip during scanning
 SKIP_DIRS: set[str] = {
     ".git",
@@ -28,6 +30,9 @@ SKIP_DIRS: set[str] = {
     "target",
     ".idea",
     ".vscode",
+    "CortexStorage",
+    ".cortex",
+    "cortex_data",
 }
 
 # Max file path length (DB column is VARCHAR(1000))
@@ -71,7 +76,7 @@ class FilesystemIndexerService:
 
         for root, dirs, filenames in os.walk(directory):
             # Mutate dirs in-place to prune ignored subdirectories
-            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+            dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not os.path.isfile(os.path.join(root, d, CORTEXIGNORE))]
 
             for filename in filenames:
                 if file_count >= MAX_FILES_PER_SCAN:
@@ -130,7 +135,7 @@ class FilesystemIndexerService:
         # Current files on disk
         current_paths: set[str] = set()
         for root, dirs, filenames in os.walk(directory):
-            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+            dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not os.path.isfile(os.path.join(root, d, CORTEXIGNORE))]
             for filename in filenames:
                 fp = os.path.join(root, filename)
                 if len(fp) <= MAX_PATH_LENGTH:

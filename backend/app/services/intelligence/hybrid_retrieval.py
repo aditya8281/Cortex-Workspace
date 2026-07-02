@@ -15,7 +15,7 @@ from backend.app.services.intelligence.fulltext import FullTextSearch, get_fullt
 logger = logging.getLogger(__name__)
 
 CODE_COLLECTION = "cortex_code"
-MEMORY_COLLECTION = "cortex_memory"
+DOCS_COLLECTION = "cortex_docs"
 K_RRF = 60  # RRF constant
 
 
@@ -88,13 +88,14 @@ class HybridRetrievalV2:
         query_vector = self._embedder.embed_single(query)
         results = []
 
-        for collection in [CODE_COLLECTION, MEMORY_COLLECTION]:
+        # System-level brain collections — no user isolation needed.
+        # cortex_code: code embeddings (shared knowledge).
+        # cortex_docs: document embeddings (PDFs, docs, admin-specified paths).
+        for collection in [CODE_COLLECTION, DOCS_COLLECTION]:
             try:
                 filter_payload = {}
                 if repo_id and collection == CODE_COLLECTION:
                     filter_payload["repo_id"] = repo_id
-                if user_id and collection == MEMORY_COLLECTION:
-                    filter_payload["user_id"] = user_id
 
                 hits = self._vector_db.search(
                     collection,

@@ -14,7 +14,7 @@ from backend.app.services.intelligence.embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_COLLECTION = "cortex_memory"
+DEFAULT_COLLECTION = "cortex_docs"
 
 
 class MemoryManager:

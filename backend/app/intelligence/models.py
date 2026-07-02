@@ -22,7 +22,7 @@ class KnowledgeEntry(Base):
     source_key: Mapped[str | None] = mapped_column(String(512), nullable=True, index=True)
     embedding_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     tags: Mapped[str | None] = mapped_column(Text, nullable=True)
-    vector_collection: Mapped[str] = mapped_column(String(64), default="cortex_memory", nullable=False)
+    vector_collection: Mapped[str] = mapped_column(String(64), default="cortex_docs", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False

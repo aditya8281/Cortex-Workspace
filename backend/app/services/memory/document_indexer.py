@@ -168,6 +168,9 @@ MIME_TYPE_MAP: dict[str, DocumentType] = {
     "text/x-shellscript": DocumentType.CODE,
 }
 
+# Marker file — if present in a directory, the entire subtree is skipped
+CORTEXIGNORE = ".cortexignore"
+
 SKIP_DIRS: set[str] = {
     ".git",
     "node_modules",
@@ -179,6 +182,9 @@ SKIP_DIRS: set[str] = {
     ".next",
     "target",
     ".cache",
+    "CortexStorage",
+    ".cortex",
+    "cortex_data",
 }
 
 # chardet availability
@@ -341,7 +347,12 @@ class DocumentIndexer:
         stats = {"files_scanned": 0, "files_indexed": 0, "files_skipped": 0, "errors": 0}
 
         for root, dirs, files in os.walk(dir_path):
-            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+            # Skip dirs in SKIP_DIRS OR containing .cortexignore
+            dirs[:] = [
+                d for d in dirs
+                if d not in SKIP_DIRS
+                and not os.path.isfile(os.path.join(root, d, CORTEXIGNORE))
+            ]
             for fname in files:
                 fpath = os.path.join(root, fname)
                 doc_type = _detect_doc_type(fpath)
@@ -377,7 +388,7 @@ class DocumentIndexer:
         embedding_ids = [c.embedding_id for c in chunks if c.embedding_id]
         if embedding_ids:
             try:
-                self._vector_db.delete("cortex_memory", embedding_ids)
+                self._vector_db.delete("cortex_docs", embedding_ids)
             except Exception as e:
                 logger.warning("Failed to delete vectors: %s", e)
         for chunk in chunks:
@@ -434,7 +445,7 @@ class DocumentIndexer:
         for i in range(0, len(points), EMBED_BATCH_SIZE):
             batch = points[i : i + EMBED_BATCH_SIZE]
             try:
-                self._vector_db.upsert("cortex_memory", batch)
+                self._vector_db.upsert("cortex_docs", batch)
             except Exception as e:
                 logger.warning("Failed to upsert vectors: %s", e)
 
