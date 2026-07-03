@@ -42,6 +42,11 @@ _SEARCH_PATTERNS = [
     r"\btell me about\b",
     r"\bwhat (?:is|are|was|were) .*\b(?:in 2024|in 2025|in 2026|today|now|currently)\b",
     r"\bhow (?:do|does|to|is) .*\b(?:in 2024|in 2025|in 2026)\b",
+    # Common typos — "webserch", "searhc", etc.
+    r"\bwebserch\b",
+    r"\bsearhc\b",
+    r"\bwe[bs]earch\b",
+    r"\b(?:google|ddg|duckduckgo|bing|yahoo)\b",
 ]
 
 _WRITE_FILE_PATTERNS = [

@@ -353,10 +353,16 @@ def _describe_schema_params(schema: dict) -> str:
         return ""
 
 
-# Matches TOOL_CALL: name( — captures tool name and opening paren position.
+# Matches TOOL_CALL directives. Handles:
+#   TOOL_CALL: web_search(query="...")
+#   TOOL_CALL:web_search(query="...")       (no space after colon)
+#   `TOOL_CALL: web_search(...)`            (backtick-wrapped)
+#   TOOL_CALL web_search(...)               (missing colon)
+#   tool_call: web_search(...)              (lowercase)
+#   TOOL_CALL: web_search (query = "...")   (spaces around name/parens)
 # Argument extraction uses paren-depth counting to handle nested parens.
 _TOOL_CALL_START_RE = re.compile(
-    r"TOOL_CALL:\s*(\w+)\s*\(",
+    r"`*\s*TOOL_CALL\s*:?\s*(\w+)\s*\(",
     re.IGNORECASE,
 )
 
@@ -452,6 +458,8 @@ def _strip_tool_calls(text: str) -> str:
     """Remove TOOL_CALL directives from text, leaving only user-visible content.
 
     Uses paren-depth counting to handle nested parens in arguments.
+    Also strips surrounding backticks and code-block fences
+    (`` `TOOL_CALL: ...()``, ``````TOOL_CALL: ...()``````) cleanly.
     """
     result_parts: list[str] = []
     pos = 0
@@ -460,17 +468,23 @@ def _strip_tool_calls(text: str) -> str:
         if not match:
             result_parts.append(text[pos:])
             break
-        # Append text before this TOOL_CALL
-        result_parts.append(text[pos : match.start()])
+        # Append text before this TOOL_CALL (excluding any opening backticks/fence)
+        before = text[pos : match.start()]
+        # Strip trailing backticks from "before" (the leading fence that the
+        # regex's `\`*` prefix consumed as part of the match)
+        result_parts.append(before.rstrip("`"))
         block = _extract_paren_block(text, match.end() - 1)
         if block is None:
             pos = match.end()
             continue
         _, end_pos = block
-        pos = end_pos
         # Skip trailing whitespace after the call
-        while pos < len(text) and text[pos] in " \t\n":
-            pos += 1
+        while end_pos < len(text) and text[end_pos] in " \t\n":
+            end_pos += 1
+        # Skip trailing backtick(s) if present (matching the leading ones)
+        while end_pos < len(text) and text[end_pos] == "`":
+            end_pos += 1
+        pos = end_pos
     return "".join(result_parts).strip()
 
 

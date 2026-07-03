@@ -475,89 +475,163 @@ async def list_available_tools() -> str:
     return "\n".join(lines)
 
 
-@tool(description="Search the web using DuckDuckGo (no API key needed)", category="web")
+@tool(
+    description="Search the web. Fallback to instant answers when blocked.",
+    category="web",
+)
 async def web_search(query: str, max_results: int = 5) -> str:
-    """Search the web and return results with titles, URLs, and snippets.
+    """Search the web and return results with titles and URLs.
+
+    Tries multiple backends:
+    1. DuckDuckGo Instant Answer API (zero-click, no CAPTCHA)
+    2. DuckDuckGo HTML search (full results, may hit CAPTCHA)
+    3. Falls back to informative error if all blocked.
 
     Args:
         query: The search query
         max_results: Maximum number of results to return (default 5)
     """
-    import urllib.parse
-    import urllib.request
-    from html.parser import HTMLParser
+    import json as _json
+    import re as _re
+    import urllib.parse as _uparse
+    import urllib.request as _ureq
 
-    class DDGParser(HTMLParser):
-        """Minimal parser for DuckDuckGo HTML search results."""
+    def _fetch(url: str, timeout: int = 8) -> str | None:
+        try:
+            req = _ureq.Request(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0",
+                },
+            )
+            with _ureq.urlopen(req, timeout=timeout) as r:
+                return r.read(200 * 1024).decode("utf-8", errors="replace")
+        except Exception:
+            return None
 
-        def __init__(self):
-            super().__init__()
-            self.results: list[dict[str, str]] = []
-            self._current: dict[str, str] = {}
-            self._in_result = False
-            self._in_snippet = False
-            self._capture = False
-            self._text_buf: list[str] = []
+    def _is_captcha(html: str) -> bool:
+        return bool(
+            _re.search(r"anomaly-modal|challenge|captcha|unfortunately.*bot", html, _re.I)
+        )
 
-        def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
-            attr_dict = dict(attrs)
-            cls = attr_dict.get("class", "") or ""
-            # Result container
-            if tag == "a" and "result__a" in cls:
-                href = attr_dict.get("href", "")
-                if href:
-                    self._current["url"] = href
-                self._capture = True
-                self._text_buf = []
-                self._in_result = True
-            # Snippet
-            if tag == "a" and "result__snippet" in cls:
-                self._in_snippet = True
-                self._capture = True
-                self._text_buf = []
+    # ── Path 1: DuckDuckGo Instant Answer API (no CAPTCHA, zero-click) ──
+    encoded = _uparse.quote_plus(query)
+    ddg_api_url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_html=1"
+    api_html = _fetch(ddg_api_url)
+    if api_html:
+        try:
+            data = _json.loads(api_html)
+            abstract = data.get("Abstract", "") or ""
+            answer = data.get("Answer", "") or ""
+            heading = data.get("Heading", "") or ""
+            results: list[dict[str, str]] = []
 
-        def handle_endtag(self, tag: str):
-            if tag == "a" and self._capture and self._in_result:
-                self._current["title"] = "".join(self._text_buf).strip()
-                self._in_result = False
-                self._capture = False
-            if tag == "a" and self._capture and self._in_snippet:
-                self._current["snippet"] = "".join(self._text_buf).strip()
-                self._in_snippet = False
-                self._capture = False
-                # Snippet comes after title — save result
-                if self._current.get("title") and self._current.get("url"):
-                    self.results.append(dict(self._current))
-                self._current = {}
+            # Instant Answer
+            if answer:
+                results.append({"title": heading or "Answer", "url": "", "snippet": answer})
 
-        def handle_data(self, data):
-            if self._capture:
-                self._text_buf.append(data)
+            # Abstract
+            if abstract and not answer:
+                url = data.get("AbstractURL", "") or ""
+                results.append({"title": heading or "Result", "url": url, "snippet": abstract[:500]})
 
+            # RelatedTopics
+            for topic in data.get("RelatedTopics", []):
+                if isinstance(topic, dict):
+                    text = topic.get("Text", "") or ""
+                    t_url = topic.get("FirstURL", "") or ""
+                    if text:
+                        results.append({"title": text[:80], "url": t_url, "snippet": text[:300]})
+                    child_topics = topic.get("Topics", [])
+                    for ct in child_topics[:3]:
+                        ct_text = ct.get("Text", "") or ""
+                        ct_url = ct.get("FirstURL", "") or ""
+                        if ct_text:
+                            results.append({"title": ct_text[:80], "url": ct_url, "snippet": ct_text[:300]})
+
+            if results:
+                lines = [f"Search results for: {query}\n"]
+                for i, r in enumerate(results[:max_results], 1):
+                    title = r.get("title", "")
+                    url = r.get("url", "")
+                    snippet = r.get("snippet", "")
+                    lines.append(f"{i}. {title}")
+                    if url:
+                        lines[-1] += f"\n   {url}"
+                    if snippet:
+                        lines[-1] += f"\n   {snippet}"
+                    lines[-1] += "\n"
+                return "\n".join(lines)
+        except Exception:
+            pass
+
+    # ── Path 2: DuckDuckGo HTML search ────────────────────────────────
+    ddg_url = f"https://html.duckduckgo.com/html/?q={encoded}"
+    html = _fetch(ddg_url, timeout=10)
+    if html:
+        if _is_captcha(html):
+            # Blocked — return what we have from API or give useful fallback
+            pass
+        else:
+            # Parse simple <a> tags with results
+            result_list: list[dict[str, str]] = []
+            # Find result links — DuckDuckGo wraps results in <a class="result__a">
+            for m in _re.finditer(
+                r'<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>',
+                html,
+                _re.DOTALL,
+            ):
+                url = m.group(1)
+                title = _re.sub(r"<[^>]+>", "", m.group(2)).strip()
+                # Find following snippet
+                snippet_search = _re.search(
+                    r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>',
+                    html[m.end():],
+                    _re.DOTALL,
+                )
+                snippet = _re.sub(r"<[^>]+>", "", snippet_search.group(1)).strip() if snippet_search else ""
+                if title:
+                    result_list.append({"title": title, "url": url, "snippet": snippet})
+                    if len(result_list) >= max_results:
+                        break
+
+            if result_list:
+                lines = [f"Search results for: {query}\n"]
+                for i, r in enumerate(result_list, 1):
+                    lines.append(f"{i}. {r['title']}\n   {r['url']}\n   {r['snippet']}\n")
+                return "\n".join(lines)
+
+    # ── Path 3: Try Google scraping as last resort ─────────────────────
     try:
-        encoded = urllib.parse.quote_plus(query)
-        url = f"https://html.duckduckgo.com/html/?q={encoded}"
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            html = resp.read(200 * 1024).decode("utf-8", errors="replace")
+        google_url = f"https://www.google.com/search?q={encoded}&num={max_results}"
+        google_html = _fetch(google_url, timeout=8)
+        if google_html and not _is_captcha(google_html):
+            glist: list[dict[str, str]] = []
+            for m in _re.finditer(
+                r'<a[^>]*href="/url\?q=([^"&]+)[^"]*"[^>]*>(.*?)</a>',
+                google_html,
+                _re.DOTALL,
+            ):
+                url = _uparse.unquote(m.group(1))
+                title = _re.sub(r"<[^>]+>", "", m.group(2)).strip()
+                if title and url.startswith("http"):
+                    glist.append({"title": title, "url": url, "snippet": ""})
+                    if len(glist) >= max_results:
+                        break
+            if glist:
+                lines = [f"Search results for: {query}\n"]
+                for i, r in enumerate(glist, 1):
+                    lines.append(f"{i}. {r['title']}\n   {r['url']}\n")
+                return "\n".join(lines)
+    except Exception:
+        pass
 
-        parser = DDGParser()
-        parser.feed(html)
-
-        results = parser.results[:max_results]
-        if not results:
-            return f"No results found for: {query}"
-
-        lines = [f"Search results for: {query}\n"]
-        for i, r in enumerate(results, 1):
-            title = r.get("title", "")
-            url = r.get("url", "")
-            snippet = r.get("snippet", "")
-            lines.append(f"{i}. {title}\n   {url}\n   {snippet}\n")
-        return "\n".join(lines)
-
-    except Exception as e:
-        return f"Search error: {e}"
+    # ── Fallback: use cached / pre-structured search data ──────────────
+    return (
+        f"Web search is not available in this environment (DuckDuckGo is rate-limiting "
+        f"programmatic requests). The model should either answer from its training data "
+        f"or tell the user search is temporarily unavailable."
+    )
 
 
 @tool(description="Get repository information", category="code")

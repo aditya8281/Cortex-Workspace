@@ -1,8 +1,8 @@
 {
-  "scraped_at": "2026-07-03T05:30:26.154984+00:00",
+  "scraped_at": "2026-07-03T05:33:13.150388+00:00",
   "source": "https://ollama.com/library",
   "total_models": 236,
-  "total_tags": 831,
+  "total_tags": 837,
   "models": [
     {
       "name": "alfred",
@@ -185,7 +185,11 @@
     },
     {
       "name": "deepcoder",
-      "tags": []
+      "tags": [
+        "latest",
+        "1.5b",
+        "14b"
+      ]
     },
     {
       "name": "deepscaler",
@@ -597,7 +601,11 @@
     },
     {
       "name": "granite-embedding",
-      "tags": []
+      "tags": [
+        "latest",
+        "30m",
+        "278m"
+      ]
     },
     {
       "name": "granite3-dense",
@@ -625,7 +633,11 @@
     },
     {
       "name": "granite3.1-dense",
-      "tags": []
+      "tags": [
+        "latest",
+        "2b",
+        "8b"
+      ]
     },
     {
       "name": "granite3.1-moe",
@@ -943,7 +955,10 @@
     },
     {
       "name": "marco-o1",
-      "tags": []
+      "tags": [
+        "latest",
+        "7b"
+      ]
     },
     {
       "name": "mathstral",
@@ -1289,11 +1304,7 @@
     },
     {
       "name": "olmo2",
-      "tags": [
-        "latest",
-        "7b",
-        "13b"
-      ]
+      "tags": []
     },
     {
       "name": "open-orca-platypus2",
@@ -1400,10 +1411,7 @@
     },
     {
       "name": "phi",
-      "tags": [
-        "latest",
-        "2.7b"
-      ]
+      "tags": []
     },
     {
       "name": "phi3",
