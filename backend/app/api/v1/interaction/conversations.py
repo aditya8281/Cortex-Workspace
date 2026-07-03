@@ -329,17 +329,24 @@ async def _generate_response_task_impl(
     total_tool_calls = 0
     _streamed_directly = False  # True when fallback path already streamed tokens
 
-    # Check if active provider supports native tool calling (once, not per iteration)
-    _native_tools_checked = False
+    # Detect provider tool capability — quick check, no blocking call.
+    # Streaming is always preferred on first iteration for per-token delivery.
     _supports_native_tools = False
+    try:
+        provider = await llm_manager._get_active()
+        _supports_native_tools = hasattr(provider, "chat_with_tools")
+    except Exception:
+        pass
 
     try:
         for tool_iteration in range(_MAX_CHAT_TOOL_ITERATIONS):
             native_tool_calls = None
             content = ""
 
-            # ── Native Ollama tool calling (only if provider supports it) ──
-            if not _native_tools_checked or _supports_native_tools:
+            # ── Native Ollama tool calling — only for subsequent iterations ──
+            # First iteration always streams (per-token thinking, no blocking).
+            # After tool calls are parsed, use native tools for result synthesis.
+            if _supports_native_tools and tool_iteration > 0:
                 try:
                     ollama_tools = [t.schema for t in registry.get_all()]
                     native_result = await llm_manager.chat_with_tools(
@@ -347,7 +354,6 @@ async def _generate_response_task_impl(
                         ollama_tools,
                         model=model,
                     )
-                    _native_tools_checked = True
                     if native_result is None:
                         _supports_native_tools = False
                     elif native_result.get("tool_calls"):
@@ -369,8 +375,39 @@ async def _generate_response_task_impl(
                         content = native_result.get("content", "").strip()
                         native_tool_calls = []  # Signal "no tools" so fallback is skipped
                 except Exception:
-                    _native_tools_checked = True
                     _supports_native_tools = False  # Disable for subsequent iterations
+
+            # ── Native returns content without tool calls — deliver as stream ──
+            if native_tool_calls is not None and not native_tool_calls and content:
+                # Non-streaming call already got the full response.
+                # Extract thinking, then stream content word-by-word for natural feel.
+                resp = content
+                content = ""
+                tool_calls = []
+                streamed_visible = ""
+
+                # Extract thinking from <think> tags (embeds in non-streaming response)
+                think_match = re.search(r"<think>(.*?)</think>", resp, re.DOTALL)
+                if think_match:
+                    thinking_content = think_match.group(1).strip()
+                    buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': thinking_content})}\n\n")
+                    resp = re.sub(r"<think>.*?</think>", "", resp, flags=re.DOTALL).strip()
+                # Also check for thinking field (Ollama 0.6+ in non-streaming mode)
+                thinking_field = native_result.get("thinking", "")
+                if thinking_field and not thinking_content:
+                    thinking_content = thinking_field
+                    buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': thinking_field})}\n\n")
+
+                # Stream visible content word-by-word
+                if resp:
+                    words = resp.split(" ")
+                    for i, w in enumerate(words):
+                        chunk_text = w + (" " if i < len(words) - 1 else "")
+                        content += chunk_text
+                        streamed_visible += chunk_text
+                        buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': chunk_text})}\n\n")
+
+                _streamed_directly = True
 
             # ── Fallback: text-based TOOL_CALL parsing with streaming ──
             if native_tool_calls is None:

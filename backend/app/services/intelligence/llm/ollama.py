@@ -48,6 +48,7 @@ class OllamaProvider(LLMProvider):
                 "model": model,
                 "messages": formatted,
                 "stream": False,
+                "think": True,
                 "options": {
                     "num_predict": (config or {}).get("max_tokens", 2048),
                     "temperature": (config or {}).get("temperature", 0.7),
@@ -80,6 +81,7 @@ class OllamaProvider(LLMProvider):
                 "model": model,
                 "messages": formatted,
                 "stream": False,
+                "think": True,
                 "options": {
                     "num_predict": max_tokens,
                     "temperature": temperature,
@@ -137,6 +139,7 @@ class OllamaProvider(LLMProvider):
             "model": model,
             "messages": formatted,
             "stream": False,
+            "think": True,  # Enable thinking for reasoning models
             "options": {
                 "num_predict": max_tokens,
                 "temperature": temperature,
@@ -204,6 +207,7 @@ class OllamaProvider(LLMProvider):
                 "model": model,
                 "messages": formatted,
                 "stream": True,
+                "think": True,  # Enable thinking field for reasoning models
                 "options": {
                     "num_predict": (config or {}).get("max_tokens", 2048),
                     "temperature": (config or {}).get("temperature", 0.7),
