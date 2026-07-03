@@ -299,6 +299,10 @@ export default function ChatPage() {
         setGenerating(conv.id, true);
         setSources([]);
         setToolEvents([]);
+        // Placeholder — shows "Thinking…" immediately without waiting for SSE
+        setMessages((prev) => [...prev, {
+          id: -1, role: "assistant" as const, content: "", tokens: 0, created_at: new Date().toISOString(),
+        }]);
         _streamResponse(convId, content);
         return;
       } catch { return; }
@@ -307,7 +311,9 @@ export default function ChatPage() {
     const userMsg: ChatMessage = {
       id: Date.now(), role: "user", content, tokens: 0, created_at: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg, {
+      id: -1, role: "assistant" as const, content: "", tokens: 0, created_at: new Date().toISOString(),
+    }]);
     setGenerating(convId, true);
     setSources([]);
     _streamResponse(convId, content);
@@ -326,18 +332,14 @@ export default function ChatPage() {
     // Helper: update messages for this conversation, whether visible or cached
     const updateMessages = (updater: (prev: ChatMessage[]) => ChatMessage[]) => {
       if (isStillActive()) {
-        // Currently viewing this conversation — update visible state
         setMessages((prev) => updater(prev));
       }
-      // Always update cache so switching back preserves streaming state
       const current = streamingMessagesRef.current.get(convId) ?? [];
       streamingMessagesRef.current.set(convId, updater(current));
     };
 
-    // Step 1: Tell backend to start generating (returns immediately)
-    try {
-      await sendMessage(convId, content, selectedModel ?? undefined);
-    } catch (err) {
+    // Step 1: Start generation (don't await — subscribe SSE in parallel)
+    const postPromise = sendMessage(convId, content, selectedModel ?? undefined).catch((err) => {
       setGenerating(convId, false);
       updateMessages((prev) => [...prev.filter((m) => m.id !== -1), {
         id: Date.now(), role: "assistant", content: "Failed to start generation. Please try again.",
@@ -345,16 +347,19 @@ export default function ChatPage() {
       }]);
       abortRef.current = null;
       streamConvIdRef.current = null;
-      return;
-    }
+    });
 
-    // Step 2: Subscribe to the SSE stream (with auto-reconnect)
+    // Step 2: Subscribe to SSE immediately (parallel with POST)
     let assistantContent = "";
     let thinkingContent = "";
     const MAX_RECONNECTS = 3;
 
+    // Small delay to let buffer be created
+    await new Promise((r) => setTimeout(r, 100));
+
     for (let attempt = 0; attempt <= MAX_RECONNECTS; attempt++) {
       try {
+        if (controller.signal.aborted) return;
         for await (const event of subscribeToStream(convId, controller.signal)) {
           if (!isStillActive()) return;
           if (event.type === "thinking" && event.content) {
@@ -417,7 +422,6 @@ export default function ChatPage() {
                 thinking_content: thinkingContent || m.thinking_content,
               } : m)
             );
-            // Successfully completed — clear cache for this conv (response is now in DB)
             streamingMessagesRef.current.delete(convId);
             thinkingRef.current.delete(convId);
             toolEventsRef.current.delete(convId);
@@ -425,12 +429,10 @@ export default function ChatPage() {
             setGenerating(convId, false);
             abortRef.current = null;
             streamConvIdRef.current = null;
-            // Refresh conversation list — backend may have generated a new title
             loadConversations();
             return;
           }
         }
-        // Stream ended without "done" — reconnect if still active
         if (!isStillActive()) return;
         if (attempt < MAX_RECONNECTS) {
           await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));

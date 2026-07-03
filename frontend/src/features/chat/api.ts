@@ -1,4 +1,15 @@
-import { apiFetch, apiFetchStream } from "@/shared/api/client";
+import { apiFetch, apiFetchStream, getCsrfToken } from "@/shared/api/client";
+
+/**
+ * Direct backend URL for SSE streaming.
+ * Bypasses Next.js proxy which buffers the entire response.
+ */
+const BACKEND_URL =
+  (typeof process !== "undefined" &&
+    typeof (process as any).env !== "undefined" &&
+    (process as any).env.NEXT_PUBLIC_CORTEX_BACKEND_URL) ||
+  "http://localhost:8000";
+const API_V1 = `${BACKEND_URL}/api/v1`;
 
 export interface Conversation {
   id: number;
@@ -104,10 +115,20 @@ export async function* subscribeToStream(
   conversationId: number,
   signal?: AbortSignal,
 ): AsyncGenerator<{ type: string; content?: string; tokens?: number; sources?: Source[]; tool?: string; args?: Record<string, string>; result?: string; denied?: boolean; call_id?: string }> {
-  const res = await apiFetchStream(
-    `/conversations/${conversationId}/stream`,
-    { signal },
-  );
+  // Use the Next.js route handler at /sse/... (not /api/, so it doesn't
+  // match the rewrite which buffers responses). Same origin → cookies work.
+  const url = `/sse/v1/conversations/${conversationId}/stream`;
+  const headers: Record<string, string> = {};
+
+  // GET doesn't strictly need CSRF, but forward it for completeness
+  headers["X-CSRF-Token"] = getCsrfToken();
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers,
+    credentials: "include",
+    signal,
+  });
 
   if (!res.ok) {
     throw new Error(`Stream subscription failed: ${res.status}`);

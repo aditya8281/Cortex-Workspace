@@ -9,6 +9,7 @@ import { MermaidDiagram } from "./MermaidDiagram";
 
 interface MarkdownRendererProps {
   content: string;
+  isStreaming?: boolean;
 }
 
 /**
@@ -16,7 +17,7 @@ interface MarkdownRendererProps {
  * Handles GFM (tables, strikethrough, task lists), syntax highlighting,
  * mermaid diagrams, and inline code.
  */
-export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, isStreaming }: MarkdownRendererProps) {
   return (
     <div className="markdown-body space-y-3">
       <Markdown
@@ -29,8 +30,11 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
             const lang = match?.[1] ?? "";
             const text = String(children).replace(/\n$/, "");
 
-            // Mermaid diagram
+            // Mermaid diagram — skip during streaming to avoid partial/invalid syntax
             if (lang === "mermaid") {
+              if (isStreaming) {
+                return <CodeBlock language="mermaid">{text}</CodeBlock>;
+              }
               return <MermaidDiagram code={text} />;
             }
 

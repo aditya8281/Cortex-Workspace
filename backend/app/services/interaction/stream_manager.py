@@ -127,6 +127,22 @@ class StreamManager:
             return None
         return buf
 
+    async def wait_for_buffer(
+        self, conversation_id: int, timeout: float = 10.0
+    ) -> StreamBuffer | None:
+        """Wait for a buffer to be created for this conversation.
+
+        Used when the SSE subscriber might connect before the POST handler
+        has finished creating the buffer. Polls every 50ms until found.
+        """
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            buf = self._buffers.get(conversation_id)
+            if buf is not None:
+                return buf
+            await asyncio.sleep(0.05)
+        return None
+
     def register_task(self, conversation_id: int, task: asyncio.Task) -> None:
         """Register a background generation task."""
         # Cancel previous task for this conversation if any

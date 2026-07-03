@@ -205,6 +205,7 @@ async def _generate_response_task_impl(
 
     from backend.app.agents.loop import (
         _TOOL_CALL_START_RE,
+        _extract_paren_block,
         _parse_tool_calls,
         _strip_tool_calls,
     )
@@ -327,206 +328,150 @@ async def _generate_response_task_impl(
     thinking_content = ""
     response_tokens = 0
     total_tool_calls = 0
-    _streamed_directly = False  # True when fallback path already streamed tokens
 
-    # Detect provider tool capability — quick check, no blocking call.
-    # Streaming is always preferred on first iteration for per-token delivery.
-    _supports_native_tools = False
-    try:
-        provider = await llm_manager._get_active()
-        _supports_native_tools = hasattr(provider, "chat_with_tools")
-    except Exception:
-        pass
+    # No native tool detection — always use streaming + text-based TOOL_CALL
+    # parsing for ALL iterations. This guarantees per-token delivery every time.
 
     try:
         for tool_iteration in range(_MAX_CHAT_TOOL_ITERATIONS):
-            native_tool_calls = None
             content = ""
+            tool_calls = []
+            streamed_visible = ""  # Text already pushed as chunk events
 
-            # ── Native Ollama tool calling — only for subsequent iterations ──
-            # First iteration always streams (per-token thinking, no blocking).
-            # After tool calls are parsed, use native tools for result synthesis.
-            if _supports_native_tools and tool_iteration > 0:
-                try:
-                    ollama_tools = [t.schema for t in registry.get_all()]
-                    native_result = await llm_manager.chat_with_tools(
-                        llm_messages,
-                        ollama_tools,
-                        model=model,
-                    )
-                    if native_result is None:
-                        _supports_native_tools = False
-                    elif native_result.get("tool_calls"):
-                        _supports_native_tools = True
-                        native_tool_calls = []
-                        for tc in native_result["tool_calls"]:
-                            func = tc.get("function", tc)
-                            native_tool_calls.append(
-                                {
-                                    "name": func.get("name", ""),
-                                    "args": func.get("arguments", func.get("args", {})),
-                                }
-                            )
-                        content = native_result.get("content", "")
-                        logger.info("Native tool calling: %d calls", len(native_tool_calls))
-                    else:
-                        # Provider supports tools but model chose not to use them
-                        _supports_native_tools = True
-                        content = native_result.get("content", "").strip()
-                        native_tool_calls = []  # Signal "no tools" so fallback is skipped
-                except Exception:
-                    _supports_native_tools = False  # Disable for subsequent iterations
+            # Streaming path — runs every iteration for per-token delivery.
+            # State machine: _in_tool_call suppresses tool-call text from visible output.
+            _in_tool_call = False
+            _tool_buf = ""
+            _rolling = ""  # Rolling window for TOOL_CALL detection across chunks
+            _think_buf = ""  # Accumulator inside <think> tags
+            _in_think = False
 
-            # ── Native returns content without tool calls — deliver as stream ──
-            if native_tool_calls is not None and not native_tool_calls and content:
-                # Non-streaming call already got the full response.
-                # Extract thinking, then stream content word-by-word for natural feel.
-                resp = content
-                content = ""
-                tool_calls = []
-                streamed_visible = ""
-
-                # Extract thinking from <think> tags (embeds in non-streaming response)
-                think_match = re.search(r"<think>(.*?)</think>", resp, re.DOTALL)
-                if think_match:
-                    thinking_content = think_match.group(1).strip()
-                    buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': thinking_content})}\n\n")
-                    resp = re.sub(r"<think>.*?</think>", "", resp, flags=re.DOTALL).strip()
-                # Also check for thinking field (Ollama 0.6+ in non-streaming mode)
-                thinking_field = native_result.get("thinking", "")
-                if thinking_field and not thinking_content:
-                    thinking_content = thinking_field
-                    buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': thinking_field})}\n\n")
-
-                # Stream visible content word-by-word
-                if resp:
-                    words = resp.split(" ")
-                    for i, w in enumerate(words):
-                        chunk_text = w + (" " if i < len(words) - 1 else "")
-                        content += chunk_text
-                        streamed_visible += chunk_text
-                        buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': chunk_text})}\n\n")
-
-                _streamed_directly = True
-
-            # ── Fallback: text-based TOOL_CALL parsing with streaming ──
-            if native_tool_calls is None:
-                content = ""
-                tool_calls = []
-                streamed_visible = ""  # Text already sent to user (without TOOL_CALL lines)
-
-                # Use streaming for per-token delivery
-                _think_buf = ""  # Accumulator inside <think> tags
-                _in_think = False
-                async for chunk in llm_manager.chat_stream(
-                    llm_messages,
-                    model=model,
-                    max_tokens=2048,
-                    temperature=0.7,
-                ):
-                    if chunk.get("type") == "thinking":
-                        text = chunk.get("text", "")
-                        if text:
-                            thinking_content += text
-                            buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': text})}\n\n")
-                        continue
-
+            async for chunk in llm_manager.chat_stream(
+                llm_messages,
+                model=model,
+                max_tokens=2048,
+                temperature=0.7,
+            ):
+                if chunk.get("type") == "thinking":
                     text = chunk.get("text", "")
-                    if not text:
+                    if text:
+                        thinking_content += text
+                        buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': text})}\n\n")
+                    continue
+
+                text = chunk.get("text", "")
+                if not text:
+                    continue
+
+                # ── Handle <think> tags inline ──────────────────────
+                if _in_think:
+                    close_idx = text.find("</think>")
+                    if close_idx != -1:
+                        _think_buf += text[:close_idx]
+                        if _think_buf:
+                            thinking_content += _think_buf
+                            buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': _think_buf})}\n\n")
+                        _think_buf = ""
+                        _in_think = False
+                        text = text[close_idx + 8 :]
+                        if not text:
+                            continue
+                    else:
+                        _think_buf += text
                         continue
 
-                    # ── Handle <think> tags inline ──────────────────────
-                    # If <think> opened in a previous chunk, accumulate
-                    if _in_think:
-                        close_idx = text.find("</think>")
-                        if close_idx != -1:
-                            _think_buf += text[:close_idx]
-                            if _think_buf:
-                                thinking_content += _think_buf
-                                buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': _think_buf})}\n\n")
-                            _think_buf = ""
-                            _in_think = False
-                            text = text[close_idx + 8 :]  # After </think>
-                            if not text:
-                                continue
-                        else:
-                            _think_buf += text
+                think_start = text.find("<think>")
+                if think_start != -1:
+                    before = text[:think_start]
+                    if before:
+                        content += before
+                        streamed_visible += before
+                        buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': before})}\n\n")
+                    after_start = text[think_start + 7 :]
+                    close_idx = after_start.find("</think>")
+                    if close_idx != -1:
+                        think_text = after_start[:close_idx]
+                        if think_text:
+                            thinking_content += think_text
+                            buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': think_text})}\n\n")
+                        text = after_start[close_idx + 8 :]
+                        if not text:
                             continue
-
-                    # Check if <think> starts in this chunk
-                    think_start = text.find("<think>")
-                    if think_start != -1:
-                        # Stream text before <think>
-                        before = text[:think_start]
-                        if before:
-                            content += before
-                            streamed_visible += before
-                            buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': before})}\n\n")
-                        after_start = text[think_start + 7 :]
-                        close_idx = after_start.find("</think>")
-                        if close_idx != -1:
-                            # Complete <think>...</think> in one chunk
-                            think_text = after_start[:close_idx]
-                            if think_text:
-                                thinking_content += think_text
-                                buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': think_text})}\n\n")
-                            text = after_start[close_idx + 8 :]
-                            if not text:
-                                continue
-                        else:
-                            # <think> opens but </think> not in this chunk
-                            _in_think = True
-                            _think_buf = after_start
-                            continue
-
-                    # ── Check for TOOL_CALL in visible text ──────────
-                    content += text
-                    if "TOOL_CALL:" in text or _TOOL_CALL_START_RE.search(text):
-                        idx = text.find("TOOL_CALL:")
-                        if idx == -1:
-                            m = _TOOL_CALL_START_RE.search(text)
-                            idx = m.start() if m else 0
-                        chunk_visible = text[:idx]
-                        if chunk_visible:
-                            streamed_visible += chunk_visible
-                            buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': chunk_visible})}\n\n")
                     else:
-                        streamed_visible += text
-                        buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n")
+                        _in_think = True
+                        _think_buf = after_start
+                        continue
 
-                # After stream ends, parse any tool calls from full content
-                content = content.strip()
-                tool_calls = _parse_tool_calls(content)
-                logger.info(
-                    "Streaming fallback complete: %d chars, %d tool calls",
-                    len(content),
-                    len(tool_calls),
-                )
-                _streamed_directly = True  # Already streamed token-by-token
-            else:
-                tool_calls = native_tool_calls
+                # ── Tool call detection with rolling buffer ─────────
+                if _in_tool_call:
+                    # Inside a TOOL_CALL — suppress from visible output
+                    _tool_buf += text
+                    open_idx = _tool_buf.find("(")
+                    if open_idx != -1:
+                        result = _extract_paren_block(_tool_buf, open_idx)
+                        if result is not None:
+                            # Tool call complete — add to content for post-parse
+                            content += _tool_buf
+                            _in_tool_call = False
+                            _tool_buf = ""
+                            _rolling = ""
+                    continue
 
-            # Extract model thinking from <think> tags (qwen3, deepseek, etc.)
-            # Non-streaming paths (native tool / fallback) embed thinking in content
+                # Normal mode: check for TOOL_CALL start via rolling window
+                _rolling += text
+                match = _TOOL_CALL_START_RE.search(_rolling)
+                if match:
+                    # Push text before tool call as visible
+                    pre_tool = _rolling[:match.start()]
+                    if pre_tool:
+                        content += pre_tool
+                        streamed_visible += pre_tool
+                        buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': pre_tool})}\n\n")
+
+                    # Enter tool call mode
+                    _tool_buf = _rolling[match.start():]
+                    _in_tool_call = True
+                    _rolling = ""
+
+                    # Check if tool call completes in same buffer
+                    open_idx = _tool_buf.find("(")
+                    if open_idx != -1:
+                        result = _extract_paren_block(_tool_buf, open_idx)
+                        if result is not None:
+                            content += _tool_buf
+                            _in_tool_call = False
+                            _tool_buf = ""
+                    continue
+
+                # No TOOL_CALL — this is visible content
+                content += text
+                streamed_visible += text
+                buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n")
+
+                # Keep rolling window bounded
+                if len(_rolling) > 200:
+                    _rolling = _rolling[-100:]
+
+            # ── Post-stream: parse tool calls ────────────────────
+            content = content.strip()
+            tool_calls = _parse_tool_calls(content)
+
+            # Post-stream <think> extraction (models that embed think tags)
             if not thinking_content and "<think>" in content:
                 m = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
                 if m:
                     thinking_content = m.group(1).strip()
                     content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
-                    # Re-parse tool calls on cleaned content for fallback path
-                    if native_tool_calls is None:
-                        tool_calls = _parse_tool_calls(content)
+                    tool_calls = _parse_tool_calls(content)
                     if thinking_content:
                         buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': thinking_content})}\n\n")
-            # If native path returned content but no tool_calls, try text-based
-            # TOOL_CALL parsing on it (covers models that sometimes fall back to
-            # text format even when native tools are available).
-            # This avoids a wasteful second LLM call that the old code made.
-            if not tool_calls and content and native_tool_calls is not None:
-                parsed = _parse_tool_calls(content)
-                if parsed:
-                    tool_calls = parsed
-                    logger.info("Native path with text-based TOOL_CALL fallback: %d calls", len(tool_calls))
+
+            logger.info(
+                "Streaming complete iter=%d: %d chars, %d tool calls",
+                tool_iteration,
+                len(content),
+                len(tool_calls),
+            )
 
             if not tool_calls and not content:
                 if tool_iteration == 0:
@@ -535,12 +480,15 @@ async def _generate_response_task_impl(
                     break
 
             if tool_calls:
-                # Strip tool calls from user-visible text
-                visible_text = _strip_tool_calls(content)
-                if visible_text:
-                    # Stream pre-tool explanation as a thinking event (shows as "Reasoning")
-                    # This is Cortex explaining what it's about to do before calling tools
-                    buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': visible_text})}\n\n")
+                # If text after tool calls wasn't streamed (suppressed), push it now
+                full_visible = _strip_tool_calls(content)
+                if full_visible:
+                    if full_visible.startswith(streamed_visible):
+                        new_text = full_visible[len(streamed_visible):]
+                    else:
+                        new_text = full_visible
+                    if new_text:
+                        buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': new_text})}\n\n")
 
                 for tc in tool_calls:
                     tool_name = tc["name"]
@@ -626,14 +574,7 @@ async def _generate_response_task_impl(
                 full_response = full_response[1:-1]
             response_tokens = estimate_tokens(full_response)
 
-            # Stream the final response as text chunks (only if not already streamed)
-            if not _streamed_directly:
-                chunk_size = 40
-                for i in range(0, len(full_response), chunk_size):
-                    chunk_text = full_response[i : i + chunk_size]
-                    buffer.push(
-                        f"data: {json.dumps({'type': 'chunk', 'content': chunk_text, 'tokens': response_tokens})}\n\n"
-                    )
+            # Already streamed token-by-token — no final chunk push needed
             break
 
     except asyncio.CancelledError:
@@ -766,7 +707,11 @@ async def stream_conversation(
 
     buffer = stream_manager.get_buffer(conversation_id)
     if buffer is None:
-        # No generation happening — return done immediately
+        # Buffer may not exist yet if subscribed before POST completed
+        buffer = await stream_manager.wait_for_buffer(conversation_id, timeout=10.0)
+
+    if buffer is None:
+        # No generation happening at all — return done immediately
         async def empty_stream():
             yield f"data: {json.dumps({'type': 'done', 'total_tokens': 0, 'sources': []})}\n\n"
 

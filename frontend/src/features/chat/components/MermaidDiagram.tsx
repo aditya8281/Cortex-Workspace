@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 
-// Initialize once with dark theme matching Cortex palette
+// Initialize once with dark theme matching Cortex palette.
+// securityLevel: "strict" so mermaid.render() throws on syntax errors
+// instead of rendering inline error SVGs on the page.
 mermaid.initialize({
   startOnLoad: false,
   theme: "dark",
@@ -25,7 +27,7 @@ mermaid.initialize({
     signalColor: "#f0f0f0",
     signalTextColor: "#f0f0f0",
   },
-  securityLevel: "loose",
+  securityLevel: "strict",
 });
 
 interface MermaidDiagramProps {
@@ -44,7 +46,16 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
     mermaid
       .render(id, code.trim())
       .then(({ svg }) => {
-        if (!cancelled) {
+        if (cancelled) return;
+        // Mermaid returns an "error SVG" on syntax errors instead of
+        // throwing — check for error indicator classes in the output.
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svg, "image/svg+xml");
+        const hasError = doc.querySelector(".error-icon, .error-text") !== null;
+        if (hasError) {
+          setSvg("");
+          setError("Diagram contains syntax errors");
+        } else {
           setSvg(svg);
           setError(null);
         }
@@ -74,9 +85,9 @@ export function MermaidDiagram({ code }: MermaidDiagramProps) {
 
   if (error) {
     return (
-      <div className="my-3 rounded-lg border border-accent-red/20 bg-accent-red/5 px-4 py-3 text-xs text-accent-red font-mono">
-        Diagram error: {error}
-      </div>
+      <pre className="my-3 overflow-x-auto rounded-lg border border-border-subtle bg-bg-elevated p-4 font-mono text-xs leading-relaxed text-text-secondary">
+        {code}
+      </pre>
     );
   }
 

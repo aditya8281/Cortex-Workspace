@@ -47,12 +47,20 @@ function relativeTime(timestamp: string): string {
 // ── Component ─────────────────────────────────────────────────────────
 export function MessageBubble({ role, content, thinkingContent, timestamp, isStreaming, style }: MessageBubbleProps) {
   const [thoughtExpanded, setThoughtExpanded] = useState(false);
+  const [autoExpanded, setAutoExpanded] = useState(false);
   const hasThinking = !!thinkingContent;
 
-  // Auto-expand thought block when streaming thinking arrives
+  // Auto-expand ONCE when thinking first arrives — no deps on thinkingContent
+  // so subsequent tokens don't override user's manual collapse.
   useEffect(() => {
-    if (isStreaming && hasThinking) setThoughtExpanded(true);
-  }, [isStreaming, hasThinking, thinkingContent]);
+    if (isStreaming && hasThinking && !autoExpanded) {
+      setThoughtExpanded(true);
+      setAutoExpanded(true);
+    }
+  }, [isStreaming, hasThinking, autoExpanded]);
+
+  const isThinking = hasThinking && isStreaming && !content;
+  const thoughtLabel = isThinking ? "Thinking" : hasThinking ? "Thought" : "";
 
   return (
     <div
@@ -91,7 +99,7 @@ export function MessageBubble({ role, content, thinkingContent, timestamp, isStr
                     thoughtExpanded ? "rotate-0" : "-rotate-90",
                   )}
                 />
-                Thought
+                {thoughtLabel}
                 <span className="ml-auto text-[9px] text-text-muted font-normal normal-case">
                   {thoughtExpanded ? "hide" : "show"}
                 </span>
@@ -130,11 +138,9 @@ export function MessageBubble({ role, content, thinkingContent, timestamp, isStr
             )}
           >
             {content ? (
-              <MarkdownRenderer content={content} />
-            ) : (
-              <span className="text-sm text-text-muted italic">
-                {hasThinking ? "Writing…" : "Thinking…"}
-              </span>
+              <MarkdownRenderer content={content} isStreaming={isStreaming} />
+            ) : isThinking ? null : (
+              <span className="text-sm text-text-muted italic">Thinking…</span>
             )}
           </div>
         </>

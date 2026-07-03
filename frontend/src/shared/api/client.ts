@@ -12,6 +12,15 @@ export function getCsrfToken(): string {
   return match?.[1] ?? "";
 }
 
+/**
+ * Direct backend URL for SSE/streaming connections.
+ * Uses build-time env (inlined) or falls back to localhost:8000.
+ * Bypasses Next.js proxy which buffers streaming responses.
+ */
+const BACKEND_URL =
+  (typeof process !== "undefined" && (process.env as any).NEXT_PUBLIC_CORTEX_BACKEND_URL) ||
+  "http://localhost:8000";
+
 export interface ApiFetchOptions extends Omit<RequestInit, "body"> {
   body?: Record<string, unknown> | unknown[] | null;
 }
