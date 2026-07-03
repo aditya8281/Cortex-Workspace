@@ -52,19 +52,21 @@ export function useModeStack(): ModeStackContextValue {
 // ── Provider ──────────────────────────────────────────────────────────
 
 export function ModeStackProvider({ children }: { children: ReactNode }) {
-  // Restore last mode from sessionStorage — survives page refresh
-  const [stack, setStack] = useState<ModeState[]>(() => {
+  // Always start at hub — avoids SSR/CSR hydration mismatch (no sessionStorage on server).
+  // After mount, restore last mode from sessionStorage (survives page refresh).
+  const [stack, setStack] = useState<ModeState[]>([{ modeId: "hub", scrollPosition: 0 }]);
+
+  useEffect(() => {
     try {
       const saved = sessionStorage.getItem("cortex_last_mode");
       if (saved && saved !== "hub") {
-        return [
+        setStack([
           { modeId: "hub", scrollPosition: 0 },
           { modeId: saved, scrollPosition: 0 },
-        ];
+        ]);
       }
     } catch { /* non-critical */ }
-    return [{ modeId: "hub", scrollPosition: 0 }];
-  });
+  }, []);
 
   const currentMode = stack[stack.length - 1]?.modeId ?? "hub";
   const isHub = currentMode === "hub";

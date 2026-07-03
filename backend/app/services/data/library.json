@@ -1,8 +1,8 @@
 {
-  "scraped_at": "2026-07-03T05:33:13.150388+00:00",
+  "scraped_at": "2026-07-03T05:51:18.407413+00:00",
   "source": "https://ollama.com/library",
   "total_models": 236,
-  "total_tags": 837,
+  "total_tags": 842,
   "models": [
     {
       "name": "alfred",
@@ -1304,7 +1304,11 @@
     },
     {
       "name": "olmo2",
-      "tags": []
+      "tags": [
+        "latest",
+        "7b",
+        "13b"
+      ]
     },
     {
       "name": "open-orca-platypus2",
@@ -1411,7 +1415,10 @@
     },
     {
       "name": "phi",
-      "tags": []
+      "tags": [
+        "latest",
+        "2.7b"
+      ]
     },
     {
       "name": "phi3",
