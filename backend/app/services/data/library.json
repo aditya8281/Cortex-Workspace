@@ -1,8 +1,8 @@
 {
-  "scraped_at": "2026-07-03T15:24:05.130051+00:00",
+  "scraped_at": "2026-07-03T15:33:14.648290+00:00",
   "source": "https://ollama.com/library",
   "total_models": 236,
-  "total_tags": 821,
+  "total_tags": 842,
   "models": [
     {
       "name": "alfred",
@@ -464,7 +464,17 @@
     },
     {
       "name": "gemma3",
-      "tags": []
+      "tags": [
+        "latest",
+        "270m",
+        "1b",
+        "4b",
+        "12b",
+        "27b",
+        "4b-cloud",
+        "12b-cloud",
+        "27b-cloud"
+      ]
     },
     {
       "name": "gemma3n",
@@ -811,7 +821,12 @@
     },
     {
       "name": "llama2",
-      "tags": []
+      "tags": [
+        "latest",
+        "7b",
+        "13b",
+        "70b"
+      ]
     },
     {
       "name": "llama2-chinese",
@@ -1490,7 +1505,16 @@
     },
     {
       "name": "qwen2.5",
-      "tags": []
+      "tags": [
+        "latest",
+        "0.5b",
+        "1.5b",
+        "3b",
+        "7b",
+        "14b",
+        "32b",
+        "72b"
+      ]
     },
     {
       "name": "qwen2.5-coder",

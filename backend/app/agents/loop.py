@@ -23,6 +23,7 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from collections.abc import AsyncGenerator
@@ -47,6 +48,36 @@ from backend.app.agents.verifier import verify_completion
 from backend.app.services.intelligence.llm.provider import LLMMessage
 
 logger = logging.getLogger(__name__)
+
+async def _unload_model(model_name: str) -> None:
+    """Run 'ollama stop' to free GPU VRAM after an LLM response.
+
+    Runs in background — never blocks the agent loop.
+    Called automatically after llm_chat() returns.
+    This is critical for GPUs with limited VRAM (e.g. 6GB).
+    """
+    from backend.app.core.config import settings
+
+    if not settings.VRAM_CLEANUP or not model_name or model_name == "unknown":
+        return
+
+    # Extract short model name (e.g. "qwen3:8b" from full identifier)
+    name = model_name.split("/")[-1].split(":")[0]
+    full_name = model_name
+    if ":" not in full_name and name:
+        full_name = name
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ollama", "stop", full_name,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await asyncio.wait_for(proc.wait(), timeout=5)
+        logger.debug("VRAM cleanup: stopped model %s", full_name)
+    except (asyncio.TimeoutError, FileNotFoundError, ProcessLookupError):
+        pass  # Non-critical — best effort
+
 
 # Maximum iterations before the loop forces a final answer.
 # Safety valve to prevent infinite loops.
@@ -235,6 +266,9 @@ async def agent_loop(
                 model=model,
                 max_tokens=8192,
             )
+
+            # Free GPU VRAM after each LLM response (runs in background)
+            asyncio.ensure_future(_unload_model(response.model))
 
             content = response.content.strip()
             if not content:

@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = ""  # Must be set via environment variable
     REDIS_URL: str = "redis://localhost:6379/0"
     ENV: str = "development"
+    VRAM_CLEANUP: bool = True  # Run 'ollama stop' after each LLM response to free GPU memory
     CORTEX_ROOT: str | None = None
     MEMORY_PATH: str | None = Field(
         default=None,
