@@ -124,10 +124,11 @@ export default function HubPage() {
         tl.from(searchBarRef.current, { y: -8, opacity: 0, duration: 0.3 }, "-=0.1");
       }
 
-      // Widgets stagger
+      // Widgets stagger — use set+to to avoid flash from render-timing
       if (gridRef.current) {
         const widgets = gridRef.current.querySelectorAll("[data-widget]");
-        tl.from(widgets, { y: 16, opacity: 0, scale: 0.96, stagger: { from: "start", each: 0.04 }, duration: 0.35 }, "-=0.05");
+        gsap.set(widgets, { y: 16, opacity: 0, scale: 0.96 });
+        tl.to(widgets, { y: 0, opacity: 1, scale: 1, stagger: { from: "start", each: 0.04 }, duration: 0.35 }, "-=0.05");
       }
     });
     return () => mm.revert();

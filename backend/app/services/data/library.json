@@ -1,8 +1,8 @@
 {
-  "scraped_at": "2026-07-03T05:17:25.595432+00:00",
+  "scraped_at": "2026-07-03T05:30:26.154984+00:00",
   "source": "https://ollama.com/library",
   "total_models": 236,
-  "total_tags": 821,
+  "total_tags": 831,
   "models": [
     {
       "name": "alfred",
@@ -185,11 +185,7 @@
     },
     {
       "name": "deepcoder",
-      "tags": [
-        "latest",
-        "1.5b",
-        "14b"
-      ]
+      "tags": []
     },
     {
       "name": "deepscaler",
@@ -464,7 +460,17 @@
     },
     {
       "name": "gemma3",
-      "tags": []
+      "tags": [
+        "latest",
+        "270m",
+        "1b",
+        "4b",
+        "12b",
+        "27b",
+        "4b-cloud",
+        "12b-cloud",
+        "27b-cloud"
+      ]
     },
     {
       "name": "gemma3n",
@@ -591,11 +597,7 @@
     },
     {
       "name": "granite-embedding",
-      "tags": [
-        "latest",
-        "30m",
-        "278m"
-      ]
+      "tags": []
     },
     {
       "name": "granite3-dense",
@@ -623,11 +625,7 @@
     },
     {
       "name": "granite3.1-dense",
-      "tags": [
-        "latest",
-        "2b",
-        "8b"
-      ]
+      "tags": []
     },
     {
       "name": "granite3.1-moe",
@@ -836,7 +834,11 @@
     },
     {
       "name": "llama3",
-      "tags": []
+      "tags": [
+        "latest",
+        "8b",
+        "70b"
+      ]
     },
     {
       "name": "llama3-chatqa",
@@ -941,10 +943,7 @@
     },
     {
       "name": "marco-o1",
-      "tags": [
-        "latest",
-        "7b"
-      ]
+      "tags": []
     },
     {
       "name": "mathstral",
@@ -1526,7 +1525,17 @@
     },
     {
       "name": "qwen3",
-      "tags": []
+      "tags": [
+        "latest",
+        "0.6b",
+        "1.7b",
+        "4b",
+        "8b",
+        "14b",
+        "30b",
+        "32b",
+        "235b"
+      ]
     },
     {
       "name": "qwen3-coder",

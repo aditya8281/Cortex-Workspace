@@ -171,7 +171,6 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
           )}
           aria-label="Home — Hub"
           title="Hub (⌘H)"
-          style={{ opacity: 0 }}
         >
           <HomeIcon size={17} />
         </button>
