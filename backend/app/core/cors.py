@@ -44,9 +44,8 @@ class CORSMiddlewareWithWS(CORSMiddleware):
 
     def is_allowed_origin(self, origin: str) -> bool:
         """Check if origin is allowed — also match any localhost in dev."""
-        return (
-            super().is_allowed_origin(origin)
-            or (self.dev_accept_any_localhost and _LOCALHOST_PATTERN.match(origin) is not None)
+        return super().is_allowed_origin(origin) or (
+            self.dev_accept_any_localhost and _LOCALHOST_PATTERN.match(origin) is not None
         )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:

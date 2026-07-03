@@ -11,6 +11,7 @@ HEADERS = {"Authorization": "Bearer fake-token"}
 def _clean_stream_manager():
     """Reset the global stream manager between tests to avoid task leaks."""
     from backend.app.services.interaction.stream_manager import stream_manager
+
     yield
     # Cancel any lingering tasks and clear buffers
     for cid in list(stream_manager._tasks):
@@ -161,8 +162,8 @@ def test_stream_receives_buffered_chunks(client, mock_auth, db_session):
 
     # Pre-populate a buffer with chunks and mark done
     buf = stream_manager.get_or_create_buffer(conv.id)
-    buf.push(f'data: {json.dumps({"type": "chunk", "content": "Hello ", "tokens": 1})}\n\n')
-    buf.push(f'data: {json.dumps({"type": "chunk", "content": "world!", "tokens": 2})}\n\n')
+    buf.push(f"data: {json.dumps({'type': 'chunk', 'content': 'Hello ', 'tokens': 1})}\n\n")
+    buf.push(f"data: {json.dumps({'type': 'chunk', 'content': 'world!', 'tokens': 2})}\n\n")
     buf.mark_done(final_data={"type": "done", "total_tokens": 2, "sources": []})
 
     resp = client.get(f"/api/v1/conversations/{conv.id}/stream", headers=HEADERS)

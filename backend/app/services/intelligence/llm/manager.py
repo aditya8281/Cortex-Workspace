@@ -174,6 +174,43 @@ class LLMManager:
         self._total_errors += 1
         raise RuntimeError(f"LLM chat failed after {max_retries + 1} attempts: {last_error}") from last_error
 
+    async def chat_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[dict],
+        model: str | None = None,
+        max_tokens: int = 2048,
+        temperature: float = 0.7,
+    ) -> dict | None:
+        """Native function-calling path. Returns dict with content, tool_calls, tokens.
+
+        Falls back to None if the active provider doesn't support native tools,
+        signaling the caller to use text-based TOOL_CALL parsing instead.
+        """
+        async with self._semaphore:
+            provider = await self._get_active()
+
+        if not hasattr(provider, "chat_with_tools"):
+            return None
+
+        try:
+            result = await provider.chat_with_tools(
+                messages=messages,
+                tools=tools,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            self._total_requests += 1
+            self._total_prompt_tokens += result.get("tokens_prompt", 0)
+            self._total_completion_tokens += result.get("tokens_completion", 0)
+            return result
+        except NotImplementedError:
+            return None
+        except Exception as e:
+            logger.warning("Native tool calling failed, falling back: %s", e)
+            return None
+
     async def chat_stream(
         self,
         messages: list[LLMMessage],
@@ -198,13 +235,22 @@ class LLMManager:
         for attempt in range(max_retries + 1):
             full_response = ""
             try:
-                async for token in provider.chat_stream(  # type: ignore[attr-defined]
+                async for chunk in provider.chat_stream(  # type: ignore[attr-defined]
                     [{"role": m.role, "content": m.content} for m in messages],
                     tools=[],
                     config={"model": model, "max_tokens": max_tokens, "temperature": temperature},
                 ):
-                    full_response += token
-                    yield token
+                    # Providers yield dicts: {"type": "content"|"thinking", "text": "..."}
+                    if isinstance(chunk, dict):
+                        chunk_type = chunk.get("type", "content")
+                        text = chunk.get("text", "")
+                        if chunk_type == "content":
+                            full_response += text
+                        yield chunk
+                    else:
+                        # Legacy provider yielding plain strings
+                        full_response += chunk
+                        yield {"type": "content", "text": chunk}
 
                 self._total_requests += 1
                 prompt_tokens = count_message_tokens([{"content": m.content} for m in messages])

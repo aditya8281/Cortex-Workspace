@@ -24,16 +24,13 @@ def migrate_conversations(db: Session, ws, user_id: int) -> int:
     """Migrate all conversations for a user from DB to filesystem."""
     from backend.app.models.interaction.conversation import Conversation, ConversationMessage
 
-    conversations = (
-        db.query(Conversation)
-        .filter(Conversation.user_id == user_id)
-        .all()
-    )
+    conversations = db.query(Conversation).filter(Conversation.user_id == user_id).all()
     count = 0
     for conv in conversations:
         try:
             ws.conversations.index_entry(
-                conv.id, title=conv.title or "",
+                conv.id,
+                title=conv.title or "",
                 model_used=conv.model_used,
             )
             messages = (
@@ -44,7 +41,9 @@ def migrate_conversations(db: Session, ws, user_id: int) -> int:
             )
             for msg in messages:
                 ws.conversations.append_message(
-                    conv.id, msg.role, msg.content,
+                    conv.id,
+                    msg.role,
+                    msg.content,
                     tokens=msg.tokens or 0,
                     thinking_content=getattr(msg, "thinking_content", None),
                 )
@@ -58,11 +57,7 @@ def migrate_memories(db: Session, ws, user_id: int) -> int:
     """Migrate long-term memories from DB to filesystem."""
     from backend.app.models.memory.long_term_memory import LongTermMemory
 
-    memories = (
-        db.query(LongTermMemory)
-        .filter(LongTermMemory.user_id == user_id)
-        .all()
-    )
+    memories = db.query(LongTermMemory).filter(LongTermMemory.user_id == user_id).all()
     count = 0
     for mem in memories:
         try:
@@ -112,7 +107,9 @@ def migrate_all(db: Session) -> list[dict]:
         results.append(result)
         logger.info(
             "User %d: %d conversations, %d memories migrated",
-            user.id, result["conversations"], result["memories"],
+            user.id,
+            result["conversations"],
+            result["memories"],
         )
     return results
 
@@ -131,9 +128,6 @@ if __name__ == "__main__":
         results = migrate_all(db)
         total_convs = sum(r["conversations"] for r in results)
         total_mems = sum(r["memories"] for r in results)
-        print(
-            f"\nMigration complete: {len(results)} users, "
-            f"{total_convs} conversations, {total_mems} memories"
-        )
+        print(f"\nMigration complete: {len(results)} users, {total_convs} conversations, {total_mems} memories")
     finally:
         db.close()

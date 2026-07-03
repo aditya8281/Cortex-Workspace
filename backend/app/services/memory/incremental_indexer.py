@@ -13,7 +13,14 @@ from sqlalchemy.orm import Session
 from backend.app.core.vector_db import get_vector_db
 from backend.app.models.awareness.file_index import IndexedFile
 from backend.app.models.awareness.repo_index import CodeChunk, RepoIndex
-from backend.app.services.intelligence.chunker import CORTEXIGNORE, SKIP_DIRS, Chunk, chunk_code, chunk_text, detect_language
+from backend.app.services.intelligence.chunker import (
+    CORTEXIGNORE,
+    SKIP_DIRS,
+    Chunk,
+    chunk_code,
+    chunk_text,
+    detect_language,
+)
 from backend.app.services.intelligence.embedding_service import get_embedding_service
 from backend.app.services.memory.indexing_rules import IndexingRules
 
@@ -224,11 +231,7 @@ class IncrementalIndexer:
         follow_symlinks = bool(rules and rules._config and rules._config.follow_symlinks)
         files: list[Path] = []
         for root, dirs, filenames in path.walk(follow_symlinks=follow_symlinks):
-            dirs[:] = [
-                d for d in dirs
-                if d not in SKIP_DIRS
-                and not (root / d / CORTEXIGNORE).exists()
-            ]
+            dirs[:] = [d for d in dirs if d not in SKIP_DIRS and not (root / d / CORTEXIGNORE).exists()]
             for filename in filenames:
                 file_path = Path(root) / filename
                 if file_path.is_file() and file_path.suffix in TRACKED_EXTENSIONS:

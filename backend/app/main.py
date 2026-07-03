@@ -286,7 +286,7 @@ def create_daemon_app() -> FastAPI:
     # Without this, ALL WebSocket connections silently break (uvicorn sends
     # a CORS-less 403 instead of the 101 upgrade).
     app.add_middleware(
-        CORSMiddleware,
+        CORSMiddleware,  # type: ignore[arg-type]
         allow_origins=settings.ALLOWED_ORIGINS,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

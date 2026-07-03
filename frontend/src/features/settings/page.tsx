@@ -61,7 +61,7 @@ export default function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      await settingsApi.updateProfile({ username, nickname, bio });
+      await settingsApi.updateProfile({ nickname, bio });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {

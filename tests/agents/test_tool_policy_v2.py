@@ -36,8 +36,8 @@ class TestPlanMode:
         assert policy.is_plan_mode is True
         policy.disable_plan_mode()
         assert policy.is_plan_mode is False
-        # Now write tools should follow default rules
-        assert policy.evaluate("write_file", iteration=0) == "allow"
+        # Now write tools should follow default rules (write_file = ask)
+        assert policy.evaluate("write_file", iteration=0) == "ask"
 
 
 class TestMCPGating:
@@ -101,10 +101,13 @@ class TestDefaultPolicy:
         for tool in ["search_memory", "read_file", "web_search", "plan_task"]:
             assert policy.evaluate(tool, iteration=0) == "allow"
 
-    def test_write_tools_allowed(self):
+    def test_write_tools_ask(self):
         policy = default_policy()
-        for tool in ["write_file", "create_memory"]:
-            assert policy.evaluate(tool, iteration=0) == "allow"
+        assert policy.evaluate("write_file", iteration=0) == "ask"
+
+    def test_create_memory_allowed(self):
+        policy = default_policy()
+        assert policy.evaluate("create_memory", iteration=0) == "allow"
 
     def test_dangerous_tools_ask(self):
         policy = default_policy()

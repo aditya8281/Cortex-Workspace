@@ -77,8 +77,14 @@ class UserWorkspace:
     def ensure_dirs(self) -> None:
         """Create all required directories if they don't exist."""
         for subdir in [
-            "conversations", "memory", "agents/runs", "knowledge",
-            "vault", "workspace", "profile", "exports",
+            "conversations",
+            "memory",
+            "agents/runs",
+            "knowledge",
+            "vault",
+            "workspace",
+            "profile",
+            "exports",
         ]:
             (self._root / subdir).mkdir(parents=True, exist_ok=True)
 
@@ -96,19 +102,20 @@ class UserWorkspace:
 
 # ── File locking ────────────────────────────────────────────────────
 
+
 @contextmanager
 def _file_lock(path: Path):
     """Simple file lock using fcntl. Prevents concurrent corruption."""
     import fcntl
+
     lock_path = path.with_suffix(path.suffix + ".lock")
     lock_path.touch(exist_ok=True)
-    fd = open(lock_path, "r+")
-    try:
+    with open(lock_path, "r+") as fd:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        yield
-    finally:
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        fd.close()
+        try:
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
 
 
 def _atomic_write(path: Path, content: str) -> None:
@@ -142,6 +149,7 @@ def _read_json(path: Path, default: Any = None) -> Any:
 
 # ── Conversation Store ──────────────────────────────────────────────
 
+
 class ConversationStore:
     """Filesystem-based conversation storage.
 
@@ -165,8 +173,9 @@ class ConversationStore:
     def _save_index(self, index: list[dict]) -> None:
         _atomic_write(self._index_path, json.dumps(index, indent=2))
 
-    def index_entry(self, conv_id: int, title: str = "New Conversation",
-                    model_used: str | None = None, **extra) -> dict:
+    def index_entry(
+        self, conv_id: int, title: str = "New Conversation", model_used: str | None = None, **extra
+    ) -> dict:
         """Create or update an entry in conversations/index.json."""
         with _file_lock(self._index_path):
             index = self._load_index()
@@ -224,7 +233,7 @@ class ConversationStore:
         """List conversations from index, sorted by updated_at descending."""
         index = self._load_index()
         index.sort(key=lambda e: e.get("updated_at", 0), reverse=True)
-        return index[offset:offset + limit]
+        return index[offset : offset + limit]
 
     def get_index_entry(self, conv_id: int) -> dict | None:
         """Get a single conversation's index entry."""
@@ -233,9 +242,9 @@ class ConversationStore:
 
     # ── Message operations ──────────────────────────────────────
 
-    def append_message(self, conv_id: int, role: str, content: str,
-                       tokens: int = 0, thinking_content: str | None = None,
-                       **extra) -> dict:
+    def append_message(
+        self, conv_id: int, role: str, content: str, tokens: int = 0, thinking_content: str | None = None, **extra
+    ) -> dict:
         """Append a message to a conversation's JSONL file."""
         msg = {
             "role": role,
@@ -248,9 +257,8 @@ class ConversationStore:
         msg.update(extra)
 
         msg_file = self._msg_path(conv_id)
-        with _file_lock(msg_file):
-            with open(msg_file, "a") as f:
-                f.write(json.dumps(msg) + "\n")
+        with _file_lock(msg_file), open(msg_file, "a") as f:
+            f.write(json.dumps(msg) + "\n")
 
         # Update index counters
         with _file_lock(self._index_path):
@@ -311,6 +319,7 @@ class ConversationStore:
 
 # ── Memory Store ────────────────────────────────────────────────────
 
+
 class MemoryStore:
     """Filesystem-based memory storage.
 
@@ -332,9 +341,15 @@ class MemoryStore:
     def save_memories(self, memories: list[dict]) -> None:
         _atomic_write(self._ltm_path, json.dumps(memories, indent=2, default=str))
 
-    def add_memory(self, category: str, title: str, content: str,
-                   confidence: float = 0.5, source: str = "",
-                   source_id: int | None = None) -> dict:
+    def add_memory(
+        self,
+        category: str,
+        title: str,
+        content: str,
+        confidence: float = 0.5,
+        source: str = "",
+        source_id: int | None = None,
+    ) -> dict:
         """Add a new memory entry."""
         memories = self.load_memories()
         # Assign next ID
@@ -362,8 +377,7 @@ class MemoryStore:
             self.save_memories(memories)
         return entry
 
-    def search_memories(self, query: str = "", min_confidence: float = 0.0,
-                        limit: int = 15) -> list[dict]:
+    def search_memories(self, query: str = "", min_confidence: float = 0.0, limit: int = 15) -> list[dict]:
         """Search memories by keyword and confidence."""
         memories = self.load_memories()
         results = [m for m in memories if m.get("confidence", 0) >= min_confidence]
@@ -417,6 +431,7 @@ class MemoryStore:
 
 # ── Agent Store ─────────────────────────────────────────────────────
 
+
 class AgentStore:
     """Filesystem-based agent configuration and run history."""
 
@@ -433,8 +448,7 @@ class AgentStore:
     def save_config(self, config: dict) -> None:
         _atomic_write(self._config_path, json.dumps(config, indent=2, default=str))
 
-    def append_run(self, run_id: int, agent_name: str, status: str,
-                   result: str = "", **meta) -> dict:
+    def append_run(self, run_id: int, agent_name: str, status: str, result: str = "", **meta) -> dict:
         entry = {
             "run_id": run_id,
             "agent_name": agent_name,
@@ -464,6 +478,7 @@ class AgentStore:
 
 # ── Knowledge Store ─────────────────────────────────────────────────
 
+
 class KnowledgeStore:
     """Filesystem-based knowledge entries."""
 
@@ -475,8 +490,7 @@ class KnowledgeStore:
     def load_entries(self) -> list[dict]:
         return _read_json(self._entries_path, [])
 
-    def add_entry(self, title: str, content: str, category: str = "general",
-                  **extra) -> dict:
+    def add_entry(self, title: str, content: str, category: str = "general", **extra) -> dict:
         entries = self.load_entries()
         max_id = max((e.get("id", 0) for e in entries), default=0)
         entry = {

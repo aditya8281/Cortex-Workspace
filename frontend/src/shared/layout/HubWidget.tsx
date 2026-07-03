@@ -38,9 +38,7 @@ export function HubWidget({
         "group relative flex flex-col rounded-2xl border p-4 text-left",
         "bg-bg-widget backdrop-blur-2xl",
         spanFull && "sm:col-span-2",
-        "motion-safe:animate-fade-in motion-safe:opacity-0",
-        "motion-safe:[animation-delay:calc(var(--i,0)*50ms)]",
-        "motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-out",
+        "transition-all duration-200 ease-out",
         // Default border
         "border-border-subtle",
         // Hover

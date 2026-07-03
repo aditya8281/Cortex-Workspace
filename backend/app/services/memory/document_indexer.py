@@ -349,9 +349,7 @@ class DocumentIndexer:
         for root, dirs, files in os.walk(dir_path):
             # Skip dirs in SKIP_DIRS OR containing .cortexignore
             dirs[:] = [
-                d for d in dirs
-                if d not in SKIP_DIRS
-                and not os.path.isfile(os.path.join(root, d, CORTEXIGNORE))
+                d for d in dirs if d not in SKIP_DIRS and not os.path.isfile(os.path.join(root, d, CORTEXIGNORE))
             ]
             for fname in files:
                 fpath = os.path.join(root, fname)

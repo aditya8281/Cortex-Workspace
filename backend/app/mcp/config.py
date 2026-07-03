@@ -27,7 +27,7 @@ class MCPConfig:
 class MCPConfigManager:
     """Manage MCP configuration at all levels."""
 
-    def __init__(self, config_dir: str = None):
+    def __init__(self, config_dir: str | None = None):
         self.config_dir = Path(config_dir) if config_dir else Path.home() / ".cortex"
         self._system_config: MCPConfig | None = None
         self._user_configs: dict[int, MCPConfig] = {}

@@ -5,6 +5,7 @@ import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { SearchIcon, ChatIcon, BrainIcon, CodeIcon, VaultIcon, DocumentIcon } from "@/shared/ui/icons";
 import { cn } from "@/shared/lib/utils";
+import { getCsrfToken } from "@/shared/api/client";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -143,12 +144,12 @@ function LoadingSkeleton() {
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="rounded-xl border border-border-subtle p-4 bg-bg-widget">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-bg-surface animate-pulse" />
+            <div className="w-8 h-8 rounded-lg bg-bg-surface motion-safe:animate-pulse" />
             <div className="flex-1 space-y-2">
-              <div className="h-3 w-48 bg-bg-surface rounded animate-pulse" />
-              <div className="h-3 w-full bg-bg-surface rounded animate-pulse" />
-              <div className="h-3 w-3/4 bg-bg-surface rounded animate-pulse" />
-              <div className="h-2 w-24 bg-bg-surface rounded animate-pulse" />
+              <div className="h-3 w-48 bg-bg-surface rounded motion-safe:animate-pulse" />
+              <div className="h-3 w-full bg-bg-surface rounded motion-safe:animate-pulse" />
+              <div className="h-3 w-3/4 bg-bg-surface rounded motion-safe:animate-pulse" />
+              <div className="h-2 w-24 bg-bg-surface rounded motion-safe:animate-pulse" />
             </div>
           </div>
         </div>
@@ -228,7 +229,7 @@ export default function SearchPage() {
     try {
       const res = await fetch(`${API_BASE}/api/v1/memory/search`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         credentials: "include",
         body: JSON.stringify({
           query: trimmed,

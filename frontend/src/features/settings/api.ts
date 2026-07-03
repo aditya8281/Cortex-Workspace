@@ -25,8 +25,8 @@ export interface ConsentItem {
 
 export const settingsApi = {
   getProfile: () => apiFetch<UserProfile>("/auth/me"),
-  updateProfile: (data: Partial<{ username: string; nickname: string; bio: string }>) =>
-    apiFetch<UserProfile>("/auth/me", {
+  updateProfile: (data: Partial<{ nickname: string; bio: string; full_name: string }>) =>
+    apiFetch<UserProfile>("/me/profile", {
       method: "PUT",
       body: data,
     }),

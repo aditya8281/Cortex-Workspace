@@ -59,6 +59,45 @@ interface WidgetConfig {
 
 type WidgetDataMap = Record<string, unknown>;
 
+// ── Loading skeleton ──────────────────────────────────────────────────
+function HubSkeleton() {
+  return (
+    <div className="relative h-dvh overflow-hidden bg-bg-base">
+      <div className="absolute inset-0 top-6 flex flex-col px-4 sm:px-8 py-6">
+        {/* Greeting skeleton */}
+        <div className="mb-6 max-w-sm">
+          <div className="h-8 w-64 rounded-lg bg-bg-widget motion-safe:animate-pulse" />
+          <div className="h-4 w-48 mt-2 rounded bg-bg-widget motion-safe:animate-pulse opacity-60" />
+        </div>
+        {/* Search bar skeleton */}
+        <div className="mx-auto mb-6 w-full max-w-md h-11 rounded-xl border border-border-subtle bg-bg-widget motion-safe:animate-pulse" />
+        {/* Widget grid skeleton */}
+        <div className="grid grid-cols-2 gap-3 max-w-2xl mx-auto w-full">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className={cn(
+                "rounded-2xl border border-border-subtle bg-bg-widget motion-safe:animate-pulse p-4",
+                i === 0 && "sm:col-span-2",
+              )}
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <div className="flex items-center gap-2 mb-2.5">
+                <div className="h-5 w-5 rounded bg-bg-elevated" />
+                <div className="h-3 w-16 rounded bg-bg-elevated" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-3 w-24 rounded bg-bg-elevated opacity-60" />
+                <div className="h-3 w-16 rounded bg-bg-elevated opacity-40" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────
 export default function HubPage() {
   const { user, loading } = useAuth();
@@ -128,7 +167,11 @@ export default function HubPage() {
     if (!loading && !user) router.push("/auth");
   }, [user, loading, router]);
 
-  if (loading || !user) return null;
+  // Show skeleton while auth is loading (not blank)
+  if (loading) return <HubSkeleton />;
+
+  // If auth completed but no user, return null (will redirect to /auth)
+  if (!user) return null;
 
   return (
     <>

@@ -37,11 +37,11 @@ const tabs: { key: Tab; label: string }[] = [
 function CardSkeleton() {
   return (
     <div className="bg-bg-elevated rounded-lg border border-border-subtle p-4 space-y-3">
-      <div className="h-4 w-3/4 bg-bg-surface rounded animate-pulse" />
-      <div className="h-3 w-1/2 bg-bg-surface rounded animate-pulse" />
+      <div className="h-4 w-3/4 bg-bg-surface rounded motion-safe:animate-pulse" />
+      <div className="h-3 w-1/2 bg-bg-surface rounded motion-safe:animate-pulse" />
       <div className="space-y-1.5">
-        <div className="h-3 w-full bg-bg-surface rounded animate-pulse" />
-        <div className="h-3 w-5/6 bg-bg-surface rounded animate-pulse" />
+        <div className="h-3 w-full bg-bg-surface rounded motion-safe:animate-pulse" />
+        <div className="h-3 w-5/6 bg-bg-surface rounded motion-safe:animate-pulse" />
       </div>
     </div>
   );
@@ -434,13 +434,13 @@ export default function CognitionPage() {
   if (loading || !user)
     return (
         <div className="max-w-5xl mx-auto space-y-6">
-          <div className="h-6 w-24 bg-bg-elevated rounded animate-pulse" />
-          <div className="h-4 w-40 bg-bg-elevated rounded animate-pulse" />
+          <div className="h-6 w-24 bg-bg-elevated rounded motion-safe:animate-pulse" />
+          <div className="h-4 w-40 bg-bg-elevated rounded motion-safe:animate-pulse" />
           <div className="flex gap-2">
             {tabs.map((t) => (
               <div
                 key={t.key}
-                className="h-8 w-28 bg-bg-elevated rounded animate-pulse"
+                className="h-8 w-28 bg-bg-elevated rounded motion-safe:animate-pulse"
               />
             ))}
           </div>

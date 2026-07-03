@@ -57,10 +57,10 @@ export function ChatInput({ onSend, onTyping, disabled, onStop, initialValue = "
   return (
     <div className="border-t border-border-subtle px-4 sm:px-6 py-3">
       <div className={cn(
-        "mx-auto max-w-3xl flex items-end gap-2",
-        "rounded-xl border border-border-subtle",
-        "bg-bg-glass backdrop-blur-xl",
-        "px-3 py-2",
+        "mx-auto max-w-3xl flex items-center gap-2",
+        "rounded-xl",
+        "bg-bg-elevated border border-border-subtle",
+        "px-3 py-1.5 min-h-[44px]",
         "motion-safe:transition-colors motion-safe:duration-200",
         "focus-within:border-border-default",
       )}>
@@ -85,7 +85,7 @@ export function ChatInput({ onSend, onTyping, disabled, onStop, initialValue = "
           placeholder="Ask Cortex anything…"
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none max-h-[200px]"
+          className="flex-1 resize-none bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none max-h-[200px] self-center py-[5px]"
         />
 
         {/* Actions */}

@@ -176,7 +176,7 @@ export function WorkflowBuilder({ onCreated }: WorkflowBuilderProps) {
         <div className="flex-1 min-w-[200px] space-y-1">
           <label className="text-xs text-text-muted">Tool</label>
           {loadingTools ? (
-            <div className="h-9 bg-bg-surface rounded animate-pulse" />
+            <div className="h-9 bg-bg-surface rounded motion-safe:animate-pulse" />
           ) : (
             <select
               value={selectedTool}

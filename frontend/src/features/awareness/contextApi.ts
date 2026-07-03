@@ -96,7 +96,7 @@ export interface ContextEvent {
 
 export const systemApi = {
   takeSnapshot: () =>
-    apiFetch<SystemSnapshot>("/system/snapshot", { method: "POST" }),
+    apiFetch<SystemSnapshot>("/awareness/system/snapshot", { method: "POST" }),
 
   getRecent: (limit = 20) =>
     apiFetch<{ snapshots: SystemSnapshot[]; total: number }>(
@@ -119,7 +119,7 @@ export const systemApi = {
 
 export const attentionApi = {
   startSession: (data: { session_type: string; task_description?: string }) =>
-    apiFetch<AttentionSession>("/attention/session", {
+    apiFetch<AttentionSession>("/awareness/attention/session", {
       method: "POST",
       body: data,
     }),
@@ -140,7 +140,7 @@ export const attentionApi = {
       `/attention/sessions?limit=${limit}`,
     ),
 
-  getStats: () => apiFetch<AttentionStats>("/attention/stats"),
+  getStats: () => apiFetch<AttentionStats>("/awareness/attention/stats"),
 };
 
 // ── Context Rules API ─────────────────────────────────────────────────────
@@ -153,7 +153,7 @@ export const contextRulesApi = {
     conditions?: Record<string, unknown>;
     actions?: Record<string, unknown>;
     priority?: number;
-  }) => apiFetch<ContextRule>("/context/rules", { method: "POST", body: data }),
+  }) => apiFetch<ContextRule>("/awareness/context/rules", { method: "POST", body: data }),
 
   list: (rule_type?: string) => {
     const qs = rule_type ? `?rule_type=${encodeURIComponent(rule_type)}` : "";
@@ -179,7 +179,7 @@ export const contextRulesApi = {
     apiFetch<void>(`/context/rules/${id}`, { method: "DELETE" }),
 
   match: (context: Record<string, unknown>) =>
-    apiFetch<{ matched_rules: ContextRule[] }>("/context/rules/match", {
+    apiFetch<{ matched_rules: ContextRule[] }>("/awareness/context/rules/match", {
       method: "POST",
       body: { context },
     }),
@@ -197,7 +197,7 @@ export const contextStateApi = {
       body: data,
     }),
 
-  list: () => apiFetch<ContextState[]>("/context/state"),
+  list: () => apiFetch<ContextState[]>("/awareness/context/state"),
 };
 
 // ── Context Events API ────────────────────────────────────────────────────
@@ -209,7 +209,7 @@ export const contextEventsApi = {
     source?: string;
     relevance_score?: number;
     related_rule_id?: number;
-  }) => apiFetch<ContextEvent>("/context/events", { method: "POST", body: data }),
+  }) => apiFetch<ContextEvent>("/awareness/context/events", { method: "POST", body: data }),
 
   list: (params?: { event_type?: string; limit?: number }) => {
     const qs = new URLSearchParams();

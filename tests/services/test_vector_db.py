@@ -19,7 +19,6 @@ def test_init_defaults(mock_qdrant_cls, mock_settings):
     )
 
 
-
 @patch("backend.app.core.vector_db.QdrantClient")
 def test_init_custom(mock_qdrant_cls):
     VectorDB(host="10.0.0.1", port=9999)

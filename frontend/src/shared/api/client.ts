@@ -7,7 +7,7 @@ const API_BASE = "/api/v1";
  * Backend rotates the cortex_csrf cookie on every GET response,
  * so caching the value causes stale tokens → 403.
  */
-function getCsrfToken(): string {
+export function getCsrfToken(): string {
   const match = document.cookie.match(/cortex_csrf=([^;]+)/);
   return match?.[1] ?? "";
 }

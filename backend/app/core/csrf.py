@@ -1,11 +1,12 @@
 """CSRF protection via double-submit cookie pattern.
 
-On every GET request, sets a ``cortex_csrf`` cookie (non-httpOnly, readable
-by JavaScript). State-changing requests (POST, PUT, DELETE, PATCH) must include
+Sets a ``cortex_csrf`` cookie on the FIRST GET response (not on every GET,
+to avoid race conditions from parallel requests overwriting the token).
+State-changing requests (POST, PUT, DELETE, PATCH) must include
 the token in an ``X-CSRF-Token`` header matching the cookie value.
 
-Endpoints under ``/api/auth/`` and ``/api/v1/health/``
-are exempt. Auth endpoints are API-client-facing.
+Endpoints under ``/api/v1/auth/``, ``/api/v1/health/``, ``/metrics``,
+``/ws``, and ``/api/v1/ws`` are exempt.
 """
 
 from __future__ import annotations
@@ -43,16 +44,19 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         if request.method in SAFE_METHODS:
             response = await call_next(request)
-            token = secrets.token_urlsafe(32)
-            response.set_cookie(
-                key=CSRF_COOKIE_NAME,
-                value=token,
-                httponly=False,
-                samesite="lax",
-                secure=settings.ENV not in ("development", "test"),
-                path="/",
-                max_age=3600,
-            )
+            # Only set CSRF cookie if not already present — prevents race
+            # conditions where parallel GETs overwrite each other's token.
+            if not request.cookies.get(CSRF_COOKIE_NAME):
+                token = secrets.token_urlsafe(32)
+                response.set_cookie(
+                    key=CSRF_COOKIE_NAME,
+                    value=token,
+                    httponly=False,
+                    samesite="lax",
+                    secure=settings.ENV not in ("development", "test"),
+                    path="/",
+                    max_age=3600,
+                )
             return response
 
         csrf_cookie = request.cookies.get(CSRF_COOKIE_NAME)

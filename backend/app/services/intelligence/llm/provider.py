@@ -15,6 +15,21 @@ class LLMProvider(ABC):
         """Send messages to LLM, return (text, optional_tool_calls)."""
         ...
 
+    async def chat_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[dict],
+        model: str | None = None,
+        max_tokens: int = 2048,
+        temperature: float = 0.7,
+    ) -> dict:
+        """Native function-calling API. Returns dict with content, tool_calls, model, tokens.
+
+        Subclasses that support native tool calling override this.
+        Default raises NotImplementedError so callers can fall back to text-based TOOL_CALL.
+        """
+        raise NotImplementedError(f"{type(self).__name__} does not support native tool calling")
+
     @abstractmethod
     def list_models(self) -> list[dict[str, Any]]:
         """List available models."""

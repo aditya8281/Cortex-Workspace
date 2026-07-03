@@ -211,3 +211,37 @@ export const BoltIcon: IconComponent = (props) => (
     <path d="M8 1L3 10h5l-1 7 7-10H9l1-7-7 10" />
   </Svg>
 );
+
+/** Image file icon — landscape frame with sun */
+export const ImageFileIcon: IconComponent = (props) => (
+  <Svg {...props}>
+    <rect x="2" y="3" width="12" height="10" rx="1.5" />
+    <circle cx="6" cy="7" r="1.5" />
+    <path d="M2 12l3-3 2 2 3-3 4 4" />
+  </Svg>
+);
+
+/** Document/text file icon — lined page */
+export const DocFileIcon: IconComponent = (props) => (
+  <Svg {...props}>
+    <path d="M5 2h4l4 4v9a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z" />
+    <path d="M9 2v4h4" />
+    <path d="M6.5 9h4M6.5 11.5h4" strokeWidth="1.2" />
+  </Svg>
+);
+
+/** Code file icon — angle brackets on page */
+export const CodeFileIcon: IconComponent = (props) => (
+  <Svg {...props}>
+    <path d="M5 2h4l4 4v9a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z" />
+    <path d="M9 2v4h4" />
+    <path d="M7.5 9l-1.5 1.5L7.5 12M10.5 9l1.5 1.5-1.5 1.5" strokeWidth="1.2" />
+  </Svg>
+);
+
+/** Folder icon */
+export const FolderIcon: IconComponent = (props) => (
+  <Svg {...props}>
+    <path d="M2 5.5A1.5 1.5 0 013.5 4h2.5l1.5 2H13.5A1.5 1.5 0 0115 7.5v5a1.5 1.5 0 01-1.5 1.5h-10A1.5 1.5 0 012 12.5v-7z" />
+  </Svg>
+);

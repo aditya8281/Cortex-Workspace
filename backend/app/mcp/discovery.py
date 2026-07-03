@@ -75,7 +75,7 @@ class MCPServerDiscovery:
         self._health_task: asyncio.Task | None = None
         self._running = False
 
-    async def load_config(self, config_path: str = None) -> int:
+    async def load_config(self, config_path: str | None = None) -> int:
         """Load MCP server configurations. Returns count loaded."""
         configs = self._load_configs(config_path)
         for config in configs:
@@ -312,6 +312,6 @@ class MCPServerDiscovery:
             },
         }
 
-    def _load_configs(self, config_path: str = None) -> list[MCPServerConfig]:
+    def _load_configs(self, config_path: str | None = None) -> list[MCPServerConfig]:
         """Load MCP server configurations from file or defaults."""
         return []

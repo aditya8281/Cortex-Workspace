@@ -1,8 +1,8 @@
 {
-  "scraped_at": "2026-07-01T16:07:54.628964+00:00",
+  "scraped_at": "2026-07-03T02:15:23.953995+00:00",
   "source": "https://ollama.com/library",
-  "total_models": 235,
-  "total_tags": 839,
+  "total_models": 236,
+  "total_tags": 842,
   "models": [
     {
       "name": "alfred",
@@ -729,6 +729,15 @@
       "name": "kimi-k2.7-code",
       "tags": [
         "cloud"
+      ]
+    },
+    {
+      "name": "laguna-xs-2.1",
+      "tags": [
+        "latest",
+        "q4_K_M",
+        "q8_0",
+        "bf16"
       ]
     },
     {
@@ -1654,8 +1663,7 @@
       "name": "rnj-1",
       "tags": [
         "latest",
-        "8b",
-        "8b-cloud"
+        "8b"
       ]
     },
     {

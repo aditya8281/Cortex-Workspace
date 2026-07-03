@@ -166,7 +166,7 @@ class LlamaCppProvider(LLMProvider):
             for chunk in stream:
                 delta = chunk["choices"][0].get("delta", {})
                 if "content" in delta:
-                    yield delta["content"]
+                    yield {"type": "content", "text": delta["content"]}
 
     def list_models(self) -> list[dict[str, Any]]:
         if not os.path.exists(self._model_path):

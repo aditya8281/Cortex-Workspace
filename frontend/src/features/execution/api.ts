@@ -83,32 +83,32 @@ export const tools = {
     if (options?.confirmed !== undefined) qs.set("confirmed", String(options.confirmed));
     const qsStr = qs.toString();
     return apiFetch<ToolExecution>(
-      `/tools/execute${qsStr ? `?${qsStr}` : ""}`,
+      `/execution/tools/execute${qsStr ? `?${qsStr}` : ""}`,
       { method: "POST", body: { tool_name: toolName, parameters: parameters || {} } },
     );
   },
 
   executeWithRetry: (toolName: string, parameters?: Record<string, unknown>, maxRetries: number = 3) =>
     apiFetch<ToolExecution>(
-      `/tools/execute-with-retry?max_retries=${maxRetries}`,
+      `/execution/tools/execute-with-retry?max_retries=${maxRetries}`,
       { method: "POST", body: { tool_name: toolName, parameters: parameters || {} } },
     ),
 
   list: (category?: string) =>
-    apiFetch<ToolInfo[]>(`/tools/list${category ? `?category=${category}` : ""}`),
+    apiFetch<ToolInfo[]>(`/execution/tools/list${category ? `?category=${category}` : ""}`),
 
   getStats: () =>
-    apiFetch<ExecutionStats>("/tools/stats"),
+    apiFetch<ExecutionStats>("/execution/tools/stats"),
 
   getExecution: (executionId: number) =>
-    apiFetch<ToolExecution>(`/tools/${executionId}`),
+    apiFetch<ToolExecution>(`/execution/tools/${executionId}`),
 };
 
 // ── Workflows ──────────────────────────────────────────────────────────────
 
 export const workflows = {
   create: (name: string, steps: WorkflowStep[], description?: string) =>
-    apiFetch<Workflow>("/workflows/create", {
+    apiFetch<Workflow>("/execution/workflows/create", {
       method: "POST",
       body: { name, steps, description: description || null },
     }),
@@ -117,21 +117,21 @@ export const workflows = {
     const qs = new URLSearchParams();
     if (params?.status) qs.set("status", params.status);
     if (params?.limit) qs.set("limit", String(params.limit));
-    return apiFetch<Workflow[]>(`/workflows/list?${qs}`);
+    return apiFetch<Workflow[]>(`/execution/workflows/list?${qs}`);
   },
 
   get: (workflowId: number) =>
-    apiFetch<Workflow>(`/workflows/${workflowId}`),
+    apiFetch<Workflow>(`/execution/workflows/${workflowId}`),
 
   run: (workflowId: number) =>
-    apiFetch<Workflow>(`/workflows/${workflowId}/run`, { method: "POST" }),
+    apiFetch<Workflow>(`/execution/workflows/${workflowId}/run`, { method: "POST" }),
 
   cancel: (workflowId: number) =>
-    apiFetch<Workflow>(`/workflows/${workflowId}/cancel`, { method: "POST" }),
+    apiFetch<Workflow>(`/execution/workflows/${workflowId}/cancel`, { method: "POST" }),
 
   duplicate: (workflowId: number, newName: string) =>
     apiFetch<Workflow>(
-      `/workflows/${workflowId}/duplicate?new_name=${encodeURIComponent(newName)}`,
+      `/execution/workflows/${workflowId}/duplicate?new_name=${encodeURIComponent(newName)}`,
       { method: "POST" },
     ),
 };

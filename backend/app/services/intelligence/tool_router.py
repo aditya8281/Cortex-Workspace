@@ -18,7 +18,6 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ToolIntent:
     """Result of intent analysis — which tools to offer and which to force."""
+
     tools_needed: list[str] = field(default_factory=list)
     forced_tool: str | None = None
     forced_args: dict[str, str] = field(default_factory=dict)
@@ -113,9 +113,7 @@ def classify_intent_tools(message: str) -> ToolIntent:
     # ── Shell execution ────────────────────────────────────────
     if _match_patterns(message, _EXEC_PATTERNS):
         # Extract the command — usually everything after "run"/"execute"
-        cmd_match = re.search(
-            r"(?:run|execute)\s+(.+?)(?:\s*$)", lower
-        )
+        cmd_match = re.search(r"(?:run|execute)\s+(.+?)(?:\s*$)", lower)
         args = {}
         if cmd_match:
             args["command"] = cmd_match.group(1).strip()
@@ -142,7 +140,6 @@ def classify_intent_tools(message: str) -> ToolIntent:
 
     # ── Git operations ─────────────────────────────────────────
     if _match_patterns(message, _GIT_PATTERNS):
-        tools = []
         if re.search(r"\bgit\s+log\b", lower) or re.search(r"recent|latest|last.*commit", lower):
             return ToolIntent(
                 tools_needed=["git_log"],
@@ -192,7 +189,4 @@ def build_tool_choice_hint(intent: ToolIntent) -> str:
         )
 
     tool_list = ", ".join(intent.tools_needed)
-    return (
-        f"\n\nHINT: This message likely needs these tools: {tool_list}. "
-        f"Use TOOL_CALL format if appropriate.\n"
-    )
+    return f"\n\nHINT: This message likely needs these tools: {tool_list}. Use TOOL_CALL format if appropriate.\n"

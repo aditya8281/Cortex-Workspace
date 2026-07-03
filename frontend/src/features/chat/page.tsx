@@ -67,6 +67,10 @@ export default function ChatPage() {
     if (active) next.add(convId); else next.delete(convId);
     generatingRef.current = next;
     setGeneratingIds(new Set(next));
+    // Persist generating state to sessionStorage so it survives tab switches
+    try {
+      sessionStorage.setItem("cortex_generating", JSON.stringify([...next]));
+    } catch { /* quota exceeded — non-critical */ }
   }, []);
 
   // Typing indicators
@@ -82,6 +86,17 @@ export default function ChatPage() {
   useEffect(() => {
     setSelectedModel(getDefaultModel());
     modelsDownloads.installed().then((res) => setInstalledModels(res.models)).catch(() => {});
+    // Restore generating state from sessionStorage (survives tab switches)
+    try {
+      const raw = sessionStorage.getItem("cortex_generating");
+      if (raw) {
+        const restored = new Set(JSON.parse(raw) as number[]);
+        if (restored.size > 0) {
+          generatingRef.current = restored;
+          setGeneratingIds(restored);
+        }
+      }
+    } catch { /* non-critical */ }
   }, []);
 
   const loadConversations = useCallback(async () => {
@@ -106,8 +121,14 @@ export default function ChatPage() {
     // Always fetch from DB for clean state (user msg + completed responses are there)
     chatApi.get(activeId).then((conv) => {
       setMessages(conv.messages);
-      // If this conversation is actively generating, resubscribe to get live stream
-      if (generatingRef.current.has(activeId)) {
+      // Check generating state from ref OR sessionStorage (survives tab switches)
+      const isGenerating = generatingRef.current.has(activeId) || (() => {
+        try {
+          const raw = sessionStorage.getItem("cortex_generating");
+          return raw ? (JSON.parse(raw) as number[]).includes(activeId) : false;
+        } catch { return false; }
+      })();
+      if (isGenerating) {
         _resubscribeStream(activeId);
       }
     }).catch(() => setMessages([]));
@@ -437,10 +458,32 @@ export default function ChatPage() {
     streamConvIdRef.current = null;
   };
 
-  // Cleanup on unmount
+  // Handle visibility changes (tab switch): pause SSE when hidden,
+  // reconnect when visible if generation is still active.
   useEffect(() => {
-    return () => { abortRef.current?.abort(); };
-  }, []);
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        // Hide: abort SSE — backend keeps generating as a detached task
+        abortRef.current?.abort();
+        abortRef.current = null;
+      } else {
+        // Show: reconnect if this conversation was generating
+        if (activeId) {
+          const isGenerating = generatingRef.current.has(activeId) || (() => {
+            try {
+              const raw = sessionStorage.getItem("cortex_generating");
+              return raw ? (JSON.parse(raw) as number[]).includes(activeId) : false;
+            } catch { return false; }
+          })();
+          if (isGenerating && streamConvIdRef.current !== activeId) {
+            _resubscribeStream(activeId);
+          }
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [activeId]);
 
   if (loading) return null;
   if (!user) return null;
@@ -571,15 +614,6 @@ export default function ChatPage() {
           {!activeId ? (
             /* ── Empty state ── */
             <div className="relative flex flex-col items-center justify-center h-full text-center max-w-lg mx-auto">
-              {/* Ambient neural glow — very faint radial, centered behind content */}
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  background:
-                    "radial-gradient(ellipse 60% 50% at 50% 45%, rgba(0,172,193,0.04) 0%, transparent 70%)",
-                }}
-                aria-hidden="true"
-              />
 
               {/* Neural icon — the brain/synapse mark */}
               <div className="chat-empty-entrance relative mb-8">
@@ -593,7 +627,7 @@ export default function ChatPage() {
                   </svg>
                 </div>
                 {/* Subtle pulse ring — perpetual micro-animation (§4 design taste) */}
-                <span className="pointer-events-none absolute inset-0 rounded-2xl border border-accent-cyan/10 animate-pulse" />
+                <span className="pointer-events-none absolute inset-0 rounded-2xl border border-accent-cyan/10 motion-safe:animate-pulse" />
               </div>
 
               <h2 className="chat-empty-entrance chat-empty-delay-1 text-display font-semibold text-text-primary tracking-tight">
@@ -649,7 +683,6 @@ export default function ChatPage() {
                   ))}
                 </div>
               )}
-              {activeId && generatingIds.has(activeId) && <StreamingIndicator />}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -697,6 +730,13 @@ export default function ChatPage() {
             </div>
           ) : null}
         </div>
+
+        {/* Streaming indicator — centered bar above input */}
+        {activeId && isCurrentlyStreaming && (
+          <div className="flex justify-center px-4 sm:px-6 pb-3">
+            <StreamingIndicator centered />
+          </div>
+        )}
 
         {/* Input */}
         <div className="pb-20">

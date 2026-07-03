@@ -44,6 +44,7 @@ class ConversationMessage(Base):
     )
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # "system", "user", "assistant"
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    thinking_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     tokens: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -95,10 +95,10 @@ export function ToolRegistryPanel({ onSelectTool }: ToolRegistryPanelProps) {
               key={i}
               className="bg-bg-elevated rounded-lg border border-border-subtle p-4 space-y-3"
             >
-              <div className="h-4 w-32 bg-bg-surface rounded animate-pulse" />
-              <div className="h-3 w-20 bg-bg-surface rounded animate-pulse" />
-              <div className="h-3 w-full bg-bg-surface rounded animate-pulse" />
-              <div className="h-3 w-3/4 bg-bg-surface rounded animate-pulse" />
+              <div className="h-4 w-32 bg-bg-surface rounded motion-safe:animate-pulse" />
+              <div className="h-3 w-20 bg-bg-surface rounded motion-safe:animate-pulse" />
+              <div className="h-3 w-full bg-bg-surface rounded motion-safe:animate-pulse" />
+              <div className="h-3 w-3/4 bg-bg-surface rounded motion-safe:animate-pulse" />
             </div>
           ))}
         </div>

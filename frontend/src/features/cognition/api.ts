@@ -99,41 +99,41 @@ export interface ConfidenceResult {
 
 export const planning = {
   createPlan: (goal: string, steps?: TaskStep[]) =>
-    apiFetch<TaskPlan>("/planning/plan", {
+    apiFetch<TaskPlan>("/cognition/planning/plan", {
       method: "POST",
       body: { goal, steps: steps || null },
     }),
 
   getPlan: (planId: number) =>
-    apiFetch<TaskPlan>(`/planning/plan/${planId}`),
+    apiFetch<TaskPlan>(`/cognition/planning/plan/${planId}`),
 
   listPlans: (params?: { status?: string; limit?: number }) => {
     const qs = new URLSearchParams();
     if (params?.status) qs.set("status", params.status);
     if (params?.limit) qs.set("limit", String(params.limit));
-    return apiFetch<TaskPlanListResponse>(`/planning/plans?${qs}`);
+    return apiFetch<TaskPlanListResponse>(`/cognition/planning/plans?${qs}`);
   },
 
   executeStep: (planId: number, stepIndex: number, result?: Record<string, unknown>) =>
-    apiFetch<TaskPlan>(`/planning/plan/${planId}/step/${stepIndex}`, {
+    apiFetch<TaskPlan>(`/cognition/planning/plan/${planId}/step/${stepIndex}`, {
       method: "POST",
       body: result ? { result } : undefined,
     }),
 
   skipStep: (planId: number, stepIndex: number, reason?: string) =>
     apiFetch<TaskPlan>(
-      `/planning/plan/${planId}/step/${stepIndex}/skip${reason ? `?reason=${encodeURIComponent(reason)}` : ""}`,
+      `/cognition/planning/plan/${planId}/step/${stepIndex}/skip${reason ? `?reason=${encodeURIComponent(reason)}` : ""}`,
       { method: "POST" },
     ),
 
   cancelPlan: (planId: number) =>
-    apiFetch<TaskPlan>(`/planning/plan/${planId}/cancel`, {
+    apiFetch<TaskPlan>(`/cognition/planning/plan/${planId}/cancel`, {
       method: "POST",
     }),
 
   getNextSteps: (planId: number) =>
     apiFetch<{ plan_id: number; ready_steps: number[] }>(
-      `/planning/plan/${planId}/next-steps`,
+      `/cognition/planning/plan/${planId}/next-steps`,
     ),
 };
 
@@ -141,27 +141,27 @@ export const planning = {
 
 export const errors = {
   analyze: (errorType: string, errorMessage: string, context: Record<string, unknown>) =>
-    apiFetch<ErrorAnalysis>("/errors/analyze", {
+    apiFetch<ErrorAnalysis>("/cognition/errors/analyze", {
       method: "POST",
       body: { error_type: errorType, error_message: errorMessage, context },
     }),
 
   getPatterns: (days: number = 30) =>
-    apiFetch<ErrorPatterns>(`/errors/patterns?days=${days}`),
+    apiFetch<ErrorPatterns>(`/cognition/errors/patterns?days=${days}`),
 
   list: (params?: { severity?: string; limit?: number }) => {
     const qs = new URLSearchParams();
     if (params?.severity) qs.set("severity", params.severity);
     if (params?.limit) qs.set("limit", String(params.limit));
-    return apiFetch<ErrorAnalysis[]>(`/errors/analyses?${qs}`);
+    return apiFetch<ErrorAnalysis[]>(`/cognition/errors/analyses?${qs}`);
   },
 
   get: (analysisId: number) =>
-    apiFetch<ErrorAnalysis>(`/errors/analysis/${analysisId}`),
+    apiFetch<ErrorAnalysis>(`/cognition/errors/analysis/${analysisId}`),
 
   resolve: (analysisId: number, method: string = "manual") =>
     apiFetch<ErrorAnalysis>(
-      `/errors/analysis/${analysisId}/resolve?resolution_method=${method}`,
+      `/cognition/errors/analysis/${analysisId}/resolve?resolution_method=${method}`,
       { method: "POST" },
     ),
 };
@@ -170,7 +170,7 @@ export const errors = {
 
 export const hypothesis = {
   generate: (hypothesis: string, evidenceFor?: Array<{ text: string; weight: number }>, evidenceAgainst?: Array<{ text: string; weight: number }>, source?: string) =>
-    apiFetch<Hypothesis>("/hypothesis/generate", {
+    apiFetch<Hypothesis>("/cognition/hypothesis/generate", {
       method: "POST",
       body: {
         hypothesis,
@@ -181,29 +181,29 @@ export const hypothesis = {
     }),
 
   listActive: () =>
-    apiFetch<Hypothesis[]>("/hypothesis/active"),
+    apiFetch<Hypothesis[]>("/cognition/hypothesis/active"),
 
   listHighConfidence: (threshold: number = 0.7) =>
-    apiFetch<Hypothesis[]>(`/hypothesis/high-confidence?threshold=${threshold}`),
+    apiFetch<Hypothesis[]>(`/cognition/hypothesis/high-confidence?threshold=${threshold}`),
 
   get: (hypothesisId: number) =>
-    apiFetch<Hypothesis>(`/hypothesis/${hypothesisId}`),
+    apiFetch<Hypothesis>(`/cognition/hypothesis/${hypothesisId}`),
 
   addEvidence: (hypothesisId: number, evidence: string, supports: boolean, weight: number = 1.0) =>
     apiFetch<Hypothesis>(
-      `/hypothesis/${hypothesisId}/evidence?evidence=${encodeURIComponent(evidence)}&supports=${supports}&weight=${weight}`,
+      `/cognition/hypothesis/${hypothesisId}/evidence?evidence=${encodeURIComponent(evidence)}&supports=${supports}&weight=${weight}`,
       { method: "POST" },
     ),
 
   resolve: (hypothesisId: number, status: "confirmed" | "rejected", reason?: string) =>
     apiFetch<Hypothesis>(
-      `/hypothesis/${hypothesisId}/resolve?status=${status}${reason ? `&reason=${encodeURIComponent(reason)}` : ""}`,
+      `/cognition/hypothesis/${hypothesisId}/resolve?status=${status}${reason ? `&reason=${encodeURIComponent(reason)}` : ""}`,
       { method: "POST" },
     ),
 
   merge: (hypothesisId: number, otherId: number) =>
     apiFetch<Hypothesis>(
-      `/hypothesis/merge?hypothesis_id=${hypothesisId}&other_id=${otherId}`,
+      `/cognition/hypothesis/merge?hypothesis_id=${hypothesisId}&other_id=${otherId}`,
       { method: "POST" },
     ),
 };
@@ -212,7 +212,7 @@ export const hypothesis = {
 
 export const confidence = {
   estimate: (taskType: string, context?: Record<string, unknown>) =>
-    apiFetch<ConfidenceResult>("/confidence/estimate", {
+    apiFetch<ConfidenceResult>("/cognition/confidence/estimate", {
       method: "POST",
       body: { task_type: taskType, context: context || {} },
     }),
@@ -222,13 +222,13 @@ export const confidence = {
     scores.forEach((s) => qs.append("confidences", String(s)));
     if (weights) weights.forEach((w) => qs.append("weights", String(w)));
     return apiFetch<{ confidence: number; method: string; input_scores: number[]; input_weights: number[]; factors: string[] }>(
-      `/confidence/combine?${qs}`,
+      `/cognition/confidence/combine?${qs}`,
       { method: "POST" },
     );
   },
 
   getCalibration: (days: number = 30) =>
     apiFetch<{ total_predictions: number; calibrated_count: number; calibration_score: number; by_task_type: Record<string, { total: number; calibrated: number; score: number }> }>(
-      `/confidence/calibration?days=${days}`,
+      `/cognition/confidence/calibration?days=${days}`,
     ),
 };

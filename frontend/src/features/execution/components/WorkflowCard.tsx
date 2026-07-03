@@ -24,7 +24,7 @@ function stepStatusIcon(status: string | undefined) {
   if (!status) return <span className="w-2 h-2 rounded-full bg-bg-surface inline-block" />;
   const map: Record<string, string> = {
     completed: "bg-success",
-    running: "bg-accent animate-pulse",
+    running: "bg-accent motion-safe:animate-pulse",
     pending: "bg-warning",
     failed: "bg-danger",
   };

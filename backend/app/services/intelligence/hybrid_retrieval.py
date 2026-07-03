@@ -80,7 +80,9 @@ class HybridRetrievalV2:
         diverse = self._mmr_rerank(deduped, limit, diversity_penalty)
         return diverse
 
-    def _vector_search(self, query: str, repo_id: int | None, limit: int, user_id: int | None = None) -> list[RetrievalResult]:
+    def _vector_search(
+        self, query: str, repo_id: int | None, limit: int, user_id: int | None = None
+    ) -> list[RetrievalResult]:
         if not qdrant_circuit_breaker.allow_request():
             logger.warning("Qdrant circuit breaker is OPEN — skipping vector search")
             return []

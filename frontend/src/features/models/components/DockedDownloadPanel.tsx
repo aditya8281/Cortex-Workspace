@@ -39,7 +39,7 @@ export function DockedDownloadPanel() {
           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-bg-surface/50 motion-safe:transition-colors"
           aria-label="Expand download panel"
         >
-          <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+          <div className="h-2 w-2 rounded-full bg-accent motion-safe:animate-pulse" />
           <span className="text-text-primary font-medium">
             Downloads
           </span>

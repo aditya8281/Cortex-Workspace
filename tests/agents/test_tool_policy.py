@@ -138,13 +138,13 @@ class TestDefaultPolicy:
         policy = default_policy()
         assert policy.evaluate("exec_command") == "ask"
 
-    def test_default_policy_allows_write(self):
+    def test_default_policy_asks_write(self):
         policy = default_policy()
-        assert policy.evaluate("write_file") == "allow"
+        assert policy.evaluate("write_file") == "ask"
 
-    def test_default_policy_allows_web_fetch(self):
+    def test_default_policy_asks_web_fetch(self):
         policy = default_policy()
-        assert policy.evaluate("web_fetch") == "allow"
+        assert policy.evaluate("web_fetch") == "ask"
 
     def test_default_policy_asks_for_delete(self):
         policy = default_policy()

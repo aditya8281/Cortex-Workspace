@@ -183,8 +183,8 @@ def default_policy() -> ToolPolicy:
     """Return the default tool policy for the agent system.
 
     - Read-only tools: ALLOW (search_memory, read_file, web_search, plan_task)
-    - Write tools: ALLOW (create_memory, write_file)
-    - Dangerous tools: ASK (exec_command, delete_file)
+    - Write tools: ASK (write_file) — ALLOW (create_memory)
+    - Dangerous tools: ASK (exec_command, exec_*, delete_file)
     - Unknown tools: ALLOW (default)
     - MCP tools: DENY by default
     """
@@ -192,6 +192,8 @@ def default_policy() -> ToolPolicy:
         rules=[
             ToolRule("exec_command", "ask", "Shell commands require approval"),
             ToolRule("exec_*", "ask", "Execution tools require approval"),
+            ToolRule("write_file", "ask", "File writes require approval"),
+            ToolRule("web_fetch", "ask", "URL fetches require approval"),
             ToolRule("delete_file", "ask", "File deletion requires approval"),
         ],
         default_decision="allow",

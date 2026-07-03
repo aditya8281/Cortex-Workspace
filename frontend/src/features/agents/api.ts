@@ -39,38 +39,38 @@ export interface AgentStep {
 }
 
 export const agentsApi = {
-  list: () => apiFetch<{ agents: Agent[] }>("/agents"),
+  list: () => apiFetch<{ agents: Agent[] }>("/cognition/agents"),
 
-  get: (id: number) => apiFetch<Agent>(`/agents/${id}`),
+  get: (id: number) => apiFetch<Agent>(`/cognition/agents/${id}`),
 
   create: (data: { name: string; description?: string; system_prompt: string; model_id?: string; tools?: string[] }) =>
-    apiFetch<Agent>("/agents", {
+    apiFetch<Agent>("/cognition/agents", {
       method: "POST",
       body: data,
     }),
 
   update: (id: number, data: Partial<{ name: string; description: string; system_prompt: string; model_id: string; is_active: boolean; tools: string[] }>) =>
-    apiFetch<Agent>(`/agents/${id}`, {
+    apiFetch<Agent>(`/cognition/agents/${id}`, {
       method: "PUT",
       body: data,
     }),
 
   delete: (id: number) =>
-    apiFetch<{ status: string }>(`/agents/${id}`, { method: "DELETE" }),
+    apiFetch<{ status: string }>(`/cognition/agents/${id}`, { method: "DELETE" }),
 
   listRuns: (agentId?: number, status?: string, limit = 20) => {
     const params = new URLSearchParams();
     if (agentId) params.set("agent_id", String(agentId));
     if (status) params.set("status", status);
     params.set("limit", String(limit));
-    return apiFetch<{ runs: AgentRun[] }>(`/agents/runs?${params}`);
+    return apiFetch<{ runs: AgentRun[] }>(`/cognition/agents/runs?${params}`);
   },
 
   getRun: (runId: number) =>
-    apiFetch<{ run: AgentRun; steps: AgentStep[] }>(`/agents/runs/${runId}`),
+    apiFetch<{ run: AgentRun; steps: AgentStep[] }>(`/cognition/agents/runs/${runId}`),
 
   startRun: (agentId: number, input: string) =>
-    apiFetch<{ status: string; run_id: number }>("/agents/runs", {
+    apiFetch<{ status: string; run_id: number }>("/cognition/agents/runs", {
       method: "POST",
       body: { agent_id: agentId, input },
     }),

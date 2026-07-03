@@ -21,6 +21,7 @@ class ConversationMessageResponse(BaseModel):
     id: int
     role: str
     content: str
+    thinking_content: str | None = None
     tokens: int
     created_at: datetime | None = None
 

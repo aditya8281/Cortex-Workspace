@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
-import { VaultIcon, SearchIcon } from "@/shared/ui/icons";
+import { VaultIcon, SearchIcon, ImageFileIcon, DocFileIcon, CodeFileIcon, FolderIcon } from "@/shared/ui/icons";
 import { cn } from "@/shared/lib/utils";
+import { getCsrfToken } from "@/shared/api/client";
 import gsap from "gsap";
 import { Draggable as DraggablePlugin } from "gsap/Draggable";
 import { Flip } from "gsap/Flip";
@@ -54,15 +55,15 @@ function formatTime(ts: number | null): string {
   });
 }
 
-function getFileIcon(name: string): string {
+function getFileIcon(name: string): React.ReactNode {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
   const img = ["png", "jpg", "jpeg", "gif", "svg", "webp"];
-  const doc = ["txt", "md", "pdf", "csv", "json"];
-  const code = ["py", "js", "ts", "tsx", "jsx", "rs", "go", "c", "cpp", "h"];
-  if (img.includes(ext)) return "🖼️";
-  if (doc.includes(ext)) return "📄";
-  if (code.includes(ext)) return "💻";
-  return "📁";
+  const doc = ["txt", "md", "pdf", "csv", "json", "yaml", "yml", "toml", "xml"];
+  const code = ["py", "js", "ts", "tsx", "jsx", "rs", "go", "c", "cpp", "h", "css", "scss", "html", "sh", "bash"];
+  if (img.includes(ext)) return <ImageFileIcon size={16} />;
+  if (doc.includes(ext)) return <DocFileIcon size={16} />;
+  if (code.includes(ext)) return <CodeFileIcon size={16} />;
+  return <FolderIcon size={16} />;
 }
 
 // ── Lock Screen ───────────────────────────────────────────────────────
@@ -85,7 +86,7 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
     try {
       const res = await fetch(`${API_BASE}/api/v1/privacy/vault/unlock`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         credentials: "include",
         body: JSON.stringify({ vault_password: password }),
       });
@@ -149,7 +150,7 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
               "bg-accent-red hover:bg-accent-red/90",
               "disabled:opacity-50 disabled:cursor-not-allowed",
               "motion-safe:transition-all motion-safe:duration-150",
-              loading && "animate-pulse",
+              loading && "motion-safe:animate-pulse",
             )}
           >
             {loading ? "Unlocking…" : "Unlock Vault"}
@@ -190,7 +191,7 @@ function FileRow({
         isFlatFile && "cursor-grab active:cursor-grabbing",
       )}>
       {/* Icon */}
-      <span className="flex-shrink-0 text-base">{getFileIcon(file.name)}</span>
+      <span className="flex-shrink-0 flex items-center justify-center h-6 w-6 text-text-muted">{getFileIcon(file.name)}</span>
 
       {/* Name */}
       <div className="flex-1 min-w-0">
@@ -301,6 +302,7 @@ function UploadModal({ open, onClose, onUploaded }: { open: boolean; onClose: ()
       formData.append("file", file);
       const res = await fetch(`${API_BASE}/api/v1/privacy/vault/files/upload?folder=/`, {
         method: "POST",
+        headers: { "X-CSRF-Token": getCsrfToken() },
         credentials: "include",
         body: formData,
       });
@@ -445,6 +447,7 @@ export default function VaultPage() {
     try {
       await fetch(`${API_BASE}/api/v1/privacy/vault/lock`, {
         method: "POST",
+        headers: { "X-CSRF-Token": getCsrfToken() },
         credentials: "include",
       });
       setLocked(true);
@@ -457,6 +460,7 @@ export default function VaultPage() {
     try {
       const res = await fetch(`${API_BASE}/api/v1/privacy/vault/files/${encodeURIComponent(path)}`, {
         method: "DELETE",
+        headers: { "X-CSRF-Token": getCsrfToken() },
         credentials: "include",
       });
       if (!res.ok) throw new Error("Delete failed");
@@ -470,7 +474,7 @@ export default function VaultPage() {
     try {
       const res = await fetch(`${API_BASE}/api/v1/privacy/vault/files/${encodeURIComponent(path)}/rename`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         credentials: "include",
         body: JSON.stringify({ new_name: newName }),
       });
@@ -495,7 +499,7 @@ export default function VaultPage() {
     try {
       await fetch(`${API_BASE}/api/v1/privacy/vault/files/${encodeURIComponent(path)}/metadata`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         credentials: "include",
         body: JSON.stringify({ favorite: !file.favorite }),
       });
@@ -653,7 +657,7 @@ export default function VaultPage() {
         {loading ? (
           <div className="space-y-1">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-12 rounded-lg bg-bg-surface animate-pulse" />
+              <div key={i} className="h-12 rounded-lg bg-bg-surface motion-safe:animate-pulse" />
             ))}
           </div>
         ) : filteredFiles.length === 0 ? (

@@ -41,6 +41,7 @@ def _get_svc(db: Session, user_id: int) -> ConversationService:
     """
     try:
         from backend.app.services.storage.factory import get_user_workspace
+
         ws = get_user_workspace(user_id, db)
         return ConversationService(db, workspace=ws)
     except Exception as exc:
@@ -175,19 +176,44 @@ async def _generate_response_task(
     Final text response (no TOOL_CALL) is streamed to SSE consumers.
     DB write always happens — even if no consumer is connected.
     """
+    try:
+        await _generate_response_task_impl(conversation_id, user_content, user_id, model)
+    except Exception as e:
+        logger.critical(
+            "UNHANDLED exception in _generate_response_task conv=%d: %s",
+            conversation_id, e, exc_info=True,
+        )
+        buffer = stream_manager.get_buffer(conversation_id)
+        if buffer and not buffer.done:
+            error_msg = f"Generation error: {e}"
+            buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': error_msg, 'tokens': len(error_msg)//4})}\n\n")
+            buffer.mark_done(error=str(e))
+
+
+async def _generate_response_task_impl(
+    conversation_id: int,
+    user_content: str,
+    user_id: int,
+    model: str | None = None,
+) -> None:
+    """Implementation of _generate_response_task."""
+    import re
+
     from backend.app.agents.loop import (
         _parse_tool_calls,
         _strip_tool_calls,
+        _TOOL_CALL_START_RE,
     )
-    from backend.app.agents.tools.registry import get_tool_registry
     from backend.app.agents.tools.policy import default_policy
+    from backend.app.agents.tools.registry import get_tool_registry
     from backend.app.db.session import SessionLocal
     from backend.app.services.intelligence.llm.manager import llm_manager
     from backend.app.services.intelligence.llm.provider import LLMMessage
     from backend.app.services.intelligence.tool_router import (
-        classify_intent_tools,
         build_tool_choice_hint,
+        classify_intent_tools,
     )
+
     buffer = stream_manager.get_or_create_buffer(conversation_id)
     db = SessionLocal()
 
@@ -212,31 +238,46 @@ async def _generate_response_task(
         logger.error("Failed to save user message: %s", exc)
         db.rollback()
 
-    # Build context via RAG
+    # Build context via RAG (isolated session — never taint the main session)
+    rag_context = None
+    sources = []
     try:
-        rag = get_rag_pipeline(db)
-        conv = svc.get(conversation_id, user_id)
-        repo_id = conv.repo_id if conv else None
-        rag_context = rag.retrieve_context(user_content, repo_id=repo_id, user_id=user_id)
-        sources = [
-            {"file_path": r.file_path, "score": r.score, "content": r.content[:300]}
-            for r in rag_context.results
-        ]
-    except Exception as exc:
-        logger.error("RAG pipeline failed: %s", exc)
-        rag_context = None
-        sources = []
+        from backend.app.db.session import SessionLocal as RagSessionLocal
 
-    try:
-        db.rollback()
+        rag_db = RagSessionLocal()
+        try:
+            rag = get_rag_pipeline(rag_db)
+            conv = svc.get(conversation_id, user_id)
+            repo_id = conv.repo_id if conv else None
+            rag_result = rag.retrieve_context(user_content, repo_id=repo_id, user_id=user_id)
+            sources = [
+                {"file_path": r.file_path, "score": r.score, "content": r.content[:300]}
+                for r in rag_result.results
+            ]
+            rag_context = rag_result
+        finally:
+            rag_db.close()
     except Exception:
-        pass
+        logger.error("RAG pipeline failed", exc_info=True)
 
     history = svc.get_context_messages(conversation_id, max_tokens=28000)
 
-    # Build system prompt from personality config + memories
+    # Build system prompt from personality config + memories (isolated session)
     from backend.app.services.personality.builder import build_system_prompt
-    system_content = build_system_prompt(db, user_id=user_id, user_message=user_content)
+
+    try:
+        from backend.app.db.session import SessionLocal as MemorySessionLocal
+
+        memory_db = MemorySessionLocal()
+        try:
+            system_content = build_system_prompt(
+                memory_db, user_id=user_id, user_message=user_content, workspace=svc.workspace
+            )
+        finally:
+            memory_db.close()
+    except Exception as exc:
+        logger.warning("Memory-backed system prompt failed, using fallback: %s", exc)
+        system_content = build_system_prompt(None, user_id=None, user_message=user_content)
 
     # Add RAG context if available
     if rag_context and rag_context.formatted_context:
@@ -251,9 +292,9 @@ async def _generate_response_task(
     for t in registry.get_all():
         try:
             props = t.schema.get("function", {}).get("parameters", {}).get("properties", {})
-            param_desc = ", ".join(
-                f"{name}: {prop.get('description', name)}" for name, prop in props.items()
-            ) if props else ""
+            param_desc = (
+                ", ".join(f"{name}: {prop.get('description', name)}" for name, prop in props.items()) if props else ""
+            )
             req = " [REQUIRES APPROVAL]" if t.requires_approval else ""
             tool_lines.append(f"  - {t.name}: {t.description} ({param_desc}){req}")
         except Exception:
@@ -261,15 +302,7 @@ async def _generate_response_task(
 
     if tool_lines:
         system_content += (
-            "\n\n=== AVAILABLE TOOLS ===\n"
-            "You have access to tools. To use a tool, put this EXACTLY in your response "
-            "(on its own line or at the end):\n"
-            "TOOL_CALL: tool_name(param=value, param2=value2)\n\n"
-            "You MUST explain what you're about to do BEFORE the TOOL_CALL line.\n"
-            "After receiving tool results, synthesize them into a clear, helpful answer.\n"
-            "Do NOT call the same tool with the same arguments twice.\n"
-            "Do NOT call more tools than necessary.\n\n"
-            "Available tools:\n" + "\n".join(tool_lines)
+            "\n\nAvailable tools:\n" + "\n".join(tool_lines)
         )
 
         # Intent-based routing: classify the user message and inject tool hints.
@@ -280,7 +313,8 @@ async def _generate_response_task(
             system_content += intent_hint
             logger.info(
                 "Intent router: %s (confidence=%.2f) — hint injected",
-                intent.tools_needed or ["none"], intent.confidence,
+                intent.tools_needed or ["none"],
+                intent.confidence,
             )
 
     # Build message history for LLM
@@ -292,6 +326,7 @@ async def _generate_response_task(
     thinking_content = ""
     response_tokens = 0
     total_tool_calls = 0
+    _streamed_directly = False  # True when fallback path already streamed tokens
 
     # Check if active provider supports native tool calling (once, not per iteration)
     _native_tools_checked = False
@@ -307,7 +342,9 @@ async def _generate_response_task(
                 try:
                     ollama_tools = [t.schema for t in registry.get_all()]
                     native_result = await llm_manager.chat_with_tools(
-                        llm_messages, ollama_tools, model=model,
+                        llm_messages,
+                        ollama_tools,
+                        model=model,
                     )
                     _native_tools_checked = True
                     if native_result is None:
@@ -317,29 +354,151 @@ async def _generate_response_task(
                         native_tool_calls = []
                         for tc in native_result["tool_calls"]:
                             func = tc.get("function", tc)
-                            native_tool_calls.append({
-                                "name": func.get("name", ""),
-                                "args": func.get("arguments", func.get("args", {})),
-                            })
+                            native_tool_calls.append(
+                                {
+                                    "name": func.get("name", ""),
+                                    "args": func.get("arguments", func.get("args", {})),
+                                }
+                            )
                         content = native_result.get("content", "")
                         logger.info("Native tool calling: %d calls", len(native_tool_calls))
                     else:
                         # Provider supports tools but model chose not to use them
                         _supports_native_tools = True
                         content = native_result.get("content", "").strip()
+                        native_tool_calls = []  # Signal "no tools" so fallback is skipped
                 except Exception:
                     _native_tools_checked = True
                     _supports_native_tools = False  # Disable for subsequent iterations
 
-            # ── Fallback: text-based TOOL_CALL parsing ──────────────
+            # ── Fallback: text-based TOOL_CALL parsing with streaming ──
             if native_tool_calls is None:
-                result = await llm_manager.chat(
-                    llm_messages, model=model, max_tokens=2048, temperature=0.7
-                )
-                content = result.content.strip()
+                content = ""
+                tool_calls = []
+                streamed_visible = ""  # Text already sent to user (without TOOL_CALL lines)
+
+                # Use streaming for per-token delivery
+                _think_buf = ""  # Accumulator inside <think> tags
+                _in_think = False
+                async for chunk in llm_manager.chat_stream(
+                    llm_messages, model=model, max_tokens=2048, temperature=0.7,
+                ):
+                    if chunk.get("type") == "thinking":
+                        text = chunk.get("text", "")
+                        if text:
+                            thinking_content += text
+                            buffer.push(
+                                f"data: {json.dumps({'type': 'thinking', 'content': text})}\n\n"
+                            )
+                        continue
+
+                    text = chunk.get("text", "")
+                    if not text:
+                        continue
+
+                    # ── Handle <think> tags inline ──────────────────────
+                    # If <think> opened in a previous chunk, accumulate
+                    if _in_think:
+                        close_idx = text.find("</think>")
+                        if close_idx != -1:
+                            _think_buf += text[:close_idx]
+                            if _think_buf:
+                                thinking_content += _think_buf
+                                buffer.push(
+                                    f"data: {json.dumps({'type': 'thinking', 'content': _think_buf})}\n\n"
+                                )
+                            _think_buf = ""
+                            _in_think = False
+                            text = text[close_idx + 8:]  # After </think>
+                            if not text:
+                                continue
+                        else:
+                            _think_buf += text
+                            continue
+
+                    # Check if <think> starts in this chunk
+                    think_start = text.find("<think>")
+                    if think_start != -1:
+                        # Stream text before <think>
+                        before = text[:think_start]
+                        if before:
+                            content += before
+                            streamed_visible += before
+                            buffer.push(
+                                f"data: {json.dumps({'type': 'chunk', 'content': before})}\n\n"
+                            )
+                        after_start = text[think_start + 7:]
+                        close_idx = after_start.find("</think>")
+                        if close_idx != -1:
+                            # Complete <think>...</think> in one chunk
+                            think_text = after_start[:close_idx]
+                            if think_text:
+                                thinking_content += think_text
+                                buffer.push(
+                                    f"data: {json.dumps({'type': 'thinking', 'content': think_text})}\n\n"
+                                )
+                            text = after_start[close_idx + 8:]
+                            if not text:
+                                continue
+                        else:
+                            # <think> opens but </think> not in this chunk
+                            _in_think = True
+                            _think_buf = after_start
+                            continue
+
+                    # ── Check for TOOL_CALL in visible text ──────────
+                    content += text
+                    if "TOOL_CALL:" in text or _TOOL_CALL_START_RE.search(text):
+                        idx = text.find("TOOL_CALL:")
+                        if idx == -1:
+                            m = _TOOL_CALL_START_RE.search(text)
+                            idx = m.start() if m else 0
+                        chunk_visible = text[:idx]
+                        if chunk_visible:
+                            streamed_visible += chunk_visible
+                            buffer.push(
+                                f"data: {json.dumps({'type': 'chunk', 'content': chunk_visible})}\n\n"
+                            )
+                    else:
+                        streamed_visible += text
+                        buffer.push(
+                            f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n"
+                        )
+
+                # After stream ends, parse any tool calls from full content
+                content = content.strip()
                 tool_calls = _parse_tool_calls(content)
+                logger.info(
+                    "Streaming fallback complete: %d chars, %d tool calls",
+                    len(content), len(tool_calls),
+                )
+                _streamed_directly = True  # Already streamed token-by-token
             else:
                 tool_calls = native_tool_calls
+
+            # Extract model thinking from <think> tags (qwen3, deepseek, etc.)
+            # Non-streaming paths (native tool / fallback) embed thinking in content
+            if not thinking_content and "<think>" in content:
+                m = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
+                if m:
+                    thinking_content = m.group(1).strip()
+                    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+                    # Re-parse tool calls on cleaned content for fallback path
+                    if native_tool_calls is None:
+                        tool_calls = _parse_tool_calls(content)
+                    if thinking_content:
+                        buffer.push(
+                            f"data: {json.dumps({'type': 'thinking', 'content': thinking_content})}\n\n"
+                        )
+            # If native path returned content but no tool_calls, try text-based
+            # TOOL_CALL parsing on it (covers models that sometimes fall back to
+            # text format even when native tools are available).
+            # This avoids a wasteful second LLM call that the old code made.
+            if not tool_calls and content and native_tool_calls is not None:
+                parsed = _parse_tool_calls(content)
+                if parsed:
+                    tool_calls = parsed
+                    logger.info('Native path with text-based TOOL_CALL fallback: %d calls', len(tool_calls))
 
             if not tool_calls and not content:
                 if tool_iteration == 0:
@@ -353,9 +512,7 @@ async def _generate_response_task(
                 if visible_text:
                     # Stream pre-tool explanation as a thinking event (shows as "Reasoning")
                     # This is Cortex explaining what it's about to do before calling tools
-                    buffer.push(
-                        f"data: {json.dumps({'type': 'thinking', 'content': visible_text})}\n\n"
-                    )
+                    buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': visible_text})}\n\n")
 
                 for tc in tool_calls:
                     tool_name = tc["name"]
@@ -365,14 +522,13 @@ async def _generate_response_task(
                     tool_obj = registry.get(tool_name)
                     if tool_obj:
                         from backend.app.agents.loop import _coerce_args
+
                         tool_args = _coerce_args(tool_args, tool_obj.schema)
 
                     total_tool_calls += 1
 
                     # Emit tool_call event
-                    buffer.push(
-                        f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name, 'args': tool_args})}\n\n"
-                    )
+                    buffer.push(f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name, 'args': tool_args})}\n\n")
 
                     # Check policy
                     decision = policy.evaluate(tool_name, tool_iteration)
@@ -381,10 +537,12 @@ async def _generate_response_task(
                         buffer.push(
                             f"data: {json.dumps({'type': 'tool_result', 'tool': tool_name, 'result': result_text, 'denied': True})}\n\n"
                         )
-                        llm_messages.append(LLMMessage(
-                            role="user",
-                            content=f"[Tool result for {tool_name}]: {result_text}",
-                        ))
+                        llm_messages.append(
+                            LLMMessage(
+                                role="user",
+                                content=f"[Tool result for {tool_name}]: {result_text}",
+                            )
+                        )
                         continue
 
                     if decision == "ask":
@@ -402,10 +560,12 @@ async def _generate_response_task(
                             buffer.push(
                                 f"data: {json.dumps({'type': 'tool_result', 'tool': tool_name, 'result': result_text, 'denied': True})}\n\n"
                             )
-                            llm_messages.append(LLMMessage(
-                                role="user",
-                                content=f"[Tool result for {tool_name}]: {result_text}",
-                            ))
+                            llm_messages.append(
+                                LLMMessage(
+                                    role="user",
+                                    content=f"[Tool result for {tool_name}]: {result_text}",
+                                )
+                            )
                             continue
 
                     # Execute the tool
@@ -421,25 +581,31 @@ async def _generate_response_task(
                     buffer.push(
                         f"data: {json.dumps({'type': 'tool_result', 'tool': tool_name, 'result': tool_result[:500]})}\n\n"
                     )
-                    llm_messages.append(LLMMessage(
-                        role="user",
-                        content=f"[Tool result for {tool_name}]: {tool_result}",
-                    ))
+                    llm_messages.append(
+                        LLMMessage(
+                            role="user",
+                            content=f"[Tool result for {tool_name}]: {tool_result}",
+                        )
+                    )
 
                 # Continue loop — LLM will synthesize tool results
                 continue
 
             # No tool calls — this is the final text response
             full_response = content
+            # Strip leading/trailing quotes from model responses
+            if len(full_response) >= 2 and full_response.startswith('"') and full_response.endswith('"'):
+                full_response = full_response[1:-1]
             response_tokens = estimate_tokens(full_response)
 
-            # Stream the final response as text chunks
-            chunk_size = 40
-            for i in range(0, len(full_response), chunk_size):
-                chunk_text = full_response[i:i + chunk_size]
-                buffer.push(
-                    f"data: {json.dumps({'type': 'chunk', 'content': chunk_text, 'tokens': response_tokens})}\n\n"
-                )
+            # Stream the final response as text chunks (only if not already streamed)
+            if not _streamed_directly:
+                chunk_size = 40
+                for i in range(0, len(full_response), chunk_size):
+                    chunk_text = full_response[i : i + chunk_size]
+                    buffer.push(
+                        f"data: {json.dumps({'type': 'chunk', 'content': chunk_text, 'tokens': response_tokens})}\n\n"
+                    )
             break
 
     except asyncio.CancelledError:
@@ -460,7 +626,10 @@ async def _generate_response_task(
     # ALWAYS write assistant message to DB
     try:
         svc.add_message(
-            conversation_id, "assistant", full_response, tokens=response_tokens,
+            conversation_id,
+            "assistant",
+            full_response,
+            tokens=response_tokens,
             thinking_content=thinking_content or None,
         )
         db.commit()
@@ -515,7 +684,9 @@ async def send_message(
     """
     logger.info(
         "send_message called: conv=%s user=%s content_len=%d",
-        conversation_id, current_user.id, len(payload.content),
+        conversation_id,
+        current_user.id,
+        len(payload.content),
     )
 
     # Validate conversation exists and belongs to user
@@ -530,7 +701,7 @@ async def send_message(
         return {"status": "generating", "conversation_id": conversation_id}
 
     # Create buffer and start background task
-    buffer = stream_manager.get_or_create_buffer(conversation_id)
+    stream_manager.get_or_create_buffer(conversation_id)
     task = asyncio.create_task(
         _generate_response_task(
             conversation_id,
@@ -570,6 +741,7 @@ async def stream_conversation(
         # No generation happening — return done immediately
         async def empty_stream():
             yield f"data: {json.dumps({'type': 'done', 'total_tokens': 0, 'sources': []})}\n\n"
+
         return StreamingResponse(
             empty_stream(),
             media_type="text/event-stream",
@@ -666,9 +838,7 @@ async def approve_tool_call(
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    resolved = stream_manager.resolve_approval(
-        conversation_id, payload.call_id, payload.approved
-    )
+    resolved = stream_manager.resolve_approval(conversation_id, payload.call_id, payload.approved)
     if not resolved:
         return {"status": "not_found", "message": "No pending approval with that call_id"}
 

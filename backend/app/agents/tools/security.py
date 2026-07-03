@@ -123,8 +123,31 @@ def has_blocked_command(command: str) -> str | None:
 def ensure_within_workspace(file_path: str, workspace_root: str | None = None) -> Path:
     """Resolve and validate that a file path is within the agent workspace.
 
+    Absolute paths are allowed if they fall within the user's home directory.
+    Relative paths are resolved within the agent workspace.
+
     Raises ValueError on path traversal.
     """
+    resolved = Path(file_path).expanduser().resolve()
+
+    # ── Absolute path: check against workspace_root or home directory ──
+    if file_path.startswith("/") or file_path.startswith("~"):
+        root = workspace_root or os.environ.get("AGENT_WORKSPACE")
+        if root:
+            workspace = Path(root).resolve()
+            try:
+                resolved.relative_to(workspace)
+                return resolved
+            except ValueError:
+                pass  # Check home directory below
+        home = Path.home().resolve()
+        try:
+            resolved.relative_to(home)
+        except ValueError:
+            raise ValueError(f"Path traversal denied: {file_path}")
+        return resolved
+
+    # ── Relative path: resolve within agent workspace ──
     root = workspace_root or os.environ.get(
         "AGENT_WORKSPACE",
         os.path.join(os.path.expanduser("~"), ".cortex-agent-workspace"),
@@ -132,8 +155,6 @@ def ensure_within_workspace(file_path: str, workspace_root: str | None = None) -
     workspace = Path(root).resolve()
     workspace.mkdir(parents=True, exist_ok=True)
     target = (workspace / file_path).resolve()
-    # Use relative_to instead of startswith to prevent prefix-based bypass
-    # (e.g. /workspace-extra/file passes startswith("/workspace") but is outside workspace)
     try:
         target.relative_to(workspace)
     except ValueError:

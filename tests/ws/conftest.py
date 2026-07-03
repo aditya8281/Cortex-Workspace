@@ -1,4 +1,5 @@
 """WS test fixtures — patch SessionLocal for WS auth tests."""
+
 from unittest.mock import patch
 
 import pytest

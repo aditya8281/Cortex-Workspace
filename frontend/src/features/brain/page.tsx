@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/shared/auth/AuthProvider";
 import { useRouter } from "next/navigation";
 import { BrainIcon, SearchIcon, DocumentIcon, CodeIcon, VaultIcon } from "@/shared/ui/icons";
+import { apiFetch } from "@/shared/api/client";
 import { cn } from "@/shared/lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -108,17 +109,17 @@ function LoadingSkeleton() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="rounded-xl border border-border-subtle p-4 bg-bg-widget">
-            <div className="h-3 w-16 bg-bg-surface rounded animate-pulse mb-3" />
-            <div className="h-7 w-20 bg-bg-surface rounded animate-pulse mb-2" />
-            <div className="h-2 w-12 bg-bg-surface rounded animate-pulse" />
+            <div className="h-3 w-16 bg-bg-surface rounded motion-safe:animate-pulse mb-3" />
+            <div className="h-7 w-20 bg-bg-surface rounded motion-safe:animate-pulse mb-2" />
+            <div className="h-2 w-12 bg-bg-surface rounded motion-safe:animate-pulse" />
           </div>
         ))}
       </div>
       <div className="rounded-xl border border-border-subtle p-5 bg-bg-widget">
-        <div className="h-4 w-24 bg-bg-surface rounded animate-pulse mb-4" />
+        <div className="h-4 w-24 bg-bg-surface rounded motion-safe:animate-pulse mb-4" />
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-4 w-full bg-bg-surface rounded animate-pulse" />
+            <div key={i} className="h-4 w-full bg-bg-surface rounded motion-safe:animate-pulse" />
           ))}
         </div>
       </div>
@@ -173,15 +174,11 @@ export default function BrainPage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/memory/scan-repo`, {
+      await apiFetch("/memory/scan-repo", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ repo_path: "." }),
+        body: { repo_path: "." },
       });
-      if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
       setSyncResult("Sync queued successfully");
-      // Refresh data after a moment
       setTimeout(fetchAll, 2000);
     } catch (err) {
       setSyncResult(err instanceof Error ? err.message : "Sync failed");

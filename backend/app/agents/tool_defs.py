@@ -237,10 +237,11 @@ async def read_file(path: str, max_lines: int = 500) -> str:
 
 @tool(description="Write content to a file (requires approval)", requires_approval=True, category="files")
 async def write_file(path: str, content: str) -> str:
-    """Write content to a file within the workspace. Overwrites if exists.
+    """Write content to a file. Absolute paths go anywhere in your home
+    directory; relative paths are restricted to the agent workspace.
 
     Args:
-        path: Path relative to workspace root (no absolute paths for safety)
+        path: Absolute path (e.g. ~/Desktop/file.py) or path relative to workspace
         content: The content to write
     """
     try:
@@ -500,7 +501,7 @@ async def web_search(query: str, max_results: int = 5) -> str:
 
         def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
             attr_dict = dict(attrs)
-            cls = attr_dict.get("class", "")
+            cls = attr_dict.get("class", "") or ""
             # Result container
             if tag == "a" and "result__a" in cls:
                 href = attr_dict.get("href", "")
@@ -536,9 +537,7 @@ async def web_search(query: str, max_results: int = 5) -> str:
     try:
         encoded = urllib.parse.quote_plus(query)
         url = f"https://html.duckduckgo.com/html/?q={encoded}"
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
-        })
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             html = resp.read(200 * 1024).decode("utf-8", errors="replace")
 

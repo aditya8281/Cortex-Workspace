@@ -213,7 +213,7 @@ Feature flag: `CORTEX_NEW_AGENT_LOOP` (default: False) in Settings. When True, d
 
 ### Vector Search (Qdrant)
 
-- **Collections**: `cortex_code` (file chunks), `cortex_memory` (user memories)
+- **Collections**: `cortex_code` (file chunks), `cortex_docs` (admin-specified document paths)
 - **Vector size**: 768 (configurable via `EMBEDDING_DIM`)
 - **Distance**: Cosine similarity
 - **Filtering**: Payload-based (repo_id, file_path, document_id)

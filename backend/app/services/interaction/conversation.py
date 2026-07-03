@@ -3,10 +3,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
     from backend.app.services.storage.user_workspace import UserWorkspace
+
+from backend.app.services.memory.long_term import LongTermMemoryService
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +39,14 @@ class ConversationService:
     When no workspace is provided, DB-only mode (backward compat).
     """
 
-    def __init__(self, db: Session, workspace: "UserWorkspace | None" = None):
+    def __init__(self, db: Session, workspace: UserWorkspace | None = None):
         self._db = db
         self._ws = workspace
+
+    @property
+    def workspace(self) -> UserWorkspace | None:
+        """Expose the filesystem workspace for personality builder and other consumers."""
+        return self._ws
 
     def create(self, user_id: int, title: str = "New Conversation", repo_id: int | None = None) -> Conversation:
         conv = Conversation(user_id=user_id, title=title, repo_id=repo_id)
@@ -50,7 +58,9 @@ class ConversationService:
         if self._ws:
             try:
                 self._ws.conversations.index_entry(
-                    conv.id, title=title, repo_id=repo_id,
+                    conv.id,
+                    title=title,
+                    repo_id=repo_id,
                 )
             except Exception as exc:
                 logger.warning("Filesystem index write failed for conv %d: %s", conv.id, exc)
@@ -106,7 +116,10 @@ class ConversationService:
         if self._ws:
             try:
                 self._ws.conversations.append_message(
-                    conversation_id, role, content, tokens=tokens,
+                    conversation_id,
+                    role,
+                    content,
+                    tokens=tokens,
                     thinking_content=thinking_content,
                 )
             except Exception as exc:
@@ -185,19 +198,19 @@ class ConversationService:
         if len(messages) < 2:
             return []
 
-        ltm_svc = LongTermMemoryService(self._db)
+        ltm_svc = LongTermMemoryService(self._db, workspace=self._ws)
         existing = ltm_svc.search(user_id, min_confidence=0.0, limit=200)
 
         # ── Path 1: LLM-based extraction (rich, nuanced) ─────────────────
         stored: builtins.list[dict] = []
         try:
-            stored = await self._extract_via_llm(
-                messages, existing, ltm_svc, user_id, conversation_id, model
-            )
+            stored = await self._extract_via_llm(messages, existing, ltm_svc, user_id, conversation_id, model)
             if stored:
                 logger.info(
                     "LLM extraction: %d memories for user %d (conv %d)",
-                    len(stored), user_id, conversation_id,
+                    len(stored),
+                    user_id,
+                    conversation_id,
                 )
                 return stored
         except Exception as e:
@@ -205,13 +218,13 @@ class ConversationService:
 
         # ── Path 2: Heuristic fallback (always works, no LLM needed) ────
         try:
-            stored = self._extract_via_heuristics(
-                messages, existing, ltm_svc, user_id, conversation_id
-            )
+            stored = self._extract_via_heuristics(messages, existing, ltm_svc, user_id, conversation_id)
             if stored:
                 logger.info(
                     "Heuristic extraction: %d memories for user %d (conv %d)",
-                    len(stored), user_id, conversation_id,
+                    len(stored),
+                    user_id,
+                    conversation_id,
                 )
         except Exception as e:
             logger.warning("Heuristic extraction failed for conv %d: %s", conversation_id, e)
@@ -220,9 +233,9 @@ class ConversationService:
 
     async def _extract_via_llm(
         self,
-        messages: list,
-        existing: list,
-        ltm_svc: "LongTermMemoryService",
+        messages: builtins.list,  # noqa: UP037
+        existing: builtins.list,  # noqa: UP037
+        ltm_svc: LongTermMemoryService,
         user_id: int,
         conversation_id: int,
         model: str | None = None,
@@ -235,17 +248,19 @@ class ConversationService:
         from backend.app.services.intelligence.llm.manager import llm_manager
         from backend.app.services.intelligence.llm.provider import LLMMessage
 
-        existing_summary = "\n".join(
-            f"- [{m.category}] {m.title}: {m.content}" for m in existing
-        ) if existing else "(no existing memories)"
+        existing_summary = (
+            "\n".join(f"- [{m.category}] {m.title}: {m.content}" for m in existing)
+            if existing
+            else "(no existing memories)"
+        )
 
         conversation_text = "\n".join(
-            f"{m.role}: {m.content}" for m in messages  # type: ignore[attr-defined]
+            f"{m.role}: {m.content}"
+            for m in messages  # type: ignore[attr-defined]
         )
 
         extraction_prompt = (
-            settings.CORTEX_EXTRACTION_PROMPT
-            .replace("{name}", settings.CORTEX_NAME)
+            settings.CORTEX_EXTRACTION_PROMPT.replace("{name}", settings.CORTEX_NAME)
             .replace("{existing_memories}", existing_summary)
             .replace("{conversation}", conversation_text)
         )
@@ -273,7 +288,8 @@ class ConversationService:
         # Build a set of significant words from user messages only
         # for cross-reference validation
         user_text = "\n".join(
-            m.content for m in messages
+            m.content
+            for m in messages
             if getattr(m, "role", None) == "user"  # type: ignore[attr-defined]
         ).lower()
         # Extract meaningful words (4+ chars) from user text
@@ -300,13 +316,12 @@ class ConversationService:
             if len(overlap) < 2:
                 logger.debug(
                     "Dropping ungrounded memory '%s' (only %d words match user text)",
-                    title, len(overlap),
+                    title,
+                    len(overlap),
                 )
                 continue
 
-            existing_match = next(
-                (m for m in existing if m.title.lower() == title.lower()), None
-            )
+            existing_match = next((m for m in existing if m.title.lower() == title.lower()), None)
             if existing_match:
                 existing_match.content = content
                 existing_match.confidence = min(1.0, existing_match.confidence + 0.15)
@@ -328,9 +343,9 @@ class ConversationService:
 
     @staticmethod
     def _extract_via_heuristics(
-        messages: list,
-        existing: list,
-        ltm_svc: "LongTermMemoryService",
+        messages: builtins.list,  # noqa: UP037
+        existing: builtins.list,  # noqa: UP037
+        ltm_svc: LongTermMemoryService,
         user_id: int,
         conversation_id: int,
     ) -> builtins.list[dict]:
@@ -354,10 +369,7 @@ class ConversationService:
         full_text = "\n".join(m.content for m in user_messages)  # type: ignore[attr-defined]
 
         # Don't re-extract if we already have a summary for this conversation
-        already_has_summary = any(
-            m.source == "conversation" and m.source_id == conversation_id
-            for m in existing
-        )
+        already_has_summary = any(m.source == "conversation" and m.source_id == conversation_id for m in existing)
 
         stored: builtins.list[dict] = []
         existing_titles = {m.title.lower() for m in existing}
@@ -387,7 +399,7 @@ class ConversationService:
         for pattern in id_patterns:
             match = re.search(pattern, full_text, re.IGNORECASE)
             if match:
-                _store("fact", f"self-identifies: {match.group(1)[:40]}", f"The user said: \"{match.group(0).strip()}\"")
+                _store("fact", f"self-identifies: {match.group(1)[:40]}", f'The user said: "{match.group(0).strip()}"')
 
         # ── Preferences ──────────────────────────────────────────────
         pref_patterns = [
@@ -399,7 +411,7 @@ class ConversationService:
             match = re.search(pattern, full_text, re.IGNORECASE)
             if match:
                 verb = match.group(0).split()[1] if len(match.group(0).split()) > 1 else "prefers"
-                _store("preference", f"{verb}: {match.group(1)[:40]}", f"The user said: \"{match.group(0).strip()}\"")
+                _store("preference", f"{verb}: {match.group(1)[:40]}", f'The user said: "{match.group(0).strip()}"')
 
         # ── Corrections ──────────────────────────────────────────────
         correction_patterns = [
@@ -409,7 +421,9 @@ class ConversationService:
         for pattern in correction_patterns:
             match = re.search(pattern, full_text, re.IGNORECASE)
             if match:
-                _store("correction", f"corrected: {match.group(0)[:45]}", f"The user corrected: \"{match.group(0).strip()}\"")
+                _store(
+                    "correction", f"corrected: {match.group(0)[:45]}", f'The user corrected: "{match.group(0).strip()}"'
+                )
 
         # ── Opinions / strong takes ──────────────────────────────────
         opinion_patterns = [
@@ -419,24 +433,36 @@ class ConversationService:
         for pattern in opinion_patterns:
             match = re.search(pattern, full_text, re.IGNORECASE)
             if match:
-                _store("personality", f"opinion: {match.group(0)[:45]}", f"The user expressed: \"{match.group(0).strip()}\"")
+                _store(
+                    "personality", f"opinion: {match.group(0)[:45]}", f'The user expressed: "{match.group(0).strip()}"'
+                )
 
         # ── Emotional signals ────────────────────────────────────────
         emotion_map = {
-            "frustrated": "pattern", "excited": "personality",
-            "stuck": "context", "love this": "personality",
-            "hate this": "personality", "confused": "context",
-            "annoyed": "personality", "impressed": "personality",
-            "pissed off": "personality", "livid": "personality",
-            "this is great": "personality", "this is garbage": "personality",
-            "you're wrong": "correction", "that's wrong": "correction",
-            "bullshit": "personality", "no way": "personality",
+            "frustrated": "pattern",
+            "excited": "personality",
+            "stuck": "context",
+            "love this": "personality",
+            "hate this": "personality",
+            "confused": "context",
+            "annoyed": "personality",
+            "impressed": "personality",
+            "pissed off": "personality",
+            "livid": "personality",
+            "this is great": "personality",
+            "this is garbage": "personality",
+            "you're wrong": "correction",
+            "that's wrong": "correction",
+            "bullshit": "personality",
+            "no way": "personality",
         }
         for keyword, category in emotion_map.items():
             if keyword in full_text.lower():
                 for sentence in re.split(r"[.!?]", full_text):
                     if keyword in sentence.lower():
-                        _store(category, f"felt {keyword}", f"The user expressed feeling {keyword}: \"{sentence.strip()}\"")
+                        _store(
+                            category, f"felt {keyword}", f'The user expressed feeling {keyword}: "{sentence.strip()}"'
+                        )
                         break
 
         # ── Conflict / fight detection ─────────────────────────────
@@ -462,22 +488,36 @@ class ConversationService:
                 _store(
                     "correction",
                     f"{label}: {match.group(0)[:40]}",
-                    f"The user said: \"{context_sentence or match.group(0)}\"",
+                    f'The user said: "{context_sentence or match.group(0)}"',
                 )
 
         # ── Conversation emotional arc ─────────────────────────────
         # Detect the overall emotional trajectory of the conversation
         all_text_lower = full_text.lower()
-        positive_words = sum(1 for w in ["great", "awesome", "love", "nice", "perfect", "thanks", "exactly", "yes"] if w in all_text_lower)
-        negative_words = sum(1 for w in ["hate", "wrong", "stupid", "broken", "bug", "frustrat", "annoy", "suck", "shit", "damn"] if w in all_text_lower)
+        positive_words = sum(
+            1
+            for w in ["great", "awesome", "love", "nice", "perfect", "thanks", "exactly", "yes"]
+            if w in all_text_lower
+        )
+        negative_words = sum(
+            1
+            for w in ["hate", "wrong", "stupid", "broken", "bug", "frustrat", "annoy", "suck", "shit", "damn"]
+            if w in all_text_lower
+        )
         total = positive_words + negative_words
         if total >= 2:
             if negative_words > positive_words * 1.5:
-                _store("context", f"tense conversation (neg:{negative_words} pos:{positive_words})",
-                       f"Conversation had {negative_words} negative signals vs {positive_words} positive. User was likely frustrated.")
+                _store(
+                    "context",
+                    f"tense conversation (neg:{negative_words} pos:{positive_words})",
+                    f"Conversation had {negative_words} negative signals vs {positive_words} positive. User was likely frustrated.",
+                )
             elif positive_words > negative_words * 1.5:
-                _store("personality", f"positive conversation (pos:{positive_words} neg:{negative_words})",
-                       f"Conversation had {positive_words} positive signals vs {negative_words} negative. User was likely in a good mood.")
+                _store(
+                    "personality",
+                    f"positive conversation (pos:{positive_words} neg:{negative_words})",
+                    f"Conversation had {positive_words} positive signals vs {negative_words} negative. User was likely in a good mood.",
+                )
 
         # ── Conversation summary (always stored) ─────────────────────
         if not already_has_summary and len(user_messages) >= 2:

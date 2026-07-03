@@ -11,7 +11,6 @@ Usage:
 from __future__ import annotations
 
 import logging
-from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -26,7 +25,7 @@ logger = logging.getLogger(__name__)
 _DEFAULT_BASE = Path.home() / "CortexStorage"
 
 
-def get_user_workspace(user_id: int, db: "Session | None" = None) -> UserWorkspace:
+def get_user_workspace(user_id: int, db: Session | None = None) -> UserWorkspace:
     """Get or create a UserWorkspace for the given user.
 
     Resolution order:
@@ -40,14 +39,13 @@ def get_user_workspace(user_id: int, db: "Session | None" = None) -> UserWorkspa
     return ws
 
 
-def _resolve_storage_root(user_id: int, db: "Session | None" = None) -> str:
+def _resolve_storage_root(user_id: int, db: Session | None = None) -> str:
     """Find the storage root for a user. DB first, then filesystem default."""
     if db is not None:
         try:
             from backend.app.models.memory.storage_registry import StorageRegistry
-            registry = db.query(StorageRegistry).filter(
-                StorageRegistry.user_id == user_id
-            ).first()
+
+            registry = db.query(StorageRegistry).filter(StorageRegistry.user_id == user_id).first()
             if registry and registry.storage_root:
                 root = Path(registry.storage_root)
                 root.mkdir(parents=True, exist_ok=True)
@@ -68,19 +66,20 @@ def _resolve_storage_root(user_id: int, db: "Session | None" = None) -> str:
     return str(path)
 
 
-def _get_username(user_id: int, db: "Session | None" = None) -> str | None:
+def _get_username(user_id: int, db: Session | None = None) -> str | None:
     """Get username from DB for path construction."""
     if db is None:
         return None
     try:
         from backend.app.models.auth.user import User
+
         user = db.query(User).filter(User.id == user_id).first()
         return user.username if user else None
     except Exception:
         return None
 
 
-def ensure_user_workspace(user_id: int, db: "Session | None" = None) -> UserWorkspace:
+def ensure_user_workspace(user_id: int, db: Session | None = None) -> UserWorkspace:
     """Ensure workspace exists and return it. Same as get_user_workspace.
 
     Named differently for clarity at call sites that are creating

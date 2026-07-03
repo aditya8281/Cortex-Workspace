@@ -29,10 +29,12 @@ interface ModeEntry {
   icon: React.ReactNode;
   name: string;
   Component: React.ComponentType<any> | null;
+  /** If true, ModeView skips its own header — the component renders its own */
+  selfContained?: boolean;
 }
 
 const MODE_REGISTRY: Record<string, ModeEntry> = {
-  chat:     { icon: <ChatIcon size={18} />, name: "Chat",     Component: ChatPage },
+  chat:     { icon: <ChatIcon size={18} />, name: "Chat",     Component: ChatPage, selfContained: true },
   search:   { icon: <SearchIcon size={18} />, name: "Search",   Component: SearchPage },
   brain:    { icon: <BrainIcon size={18} />, name: "Brain",    Component: BrainPage },
   vault:    { icon: <VaultIcon size={18} />, name: "Vault",    Component: VaultPage },
@@ -183,30 +185,39 @@ export function ModeView() {
   return (
     <div className="relative h-dvh overflow-hidden bg-bg-base">
       <NeuralRibbon />
-      <div className="absolute inset-0 top-6 flex flex-col">
-        <div ref={contentRef} className="flex h-full flex-col">
-          <header className="flex h-11 items-center gap-2.5 border-b border-border-subtle px-4 flex-shrink-0">
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-text-primary motion-safe:transition-colors motion-safe:duration-150"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 2L4 8l6 6" />
-              </svg>
-              Back
-            </button>
-            <span className="text-border-default text-sm">·</span>
-            <span className="text-lg leading-none">{entry.icon}</span>
-            <h1 className="text-sm font-semibold text-text-primary">{entry.name}</h1>
-            <div className="flex-1" />
-          </header>
-          <main className="flex-1 overflow-y-auto">
-            {entry.Component ? (
-              <entry.Component />
-            ) : (
-              <PlaceholderMode icon={entry.icon} name={entry.name} />
-            )}
-          </main>
+      <div className="absolute inset-0 top-6 flex flex-col min-h-0">
+        <div ref={contentRef} className="flex h-full flex-col min-h-0">
+          {entry.selfContained ? (
+            /* Self-contained mode (chat) renders its own header */
+            <main className="flex-1 min-h-0 overflow-hidden">
+              {entry.Component && <entry.Component />}
+            </main>
+          ) : (
+            <>
+              <header className="flex h-11 items-center gap-2.5 border-b border-border-subtle px-4 flex-shrink-0 min-h-0">
+                <button
+                  onClick={handleBack}
+                  className="flex items-center gap-1.5 text-sm font-medium text-text-secondary hover:text-text-primary motion-safe:transition-colors motion-safe:duration-150"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 2L4 8l6 6" />
+                  </svg>
+                  Back
+                </button>
+                <span className="text-border-default text-sm">·</span>
+                <span className="text-lg leading-none">{entry.icon}</span>
+                <h1 className="text-sm font-semibold text-text-primary">{entry.name}</h1>
+                <div className="flex-1" />
+              </header>
+              <main className="flex-1 overflow-y-auto">
+                {entry.Component ? (
+                  <entry.Component />
+                ) : (
+                  <PlaceholderMode icon={entry.icon} name={entry.name} />
+                )}
+              </main>
+            </>
+          )}
         </div>
       </div>
       <Dock
