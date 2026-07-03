@@ -514,6 +514,21 @@ async def web_search(query: str, max_results: int = 5) -> str:
             _re.search(r"anomaly-modal|challenge|captcha|unfortunately.*bot", html, _re.I)
         )
 
+    def _ddg_redirect_url(ddg_url: str) -> str:
+        """Decode a DuckDuckGo redirect URL to the actual destination."""
+        # DDG redirects look like: //duckduckgo.com/l/?uddg=ENCODED_URL&rut=...
+        q_pos = ddg_url.find("uddg=")
+        if q_pos == -1:
+            return ddg_url
+        encoded = ddg_url[q_pos + 5:]
+        amp_pos = encoded.find("&")
+        if amp_pos != -1:
+            encoded = encoded[:amp_pos]
+        try:
+            return _uparse.unquote(encoded)
+        except Exception:
+            return ddg_url
+
     # ── Path 1: DuckDuckGo Instant Answer API (no CAPTCHA, zero-click) ──
     encoded = _uparse.quote_plus(query)
     ddg_api_url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_html=1"
@@ -598,7 +613,8 @@ async def web_search(query: str, max_results: int = 5) -> str:
             if result_list:
                 lines = [f"Search results for: {query}\n"]
                 for i, r in enumerate(result_list, 1):
-                    lines.append(f"{i}. {r['title']}\n   {r['url']}\n   {r['snippet']}\n")
+                    real_url = _ddg_redirect_url(r['url'])
+                    lines.append(f"{i}. {r['title']}\n   {real_url}\n   {r['snippet']}\n")
                 return "\n".join(lines)
 
     # ── Path 3: Try Google scraping as last resort ─────────────────────

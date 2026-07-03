@@ -209,8 +209,11 @@ async def _generate_response_task_impl(
         _parse_tool_calls,
         _strip_tool_calls,
     )
+    from backend.app.agents.tool_defs import (  # noqa: F401 — trigger @tool decorator registration
+    )
     from backend.app.agents.tools.policy import default_policy
     from backend.app.agents.tools.registry import get_tool_registry
+    from backend.app.core.config import settings
     from backend.app.db.session import SessionLocal
     from backend.app.services.intelligence.llm.manager import llm_manager
     from backend.app.services.intelligence.llm.provider import LLMMessage
@@ -221,6 +224,17 @@ async def _generate_response_task_impl(
 
     buffer = stream_manager.get_or_create_buffer(conversation_id)
     db = SessionLocal()
+
+    # Set agent workspace so relative paths in write_file etc. resolve
+    # to the Cortex project root, not ~/.cortex-agent-workspace
+    import os as _os
+    if _os.environ.get("AGENT_WORKSPACE") is None:
+        if settings.CORTEX_ROOT:
+            _os.environ["AGENT_WORKSPACE"] = settings.CORTEX_ROOT
+        elif _os.getenv("CORTEX_ROOT"):
+            _os.environ["AGENT_WORKSPACE"] = _os.getenv("CORTEX_ROOT")  # type: ignore[arg-type]
+        else:
+            _os.environ["AGENT_WORKSPACE"] = _os.getcwd()
 
     svc = _get_svc(db, user_id)
 

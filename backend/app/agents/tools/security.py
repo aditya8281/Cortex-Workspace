@@ -150,8 +150,10 @@ def ensure_within_workspace(file_path: str, workspace_root: str | None = None) -
     # ── Relative path: resolve within agent workspace ──
     root = workspace_root or os.environ.get(
         "AGENT_WORKSPACE",
-        os.path.join(os.path.expanduser("~"), ".cortex-agent-workspace"),
+        os.environ.get("CORTEX_ROOT", None),
     )
+    if not root:
+        root = os.path.join(os.path.expanduser("~"), ".cortex-agent-workspace")
     workspace = Path(root).resolve()
     workspace.mkdir(parents=True, exist_ok=True)
     target = (workspace / file_path).resolve()
