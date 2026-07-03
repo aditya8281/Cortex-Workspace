@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -51,12 +52,29 @@ export function useModeStack(): ModeStackContextValue {
 // ── Provider ──────────────────────────────────────────────────────────
 
 export function ModeStackProvider({ children }: { children: ReactNode }) {
-  const [stack, setStack] = useState<ModeState[]>([
-    { modeId: "hub", scrollPosition: 0 },
-  ]);
+  // Restore last mode from sessionStorage — survives page refresh
+  const [stack, setStack] = useState<ModeState[]>(() => {
+    try {
+      const saved = sessionStorage.getItem("cortex_last_mode");
+      if (saved && saved !== "hub") {
+        return [
+          { modeId: "hub", scrollPosition: 0 },
+          { modeId: saved, scrollPosition: 0 },
+        ];
+      }
+    } catch { /* non-critical */ }
+    return [{ modeId: "hub", scrollPosition: 0 }];
+  });
 
   const currentMode = stack[stack.length - 1]?.modeId ?? "hub";
   const isHub = currentMode === "hub";
+
+  // Persist current mode to sessionStorage — survives refresh
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("cortex_last_mode", currentMode);
+    } catch { /* non-critical */ }
+  }, [currentMode]);
 
   // Use ref to track the latest callbacks so the keyboard handler doesn't stale-capture
   const pushRef = useRef<(id: string) => void>(null!);

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { cn } from "@/shared/lib/utils";
-import { ChatIcon, SearchIcon, BrainIcon, VaultIcon, ModelsIcon, CodeIcon, UtilityIcon, SettingsIcon, SystemsIcon, ProfileIcon } from "@/shared/ui/icons";
+import { ChatIcon, SearchIcon, BrainIcon, VaultIcon, ModelsIcon, CodeIcon, UtilityIcon, SettingsIcon, SystemsIcon, ProfileIcon, HomeIcon } from "@/shared/ui/icons";
 
 gsap.registerPlugin(useGSAP);
 
@@ -116,10 +116,18 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
     gsap.fromTo(btn, { scale: 1 }, { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1, ease: "power2.out" });
   }, [activeMode]);
 
-  // ── Keyboard: ⌘1-⌘0 ────────────────────────────────────────────────
+  // ── Keyboard: ⌘1-⌘0 + ⌘H for hub ────────────────────────────────────
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (!e.metaKey || e.altKey || e.ctrlKey) return;
+
+      // ⌘H → hub
+      if (e.key === "h" || e.key === "H") {
+        e.preventDefault();
+        onModeChange("hub");
+        return;
+      }
+
       const idx = parseInt(e.key, 10);
       if (idx >= 1 && idx <= 9) {
         e.preventDefault();
@@ -151,6 +159,25 @@ export function Dock({ activeMode, onModeChange, visible }: DockProps) {
           "shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
         )}
       >
+        {/* Hub/home button — standalone, no keyboard shortcut */}
+        <button
+          onClick={() => onModeChange("hub")}
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-full",
+            "motion-safe:transition-all motion-safe:duration-150",
+            activeMode === "hub"
+              ? "bg-accent-cyan/20 text-accent-cyan"
+              : "text-text-muted hover:text-text-primary hover:bg-bg-surface/50",
+          )}
+          aria-label="Home — Hub"
+          title="Hub (⌘H)"
+          style={{ opacity: 0 }}
+        >
+          <HomeIcon size={17} />
+        </button>
+
+        <div className="mx-1.5 h-5 w-px bg-border-default/50" />
+
         {DOCK_ITEMS.map((item, i) => {
           const isActive = activeMode === item.id;
           const isHovered = hoveredItem === item.id;
