@@ -1,1 +1,24 @@
-{"entries": []}
+{"entries": [
+  {
+    "timestamp": "2026-07-03T08:15:00Z",
+    "command": "/project:audit",
+    "outcome": "success",
+    "learnings": [
+      "SSE streaming endpoint missing response_model is intentional",
+      "Route order false positives: different HTTP methods don't conflict on same path prefix",
+      "BaseParser missing @abstractmethod — subclass without parse() fails at runtime, not instantiation (FIXED)",
+      "privacy/__init__.py already deleted (commit 2b59956)",
+      "All WS handlers use manager.extract_ws_token() + verify_ws_token() + finally cleanup",
+      "All BaseHTTPMiddleware subclasses have WebSocket scope bypass",
+      "Token refresh deduplication uses .finally() to clear promise on both success and failure",
+      "AuthProvider uses raw fetch to prevent 401→refresh→redirect loop",
+      "0 test files missing docstrings",
+      "Fix base.py:30-31 — BaseParser now uses ABC + @abstractmethod"
+    ],
+    "suggestions": [
+      "Delete dead service subpackages: developer/, learning/, integration/, utility/",
+      "Delete dead privacy services: deletion.py, data_masking.py, encryption.py, local_processing.py",
+      "Delete empty API subpackage: utility/"
+    ]
+  }
+]}

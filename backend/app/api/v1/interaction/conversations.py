@@ -181,12 +181,16 @@ async def _generate_response_task(
     except Exception as e:
         logger.critical(
             "UNHANDLED exception in _generate_response_task conv=%d: %s",
-            conversation_id, e, exc_info=True,
+            conversation_id,
+            e,
+            exc_info=True,
         )
         buffer = stream_manager.get_buffer(conversation_id)
         if buffer and not buffer.done:
             error_msg = f"Generation error: {e}"
-            buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': error_msg, 'tokens': len(error_msg)//4})}\n\n")
+            buffer.push(
+                f"data: {json.dumps({'type': 'chunk', 'content': error_msg, 'tokens': len(error_msg) // 4})}\n\n"
+            )
             buffer.mark_done(error=str(e))
 
 
@@ -200,9 +204,9 @@ async def _generate_response_task_impl(
     import re
 
     from backend.app.agents.loop import (
+        _TOOL_CALL_START_RE,
         _parse_tool_calls,
         _strip_tool_calls,
-        _TOOL_CALL_START_RE,
     )
     from backend.app.agents.tools.policy import default_policy
     from backend.app.agents.tools.registry import get_tool_registry
@@ -251,8 +255,7 @@ async def _generate_response_task_impl(
             repo_id = conv.repo_id if conv else None
             rag_result = rag.retrieve_context(user_content, repo_id=repo_id, user_id=user_id)
             sources = [
-                {"file_path": r.file_path, "score": r.score, "content": r.content[:300]}
-                for r in rag_result.results
+                {"file_path": r.file_path, "score": r.score, "content": r.content[:300]} for r in rag_result.results
             ]
             rag_context = rag_result
         finally:
@@ -301,9 +304,7 @@ async def _generate_response_task_impl(
             tool_lines.append(f"  - {t.name}: {t.description}")
 
     if tool_lines:
-        system_content += (
-            "\n\nAvailable tools:\n" + "\n".join(tool_lines)
-        )
+        system_content += "\n\nAvailable tools:\n" + "\n".join(tool_lines)
 
         # Intent-based routing: classify the user message and inject tool hints.
         # This helps small models (3-8B) that might ignore the tool list.
@@ -381,15 +382,16 @@ async def _generate_response_task_impl(
                 _think_buf = ""  # Accumulator inside <think> tags
                 _in_think = False
                 async for chunk in llm_manager.chat_stream(
-                    llm_messages, model=model, max_tokens=2048, temperature=0.7,
+                    llm_messages,
+                    model=model,
+                    max_tokens=2048,
+                    temperature=0.7,
                 ):
                     if chunk.get("type") == "thinking":
                         text = chunk.get("text", "")
                         if text:
                             thinking_content += text
-                            buffer.push(
-                                f"data: {json.dumps({'type': 'thinking', 'content': text})}\n\n"
-                            )
+                            buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': text})}\n\n")
                         continue
 
                     text = chunk.get("text", "")
@@ -404,12 +406,10 @@ async def _generate_response_task_impl(
                             _think_buf += text[:close_idx]
                             if _think_buf:
                                 thinking_content += _think_buf
-                                buffer.push(
-                                    f"data: {json.dumps({'type': 'thinking', 'content': _think_buf})}\n\n"
-                                )
+                                buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': _think_buf})}\n\n")
                             _think_buf = ""
                             _in_think = False
-                            text = text[close_idx + 8:]  # After </think>
+                            text = text[close_idx + 8 :]  # After </think>
                             if not text:
                                 continue
                         else:
@@ -424,20 +424,16 @@ async def _generate_response_task_impl(
                         if before:
                             content += before
                             streamed_visible += before
-                            buffer.push(
-                                f"data: {json.dumps({'type': 'chunk', 'content': before})}\n\n"
-                            )
-                        after_start = text[think_start + 7:]
+                            buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': before})}\n\n")
+                        after_start = text[think_start + 7 :]
                         close_idx = after_start.find("</think>")
                         if close_idx != -1:
                             # Complete <think>...</think> in one chunk
                             think_text = after_start[:close_idx]
                             if think_text:
                                 thinking_content += think_text
-                                buffer.push(
-                                    f"data: {json.dumps({'type': 'thinking', 'content': think_text})}\n\n"
-                                )
-                            text = after_start[close_idx + 8:]
+                                buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': think_text})}\n\n")
+                            text = after_start[close_idx + 8 :]
                             if not text:
                                 continue
                         else:
@@ -456,21 +452,18 @@ async def _generate_response_task_impl(
                         chunk_visible = text[:idx]
                         if chunk_visible:
                             streamed_visible += chunk_visible
-                            buffer.push(
-                                f"data: {json.dumps({'type': 'chunk', 'content': chunk_visible})}\n\n"
-                            )
+                            buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': chunk_visible})}\n\n")
                     else:
                         streamed_visible += text
-                        buffer.push(
-                            f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n"
-                        )
+                        buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': text})}\n\n")
 
                 # After stream ends, parse any tool calls from full content
                 content = content.strip()
                 tool_calls = _parse_tool_calls(content)
                 logger.info(
                     "Streaming fallback complete: %d chars, %d tool calls",
-                    len(content), len(tool_calls),
+                    len(content),
+                    len(tool_calls),
                 )
                 _streamed_directly = True  # Already streamed token-by-token
             else:
@@ -487,9 +480,7 @@ async def _generate_response_task_impl(
                     if native_tool_calls is None:
                         tool_calls = _parse_tool_calls(content)
                     if thinking_content:
-                        buffer.push(
-                            f"data: {json.dumps({'type': 'thinking', 'content': thinking_content})}\n\n"
-                        )
+                        buffer.push(f"data: {json.dumps({'type': 'thinking', 'content': thinking_content})}\n\n")
             # If native path returned content but no tool_calls, try text-based
             # TOOL_CALL parsing on it (covers models that sometimes fall back to
             # text format even when native tools are available).
@@ -498,7 +489,7 @@ async def _generate_response_task_impl(
                 parsed = _parse_tool_calls(content)
                 if parsed:
                     tool_calls = parsed
-                    logger.info('Native path with text-based TOOL_CALL fallback: %d calls', len(tool_calls))
+                    logger.info("Native path with text-based TOOL_CALL fallback: %d calls", len(tool_calls))
 
             if not tool_calls and not content:
                 if tool_iteration == 0:

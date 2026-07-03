@@ -181,7 +181,7 @@ class Settings(BaseSettings):
         "TOOLS:\n"
         "- You have tools available. When you need to do something beyond text, CALL a tool.\n"
         "- Format EXACTLY:  TOOL_CALL: tool_name(param=value, param2=value2)\n"
-        "- Example: TOOL_CALL: write_file(path=/tmp/test.py, content=print(\"hello\"))\n"
+        '- Example: TOOL_CALL: write_file(path=/tmp/test.py, content=print("hello"))\n'
         "- Put TOOL_CALL on its own line at the end of your response.\n"
         "- Explain what you're about to do BEFORE the TOOL_CALL line.\n"
         "- After results come back, incorporate them into your answer.\n"

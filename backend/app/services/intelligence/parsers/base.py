@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 
@@ -24,8 +25,9 @@ class ParsedDocument:
         return "\n\n".join(s.content for s in self.sections if s.content)
 
 
-class BaseParser:
+class BaseParser(ABC):
     """Base class for document parsers."""
 
+    @abstractmethod
     def parse(self, file_path: str) -> ParsedDocument:
-        raise NotImplementedError
+        """Parse a document and return structured sections."""
