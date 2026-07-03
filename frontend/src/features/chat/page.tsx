@@ -671,6 +671,7 @@ export default function ChatPage() {
                   role={msg.role === "system" ? "assistant" : msg.role}
                   content={msg.content}
                   thinkingContent={msg.thinking_content ?? undefined}
+                  isStreaming={msg.id === -1}
                   timestamp={msg.created_at}
                   style={{ "--i": i } as React.CSSProperties}
                 />
