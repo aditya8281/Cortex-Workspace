@@ -46,6 +46,7 @@ class StallDetector:
     repeated_response_threshold: int = 2
     timeout_seconds: int = 300
     max_iterations: int = 25
+    max_denied_retries: int = 3
     max_response_history: int = 20
 
     def __post_init__(self) -> None:
@@ -55,6 +56,7 @@ class StallDetector:
         self._last_tool_name: str = ""
         self._last_tool_args_hash: int = 0
         self._response_history: deque[str] = deque(maxlen=self.max_response_history)
+        self._denied_tools: dict[str, int] = {}  # tool_name -> denial count
 
     # ── Individual checks (return StallDetection) ───────────────────────
 
@@ -124,6 +126,18 @@ class StallDetector:
 
         return StallDetection(is_stalled=False, reason="", stall_type="repeated_tool")
 
+    def check_denied_loop(self) -> StallDetection:
+        """Check if the same tool keeps getting denied."""
+        for tool_name, count in self._denied_tools.items():
+            if count >= self.max_denied_retries:
+                return StallDetection(
+                    is_stalled=True,
+                    reason=f"Tool '{tool_name}' denied {count} times — agent is retrying a denied tool",
+                    stall_type="repeated_tool",
+                    details={"tool_name": tool_name, "denial_count": count},
+                )
+        return StallDetection(is_stalled=False, reason="", stall_type="repeated_tool")
+
     # ── Combined check ──────────────────────────────────────────────────
 
     def check(
@@ -143,12 +157,17 @@ class StallDetector:
         if result.is_stalled:
             return result
 
-        # 3. Repeated tool calls
+        # 3. Denied tool loop (same tool denied repeatedly)
+        result = self.check_denied_loop()
+        if result.is_stalled:
+            return result
+
+        # 4. Repeated tool calls
         result = self.check_tool_stall(tool_calls)
         if result.is_stalled:
             return result
 
-        # 4. Repeated responses
+        # 5. Repeated responses
         result = self.check_repeated_response()
         if result.is_stalled:
             return result
@@ -171,6 +190,10 @@ class StallDetector:
             self._last_tool_name = tool_name
             self._last_tool_args_hash = args_hash
 
+    def record_denial(self, tool_name: str) -> None:
+        """Record that a tool was denied (for stall detection on retries)."""
+        self._denied_tools[tool_name] = self._denied_tools.get(tool_name, 0) + 1
+
     def record_response(self, response: str) -> None:
         """Record an LLM response for repetition detection."""
         self._response_history.append(response)
@@ -180,10 +203,18 @@ class StallDetector:
 
         Call this when is_stalled() returns True.
         """
+        if self._denied_tools:
+            denied_list = ", ".join(sorted(self._denied_tools.keys()))
+            return (
+                f"You keep calling tools that were denied ({denied_list}). "
+                "These tools are permanently unavailable for this interaction. "
+                "Based on what you've gathered so far, please provide your best answer "
+                "to the user's request. Do not call any more tools."
+            )
         return (
             "You appear to be repeating the same tool calls without making progress. "
-            "Based on what you've gathered so far, please provide your best answer to the user's request. "
-            "Do not call any more tools. Synthesize your findings into a response."
+            "Based on what you've gathered so far, please provide your best answer "
+            "to the user's request. Do not call any more tools."
         )
 
     def reset(self) -> None:
@@ -193,6 +224,7 @@ class StallDetector:
         self._last_tool_name = ""
         self._last_tool_args_hash = 0
         self._response_history.clear()
+        self._denied_tools.clear()
 
     @property
     def total_calls(self) -> int:
