@@ -487,6 +487,27 @@ export default function ChatPage() {
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, [activeId]);
 
+  // Must be BEFORE early returns — hooks order must be consistent
+  const handleStop = useCallback(async () => {
+    if (!activeId) return;
+    // Abort SSE
+    abortRef.current?.abort();
+    abortRef.current = null;
+    streamConvIdRef.current = null;
+    // Cancel generation on backend
+    try { await chatApi.cancel(activeId); } catch { /* best effort */ }
+    setGenerating(activeId, false);
+    // Clean up transient state
+    const msg = (streamingMessagesRef.current.get(activeId) ?? []).find((m) => m.id === -1);
+    if (msg) {
+      msg.id = Date.now(); // finalize the streaming placeholder
+      streamingMessagesRef.current.delete(activeId);
+    }
+    toolEventsRef.current.delete(activeId);
+    setToolEvents([]);
+    thinkingRef.current.delete(activeId);
+  }, [activeId, setGenerating]);
+
   if (loading) return null;
   if (!user) return null;
 
@@ -668,24 +689,25 @@ export default function ChatPage() {
           ) : (
             <div className="max-w-3xl mx-auto space-y-4 pb-4">
               {messages.map((msg, i) => (
-                <MessageBubble
-                  key={msg.id || i}
-                  role={msg.role === "system" ? "assistant" : msg.role}
-                  content={msg.content}
-                  thinkingContent={msg.thinking_content ?? undefined}
-                  isStreaming={msg.id === -1}
-                  timestamp={msg.created_at}
-                  style={{ "--i": i } as React.CSSProperties}
-                />
-              ))}
-              {/* Tool activity — shown during streaming */}
-              {activeId && toolEvents.length > 0 && (
-                <div className="flex flex-col gap-1.5 pl-1">
-                  {toolEvents.map((evt, i) => (
-                    <ToolActivity key={`${evt.tool}-${i}`} {...evt} />
-                  ))}
+                <div key={msg.id || i} className="space-y-3">
+                  <MessageBubble
+                    role={msg.role === "system" ? "assistant" : msg.role}
+                    content={msg.content}
+                    thinkingContent={msg.thinking_content ?? undefined}
+                    isStreaming={msg.id === -1}
+                    timestamp={msg.created_at}
+                    style={{ "--i": i } as React.CSSProperties}
+                  />
+                  {/* Tool events for the last assistant message */}
+                  {msg.role === "assistant" && i === messages.length - 1 && toolEvents.length > 0 && (
+                    <div className="flex flex-col gap-2 pl-2 border-l border-border-subtle/40 ml-2">
+                      {toolEvents.map((evt, j) => (
+                        <ToolActivity key={`${evt.tool}-${j}`} {...evt} />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -749,6 +771,7 @@ export default function ChatPage() {
             disabled={isCurrentlyStreaming}
             initialValue={drafts[activeId ?? 0] ?? ""}
             onValueChange={handleDraftChange}
+            onStop={handleStop}
           />
         </div>
       </div>

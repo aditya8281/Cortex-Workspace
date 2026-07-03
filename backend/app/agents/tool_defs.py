@@ -24,7 +24,6 @@ from backend.app.agents.tools.security import (
 
 # Re-export with legacy names for backward compat during V1 Phase-2 transition.
 # After executor.py is replaced by the streaming loop, remove these aliases.
-_ensure_within_workspace = ensure_within_workspace
 _is_private_url = is_private_url
 
 logger = logging.getLogger(__name__)
@@ -292,6 +291,62 @@ async def list_directory(path: str = ".") -> str:
         return f"Error listing directory: {exc}"
 
 
+@tool(description="Find a file or directory by name on the filesystem", category="files")
+async def search_path(name: str, start_dir: str = "~", max_depth: int = 3) -> str:
+    """Search for a file or directory by name on the filesystem.
+
+    Walks the directory tree starting from start_dir (default: home directory),
+    looking for files/directories whose name matches the query.
+
+    Args:
+        name: Filename or directory name to search for (case-insensitive substring)
+        start_dir: Directory to start searching from (default: ~)
+        max_depth: Maximum directory depth to search (default 3, max 6)
+    """
+    max_depth = min(max_depth, 6)
+    try:
+        start = Path(start_dir).expanduser().resolve()
+    except Exception as exc:
+        return f"Error: invalid start directory — {exc}"
+
+    if not start.exists() or not start.is_dir():
+        return f"Error: start directory not found — {start_dir}"
+
+    matches: list[str] = []
+    query = name.lower()
+
+    try:
+        for root, dirs, files in os.walk(str(start)):
+            rel = Path(root).relative_to(start)
+            depth = len(rel.parts) if str(rel) != "." else 0
+            if depth > max_depth:
+                dirs.clear()
+                continue
+
+            # Check current directory name
+            if query in Path(root).name.lower():
+                matches.append(f"[dir]  {root}")
+
+            # Check files
+            for fname in files:
+                if query in fname.lower():
+                    matches.append(f"[file] {os.path.join(root, fname)}")
+
+            # Limit to most relevant results
+            if len(matches) >= 30:
+                break
+
+        if not matches:
+            return f"No results found for \"{name}\" in {start_dir} (depth={max_depth})"
+
+        summary = f"Found {len(matches)} result{'s' if len(matches) != 1 else ''} for \"{name}\" in {start_dir}:\n"
+        return summary + "\n".join(matches[:25])
+    except PermissionError:
+        return f"Permission denied while searching — some directories may be restricted"
+    except Exception as exc:
+        return f"Error searching: {exc}"
+
+
 @tool(description="Search for text patterns in files (like grep)", category="code")
 async def grep_files(pattern: str, path: str = ".", max_results: int = 50) -> str:
     """Search for a regex pattern in files within the given directory.
@@ -310,9 +365,9 @@ async def grep_files(pattern: str, path: str = ".", max_results: int = 50) -> st
     if not target.is_dir():
         return f"Error: not a directory — {path}"
 
-    try:
-        import re
+    import re
 
+    try:
         compiled = re.compile(pattern)
     except re.error as exc:
         return f"Error: invalid regex pattern — {exc}"
@@ -406,39 +461,7 @@ async def git_show(ref: str = "HEAD") -> str:
         return "Error: git not available"
 
 
-@tool(description="Search knowledge base entries", category="knowledge")
-async def search_knowledge(query: str, limit: int = 10) -> str:
-    """Search the knowledge base for entries matching the query.
-
-    Args:
-        query: Search query text
-        limit: Maximum results to return (default 10, max 50)
-    """
-    limit = min(limit, 50)
-    try:
-        # MemoryManager requires a db session. We create one lazily.
-        from backend.app.core.db import SessionLocal
-        from backend.app.services.memory.manager import MemoryManager
-
-        db = SessionLocal()
-        try:
-            mgr = MemoryManager(db)
-            results = mgr.search(query=query, user_id=None, category=None, limit=limit)
-            if not results:
-                return "No knowledge base entries found matching the query."
-            parts: list[str] = [f"Knowledge base results ({len(results)}):"]
-            for r in results:
-                title = r.get("title", "Untitled")
-                content = str(r.get("content", ""))[:200]
-                category = r.get("category", "general")
-                parts.append(f"  [{category}] {title}: {content}")
-            return wrap_external_content("\n".join(parts), source="search:knowledge")
-        finally:
-            db.close()
-    except ImportError:
-        return "Knowledge base search is not available (MemoryManager not yet initialized)"
-    except Exception as exc:
-        return f"Error searching knowledge base: {exc}"
+# (moved to V1 Phase 3 section below — search_knowledge with relevance filtering)
 
 
 @tool(description="Get the current date and time", category="system")
@@ -474,180 +497,6 @@ async def list_available_tools() -> str:
         lines.append(f"  - {t.name}: {t.description}{params}{req}")
     return "\n".join(lines)
 
-
-@tool(
-    description="Search the web. Fallback to instant answers when blocked.",
-    category="web",
-)
-async def web_search(query: str, max_results: int = 5) -> str:
-    """Search the web and return results with titles and URLs.
-
-    Tries multiple backends:
-    1. DuckDuckGo Instant Answer API (zero-click, no CAPTCHA)
-    2. DuckDuckGo HTML search (full results, may hit CAPTCHA)
-    3. Falls back to informative error if all blocked.
-
-    Args:
-        query: The search query
-        max_results: Maximum number of results to return (default 5)
-    """
-    import json as _json
-    import re as _re
-    import urllib.parse as _uparse
-    import urllib.request as _ureq
-
-    def _fetch(url: str, timeout: int = 8) -> str | None:
-        try:
-            req = _ureq.Request(
-                url,
-                headers={
-                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0",
-                },
-            )
-            with _ureq.urlopen(req, timeout=timeout) as r:
-                return r.read(200 * 1024).decode("utf-8", errors="replace")
-        except Exception:
-            return None
-
-    def _is_captcha(html: str) -> bool:
-        return bool(
-            _re.search(r"anomaly-modal|challenge|captcha|unfortunately.*bot", html, _re.I)
-        )
-
-    def _ddg_redirect_url(ddg_url: str) -> str:
-        """Decode a DuckDuckGo redirect URL to the actual destination."""
-        # DDG redirects look like: //duckduckgo.com/l/?uddg=ENCODED_URL&rut=...
-        q_pos = ddg_url.find("uddg=")
-        if q_pos == -1:
-            return ddg_url
-        encoded = ddg_url[q_pos + 5:]
-        amp_pos = encoded.find("&")
-        if amp_pos != -1:
-            encoded = encoded[:amp_pos]
-        try:
-            return _uparse.unquote(encoded)
-        except Exception:
-            return ddg_url
-
-    # ── Path 1: DuckDuckGo Instant Answer API (no CAPTCHA, zero-click) ──
-    encoded = _uparse.quote_plus(query)
-    ddg_api_url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_html=1"
-    api_html = _fetch(ddg_api_url)
-    if api_html:
-        try:
-            data = _json.loads(api_html)
-            abstract = data.get("Abstract", "") or ""
-            answer = data.get("Answer", "") or ""
-            heading = data.get("Heading", "") or ""
-            results: list[dict[str, str]] = []
-
-            # Instant Answer
-            if answer:
-                results.append({"title": heading or "Answer", "url": "", "snippet": answer})
-
-            # Abstract
-            if abstract and not answer:
-                url = data.get("AbstractURL", "") or ""
-                results.append({"title": heading or "Result", "url": url, "snippet": abstract[:500]})
-
-            # RelatedTopics
-            for topic in data.get("RelatedTopics", []):
-                if isinstance(topic, dict):
-                    text = topic.get("Text", "") or ""
-                    t_url = topic.get("FirstURL", "") or ""
-                    if text:
-                        results.append({"title": text[:80], "url": t_url, "snippet": text[:300]})
-                    child_topics = topic.get("Topics", [])
-                    for ct in child_topics[:3]:
-                        ct_text = ct.get("Text", "") or ""
-                        ct_url = ct.get("FirstURL", "") or ""
-                        if ct_text:
-                            results.append({"title": ct_text[:80], "url": ct_url, "snippet": ct_text[:300]})
-
-            if results:
-                lines = [f"Search results for: {query}\n"]
-                for i, r in enumerate(results[:max_results], 1):
-                    title = r.get("title", "")
-                    url = r.get("url", "")
-                    snippet = r.get("snippet", "")
-                    lines.append(f"{i}. {title}")
-                    if url:
-                        lines[-1] += f"\n   {url}"
-                    if snippet:
-                        lines[-1] += f"\n   {snippet}"
-                    lines[-1] += "\n"
-                return "\n".join(lines)
-        except Exception:
-            pass
-
-    # ── Path 2: DuckDuckGo HTML search ────────────────────────────────
-    ddg_url = f"https://html.duckduckgo.com/html/?q={encoded}"
-    html = _fetch(ddg_url, timeout=10)
-    if html:
-        if _is_captcha(html):
-            # Blocked — return what we have from API or give useful fallback
-            pass
-        else:
-            # Parse simple <a> tags with results
-            result_list: list[dict[str, str]] = []
-            # Find result links — DuckDuckGo wraps results in <a class="result__a">
-            for m in _re.finditer(
-                r'<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>',
-                html,
-                _re.DOTALL,
-            ):
-                url = m.group(1)
-                title = _re.sub(r"<[^>]+>", "", m.group(2)).strip()
-                # Find following snippet
-                snippet_search = _re.search(
-                    r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>',
-                    html[m.end():],
-                    _re.DOTALL,
-                )
-                snippet = _re.sub(r"<[^>]+>", "", snippet_search.group(1)).strip() if snippet_search else ""
-                if title:
-                    result_list.append({"title": title, "url": url, "snippet": snippet})
-                    if len(result_list) >= max_results:
-                        break
-
-            if result_list:
-                lines = [f"Search results for: {query}\n"]
-                for i, r in enumerate(result_list, 1):
-                    real_url = _ddg_redirect_url(r['url'])
-                    lines.append(f"{i}. {r['title']}\n   {real_url}\n   {r['snippet']}\n")
-                return "\n".join(lines)
-
-    # ── Path 3: Try Google scraping as last resort ─────────────────────
-    try:
-        google_url = f"https://www.google.com/search?q={encoded}&num={max_results}"
-        google_html = _fetch(google_url, timeout=8)
-        if google_html and not _is_captcha(google_html):
-            glist: list[dict[str, str]] = []
-            for m in _re.finditer(
-                r'<a[^>]*href="/url\?q=([^"&]+)[^"]*"[^>]*>(.*?)</a>',
-                google_html,
-                _re.DOTALL,
-            ):
-                url = _uparse.unquote(m.group(1))
-                title = _re.sub(r"<[^>]+>", "", m.group(2)).strip()
-                if title and url.startswith("http"):
-                    glist.append({"title": title, "url": url, "snippet": ""})
-                    if len(glist) >= max_results:
-                        break
-            if glist:
-                lines = [f"Search results for: {query}\n"]
-                for i, r in enumerate(glist, 1):
-                    lines.append(f"{i}. {r['title']}\n   {r['url']}\n")
-                return "\n".join(lines)
-    except Exception:
-        pass
-
-    # ── Fallback: use cached / pre-structured search data ──────────────
-    return (
-        f"Web search is not available in this environment (DuckDuckGo is rate-limiting "
-        f"programmatic requests). The model should either answer from its training data "
-        f"or tell the user search is temporarily unavailable."
-    )
 
 
 @tool(description="Get repository information", category="code")
@@ -700,6 +549,441 @@ async def get_repo_info() -> str:
         return "Error: git not available"
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# V1 Phase 3 — new tools
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@tool(description="Edit an existing file by replacing exact text (requires approval)", requires_approval=True, category="files")
+async def edit_file(path: str, old_string: str, new_string: str, replace_all: bool = False) -> str:
+    """Edit a file by replacing exact occurrences of old_string with new_string.
+    Like Claude Code's edit — precise, targeted changes without rewriting the whole file.
+
+    Args:
+        path: Absolute path or path relative to workspace root
+        old_string: The exact text to find and replace (must match exactly)
+        new_string: The replacement text
+        replace_all: If True, replace ALL occurrences. Default: only the first.
+    """
+    try:
+        target = ensure_within_workspace(path)
+    except (ValueError, PermissionError) as exc:
+        return f"Error: {exc}"
+
+    if not target.exists():
+        return f"Error: file not found — {path}"
+    if not target.is_file():
+        return f"Error: not a file — {path}"
+
+    try:
+        content = target.read_text("utf-8", errors="replace")
+    except PermissionError:
+        return f"Error: permission denied — {path}"
+    except Exception as exc:
+        return f"Error reading file: {exc}"
+
+    if old_string not in content:
+        return f"Error: old_string not found in file. Use read_file to see current content."
+
+    if replace_all:
+        new_content = content.replace(old_string, new_string)
+        count = content.count(old_string)
+    else:
+        new_content = content.replace(old_string, new_string, 1)
+        count = 1
+
+    try:
+        target.write_text(new_content, encoding="utf-8")
+        old_len = len(old_string)
+        new_len = len(new_string)
+        return (
+            f"Edited {path}: replaced {count} occurrence(s) "
+            f"({old_len} chars -> {new_len} chars)"
+        )
+    except PermissionError:
+        return f"Error: permission denied — {path}"
+    except Exception as exc:
+        return f"Error writing file: {exc}"
+
+
+@tool(description="Copy a file or directory (requires approval)", requires_approval=True, category="files")
+async def copy_file(source: str, destination: str) -> str:
+    """Copy a file or directory from source to destination.
+
+    Args:
+        source: Path to the source file or directory
+        destination: Path to the destination
+    """
+    try:
+        src = ensure_within_workspace(source)
+        dst = ensure_within_workspace(destination)
+    except (ValueError, PermissionError) as exc:
+        return f"Error: {exc}"
+
+    if not src.exists():
+        return f"Error: source not found — {source}"
+
+    import shutil as _shutil
+
+    try:
+        if src.is_dir():
+            _shutil.copytree(src, dst, dirs_exist_ok=True)
+            return f"Copied directory {source} -> {destination}"
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            _shutil.copy2(src, dst)
+            return f"Copied file {source} -> {destination} ({dst.stat().st_size} bytes)"
+    except PermissionError:
+        return f"Error: permission denied"
+    except Exception as exc:
+        return f"Error copying: {exc}"
+
+
+@tool(description="Move or rename a file or directory (requires approval)", requires_approval=True, category="files")
+async def move_file(source: str, destination: str) -> str:
+    """Move or rename a file or directory.
+
+    Args:
+        source: Path to the source file or directory
+        destination: Path to the destination
+    """
+    try:
+        src = ensure_within_workspace(source)
+        dst = ensure_within_workspace(destination)
+    except (ValueError, PermissionError) as exc:
+        return f"Error: {exc}"
+
+    if not src.exists():
+        return f"Error: source not found — {source}"
+
+    try:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        src.rename(dst)
+        return f"Moved {source} -> {destination}"
+    except PermissionError:
+        return f"Error: permission denied"
+    except Exception as exc:
+        return f"Error moving: {exc}"
+
+
+@tool(description="Delete a file or empty directory (requires approval)", requires_approval=True, category="files")
+async def delete_file(path: str) -> str:
+    """Delete a file or empty directory.
+
+    Args:
+        path: Path to the file or directory to delete
+    """
+    try:
+        target = ensure_within_workspace(path)
+    except (ValueError, PermissionError) as exc:
+        return f"Error: {exc}"
+
+    if not target.exists():
+        return f"Error: path not found — {path}"
+
+    try:
+        if target.is_dir():
+            # Only delete empty directories via this tool (safety)
+            target.rmdir()
+            return f"Deleted empty directory: {path}"
+        else:
+            size = target.stat().st_size
+            target.unlink()
+            return f"Deleted file: {path} ({size} bytes)"
+    except OSError as exc:
+        return f"Error: {exc}"
+    except PermissionError:
+        return f"Error: permission denied — {path}"
+    except Exception as exc:
+        return f"Error deleting: {exc}"
+
+
+@tool(description="Create a directory (including parents)", category="files")
+async def mkdir(path: str) -> str:
+    """Create a directory and any missing parent directories.
+
+    Args:
+        path: Path to the directory to create
+    """
+    try:
+        target = ensure_within_workspace(path)
+    except (ValueError, PermissionError) as exc:
+        return f"Error: {exc}"
+
+    if target.exists():
+        return f"Directory already exists: {path}"
+
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+        return f"Created directory: {path}"
+    except PermissionError:
+        return f"Error: permission denied — {path}"
+    except Exception as exc:
+        return f"Error creating directory: {exc}"
+
+
+@tool(
+    description="Search the web with automatic content extraction",
+    category="web",
+)
+async def web_search(query: str, max_results: int = 5) -> str:
+    """Search the web, extract content from top result pages, and return
+    synthesized information with sources.
+
+    Tries multiple backends:
+    1. DuckDuckGo Instant Answer API (no CAPTCHA)
+    2. DuckDuckGo HTML search (full results)
+    3. Google fallback
+
+    After finding results, automatically fetches top pages and extracts
+    their readable text content so the model can reference real data.
+
+    Args:
+        query: The search query
+        max_results: Maximum number of results to return (default 5, max 10)
+    """
+    import json as _json
+    import re as _re
+    import urllib.parse as _uparse
+    import urllib.request as _ureq
+
+    max_results = min(max_results, 10)
+
+    def _fetch(url: str, timeout: int = 8) -> str | None:
+        try:
+            req = _ureq.Request(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0",
+                },
+            )
+            with _ureq.urlopen(req, timeout=timeout) as r:
+                return r.read(200 * 1024).decode("utf-8", errors="replace")
+        except Exception:
+            return None
+
+    def _is_captcha(html: str) -> bool:
+        return bool(_re.search(r"anomaly-modal|challenge|captcha|unfortunately.*bot", html, _re.I))
+
+    def _ddg_redirect_url(ddg_url: str) -> str:
+        q_pos = ddg_url.find("uddg=")
+        if q_pos == -1:
+            return ddg_url
+        encoded = ddg_url[q_pos + 5:]
+        amp_pos = encoded.find("&")
+        if amp_pos != -1:
+            encoded = encoded[:amp_pos]
+        try:
+            return _uparse.unquote(encoded)
+        except Exception:
+            return ddg_url
+
+    def _extract_readable_text(html: str) -> str:
+        """Strip HTML tags and extract readable text from a page."""
+        # Remove script and style blocks
+        html = _re.sub(r"<script[^>]*>.*?</script>", "", html, flags=_re.DOTALL)
+        html = _re.sub(r"<style[^>]*>.*?</style>", "", html, flags=_re.DOTALL)
+        html = _re.sub(r"<nav[^>]*>.*?</nav>", "", html, flags=_re.DOTALL)
+        html = _re.sub(r"<footer[^>]*>.*?</footer>", "", html, flags=_re.DOTALL)
+        # Replace tags with newlines
+        html = _re.sub(r"<br\s*/?>", "\n", html)
+        html = _re.sub(r"</(p|div|h[1-6]|li|tr|blockquote)>", "\n", html)
+        # Strip remaining tags
+        text = _re.sub(r"<[^>]+>", "", html)
+        # Collapse whitespace
+        text = _re.sub(r"\n{3,}", "\n\n", text)
+        text = _re.sub(r" {2,}", " ", text)
+        return text.strip()[:5000]
+
+    encoded = _uparse.quote_plus(query)
+    found_results: list[dict[str, str]] = []
+
+    # ── Path 1: DuckDuckGo Instant Answer API ──────────────────────────────
+    ddg_api_url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_html=1"
+    api_html = _fetch(ddg_api_url)
+    if api_html:
+        try:
+            data = _json.loads(api_html)
+            abstract = data.get("Abstract", "") or ""
+            answer = data.get("Answer", "") or ""
+            heading = data.get("Heading", "") or ""
+
+            if answer:
+                found_results.append({"title": heading or "Answer", "url": "", "snippet": answer})
+            if abstract and not answer:
+                url = data.get("AbstractURL", "") or ""
+                found_results.append({"title": heading or "Result", "url": url, "snippet": abstract[:500]})
+            for topic in data.get("RelatedTopics", []):
+                if isinstance(topic, dict):
+                    text = topic.get("Text", "") or ""
+                    t_url = topic.get("FirstURL", "") or ""
+                    if text:
+                        found_results.append({"title": text[:80], "url": t_url, "snippet": text[:300]})
+                    for ct in topic.get("Topics", [])[:3]:
+                        ct_text = ct.get("Text", "") or ""
+                        ct_url = ct.get("FirstURL", "") or ""
+                        if ct_text:
+                            found_results.append({"title": ct_text[:80], "url": ct_url, "snippet": ct_text[:300]})
+        except Exception:
+            pass
+
+    # ── Path 2: DuckDuckGo HTML search ─────────────────────────────────────
+    if len(found_results) < max_results:
+        ddg_url = f"https://html.duckduckgo.com/html/?q={encoded}"
+        html = _fetch(ddg_url, timeout=10)
+        if html and not _is_captcha(html):
+            for m in _re.finditer(
+                r'<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>',
+                html, _re.DOTALL,
+            ):
+                url = m.group(1)
+                title = _re.sub(r"<[^>]+>", "", m.group(2)).strip()
+                snippet_m = _re.search(
+                    r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>',
+                    html[m.end():], _re.DOTALL,
+                )
+                snippet = _re.sub(r"<[^>]+>", "", snippet_m.group(1)).strip() if snippet_m else ""
+                if title:
+                    found_results.append({"title": title, "url": url, "snippet": snippet})
+                    if len(found_results) >= max_results:
+                        break
+
+    # ── Path 3: Google fallback ────────────────────────────────────────────
+    if len(found_results) < max_results:
+        try:
+            google_url = f"https://www.google.com/search?q={encoded}&num={max_results}"
+            google_html = _fetch(google_url, timeout=8)
+            if google_html and not _is_captcha(google_html):
+                for m in _re.finditer(
+                    r'<a[^>]*href="/url\?q=([^"&]+)[^"]*"[^>]*>(.*?)</a>',
+                    google_html, _re.DOTALL,
+                ):
+                    url = _uparse.unquote(m.group(1))
+                    title = _re.sub(r"<[^>]+>", "", m.group(2)).strip()
+                    if title and url.startswith("http"):
+                        # Check we don't already have this URL
+                        if not any(r["url"].strip("/") == url.strip("/") for r in found_results):
+                            found_results.append({"title": title, "url": url, "snippet": ""})
+                            if len(found_results) >= max_results:
+                                break
+        except Exception:
+            pass
+
+    if not found_results:
+        return (
+            f"Web search is not available in this environment (DuckDuckGo is rate-limiting "
+            f"programmatic requests). The model should either answer from its training data "
+            f"or tell the user search is temporarily unavailable."
+        )
+
+    # ── Extract content from top result URLs ───────────────────────────────
+    content_lines: list[str] = [f"Search results for: {query}\n"]
+
+    # Show search results
+    for i, r in enumerate(found_results[:max_results], 1):
+        url = r.get("url", "")
+        real_url = _ddg_redirect_url(url) if url and "duckduckgo.com/l/" in url else url
+        snippet = r.get("snippet", "")
+        content_lines.append(f"{i}. {r['title']}")
+        if real_url:
+            content_lines[-1] += f"\n   Source: {real_url}"
+        if snippet:
+            content_lines[-1] += f"\n   {snippet}"
+        content_lines[-1] += "\n"
+
+    # Fetch top 2 result pages for deeper content
+    pages_fetched = 0
+    for r in found_results[:min(3, max_results)]:
+        url = r.get("url", "")
+        if not url:
+            continue
+        real_url = _ddg_redirect_url(url) if "duckduckgo.com/l/" in url else url
+        if not real_url.startswith("http"):
+            continue
+
+        page_html = _fetch(real_url, timeout=10)
+        if not page_html or _is_captcha(page_html):
+            continue
+
+        readable = _extract_readable_text(page_html)
+        if len(readable) > 200:
+            pages_fetched += 1
+            content_lines.append(f"\n--- Content from {real_url} ---")
+            # Show first ~2000 chars of extracted content
+            content_lines.append(readable[:2000])
+            if len(readable) > 2000:
+                content_lines.append("... (content truncated)")
+            content_lines.append("")
+
+    if pages_fetched > 0:
+        content_lines.append(f"(Extracted content from {pages_fetched} page(s))")
+
+    return "\n".join(content_lines)
+
+
+@tool(description="Search memory with relevance filtering", category="knowledge")
+async def search_knowledge(query: str, limit: int = 10, min_score: float = 0.0) -> str:
+    """Search the knowledge base with relevance filtering.
+
+    Searches memories and knowledge entries. Results with low relevance
+    scores can be filtered out. Use for factual recall, not creative tasks.
+
+    Args:
+        query: Search query text
+        limit: Maximum results to return (default 10, max 50)
+        min_score: Minimum relevance score 0.0-1.0 (default 0.0 = no filter).
+                   Use 0.3+ to filter out loosely related results.
+    """
+    limit = min(limit, 50)
+    min_score = max(0.0, min(1.0, min_score))
+    try:
+        from backend.app.core.db import SessionLocal
+        from backend.app.services.memory.manager import MemoryManager
+
+        db = SessionLocal()
+        try:
+            mgr = MemoryManager(db)
+            results = mgr.search(query=query, user_id=None, category=None, limit=limit * 3)
+            if not results:
+                return "No knowledge base entries found matching the query."
+
+            # Filter by relevance score if feature available
+            if min_score > 0.0:
+                filtered = [r for r in results if r.get("score", 1.0) >= min_score]
+            else:
+                filtered = list(results)
+
+            # Dedup by content hash
+            seen_hashes: set[str] = set()
+            deduped = []
+            for r in filtered:
+                content = str(r.get("content", ""))
+                h = str(hash(content[:100]))
+                if h not in seen_hashes:
+                    seen_hashes.add(h)
+                    deduped.append(r)
+                    if len(deduped) >= limit:
+                        break
+
+            if not deduped:
+                return f"No relevant results (score >= {min_score}). Try lowering min_score."
+
+            parts: list[str] = [f"Knowledge base results ({len(deduped)}):"]
+            for r in deduped:
+                title = r.get("title", "Untitled")
+                content = str(r.get("content", ""))[:250]
+                category = r.get("category", "general")
+                score = r.get("score", "?")
+                parts.append(f"  [{category}] (score: {score}) {title}: {content}")
+            return "\n".join(parts)
+        finally:
+            db.close()
+    except ImportError:
+        return "Knowledge base search is not available (MemoryManager not yet initialized)"
+    except Exception as exc:
+        return f"Error searching knowledge base: {exc}"
+
+
 # Legacy registrations (backward compat)
 register_tool("exec_command", exec_command, "Run a shell command with safety limits")
 register_tool("git_log", git_log, "Show recent git commits")
@@ -715,5 +999,10 @@ register_tool("git_show", git_show, "Show git commit details or file content fro
 register_tool("search_knowledge", search_knowledge, "Search knowledge base entries")
 register_tool("current_datetime", current_datetime, "Get the current date and time")
 register_tool("list_available_tools", list_available_tools, "List all available tools with descriptions")
-register_tool("web_search", web_search, "Search the web using DuckDuckGo")
+register_tool("web_search", web_search, "Search the web with content extraction")
 register_tool("get_repo_info", get_repo_info, "Get repository information")
+register_tool("edit_file", edit_file, "Edit a file by replacing exact string")
+register_tool("copy_file", copy_file, "Copy a file or directory")
+register_tool("move_file", move_file, "Move or rename a file or directory")
+register_tool("delete_file", delete_file, "Delete a file or empty directory")
+register_tool("mkdir", mkdir, "Create a directory")

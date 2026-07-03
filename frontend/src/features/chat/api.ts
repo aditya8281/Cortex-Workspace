@@ -89,6 +89,11 @@ export const chatApi = {
     apiFetch<{ status: string }>(`/conversations/${id}`, {
       method: "DELETE",
     }),
+
+  cancel: (id: number) =>
+    apiFetch<{ status: string }>(`/conversations/${id}/cancel`, {
+      method: "POST",
+    }),
 };
 
 /**

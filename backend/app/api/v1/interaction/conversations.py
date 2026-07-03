@@ -209,8 +209,7 @@ async def _generate_response_task_impl(
         _parse_tool_calls,
         _strip_tool_calls,
     )
-    from backend.app.agents.tool_defs import (  # noqa: F401 — trigger @tool decorator registration
-    )
+    from backend.app.agents import tool_defs  # noqa: F401 — trigger @tool decorator registration
     from backend.app.agents.tools.policy import default_policy
     from backend.app.agents.tools.registry import get_tool_registry
     from backend.app.core.config import settings

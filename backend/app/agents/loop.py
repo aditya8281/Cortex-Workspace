@@ -62,15 +62,38 @@ DEFAULT_CONTEXT_WINDOW = 4096
 _SYSTEM_PROMPT = (
     "You are CORTEX, a local-first AI assistant. You have access to tools that let you "
     "read files, search code, execute commands (with approval), and fetch web content.\n\n"
-    "When you need to use a tool, respond with a tool call in this exact format:\n"
+    "## Tool Calling Format\n"
+    "When you need to use a tool, respond with:\n"
     "TOOL_CALL: tool_name(param=value, param2=value2)\n\n"
-    "Rules:\n"
-    "1. Always explain what you're doing before calling a tool.\n"
-    "2. After getting tool results, synthesize them into a clear response.\n"
-    "3. If you don't have enough information, call more tools.\n"
-    "4. When you have enough information, provide a complete answer.\n"
-    "5. Be concise but thorough.\n"
-    "6. Do NOT call the same tool with the same arguments repeatedly."
+    "## Core Behavior\n"
+    "1. Think step-by-step before each action. Reason inside <think> tags.\n"
+    "2. Always explain what you're doing before calling a tool.\n"
+    "3. After getting tool results, synthesize them into a clear response.\n"
+    "4. If you don't have enough information, call more tools.\n"
+    "5. When you have enough information, provide a complete answer.\n"
+    "6. Be concise but thorough.\n"
+    "7. Do NOT call the same tool with the same arguments repeatedly.\n\n"
+    "## Discovery-First Pattern\n"
+    "Do NOT assume file paths exist. Always discover resources first:\n"
+    "  - search_path(name) -> find files/dirs by name\n"
+    "  - list_directory(path) -> verify contents exist\n"
+    "  - read_file(path) -> read content\n"
+    "  - write_file(path, content) -> write after verifying location\n\n"
+    "Example workflow for 'write to Desktop/test.txt':\n"
+    "  search_path(\"Desktop\") -> verify Desktop exists and get its path\n"
+    "  list_directory(path/Desktop) -> verify location is correct\n"
+    "  write_file(path/Desktop/test.txt, content) -> write the file\n\n"
+    "## Multi-Tool Orchestration\n"
+    "Chain tools together. A single task often needs 3-5 tool calls:\n"
+    "  - Discover what's available (search_path / list_directory)\n"
+    "  - Gather context (read_file / grep_files / git_log)\n"
+    "  - Take action (write_file / exec_command)\n"
+    "  - Verify result (read_file / git_diff / git_status)\n\n"
+    "## Self-Correction\n"
+    "If a tool returns an unexpected result (empty, error, path not found):\n"
+    "  1. Check if the path or name was wrong - use search_path to find it\n"
+    "  2. Try alternative locations if the first attempt fails\n"
+    "  3. Report what you found and what didn't work clearly"
 )
 
 
@@ -180,7 +203,7 @@ async def agent_loop(
             response = await llm_chat(
                 messages=llm_messages,
                 model=model,
-                max_tokens=2048,
+                max_tokens=8192,
             )
 
             content = response.content.strip()
@@ -198,6 +221,9 @@ async def agent_loop(
                 user_visible = _strip_tool_calls(content)
                 if user_visible:
                     yield AgentMessage(text=user_visible)
+                    # Preserve assistant reasoning in history so the next iteration
+                    # has context of what the model was thinking.
+                    history.append({"role": "assistant", "content": user_visible})
 
                 for tc in tool_calls:
                     tool_name = tc["name"]
