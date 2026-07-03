@@ -698,11 +698,20 @@ export default function ChatPage() {
                     timestamp={msg.created_at}
                     style={{ "--i": i } as React.CSSProperties}
                   />
-                  {/* Tool events for the last assistant message */}
+                  {/* Tool events — each in its own bubble, staggered entrance */}
                   {msg.role === "assistant" && i === messages.length - 1 && toolEvents.length > 0 && (
-                    <div className="flex flex-col gap-2 pl-2 border-l border-border-subtle/40 ml-2">
+                    <div className="flex flex-col gap-1.5 ml-2">
                       {toolEvents.map((evt, j) => (
-                        <ToolActivity key={`${evt.tool}-${j}`} {...evt} />
+                        <div
+                          key={`${evt.tool}-${j}`}
+                          className="animate-fade-in"
+                          style={{
+                            animationDelay: `${j * 60}ms`,
+                            animationFillMode: "backwards",
+                          }}
+                        >
+                          <ToolActivity {...evt} />
+                        </div>
                       ))}
                     </div>
                   )}
