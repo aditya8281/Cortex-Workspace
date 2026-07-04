@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func
@@ -45,7 +46,7 @@ class LongTermMemoryService:
             "source": db_memory.source or "",
             "source_id": db_memory.source_id,
             "access_count": db_memory.access_count,
-            "created_at": db_memory.created_at.timestamp() if db_memory.created_at else __import__("time").time(),
+            "created_at": db_memory.created_at.timestamp() if db_memory.created_at else time.time(),
         }
 
     # ── CRUD ──────────────────────────────────────────────────────────

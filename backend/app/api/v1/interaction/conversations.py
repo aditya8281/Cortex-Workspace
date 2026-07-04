@@ -233,7 +233,7 @@ async def _generate_response_task_impl(
         if settings.CORTEX_ROOT:
             _os.environ["AGENT_WORKSPACE"] = settings.CORTEX_ROOT
         elif _os.getenv("CORTEX_ROOT"):
-            _os.environ["AGENT_WORKSPACE"] = _os.getenv("CORTEX_ROOT")  # type: ignore[arg-type]
+            _os.environ["AGENT_WORKSPACE"] = _os.getenv("CORTEX_ROOT")  # type: ignore[assignment]
         else:
             _os.environ["AGENT_WORKSPACE"] = _os.getcwd()
 
