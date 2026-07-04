@@ -3,7 +3,7 @@ import uuid
 
 from backend.app.api.metrics import record_request
 from backend.app.core.config import settings
-from backend.app.core.logging import RequestIdFilter, get_logger
+from backend.app.core.logging import get_logger, set_request_id
 
 logger = get_logger(__name__)
 
@@ -49,7 +49,7 @@ class RequestLoggingMiddleware:
             return
 
         request_id = str(uuid.uuid4())
-        RequestIdFilter.set(request_id)
+        set_request_id(request_id)
         start = time.perf_counter()
         status_code = 500
         path = scope.get("path", "/")

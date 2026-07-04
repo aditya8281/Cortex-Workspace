@@ -103,8 +103,12 @@ class LLMManager:
         async with self._semaphore:
             provider = await self._get_active()
         provider_name = getattr(provider, "provider_name", lambda: "unknown")()
+        is_ollama = "ollama" in provider_name.lower()
+        is_llamacpp = "llama" in provider_name.lower() and "cpp" in provider_name.lower()
+        inference_label = "🟢 OLLAMA" if is_ollama else "🔵 LLAMA.CPP" if is_llamacpp else "⚪ UNKNOWN"
         logger.info(
-            "Inference via %s: model=%s, messages=%d, max_tokens=%d",
+            "═══ INFERENCE [%s] ═══ provider=%s model=%s messages=%d max_tokens=%d",
+            inference_label,
             provider_name,
             model or "default",
             len(messages),
@@ -189,6 +193,14 @@ class LLMManager:
         """
         async with self._semaphore:
             provider = await self._get_active()
+        provider_name = getattr(provider, "provider_name", lambda: "unknown")()
+        logger.info(
+            "═══ INFERENCE TOOL CALL [%s] ═══ provider=%s model=%s message_count=%d",
+            "🟢 OLLAMA" if "ollama" in provider_name.lower() else "🔵 LLAMA.CPP",
+            provider_name,
+            model or "default",
+            len(messages),
+        )
 
         if not hasattr(provider, "chat_with_tools"):
             return None
@@ -222,8 +234,12 @@ class LLMManager:
         async with self._semaphore:
             provider = await self._get_active()
         provider_name = getattr(provider, "provider_name", lambda: "unknown")()
+        is_ollama = "ollama" in provider_name.lower()
+        is_llamacpp = "llama" in provider_name.lower() and "cpp" in provider_name.lower()
+        inference_label = "🟢 OLLAMA" if is_ollama else "🔵 LLAMA.CPP" if is_llamacpp else "⚪ UNKNOWN"
         logger.info(
-            "Inference stream via %s: model=%s, messages=%d, max_tokens=%d",
+            "═══ INFERENCE STREAM [%s] ═══ provider=%s model=%s messages=%d max_tokens=%d",
+            inference_label,
             provider_name,
             model or "default",
             len(messages),

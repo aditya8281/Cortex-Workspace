@@ -4,7 +4,6 @@ Resolves the database URL from application settings (DATABASE_URL).
 """
 
 import os
-from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -12,9 +11,10 @@ from sqlalchemy import engine_from_config, pool
 # Alembic Config object — provides access to values in the .ini file.
 config = context.config
 
-# Set up loggers from the config file.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+# NOTE: Do NOT call fileConfig() here — the application's setup_logging()
+# already configures root logger handlers (RotatingFileHandler, buffer).
+# fileConfig() destroys existing handlers and replaces them with bare
+# INI-based config that lacks file persistence and our in-memory buffer.
 
 # Resolve the database URL from environment / .env.
 # This ensures CLI `alembic` commands and the running app always target

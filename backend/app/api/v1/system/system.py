@@ -62,9 +62,9 @@ async def get_system_metrics(current_user: User = Depends(get_current_user)):
 
 @router.get("/system/logs", response_model=SystemLogsResponse)
 async def get_system_logs(
-    limit: int = 20,
+    limit: int = 200,
     current_user: User = Depends(get_current_user),
 ):
-    """Return recent system logs from the in-memory log buffer."""
-    logs = get_recent_logs(limit=min(limit, 200))
+    """Return recent system logs from the in-memory log buffer (persisted to file, survives restarts)."""
+    logs = get_recent_logs(limit=min(limit, 2000))
     return {"logs": logs, "total": len(logs)}

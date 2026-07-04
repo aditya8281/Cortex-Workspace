@@ -127,7 +127,7 @@ function CreateRuleModal({
           <select
             value={ruleType}
             onChange={(e) => setRuleType(e.target.value)}
-            className="h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary focus:border-border-accent focus:outline-none motion-safe:transition-colors motion-safe:duration-150"
+            className="h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary focus:border-border-input-focus focus:outline-none motion-safe:transition-colors motion-safe:duration-150"
           >
             <option value="trigger">Trigger</option>
             <option value="filter">Filter</option>
@@ -144,7 +144,7 @@ function CreateRuleModal({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What this rule does..."
             rows={3}
-            className="rounded-md border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-accent focus:outline-none motion-safe:transition-colors motion-safe:duration-150 resize-none"
+            className="rounded-md border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-input-focus focus:outline-none motion-safe:transition-colors motion-safe:duration-150 resize-none"
           />
         </div>
         <Input
@@ -222,7 +222,7 @@ function StartSessionModal({
           <select
             value={sessionType}
             onChange={(e) => setSessionType(e.target.value)}
-            className="h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary focus:border-border-accent focus:outline-none motion-safe:transition-colors motion-safe:duration-150"
+            className="h-11 rounded-md border border-border-default bg-bg-surface px-3 text-sm text-text-primary focus:border-border-input-focus focus:outline-none motion-safe:transition-colors motion-safe:duration-150"
           >
             <option value="deep_work">Deep Work</option>
             <option value="research">Research</option>
@@ -239,7 +239,7 @@ function StartSessionModal({
             onChange={(e) => setTaskDescription(e.target.value)}
             placeholder="What are you working on?"
             rows={3}
-            className="rounded-md border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-accent focus:outline-none motion-safe:transition-colors motion-safe:duration-150 resize-none"
+            className="rounded-md border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-input-focus focus:outline-none motion-safe:transition-colors motion-safe:duration-150 resize-none"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">

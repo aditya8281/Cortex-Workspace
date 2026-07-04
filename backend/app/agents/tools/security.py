@@ -120,6 +120,21 @@ def has_blocked_command(command: str) -> str | None:
     return None
 
 
+def _resolve_workspace_root(workspace_root: str | None = None) -> str | None:
+    """Resolve the agent workspace root from multiple sources (config > env > default)."""
+    from backend.app.core.config import settings
+
+    # Priority: explicit arg → config → AGENT_WORKSPACE env → CORTEX_ROOT env → default
+    if workspace_root:
+        return workspace_root
+    if settings.AGENT_WORKSPACE_ROOT:
+        return settings.AGENT_WORKSPACE_ROOT
+    env_root = os.environ.get("AGENT_WORKSPACE")
+    if env_root:
+        return env_root
+    return None
+
+
 def ensure_within_workspace(file_path: str, workspace_root: str | None = None) -> Path:
     """Resolve and validate that a file path is within the agent workspace.
 
@@ -132,7 +147,7 @@ def ensure_within_workspace(file_path: str, workspace_root: str | None = None) -
 
     # ── Absolute path: check against workspace_root or home directory ──
     if file_path.startswith("/") or file_path.startswith("~"):
-        root = workspace_root or os.environ.get("AGENT_WORKSPACE")
+        root = _resolve_workspace_root(workspace_root)
         if root:
             workspace = Path(root).resolve()
             try:
@@ -148,10 +163,9 @@ def ensure_within_workspace(file_path: str, workspace_root: str | None = None) -
         return resolved
 
     # ── Relative path: resolve within agent workspace ──
-    root = workspace_root or os.environ.get(
-        "AGENT_WORKSPACE",
-        os.environ.get("CORTEX_ROOT", None),
-    )
+    root = _resolve_workspace_root(workspace_root)
+    if not root:
+        root = os.environ.get("CORTEX_ROOT")
     if not root:
         root = os.path.join(os.path.expanduser("~"), ".cortex-agent-workspace")
     workspace = Path(root).resolve()

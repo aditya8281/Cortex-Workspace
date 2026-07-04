@@ -121,12 +121,83 @@ class Settings(BaseSettings):
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW_SECONDS: int = 60
 
+    # Logging
+    LOG_FILE_PATH: str = Field(
+        default="logs/cortex.log", description="Path to log file (relative to project root or absolute)"
+    )
+
     # Feature flags
     # Reserved for V1 Phase-2 streaming agent loop (loop.py).
     # When True, run_manager.py dispatches to the new single-streaming loop
     # instead of the legacy Planner→Executor path. Currently False — the
     # streaming loop is not yet built (next Phase 2 component).
     CORTEX_NEW_AGENT_LOOP: bool = Field(default=False)
+
+    # ── Agent Loop Configuration ─────────────────────────────────────
+    # These control the streaming agent loop behavior (loop.py).
+    AGENT_MAX_ITERATIONS: int = Field(
+        default=25, description="Safety valve — max loop iterations before forcing answer"
+    )
+    AGENT_COMPACTION_THRESHOLD: float = Field(
+        default=0.85, description="Fraction of context window that triggers compaction"
+    )
+    AGENT_DEFAULT_CONTEXT_WINDOW: int = Field(
+        default=4096, description="Default context window (tokens) when model limits unknown"
+    )
+    AGENT_WORKSPACE_ROOT: str = Field(
+        default="", description="Root dir for agent file operations (empty = auto-detect from CORTEX_ROOT or cwd)"
+    )
+
+    # ── Chat / Tool Configuration ────────────────────────────────────
+    CHAT_MAX_TOOL_ITERATIONS: int = Field(default=8, description="Max tool-calling iterations per chat turn")
+    CHAT_APPROVAL_TIMEOUT: float = Field(
+        default=120.0, description="Seconds to wait for user tool approval before denying"
+    )
+    TOOLS_REQUIRING_APPROVAL: str = Field(
+        default="exec_command,write_file,web_fetch,edit_file,copy_file,move_file,delete_file",
+        description="Comma-separated tool names that require user approval",
+    )
+
+    # ── Agent Protocol Prompt ────────────────────────────────────────
+    # Strict tool-calling protocol for the agent loop.
+    # This is separate from CORTEX_SYSTEM_PROMPT (personality) — it defines
+    # HOW the agent uses tools, not WHO the agent is.
+    AGENT_PROTOCOL_PROMPT: str = (
+        "You are CORTEX, an AI assistant with tools (your hands).\n\n"
+        "## MANDATORY: Think Before Every Action\n"
+        "ALWAYS start with <think>...</think> before any TOOL_CALL.\n"
+        "Inside <think>: plan what you need, which tool, what args, what to expect back.\n"
+        "After <think>: either call a tool or give your answer.\n"
+        "Never respond without <think> first.\n\n"
+        "## Tool Calling Format\n"
+        "TOOL_CALL: tool_name(param=value, param2=value2)\n"
+        'Strings in quotes: read_file(path="main.py")\n'
+        "Numbers bare: git_log(count=5)\n"
+        "Multiple calls = multiple TOOL_CALL lines.\n\n"
+        "## Your Tools\n"
+        "  Files: read_file, write_file, edit_file, search_path, list_directory, mkdir\n"
+        "  Code: grep_files, git_log, git_diff, git_status, git_show, get_repo_info\n"
+        "  Web: web_search (search+extract), web_fetch\n"
+        "  System: exec_command, list_available_tools, current_datetime\n"
+        "  Knowledge: search_knowledge\n\n"
+        "## Execution Rules\n"
+        "1. FIRST <think> — reason step-by-step. What do I need? Which tool?\n"
+        "2. THEN act — call a tool or answer.\n"
+        "3. After result — <think> again. What did I get? What next?\n"
+        "4. Repeat until enough info, then answer.\n"
+        "5. NEVER repeat same tool with same args.\n"
+        "6. Tool denied? ACCEPT. Never retry. Find another way.\n"
+        "7. Path unknown? search_path first. Never assume paths.\n"
+        "8. Wrong args? Fix and retry with correct ones.\n\n"
+        "## Tool Denied = Final. Move On.\n"
+        "Denial is permanent for this interaction.\n"
+        "Do NOT call it again. Explain what you need, suggest alternatives.\n"
+        "Repeated denials force a stall — your answer gets discarded.\n\n"
+        "## Example Good Response\n"
+        "<think>The user wants file changes. I need git_log or git_diff. "
+        "Let me check recent commits first.</think>\n"
+        "TOOL_CALL: git_log(count=5)"
+    )
 
     # HTTPS redirect
     HTTPS_REDIRECT_ENABLED: bool = False
@@ -181,7 +252,7 @@ class Settings(BaseSettings):
         "TOOLS:\n"
         "- You have tools available. When you need to do something beyond text, CALL a tool.\n"
         "- Format EXACTLY:  TOOL_CALL: tool_name(param=value, param2=value2)\n"
-        "- Example: TOOL_CALL: write_file(path=/tmp/test.py, content=print(\"hello\"))\n"
+        '- Example: TOOL_CALL: write_file(path=/tmp/test.py, content=print("hello"))\n'
         "- Put TOOL_CALL on its own line at the end of your response.\n"
         "- Explain what you're about to do BEFORE the TOOL_CALL line.\n"
         "- After results come back, incorporate them into your answer.\n"

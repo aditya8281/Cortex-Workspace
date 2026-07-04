@@ -28,9 +28,12 @@ _is_private_url = is_private_url
 
 logger = logging.getLogger(__name__)
 
-AGENT_WORKSPACE = os.environ.get(
+_DEFAULT_WORKSPACE = os.path.join(os.path.expanduser("~"), ".cortex-agent-workspace")
+from backend.app.core.config import settings
+
+AGENT_WORKSPACE = settings.AGENT_WORKSPACE_ROOT or os.environ.get(
     "AGENT_WORKSPACE",
-    os.path.join(os.path.expanduser("~"), ".cortex-agent-workspace"),
+    os.environ.get("CORTEX_ROOT", _DEFAULT_WORKSPACE),
 )
 
 
@@ -44,7 +47,7 @@ class UserInputRequired(Exception):
 
 TOOL_REGISTRY: dict[str, dict[str, Any]] = {}
 
-_REQUIRES_APPROVAL = {"exec_command", "write_file", "web_fetch"}
+_REQUIRES_APPROVAL = frozenset(name.strip() for name in settings.TOOLS_REQUIRING_APPROVAL.split(",") if name.strip())
 
 
 def requires_approval(tool_name: str) -> bool:
@@ -337,12 +340,12 @@ async def search_path(name: str, start_dir: str = "~", max_depth: int = 3) -> st
                 break
 
         if not matches:
-            return f"No results found for \"{name}\" in {start_dir} (depth={max_depth})"
+            return f'No results found for "{name}" in {start_dir} (depth={max_depth})'
 
-        summary = f"Found {len(matches)} result{'s' if len(matches) != 1 else ''} for \"{name}\" in {start_dir}:\n"
+        summary = f'Found {len(matches)} result{"s" if len(matches) != 1 else ""} for "{name}" in {start_dir}:\n'
         return summary + "\n".join(matches[:25])
     except PermissionError:
-        return f"Permission denied while searching — some directories may be restricted"
+        return "Permission denied while searching — some directories may be restricted"
     except Exception as exc:
         return f"Error searching: {exc}"
 
@@ -498,7 +501,6 @@ async def list_available_tools() -> str:
     return "\n".join(lines)
 
 
-
 @tool(description="Get repository information", category="code")
 async def get_repo_info() -> str:
     """Get information about the current git repository: name, branch, remote URL."""
@@ -554,7 +556,11 @@ async def get_repo_info() -> str:
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-@tool(description="Edit an existing file by replacing exact text (requires approval)", requires_approval=True, category="files")
+@tool(
+    description="Edit an existing file by replacing exact text (requires approval)",
+    requires_approval=True,
+    category="files",
+)
 async def edit_file(path: str, old_string: str, new_string: str, replace_all: bool = False) -> str:
     """Edit a file by replacing exact occurrences of old_string with new_string.
     Like Claude Code's edit — precise, targeted changes without rewriting the whole file.
@@ -583,7 +589,7 @@ async def edit_file(path: str, old_string: str, new_string: str, replace_all: bo
         return f"Error reading file: {exc}"
 
     if old_string not in content:
-        return f"Error: old_string not found in file. Use read_file to see current content."
+        return "Error: old_string not found in file. Use read_file to see current content."
 
     if replace_all:
         new_content = content.replace(old_string, new_string)
@@ -596,10 +602,7 @@ async def edit_file(path: str, old_string: str, new_string: str, replace_all: bo
         target.write_text(new_content, encoding="utf-8")
         old_len = len(old_string)
         new_len = len(new_string)
-        return (
-            f"Edited {path}: replaced {count} occurrence(s) "
-            f"({old_len} chars -> {new_len} chars)"
-        )
+        return f"Edited {path}: replaced {count} occurrence(s) ({old_len} chars -> {new_len} chars)"
     except PermissionError:
         return f"Error: permission denied — {path}"
     except Exception as exc:
@@ -634,7 +637,7 @@ async def copy_file(source: str, destination: str) -> str:
             _shutil.copy2(src, dst)
             return f"Copied file {source} -> {destination} ({dst.stat().st_size} bytes)"
     except PermissionError:
-        return f"Error: permission denied"
+        return "Error: permission denied"
     except Exception as exc:
         return f"Error copying: {exc}"
 
@@ -661,7 +664,7 @@ async def move_file(source: str, destination: str) -> str:
         src.rename(dst)
         return f"Moved {source} -> {destination}"
     except PermissionError:
-        return f"Error: permission denied"
+        return "Error: permission denied"
     except Exception as exc:
         return f"Error moving: {exc}"
 
@@ -769,7 +772,7 @@ async def web_search(query: str, max_results: int = 5) -> str:
         q_pos = ddg_url.find("uddg=")
         if q_pos == -1:
             return ddg_url
-        encoded = ddg_url[q_pos + 5:]
+        encoded = ddg_url[q_pos + 5 :]
         amp_pos = encoded.find("&")
         if amp_pos != -1:
             encoded = encoded[:amp_pos]
@@ -834,13 +837,15 @@ async def web_search(query: str, max_results: int = 5) -> str:
         if html and not _is_captcha(html):
             for m in _re.finditer(
                 r'<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>',
-                html, _re.DOTALL,
+                html,
+                _re.DOTALL,
             ):
                 url = m.group(1)
                 title = _re.sub(r"<[^>]+>", "", m.group(2)).strip()
                 snippet_m = _re.search(
                     r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>',
-                    html[m.end():], _re.DOTALL,
+                    html[m.end() :],
+                    _re.DOTALL,
                 )
                 snippet = _re.sub(r"<[^>]+>", "", snippet_m.group(1)).strip() if snippet_m else ""
                 if title:
@@ -856,24 +861,27 @@ async def web_search(query: str, max_results: int = 5) -> str:
             if google_html and not _is_captcha(google_html):
                 for m in _re.finditer(
                     r'<a[^>]*href="/url\?q=([^"&]+)[^"]*"[^>]*>(.*?)</a>',
-                    google_html, _re.DOTALL,
+                    google_html,
+                    _re.DOTALL,
                 ):
                     url = _uparse.unquote(m.group(1))
                     title = _re.sub(r"<[^>]+>", "", m.group(2)).strip()
-                    if title and url.startswith("http"):
-                        # Check we don't already have this URL
-                        if not any(r["url"].strip("/") == url.strip("/") for r in found_results):
-                            found_results.append({"title": title, "url": url, "snippet": ""})
-                            if len(found_results) >= max_results:
-                                break
+                    if (
+                        title
+                        and url.startswith("http")
+                        and not any(r["url"].strip("/") == url.strip("/") for r in found_results)
+                    ):
+                        found_results.append({"title": title, "url": url, "snippet": ""})
+                        if len(found_results) >= max_results:
+                            break
         except Exception:
             pass
 
     if not found_results:
         return (
-            f"Web search is not available in this environment (DuckDuckGo is rate-limiting "
-            f"programmatic requests). The model should either answer from its training data "
-            f"or tell the user search is temporarily unavailable."
+            "Web search is not available in this environment (DuckDuckGo is rate-limiting "
+            "programmatic requests). The model should either answer from its training data "
+            "or tell the user search is temporarily unavailable."
         )
 
     # ── Extract content from top result URLs ───────────────────────────────
@@ -893,7 +901,7 @@ async def web_search(query: str, max_results: int = 5) -> str:
 
     # Fetch top 2 result pages for deeper content
     pages_fetched = 0
-    for r in found_results[:min(3, max_results)]:
+    for r in found_results[: min(3, max_results)]:
         url = r.get("url", "")
         if not url:
             continue
@@ -948,10 +956,7 @@ async def search_knowledge(query: str, limit: int = 10, min_score: float = 0.0) 
                 return "No knowledge base entries found matching the query."
 
             # Filter by relevance score if feature available
-            if min_score > 0.0:
-                filtered = [r for r in results if r.get("score", 1.0) >= min_score]
-            else:
-                filtered = list(results)
+            filtered = [r for r in results if r.get("score", 1.0) >= min_score] if min_score > 0.0 else list(results)
 
             # Dedup by content hash
             seen_hashes: set[str] = set()

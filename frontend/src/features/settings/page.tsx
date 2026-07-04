@@ -175,7 +175,7 @@ export default function SettingsPage() {
                     rows={3}
                     maxLength={512}
                     placeholder="Tell us about yourself"
-                    className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent/50 focus:outline-none focus:ring-1 focus:ring-accent/25 motion-safe:transition-colors motion-safe:duration-150"
+                    className="w-full rounded-lg border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-border-input-focus focus:outline-none focus:ring-1 focus:ring-accent-red/25 motion-safe:transition-colors motion-safe:duration-150"
                   />
                 </div>
                 <div className="flex justify-end gap-2 pt-1">
@@ -304,7 +304,7 @@ export default function SettingsPage() {
             </Card>
 
             <Card className="p-5">
-              <h2 className="text-title font-semibold text-text-danger mb-1">
+              <h2 className="text-title font-semibold text-danger mb-1">
                 Sign Out
               </h2>
               <p className="text-xs text-text-muted mb-4">

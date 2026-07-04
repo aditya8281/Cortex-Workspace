@@ -1,5 +1,7 @@
 """Conftest for tests/ — shared fixtures and external service mocks."""
 
+import shutil
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -204,3 +206,43 @@ def _mock_external_services():
 def db_session(_db_session):
     """Alias for _db_session for clarity in new tests."""
     return _db_session
+
+
+# ── Test Artifact Cleanup ──────────────────────────────────────────────
+# Some tests create temp directories/files in the user's home directory.
+# This session-scoped fixture cleans them up after ALL tests complete.
+
+_TEST_ARTIFACT_PATTERNS = (
+    ".vault_test_tmp",
+    ".cortex-agent-workspace",
+)
+
+_TEST_ARTIFACT_PREFIXES = (
+    "CortexStorage",
+    "cortex_rt_",
+    "cortex_at_",
+    "cortex_test_",
+    "cortex_vt_",
+)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _cleanup_test_artifacts(request):
+    """Remove test artifacts from the user's home directory after all tests."""
+
+    def cleanup():
+        home = Path.home()
+        # Remove named directories
+        for name in _TEST_ARTIFACT_PATTERNS:
+            target = home / name
+            if target.exists():
+                shutil.rmtree(target, ignore_errors=True)
+
+        # Remove prefixed directories
+        for entry in home.iterdir():
+            for prefix in _TEST_ARTIFACT_PREFIXES:
+                if entry.name.startswith(prefix) and entry.is_dir():
+                    shutil.rmtree(entry, ignore_errors=True)
+                    break
+
+    request.addfinalizer(cleanup)

@@ -127,9 +127,7 @@ class StreamManager:
             return None
         return buf
 
-    async def wait_for_buffer(
-        self, conversation_id: int, timeout: float = 10.0
-    ) -> StreamBuffer | None:
+    async def wait_for_buffer(self, conversation_id: int, timeout: float = 10.0) -> StreamBuffer | None:
         """Wait for a buffer to be created for this conversation.
 
         Used when the SSE subscriber might connect before the POST handler

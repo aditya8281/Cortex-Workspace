@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from backend.app.core.config import settings
 from backend.app.core.db import get_current_user, get_db
 from backend.app.models.interaction.conversation import Conversation
 from backend.app.models.interaction.user import User
@@ -49,8 +50,8 @@ def _get_svc(db: Session, user_id: int) -> ConversationService:
         return ConversationService(db)
 
 
-# Timeout for waiting on user tool approval (seconds)
-_APPROVAL_TIMEOUT = 120.0
+# Timeout for waiting on user tool approval (seconds, from config.py)
+_APPROVAL_TIMEOUT = settings.CHAT_APPROVAL_TIMEOUT
 
 
 async def _wait_for_approval(conversation_id: int, call_id: str) -> bool:
@@ -160,8 +161,9 @@ async def delete_conversation(
 # a StreamBuffer that any number of SSE consumers can read from.
 
 
-# Maximum tool-calling iterations for chat (prevents runaway loops)
-_MAX_CHAT_TOOL_ITERATIONS = 8
+from backend.app.core.config import settings
+
+_MAX_CHAT_TOOL_ITERATIONS: int = settings.CHAT_MAX_TOOL_ITERATIONS
 
 
 async def _generate_response_task(
@@ -209,7 +211,6 @@ async def _generate_response_task_impl(
         _parse_tool_calls,
         _strip_tool_calls,
     )
-    from backend.app.agents import tool_defs  # noqa: F401 — trigger @tool decorator registration
     from backend.app.agents.tools.policy import default_policy
     from backend.app.agents.tools.registry import get_tool_registry
     from backend.app.core.config import settings
@@ -227,6 +228,7 @@ async def _generate_response_task_impl(
     # Set agent workspace so relative paths in write_file etc. resolve
     # to the Cortex project root, not ~/.cortex-agent-workspace
     import os as _os
+
     if _os.environ.get("AGENT_WORKSPACE") is None:
         if settings.CORTEX_ROOT:
             _os.environ["AGENT_WORKSPACE"] = settings.CORTEX_ROOT
@@ -435,14 +437,14 @@ async def _generate_response_task_impl(
                 match = _TOOL_CALL_START_RE.search(_rolling)
                 if match:
                     # Push text before tool call as visible
-                    pre_tool = _rolling[:match.start()]
+                    pre_tool = _rolling[: match.start()]
                     if pre_tool:
                         content += pre_tool
                         streamed_visible += pre_tool
                         buffer.push(f"data: {json.dumps({'type': 'chunk', 'content': pre_tool})}\n\n")
 
                     # Enter tool call mode
-                    _tool_buf = _rolling[match.start():]
+                    _tool_buf = _rolling[match.start() :]
                     _in_tool_call = True
                     _rolling = ""
 
@@ -497,7 +499,7 @@ async def _generate_response_task_impl(
                 full_visible = _strip_tool_calls(content)
                 if full_visible:
                     if full_visible.startswith(streamed_visible):
-                        new_text = full_visible[len(streamed_visible):]
+                        new_text = full_visible[len(streamed_visible) :]
                     else:
                         new_text = full_visible
                     if new_text:
